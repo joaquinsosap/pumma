@@ -848,518 +848,203 @@ html {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
-   FRUTIGER AERO — a skin, not a redesign.
+   DEPTH — Aero's idea, thirty years later.
    ══════════════════════════════════════════════════════════════════════════
-   Glass, gloss, sky and grass, applied app-wide. Presentation only: palette,
-   surfaces, glow and depth. No layout, no spacing, no component structure —
-   every screen keeps the arrangement it was designed with.
+   What was worth keeping from the Frutiger Aero pass was never the candy. It
+   was depth: translucency, layering, things visibly sitting above other
+   things. Modern desktop OSes kept all of that and dropped the saturation —
+   neutral vibrancy, honest shadows, and colour reserved for data.
 
-   Delete this whole block to go back.
+   So the rules here are:
+     · the ground is neutral, with one whisper of aqua at the horizon
+     · chrome is never coloured; a panel's own accent appears as a tint
+     · saturation is spent on data — the life calendar, progress, semantics
+     · nothing has a hard specular midline
+
+   Presentation only. No layout, no spacing, no component structure.
+   Delete this block to go back to the plain app; the full Aero skin is at
+   commit dd9086b if it is ever wanted again.
    ══════════════════════════════════════════════════════════════════════════ */
 
 :root {
-  /* Stays a real colour: the same token is read by `text-background`, which
-     is how every white-on-dark label in the app gets its colour. Making it
-     transparent hid the text inside the Add button, the type chips and the
-     selected day. The shell is opened up further down instead, where only
-     the BACKGROUND use is targeted. */
-  --bg: #eaf7ff;
-  /* Glass, but denser than the marketing site: this is a working tool and
-     text sits on these surfaces all day, so legibility beats translucency. */
-  --surface: rgba(255, 255, 255, 0.82);
-  --surface2: rgba(255, 255, 255, 0.62);
-  --border: rgba(255, 255, 255, 0.9);
-  --border2: rgba(190, 225, 245, 0.55);
-  --ink: #08293c;
-  --muted: #2b5a72;
-  --faint: #4a7d95;
-  --faint2: #669ab0;
-  --hover: rgba(255, 255, 255, 0.7);
-  --chip: rgba(255, 255, 255, 0.68);
-  --shadow: rgba(8, 70, 110, 0.18);
-  --lived: #58a5cc;
-  --ahead: rgba(255, 255, 255, 0.62);
+  --bg: #eef2f6;
+  --surface: rgba(255, 255, 255, 0.74);
+  --surface2: rgba(255, 255, 255, 0.5);
+  --border: rgba(24, 38, 56, 0.11);
+  --border2: rgba(24, 38, 56, 0.07);
+  --ink: #171b21;
+  --muted: #5c6672;
+  --faint: #8b95a1;
+  --faint2: #a5aeb9;
+  --hover: rgba(58, 120, 190, 0.09);
+  --chip: rgba(255, 255, 255, 0.72);
+  --shadow: rgba(20, 34, 54, 0.1);
+  --lived: #3f6ea8;
+  --ahead: rgba(24, 38, 56, 0.08);
 
-  /* Sun, sky and grass — the era's three colours, not just blue. */
-  --primary: #0b8fd4;
-  --tasks: #ef6a52;
-  --habits: #45c452;
-  --goals: #7a6bf0;
-  --projects: #12a5e8;
-  --notes: #ffc21a;
+  /* One accent, and five semantics that only ever land on data. Pulled
+     roughly 15% out of the Aero versions — they were mixing over white
+     panels then and sit on near-white glass now. */
+  --primary: #3170c8;
+  --tasks: #cb5540;
+  --habits: #38875a;
+  --goals: #6357bd;
+  --projects: #2b78a8;
+  --notes: #c2871f;
+
+  /* Depth tokens. `--rim` is the hairline every surface shares; `--lip` is
+     the one-pixel catch of light along a top edge; `--aura` is the only
+     place the old theme is allowed to show through. */
+  --rim: rgba(255, 255, 255, 0.75);
+  --lip: rgba(255, 255, 255, 0.85);
+  --edge: rgba(24, 38, 56, 0.1);
+  --aura: rgba(70, 155, 220, 0.3);
+  --well: rgba(255, 255, 255, 0.85);
+  --icon-emboss: rgba(255, 255, 255, 0.55);
 }
 
 [data-theme="dark"] {
-  /* Deep ocean rather than modern charcoal, so dark mode still belongs to
-     the same world. */
-  --bg: #04263c;
-  --surface: rgba(12, 48, 74, 0.72);
-  --surface2: rgba(8, 38, 60, 0.6);
-  --border: rgba(120, 190, 230, 0.28);
-  --border2: rgba(120, 190, 230, 0.16);
-  --ink: #e8f7ff;
-  --muted: #9fc9de;
-  --faint: #6b9cb6;
-  --faint2: #4f7f99;
-  --hover: rgba(30, 80, 115, 0.6);
-  --chip: rgba(20, 62, 92, 0.7);
-  --shadow: rgba(0, 20, 40, 0.5);
-  --lived: #3f88ad;
-  --ahead: rgba(10, 45, 70, 0.55);
+  --bg: #10151a;
+  --surface: rgba(30, 39, 49, 0.72);
+  --surface2: rgba(22, 30, 38, 0.6);
+  --border: rgba(150, 180, 210, 0.16);
+  --border2: rgba(150, 180, 210, 0.1);
+  --ink: #e7ebf0;
+  --muted: #9aa6b4;
+  --faint: #737f8c;
+  --faint2: #5b6774;
+  --hover: rgba(90, 160, 225, 0.14);
+  --chip: rgba(46, 58, 71, 0.7);
+  --shadow: rgba(0, 6, 14, 0.5);
+  --lived: #4b83c4;
+  --ahead: rgba(150, 180, 210, 0.09);
 
-  --primary: #4cc4f5;
-  --tasks: #ff8a72;
-  --habits: #5fe07a;
-  --goals: #a99bff;
-  --projects: #4cc4f5;
-  --notes: #ffd257;
+  --primary: #5fa3ee;
+  --tasks: #e3775f;
+  --habits: #57b37c;
+  --goals: #9184e0;
+  --projects: #4fa3cf;
+  --notes: #dda63f;
+
+  --rim: rgba(190, 215, 240, 0.14);
+  --lip: rgba(200, 225, 250, 0.13);
+  --edge: rgba(0, 8, 16, 0.5);
+  --aura: rgba(80, 165, 235, 0.28);
+  --well: rgba(10, 17, 24, 0.5);
+  --icon-emboss: rgba(0, 10, 20, 0.35);
 }
 
-/* Type. Segoe UI and Consolas are named first, so a Windows machine renders
-   the real Windows 7 faces and never downloads anything; everyone else gets
-   the closest free stand-ins (see app/layout.tsx). Both `font-sans` and
-   `font-mono` utilities read these, so the swap reaches the whole app rather
-   than only what inherits from body. */
+/* Native UI type. A "modern OS" direction should use the OS's own face —
+   that is the whole conceit — so this resolves to San Francisco on a Mac,
+   Segoe UI on Windows, Roboto on Android. Nothing is downloaded for it. */
 @theme inline {
   --font-sans:
-    "Segoe UI", var(--font-opensans), system-ui, -apple-system, sans-serif;
-  --font-mono: "Consolas", var(--font-inconsolata), ui-monospace, monospace;
+    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius-card: 12px;
+  --radius-input: 8px;
+  --radius-omni: 14px;
 }
 
-/* The landscape, fixed behind everything. Pure gradients — no images, no
-   requests, and it scales to any page height. */
+/* The ground. Neutral for 80% of its height, with the faintest turn toward
+   aqua at the foot — the one place the old sky survives. No sun, no bubbles,
+   nothing in motion: a background that moves is a background you notice. */
 body {
   background: linear-gradient(
-    180deg,
-    #2fa8e8 0%,
-    #7fd0f5 14%,
-    #b6e8fb 32%,
-    #dcf5ff 52%,
-    #e9fbf1 72%,
-    #b2e894 90%,
-    #74cf55 100%
+    168deg,
+    #f4f7fa 0%,
+    #eceff4 38%,
+    #e7edf1 70%,
+    #e4eef0 100%
   );
   background-attachment: fixed;
   font-family: var(--font-sans);
 }
 
 [data-theme="dark"] body {
-  background: linear-gradient(
-    180deg,
-    #01121f 0%,
-    #04263c 35%,
-    #063049 65%,
-    #0a3f4a 100%
-  );
+  background: linear-gradient(168deg, #0e1317 0%, #121a20 55%, #101a1e 100%);
   background-attachment: fixed;
 }
 
-/* Sun bloom, bubbles and a green glow at the foot. */
-body::before {
-  content: "";
-  position: fixed;
-  inset: -8%;
-  z-index: -1;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      circle at 14% 22%,
-      rgba(255, 255, 255, 0.7) 0 0.7%,
-      transparent 1.1%
-    ),
-    radial-gradient(
-      circle at 74% 15%,
-      rgba(255, 255, 255, 0.6) 0 0.5%,
-      transparent 0.9%
-    ),
-    radial-gradient(
-      circle at 58% 44%,
-      rgba(255, 255, 255, 0.45) 0 0.9%,
-      transparent 1.3%
-    ),
-    radial-gradient(
-      circle at 31% 72%,
-      rgba(255, 255, 255, 0.4) 0 0.7%,
-      transparent 1.1%
-    ),
-    radial-gradient(
-      ellipse 40% 30% at 90% 4%,
-      rgba(255, 226, 120, 0.5),
-      transparent 68%
-    ),
-    radial-gradient(
-      ellipse 70% 26% at 50% 100%,
-      rgba(120, 220, 90, 0.35),
-      transparent 74%
-    );
-  animation: aeroDriftApp 30s ease-in-out infinite alternate;
-}
-
-@keyframes aeroDriftApp {
-  from {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  to {
-    transform: translate3d(-1%, -2%, 0) scale(1.03);
-  }
-}
-
-/* Open up the shell so the landscape shows through. Only the background use
-   is neutralised — `text-background` keeps its colour, so white-on-dark
-   labels stay readable. */
 .bg-background {
   background-color: transparent !important;
 }
 
-/* Glass: any surface the app already paints gets a blurred backdrop and a
-   lit top edge. Applied to the utilities rather than to components, so no
-   component had to change. */
+/* ── Surfaces ─────────────────────────────────────────────────────────────
+   One recipe, used everywhere: a blurred translucent ground, a hairline rim,
+   a lit top edge, and a shadow with two terms — a tight contact shadow and a
+   wide soft one. That pair is what actually reads as "floating"; a single
+   large blur reads as fog. */
 .bg-surface,
 .bg-surface2 {
-  backdrop-filter: blur(16px) saturate(170%);
-  -webkit-backdrop-filter: blur(16px) saturate(170%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(20px) saturate(150%);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
 }
 
-/* Softer, rounder, floatier — Aero's corners are generous where 1998's were
-   square. Only radii the app already expresses in tokens are touched. */
-@theme inline {
-  --radius-card: 16px;
-  --radius-input: 12px;
-  --radius-omni: 18px;
-}
-
-/* Press and lift. Transform only, so nothing can reflow. */
-button:not(:disabled),
-[role="button"]:not([aria-disabled="true"]) {
-  transition:
-    transform 160ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 160ms cubic-bezier(0.22, 1, 0.36, 1),
-    background-color 160ms ease;
-}
-button:not(:disabled):active,
-[role="button"]:not([aria-disabled="true"]):active {
-  transform: translateY(1px) scale(0.99);
-}
-
-/* The capture bar's halo becomes an aqua bloom that breathes. */
-.omni-box:focus-within {
-  animation: none;
-  box-shadow:
-    0 0 0 4px color-mix(in oklch, var(--omni-accent) 24%, transparent),
-    0 10px 30px rgba(6, 68, 110, 0.24);
-}
-
-/* ── Aero character ───────────────────────────────────────────────────────
-   The palette alone left it looking like the old app in blue. This is what
-   makes it 2006: gloss sweeps, spherical dots, tube gauges, lit edges.
-
-   Every highlight below is driven by variables rather than hardcoded white.
-   The first pass hardcoded rgba(255,255,255,…) everywhere, which is right on
-   a light ground and destroys a dark one — dark mode came out with washed
-   panels and unreadable headers. See THEME-QA.md §3. */
-
-:root {
-  --gloss-hi: rgba(255, 255, 255, 0.75);
-  --gloss-mid: rgba(255, 255, 255, 0.28);
-  --gloss-lo: rgba(255, 255, 255, 0.18);
-  --sheen: rgba(255, 255, 255, 0.6);
-  --edge: rgba(255, 255, 255, 0.85);
-  /* A border that is actually visible on the surfaces it sits on. The
-     translucent-white `--border` works as a panel rim and disappears
-     completely on controls, which is how the checkboxes lost their
-     outlines. */
-  --control-edge: rgba(70, 130, 170, 0.5);
-  --hair: rgba(120, 180, 215, 0.35);
-  --panel-head: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.92) 0%,
-    rgba(219, 241, 254, 0.9) 45%,
-    rgba(178, 219, 246, 0.85) 50%,
-    rgba(206, 234, 251, 0.9) 100%
-  );
-}
-
-[data-theme="dark"] {
-  --gloss-hi: rgba(255, 255, 255, 0.16);
-  --gloss-mid: rgba(255, 255, 255, 0.06);
-  --gloss-lo: rgba(255, 255, 255, 0.04);
-  --sheen: rgba(150, 220, 255, 0.1);
-  --edge: rgba(160, 220, 255, 0.22);
-  --control-edge: rgba(150, 215, 255, 0.45);
-  --hair: rgba(140, 205, 245, 0.18);
-  --panel-head: linear-gradient(
-    180deg,
-    rgba(70, 140, 185, 0.42) 0%,
-    rgba(38, 96, 140, 0.4) 45%,
-    rgba(12, 54, 86, 0.5) 50%,
-    rgba(28, 82, 122, 0.42) 100%
-  );
-}
-
-/* Panels: a sheen down the top edge and a lift on hover. Radius is left
-   alone — forcing it larger pushed header strips out of alignment with the
-   corners they were meant to follow (THEME-QA.md §5). */
 .bg-surface {
   background-color: var(--surface) !important;
-  background-image: linear-gradient(180deg, var(--sheen) 0%, transparent 28px);
+  border-color: var(--rim) !important;
   box-shadow:
-    0 6px 18px var(--shadow),
-    inset 0 1px 0 var(--edge);
+    inset 0 1px 0 var(--lip),
+    0 1px 2px var(--shadow),
+    0 10px 26px -6px var(--shadow);
 }
 
-/* Panel headings: a real titlebar. `WidgetHeader` bleeds out to the panel's
-   padding on three sides, so the strip meets the panel edge and contains the
-   panel's own controls — the day pager, the "Meeting" button — instead of
-   leaving them stranded beside a bar that stopped halfway.
-
-   The top corners are 12px, which is the panel's 13px radius less its 1px
-   border: the strip has to follow the corner it sits in exactly (§5). */
-.widget-head {
-  background-image: var(--panel-head);
-  border-bottom: 1px solid var(--btn-rim);
-  box-shadow: inset 0 1px 0 var(--edge);
-  border-radius: 12px 12px 0 0;
-}
-/* The title link inside the bar must not paint a second strip on top of it. */
-.widget-head > * > a:hover,
-.widget-head > a:hover {
-  background-color: var(--gloss-mid) !important;
-}
-
-/* Progress fills: glass tubes. */
-[style*="width"].h-full,
-.h-full.bg-tasks,
-.h-full.bg-habits,
-.h-full.bg-goals,
-.h-full.bg-projects {
-  background-image: linear-gradient(
-    180deg,
-    var(--gloss-hi) 0%,
-    var(--gloss-mid) 48%,
-    transparent 52%,
-    var(--gloss-lo) 100%
-  ) !important;
-  border-radius: 999px !important;
-  box-shadow: inset 0 1px 0 var(--edge);
-}
-
-/* Small round swatches become glass beads. */
-.rounded-full.h-2,
-.rounded-full.h-2\.5,
-.rounded-full.h-3,
-.rounded-full.h-\[6px\],
-.rounded-full.w-2,
-.rounded-full.w-3 {
-  background-image: radial-gradient(
-    circle at 32% 26%,
-    var(--gloss-hi) 0%,
-    var(--gloss-mid) 38%,
-    transparent 62%
-  ) !important;
-  box-shadow: inset 0 -1px 2px rgba(0, 40, 70, 0.25);
-}
-
-/* Habit heat cells: rounder and glossier, still ordered. */
-.rounded-\[3px\] {
-  border-radius: 5px !important;
-  background-image: linear-gradient(
-    180deg,
-    var(--gloss-mid) 0%,
-    transparent 55%
-  );
-}
-
-/* Controls need an edge that survives a translucent surface. */
-.border-border {
-  border-color: var(--control-edge) !important;
-}
-/* …but a panel rim should stay soft, so panels opt back out. */
-.bg-surface.border-border,
-.rounded-\[13px\].border-border {
-  border-color: var(--hair) !important;
-}
-
-/* Placeholder rows are painted with `bg-border`, which is now translucent —
-   invisible on the panels they sit on. */
-.bg-border {
-  background-color: var(--hair) !important;
-}
-
-/* Dark chips become aqua jelly; a black rectangle in a sky was the last
-   thing anchoring this to the old palette. */
-.bg-ink {
-  background-color: transparent !important;
-  background-image:
-    linear-gradient(
-      180deg,
-      var(--gloss-hi) 0%,
-      transparent 50%,
-      var(--gloss-lo) 100%
-    ),
-    linear-gradient(180deg, #2fd0ee 0%, #0d95d8 52%, #2fb955 100%) !important;
-  border-radius: 999px !important;
-  box-shadow:
-    0 4px 12px rgba(8, 130, 180, 0.32),
-    inset 0 1px 0 var(--edge);
-  text-shadow: 0 1px 2px rgba(3, 80, 120, 0.45);
-}
-.bg-ink.h-7.w-7,
-.bg-ink.w-7 {
-  border-radius: 12px !important;
-}
-
-/* Capture bar: a glass pill with an aqua rim. */
-.omni-box {
-  border-radius: 999px !important;
-  border-color: var(--control-edge) !important;
-  background-image: linear-gradient(180deg, var(--sheen) 0%, transparent 100%);
-}
-
-/* Sidebar active space: a lit pill. */
-aside .bg-surface {
-  background-image: var(--panel-head);
-  box-shadow:
-    0 3px 8px var(--shadow),
-    inset 0 1px 0 var(--edge);
-}
-
-/* Quiet buttons and segmented controls: a frosted face. */
-.bg-hover {
-  background-image: linear-gradient(
-    180deg,
-    var(--gloss-mid) 0%,
-    transparent 100%
-  );
-}
-
-/* The streak card: sunset glass rather than a black box. */
-.bg-\[\#1b1a18\] {
-  background-color: transparent !important;
-  background-image:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.4) 0%,
-      transparent 50%,
-      rgba(255, 255, 255, 0.12) 100%
-    ),
-    linear-gradient(150deg, #ffb01f 0%, #ff7a3d 55%, #f2544f 100%) !important;
-  border-color: rgba(255, 255, 255, 0.6) !important;
-  box-shadow:
-    0 8px 22px rgba(210, 90, 40, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  text-shadow: 0 1px 3px rgba(140, 50, 10, 0.45);
-}
-/* Its muted greys were chosen for a black card and vanish on amber. */
-.bg-\[\#1b1a18\] .text-faint,
-.bg-\[\#1b1a18\] .text-faint2,
-.bg-\[\#1b1a18\] .text-muted {
-  color: rgba(255, 255, 255, 0.92) !important;
-}
-
-/* `text-background` is how the app writes "knocked-out text on a coloured
-   chip". It resolves to --bg, which is light on a light theme and DARK on a
-   dark one — so in dark mode the type chip became dark text on a saturated
-   red. It needs to stay knocked-out in both themes, so it gets a value of
-   its own rather than borrowing the page background. */
-[data-theme="dark"] .text-background {
-  color: #f2fbff !important;
-}
-
-/* Placeholders and hints sit on glass, which eats contrast. */
-::placeholder {
-  color: var(--faint) !important;
-  opacity: 1;
-}
-
-/* Panels lift on hover. */
+/* Panels lift, controls do not. */
 .rounded-\[13px\].border.bg-surface {
   transition:
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 .rounded-\[13px\].border.bg-surface:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px);
   box-shadow:
-    0 12px 28px var(--shadow),
-    inset 0 1px 0 var(--edge);
+    inset 0 1px 0 var(--lip),
+    0 2px 4px var(--shadow),
+    0 16px 34px -8px var(--shadow);
 }
 
-/* ── Controls: the Windows 7 face ────────────────────────────────────────
-   Aero's buttons are not flat rectangles with a tint. They are a two-stop
-   face — light above a crisp midline, deeper below it — with a white lip on
-   the top edge and a hairline rim. Everything else in the theme is glass;
-   without this the controls were the one thing still reading as 2024.
-
-   These are variables rather than literals for the same reason the gloss is:
-   a hardcoded white face is right on light and destroys dark (§3). */
-:root {
-  --btn-face: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 0.96) 0%,
-    rgba(232, 246, 253, 0.88) 47%,
-    rgba(193, 226, 245, 0.88) 50%,
-    rgba(221, 241, 252, 0.92) 100%
-  );
-  --btn-face-hover: linear-gradient(
-    180deg,
-    rgba(255, 255, 255, 1) 0%,
-    rgba(233, 247, 254, 0.95) 47%,
-    rgba(197, 231, 250, 0.95) 50%,
-    rgba(223, 243, 254, 1) 100%
-  );
-  --btn-face-active: linear-gradient(
-    180deg,
-    rgba(198, 226, 243, 1) 0%,
-    rgba(178, 213, 236, 1) 47%,
-    rgba(160, 201, 229, 1) 50%,
-    rgba(190, 223, 243, 1) 100%
-  );
-  --btn-lip: rgba(255, 255, 255, 0.95);
-  --btn-rim: rgba(70, 130, 170, 0.5);
-  --btn-rim-hot: rgba(45, 145, 205, 0.8);
-  --btn-glow: rgba(90, 190, 240, 0.55);
-  --icon-emboss: rgba(255, 255, 255, 0.9);
-  --well-hi: rgba(255, 255, 255, 0.55);
-  --well-lo: rgba(255, 255, 255, 0.15);
+/* ── Titlebars ───────────────────────────────────────────────────────────
+   The one concession to colour in the chrome, and it earns it: five panels
+   that look identical are five panels you have to read. This is a 12% tint
+   with the title still in ink, plus a lit edge in the accent — enough to
+   find Habits by its green without the bar shouting. */
+.widget-head {
+  --head-accent: var(--primary);
+  background-color: color-mix(in oklab, var(--head-accent) 11%, transparent);
+  border-bottom: 1px solid
+    color-mix(in oklab, var(--head-accent) 24%, transparent);
+  box-shadow: inset 0 2px 0 -1px
+    color-mix(in oklab, var(--head-accent) 55%, transparent);
+  border-radius: 12px 12px 0 0;
+}
+[data-theme="dark"] .widget-head {
+  background-color: color-mix(in oklab, var(--head-accent) 15%, transparent);
+}
+.widget-head > * > a:hover,
+.widget-head > a:hover {
+  background-color: color-mix(
+    in oklab,
+    var(--head-accent) 12%,
+    transparent
+  ) !important;
+}
+/* Section headers elsewhere — task groups, the detail pane — share it. */
+.bg-surface2\/60 {
+  background-color: color-mix(
+    in oklab,
+    var(--primary) 7%,
+    transparent
+  ) !important;
+  border-bottom-color: var(--border) !important;
 }
 
-[data-theme="dark"] {
-  --btn-face: linear-gradient(
-    180deg,
-    rgba(120, 180, 220, 0.26) 0%,
-    rgba(60, 120, 165, 0.22) 47%,
-    rgba(20, 68, 105, 0.3) 50%,
-    rgba(45, 105, 148, 0.24) 100%
-  );
-  --btn-face-hover: linear-gradient(
-    180deg,
-    rgba(140, 205, 245, 0.36) 0%,
-    rgba(75, 145, 195, 0.3) 47%,
-    rgba(28, 88, 132, 0.38) 50%,
-    rgba(58, 128, 178, 0.32) 100%
-  );
-  --btn-face-active: linear-gradient(
-    180deg,
-    rgba(10, 48, 76, 0.85) 0%,
-    rgba(14, 58, 90, 0.85) 47%,
-    rgba(8, 42, 68, 0.9) 50%,
-    rgba(16, 62, 96, 0.85) 100%
-  );
-  --btn-lip: rgba(180, 230, 255, 0.28);
-  --btn-rim: rgba(150, 215, 255, 0.45);
-  --btn-rim-hot: rgba(120, 210, 255, 0.85);
-  --btn-glow: rgba(60, 170, 230, 0.5);
-  --icon-emboss: rgba(0, 22, 38, 0.65);
-  --well-hi: rgba(2, 24, 40, 0.55);
-  --well-lo: rgba(2, 24, 40, 0.3);
-}
-
-/* Anything the app draws as a bordered or surfaced control. Element-typed so
-   it outranks the panel treatment: a `<select class="bg-surface">` was being
-   given a panel's 90px sheen on a 30px-tall box, which is where "white on a
-   gradient to white" came from — the control and its ground were the same
-   colour and the text had nothing to sit on. */
+/* ── Controls ────────────────────────────────────────────────────────────
+   A white face, a hairline, and a single-pixel contact shadow. Hover is the
+   only place the aura shows: a soft ring in the accent, the way a focused
+   surface glowed in Aero, at a tenth of the intensity. */
 :is(button, [role="button"], select, summary):is(
     .border-border,
     .border-border2,
@@ -1369,21 +1054,23 @@ aside .bg-surface {
   ):not(.border-\[1\.8px\]),
 .widget-head button:not(.bg-ink),
 select {
-  background-color: transparent !important;
-  background-image: var(--btn-face) !important;
-  border: 1px solid var(--btn-rim) !important;
-  border-radius: 6px !important;
+  background-color: var(--well) !important;
+  background-image: none !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 7px !important;
   color: var(--ink);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow:
-    inset 0 1px 0 var(--btn-lip),
-    0 1px 2px var(--shadow);
+    inset 0 1px 0 var(--lip),
+    0 1px 1px var(--shadow);
   text-shadow: none;
+  transition:
+    box-shadow 150ms ease,
+    border-color 150ms ease,
+    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-/* Hot-track: Aero lit a control from its rim inwards rather than darkening
-   it, which is why hover reads as "alive" and not as "pressed". */
 :is(button, [role="button"], select, summary):is(
     .border-border,
     .border-border2,
@@ -1393,14 +1080,12 @@ select {
   ):not(.border-\[1\.8px\]):hover:not(:disabled),
 .widget-head button:not(.bg-ink):hover,
 select:hover:not(:disabled) {
-  background-image: var(--btn-face-hover) !important;
-  border-color: var(--btn-rim-hot) !important;
+  border-color: color-mix(in oklab, var(--primary) 45%, transparent) !important;
   box-shadow:
-    inset 0 1px 0 var(--btn-lip),
-    0 0 7px var(--btn-glow);
+    inset 0 1px 0 var(--lip),
+    0 0 0 3px var(--aura);
 }
 
-/* Pressed inverts the face and sinks the lip. No geometry moves (§8). */
 :is(button, [role="button"], select, summary):is(
     .border-border,
     .border-border2,
@@ -1409,320 +1094,165 @@ select:hover:not(:disabled) {
     .bg-chip
   ):not(.border-\[1\.8px\]):active:not(:disabled),
 .widget-head button:not(.bg-ink):active {
-  background-image: var(--btn-face-active) !important;
-  box-shadow: inset 0 2px 4px rgba(10, 60, 95, 0.32);
+  transform: translateY(0.5px);
+  box-shadow: inset 0 1px 3px var(--edge);
 }
 
-/* The primary button keeps the aqua jelly it already had, but gains the same
-   hot-track and press so the two button families behave alike. */
+/* The primary button: the accent, flat, with depth from shadow rather than
+   from a gradient down its face. */
+.bg-ink {
+  background-color: var(--primary) !important;
+  background-image: none !important;
+  border-radius: 7px !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 1px 2px var(--shadow),
+    0 4px 12px -2px color-mix(in oklab, var(--primary) 40%, transparent);
+}
 .bg-ink:hover:not(:disabled) {
   box-shadow:
-    0 5px 16px rgba(8, 130, 180, 0.42),
-    inset 0 1px 0 var(--edge),
-    0 0 8px var(--btn-glow);
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 2px 4px var(--shadow),
+    0 8px 20px -3px color-mix(in oklab, var(--primary) 50%, transparent);
+}
+.bg-ink.h-7.w-7,
+.bg-ink.w-7 {
+  border-radius: 9px !important;
+}
+/* Knocked-out text on the accent stays knocked out in both themes. */
+.text-background {
+  color: #fff !important;
 }
 
-/* A panel is a panel, a control is a control. The lift belongs to the first
-   and looked like clutter on the second. */
-:is(button, select, input, textarea).bg-surface {
-  box-shadow:
-    inset 0 1px 0 var(--btn-lip),
-    0 1px 2px var(--shadow);
-}
-
-/* Text fields are the one surfaced control that must *not* look raised —
-   Aero sank them, with the shadow on the inside of the top edge. */
+/* Text fields sink; they are the one surfaced control that must not raise. */
 :is(input, textarea):is(
     .border-border,
     .border-border2,
     .bg-surface,
     .bg-surface2
   ) {
-  background-color: rgba(255, 255, 255, 0.72) !important;
+  background-color: var(--well) !important;
   background-image: none !important;
-  border: 1px solid var(--btn-rim) !important;
-  box-shadow: inset 0 2px 3px rgba(20, 70, 105, 0.14);
-}
-[data-theme="dark"]
-  :is(input, textarea):is(
-    .border-border,
-    .border-border2,
-    .bg-surface,
-    .bg-surface2
-  ) {
-  background-color: rgba(4, 30, 50, 0.55) !important;
+  border: 1px solid var(--border) !important;
+  box-shadow: inset 0 1px 2px var(--edge);
 }
 
-/* ── Edges ───────────────────────────────────────────────────────────────
-   The complaint was that some things had a visible border and some had
-   almost nothing, with shadows scattered at random. Both hairline tokens now
-   resolve to a colour that survives a translucent ground, and rings — which
-   the "today" cell uses instead of a border — follow the control rim. */
-.border-border2 {
-  border-color: var(--hair) !important;
-}
-.ring-border,
-.ring-border2 {
-  --tw-ring-color: var(--btn-rim) !important;
+/* Tick boxes: a well, never a raised face — a filled-looking empty box is
+   the bug that keeps coming back. Marked by the 1.8px border every one of
+   them carries. */
+.border-\[1\.8px\] {
+  border-color: var(--border) !important;
+  background-image: none;
+  box-shadow: inset 0 1px 2px var(--edge);
 }
 
-/* Capture bar: the pill's curve was eating its own right-hand padding, which
-   is what pushed "Add" against the edge. A generous rounded rect gives the
-   button room and is closer to what Aero actually did with search fields. */
+/* The capture bar. */
 .omni-box {
-  border-radius: 20px !important;
-  padding-left: 18px;
-  padding-right: 18px;
+  border-radius: 14px !important;
+  border-color: var(--border) !important;
+  background-color: var(--surface) !important;
+  padding-left: 16px;
+  padding-right: 16px;
+  box-shadow:
+    inset 0 1px 0 var(--lip),
+    0 2px 6px var(--shadow),
+    0 14px 34px -10px var(--shadow);
+}
+.omni-box:focus-within {
+  animation: none;
+  border-color: color-mix(in oklab, var(--omni-accent) 55%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--lip),
+    0 0 0 4px color-mix(in oklab, var(--omni-accent) 18%, transparent),
+    0 14px 34px -10px var(--shadow);
 }
 @media (min-width: 1024px) {
   .omni-box {
-    padding-left: 22px;
-    padding-right: 22px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
 }
 
-/* ── Icons ───────────────────────────────────────────────────────────────
-   Aero's icons were lit from above and sat on a soft white lip. Lucide draws
-   in `currentColor`, so a drop-shadow is the whole trick — the emboss reads
-   on every icon without touching a single component. Scoped to icons in
-   chrome; charts and the life calendar are left alone so their colour
-   encoding stays exact (§9). */
-:is(button, a[href], label, summary, aside, nav, .widget-head) svg {
-  filter: drop-shadow(0 1px 0 var(--icon-emboss));
-}
-/* Hovering a control lights its icon too, the way a Win7 toolbar did. */
-:is(button, a[href]):hover > svg,
-:is(button, a[href]):hover svg {
-  filter: drop-shadow(0 1px 0 var(--icon-emboss))
-    drop-shadow(0 0 4px var(--btn-glow));
-}
-/* Sidebar glyphs get the era's saturation rather than a flat grey. */
-aside svg {
-  filter: drop-shadow(0 1px 0 var(--icon-emboss)) saturate(1.35);
+/* ── Data ────────────────────────────────────────────────────────────────
+   Everything above is neutral so that this can be saturated. Progress
+   fills, semantic swatches and the life calendar are the only things on
+   screen carrying colour, which is what makes them readable at a glance. */
+[style*="width"].h-full {
+  border-radius: 999px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* Tick boxes are the one control that must read as a *well*, not a button:
-   they were being handed the raised button face, so an unchecked box looked
-   already filled (§1). The app marks every one of them with a 1.8px border,
-   which is what excludes them above and selects them here. */
-.border-\[1\.8px\] {
-  border-color: var(--btn-rim) !important;
-  background-image: linear-gradient(
-    180deg,
-    var(--well-hi) 0%,
-    var(--well-lo) 100%
-  );
-  box-shadow: inset 0 1px 2px rgba(20, 70, 105, 0.18);
+/* Hairlines that survive a translucent ground. */
+.border-border2 {
+  border-color: var(--border2) !important;
 }
-/* Ticked: the same aqua-jelly language as the primary button. */
-.border-\[1\.8px\].border-none,
-.border-\[1\.8px\][class*="bg-habits"],
-.border-\[1\.8px\][class*="bg-tasks"],
-.border-\[1\.8px\][class*="bg-goals"] {
-  background-image: linear-gradient(
-    180deg,
-    var(--gloss-hi) 0%,
-    var(--gloss-mid) 46%,
-    transparent 50%,
-    var(--gloss-lo) 100%
-  );
-  box-shadow:
-    inset 0 1px 0 var(--edge),
-    0 1px 3px var(--shadow);
+.bg-border {
+  background-color: var(--border) !important;
+}
+.ring-border,
+.ring-border2 {
+  --tw-ring-color: var(--border) !important;
 }
 
-/* Section headers that aren't widget titlebars — task group headers, the
-   detail pane's heading — are the same kind of thing and were left as a
-   near-invisible tint. They get the band too, so a header looks like a
-   header everywhere rather than only on the home grid. */
-.bg-surface2\/60 {
-  background-color: transparent !important;
-  background-image: var(--panel-head) !important;
-  border-bottom-color: var(--btn-rim) !important;
-  box-shadow: inset 0 1px 0 var(--edge);
-}
-
-/* ── Coloured titlebars ──────────────────────────────────────────────────
-   Each panel's bar wears the panel's own semantic colour, the way the
-   landing miniature does: you find Habits by looking for the green bar, not
-   by reading five identical strips. The colour arrives as `--head-accent`
-   from the component; a bar without one keeps the neutral glass band. */
-.widget-head[style*="--head-accent"] {
-  background-image:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.5) 0%,
-      rgba(255, 255, 255, 0.2) 46%,
-      rgba(0, 0, 0, 0.07) 50%,
-      rgba(255, 255, 255, 0.24) 100%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--head-accent) 82%, white) 0%,
-      var(--head-accent) 100%
-    );
-  border-bottom-color: color-mix(in oklab, var(--head-accent) 65%, black);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.6),
-    0 1px 3px var(--shadow);
-}
-
-/* Everything written on a saturated bar goes white — the muted greys were
-   chosen for a pale surface and are illegible here (§2). */
-.widget-head[style*="--head-accent"],
-.widget-head[style*="--head-accent"] :is(h3, span, a, p) {
-  color: #fff !important;
-  text-shadow: 0 1px 2px rgba(0, 30, 55, 0.35);
-}
-
-/* The swatch beside the title said "this panel is tasks" — the bar says it
-   now, and a red dot on a red bar is invisible. It stays as a shape. */
-.widget-head[style*="--head-accent"] :is(h3, span, a) + span[class*="h-2.5"],
-.widget-head[style*="--head-accent"] span[class*="h-2.5"][class*="w-2.5"] {
-  background-color: rgba(255, 255, 255, 0.9) !important;
-  background-image: radial-gradient(
-    circle at 32% 26%,
-    #fff 0%,
-    rgba(255, 255, 255, 0.55) 60%,
-    transparent 100%
-  ) !important;
-  box-shadow: inset 0 -1px 2px rgba(0, 40, 70, 0.3);
-}
-
-/* The progress gauge in the tasks bar: its fill was `bg-tasks` on a
-   `bg-border2` track, and both vanish on a tasks-coloured bar. */
-.widget-head[style*="--head-accent"] [class*="rounded-full"][class*="h-1.5"] {
-  background-color: rgba(0, 30, 55, 0.28) !important;
-  box-shadow: inset 0 1px 2px rgba(0, 30, 55, 0.35);
-}
-.widget-head[style*="--head-accent"] [style*="width"].h-full {
-  background-color: #fff !important;
-  background-image: linear-gradient(
-    180deg,
-    #fff 0%,
-    rgba(255, 255, 255, 0.85) 48%,
-    rgba(255, 255, 255, 0.65) 52%,
-    rgba(255, 255, 255, 0.9) 100%
-  ) !important;
-}
-
-/* Buttons keep their light Win7 face — a pale control on a coloured strip is
-   exactly what a Vista toolbar looked like — but their text must not follow
-   the white rule above. */
-.widget-head[style*="--head-accent"] :is(button, select) {
-  color: var(--ink) !important;
-  text-shadow: none;
-}
-.widget-head[style*="--head-accent"] :is(button, select) svg {
-  color: var(--ink);
-}
-
-/* ── Hover, visibly ──────────────────────────────────────────────────────
-   `--hover` is an opaque near-white picked for an opaque near-white surface.
-   On glass, over a sky, it is very nearly nothing: hovering an agenda day or
-   a goal row changed almost no pixels. Aero's answer was a lit rim, not a
-   fill, so hover gets both — a tint you can actually see, plus the rim. */
-:root {
-  --hover: rgba(120, 195, 240, 0.32);
-}
-[data-theme="dark"] {
-  --hover: rgba(120, 200, 250, 0.2);
-}
+/* Hover you can actually see. The old value was an opaque near-white chosen
+   for opaque near-white surfaces; on glass it changed almost nothing. */
 .hover\:bg-hover:hover,
 .bg-hover {
   background-color: var(--hover) !important;
-  background-image: linear-gradient(
-    180deg,
-    var(--gloss-mid) 0%,
-    transparent 100%
-  );
-  box-shadow:
-    inset 0 0 0 1px var(--btn-rim),
-    inset 0 1px 0 var(--btn-lip);
+  background-image: none;
 }
-
-/* Cards whose only hover cue is a hairline going one shade darker. That is a
-   legible cue on opaque paper and almost nothing on glass over a sky — goal
-   cards, project cards and task rows all read as inert. Aero's cue was a lit
-   rim, which survives any ground. */
 .hover\:border-faint2:hover,
 .hover\:border-faint:hover {
-  border-color: var(--btn-rim-hot) !important;
-  box-shadow:
-    0 0 9px var(--btn-glow),
-    inset 0 1px 0 var(--btn-lip),
-    0 4px 12px var(--shadow);
+  border-color: color-mix(in oklab, var(--primary) 40%, transparent) !important;
+  box-shadow: 0 0 0 3px var(--aura);
 }
 
-/* Dark mode's accent tokens are already the bright end of each hue, so the
-   light recipe — mix toward white — produced pastel bars with white text on
-   them. Dark bars mix toward black instead and keep the same white type. */
-[data-theme="dark"] .widget-head[style*="--head-accent"] {
-  background-image:
-    linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.18) 0%,
-      rgba(255, 255, 255, 0.07) 46%,
-      rgba(0, 0, 0, 0.22) 50%,
-      rgba(255, 255, 255, 0.08) 100%
-    ),
-    linear-gradient(
-      180deg,
-      color-mix(in oklab, var(--head-accent) 58%, black) 0%,
-      color-mix(in oklab, var(--head-accent) 36%, black) 100%
-    );
-  border-bottom-color: color-mix(in oklab, var(--head-accent) 45%, black);
+/* The streak card keeps its warmth — it is the one celebratory surface in
+   the app — but as a flat amber rather than a sunset. */
+.bg-\[\#1b1a18\] {
+  background-color: #c8761f !important;
+  background-image: none !important;
+  border-color: rgba(255, 255, 255, 0.28) !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    0 1px 3px var(--shadow);
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 8px 22px -6px rgba(160, 90, 20, 0.4);
+  text-shadow: none;
+}
+.bg-\[\#1b1a18\] .text-faint,
+.bg-\[\#1b1a18\] .text-faint2,
+.bg-\[\#1b1a18\] .text-muted {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+/* Placeholders sit on glass, which eats contrast. */
+::placeholder {
+  color: var(--faint) !important;
+  opacity: 1;
+}
+
+/* Icons: lit from above by a hair, no glow, no saturation boost. */
+:is(button, a[href], label, summary, aside, nav, .widget-head) svg {
+  filter: drop-shadow(0 1px 0 var(--icon-emboss));
 }
 
 /* ── The tour ────────────────────────────────────────────────────────────
-   The tutorial is the one place the app draws a keyboard, and its keycap was
-   a flat tinted rectangle with a thick bottom border. Aero's keys were
-   moulded: a domed face, a white lip along the top, and a base the cap sits
-   on that shortens when it goes down.
-
-   Painted here rather than on the component because it is presentation —
-   the press animation, which already varies `border-bottom-width`, stays
-   where it is. */
+   A keycap still has to look like a key — that is the one place a moulded
+   control is literally correct — but it loses the gloss with everything
+   else. The scrim goes neutral. */
 .tutorial-key {
-  background-color: transparent !important;
-  background-image: var(--btn-face) !important;
-  border-color: var(--btn-rim) !important;
-  border-bottom-color: color-mix(
-    in oklab,
-    var(--btn-rim) 70%,
-    black
-  ) !important;
-  border-radius: 9px;
+  background-color: var(--well) !important;
+  background-image: none !important;
+  border-color: var(--border) !important;
+  border-bottom-color: var(--edge) !important;
+  border-radius: 8px;
   box-shadow:
-    inset 0 1px 0 var(--btn-lip),
-    inset 0 -3px 6px rgba(20, 70, 105, 0.12),
-    0 3px 6px var(--shadow);
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
-}
-[data-theme="dark"] .tutorial-key {
+    inset 0 1px 0 var(--lip),
+    0 2px 4px var(--shadow);
   text-shadow: none;
 }
-
-/* The tour's own cards: the same glass as a panel, plus the halo Aero used
-   for "this is the thing you are being asked about". */
-.tutorial-in > div,
-[class*="max-w-[560px]"].bg-surface {
-  backdrop-filter: blur(18px) saturate(170%);
-  -webkit-backdrop-filter: blur(18px) saturate(170%);
-}
-
-/* The dim behind it. A flat black wash over a sky reads as a dead screen;
-   Aero's modal scrims kept the colour underneath and drowned it instead. */
 .bg-black\/70,
 .bg-black\/55,
 .bg-black\/50 {
-  background-color: rgba(6, 42, 68, 0.62) !important;
-  background-image: radial-gradient(
-    ellipse 80% 60% at 50% 40%,
-    rgba(40, 130, 185, 0.35),
-    transparent 70%
-  );
+  background-color: rgba(12, 20, 30, 0.6) !important;
+  background-image: none;
 }

@@ -37,11 +37,13 @@ function Aero({
   return (
     <svg viewBox="0 0 24 24" aria-hidden focusable="false" {...rest}>
       <defs>
+        {/* A whisper, not a shine. The hard midline is gone — that split was
+            the single most 2006 thing about these, and at 16px it read as a
+            highlight stuck to the glyph rather than light falling on it. */}
         <linearGradient id="aeroGloss" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0.62" />
-          <stop offset="47%" stopColor="#fff" stopOpacity="0.17" />
-          <stop offset="47%" stopColor="#000" stopOpacity="0.11" />
-          <stop offset="100%" stopColor="#fff" stopOpacity="0.26" />
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.26" />
+          <stop offset="55%" stopColor="#fff" stopOpacity="0.06" />
+          <stop offset="100%" stopColor="#000" stopOpacity="0.07" />
         </linearGradient>
       </defs>
       <path d={d} fill="currentColor" fillRule="evenodd" />
