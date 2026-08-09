@@ -877,9 +877,9 @@ html {
   --border: rgba(22, 38, 58, 0.095);
   --border2: rgba(22, 38, 58, 0.055);
   --ink: #171b21;
-  --muted: #5c6672;
-  --faint: #8b95a1;
-  --faint2: #a5aeb9;
+  --muted: #4e5866;
+  --faint: #7b8695;
+  --faint2: #98a2ae;
   --hover: rgba(58, 120, 190, 0.09);
   --chip: rgba(255, 255, 255, 0.72);
   --shadow: rgba(20, 34, 54, 0.1);
@@ -925,9 +925,9 @@ html {
   --border: rgba(168, 202, 238, 0.13);
   --border2: rgba(168, 202, 238, 0.075);
   --ink: #e7ebf0;
-  --muted: #9aa6b4;
-  --faint: #737f8c;
-  --faint2: #5b6774;
+  --muted: #a6b2c0;
+  --faint: #808d9b;
+  --faint2: #68747f;
   --hover: rgba(90, 160, 225, 0.14);
   --chip: rgba(46, 58, 71, 0.7);
   --shadow: rgba(0, 6, 14, 0.5);
@@ -1055,7 +1055,7 @@ body {
 .bg-surface2\/60 {
   background-color: color-mix(
     in oklab,
-    var(--primary) 7%,
+    var(--primary) 12%,
     transparent
   ) !important;
   border-bottom-color: var(--border) !important;

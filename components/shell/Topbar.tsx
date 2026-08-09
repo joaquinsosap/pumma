@@ -88,21 +88,34 @@ export function Topbar({
           label="DAY DONE"
           href={statLinks?.dayDone}
         />
+        <StatRule />
         <Stat
           value={habitsLabel}
           label="HABITS"
-          className="border-l border-border text-habits"
+          className="text-habits"
           href={statLinks?.habits}
         />
+        <StatRule />
         <Stat
           value={`${topStreak}🔥`}
           label="STREAK"
-          className="border-l border-border"
           href={statLinks?.streak}
         />
       </div>
     </div>
   );
+}
+
+/**
+ * The rule between two stats.
+ *
+ * These used to be a `border-l` on the stat itself, but a stat is
+ * `rounded-lg` — and a left border on a rounded box curves into the top and
+ * bottom borders that aren't there, so each one tapered off into a hook at
+ * both ends. A separate element is a straight line and stays one.
+ */
+function StatRule() {
+  return <span aria-hidden className="h-7 w-px shrink-0 bg-border" />;
 }
 
 function Stat({
@@ -134,7 +147,7 @@ function Stat({
         href={href}
         className={cn(
           "flex-1 rounded-lg px-2.5 py-1 text-right transition-colors hover:bg-hover sm:flex-none sm:px-4",
-          className
+          className,
         )}
       >
         {inner}
@@ -143,7 +156,9 @@ function Stat({
   }
 
   return (
-    <div className={cn("flex-1 px-2.5 text-right sm:flex-none sm:px-4", className)}>
+    <div
+      className={cn("flex-1 px-2.5 text-right sm:flex-none sm:px-4", className)}
+    >
       {inner}
     </div>
   );
