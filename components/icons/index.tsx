@@ -6,42 +6,42 @@
  * name points at and everywhere follows.
  *
  * Names, props and sizes are lucide's, so nothing at a call site knows which
- * icons are drawn and which are lucide's — the Aero ones take `className`
+ * icons are drawn and which are lucide's — the drawn ones take `className`
  * and their colour from `currentColor` exactly the same way.
  *
- * The drawn set is in ./aero. It grows; the re-exports below shrink to
+ * The drawn set is in ./glyphs. It grows; the re-exports below shrink to
  * match. An icon still coming from lucide is one nobody has drawn yet, not a
  * decision.
  */
 export {
-  AeroArrowLeft as ArrowLeft,
-  AeroAssistant as Sparkles,
-  AeroCalendar as Calendar,
-  AeroCalendar as CalendarDays,
-  AeroGoals as Target,
-  AeroHabits as CircleCheck,
-  AeroHabits as CheckCircle2,
-  AeroHome as Home,
-  AeroHome as House,
-  AeroLifeCalendar as Hourglass,
-  AeroNotes as StickyNote,
-  AeroNotes as FileText,
-  AeroProjects as Folder,
-  AeroProjects as FolderKanban,
-  AeroTasks as ListTodo,
-  AeroTasks as ListChecks,
-  AeroCheck as Check,
-  AeroChevronDown as ChevronDown,
-  AeroChevronLeft as ChevronLeft,
-  AeroChevronRight as ChevronRight,
-  AeroClose as X,
-  AeroEnter,
-  AeroPencil as Pencil,
-  AeroPlay as Play,
-  AeroPlus as Plus,
-  AeroSearch as Search,
-  AeroTrash as Trash2,
-} from "./aero";
+  ArrowLeftGlyph as ArrowLeft,
+  AssistantGlyph as Sparkles,
+  CalendarGlyph as Calendar,
+  CalendarGlyph as CalendarDays,
+  GoalsGlyph as Target,
+  HabitsGlyph as CircleCheck,
+  HabitsGlyph as CheckCircle2,
+  HomeGlyph as Home,
+  HomeGlyph as House,
+  LifeCalendarGlyph as Hourglass,
+  NotesGlyph as StickyNote,
+  NotesGlyph as FileText,
+  ProjectsGlyph as Folder,
+  ProjectsGlyph as FolderKanban,
+  TasksGlyph as ListTodo,
+  TasksGlyph as ListChecks,
+  CheckGlyph as Check,
+  ChevronDownGlyph as ChevronDown,
+  ChevronLeftGlyph as ChevronLeft,
+  ChevronRightGlyph as ChevronRight,
+  CloseGlyph as X,
+  EnterGlyph as EnterKey,
+  PencilGlyph as Pencil,
+  PlayGlyph as Play,
+  PlusGlyph as Plus,
+  SearchGlyph as Search,
+  TrashGlyph as Trash2,
+} from "./glyphs";
 
 export {
   Briefcase,

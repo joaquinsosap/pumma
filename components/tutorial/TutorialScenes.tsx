@@ -10,7 +10,7 @@
 // server — it's the muscle memory that has to transfer, not the data.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AeroEnter,
+  EnterKey,
   Check,
   MousePointerClick,
   Sparkles,
@@ -23,11 +23,12 @@ import {
   DATE_WORDS,
   resolveDateToken,
 } from "@/lib/date-tokens";
-import { candidatesFor, completeOmniToken, tokenAtCaret } from "@/lib/omni-complete";
 import {
-  reduceSelection,
-  type SelectionState,
-} from "@/lib/task-selection";
+  candidatesFor,
+  completeOmniToken,
+  tokenAtCaret,
+} from "@/lib/omni-complete";
+import { reduceSelection, type SelectionState } from "@/lib/task-selection";
 import { cn } from "@/lib/utils";
 
 const TASK_RED = "oklch(0.64 0.18 25)";
@@ -83,7 +84,7 @@ function Frame({
         glow
           ? "border-primary shadow-[0_0_0_4px_oklch(0.55_0.16_274/0.25),0_18px_50px_rgba(0,0,0,0.22)]"
           : "border-border shadow-[0_18px_50px_rgba(0,0,0,0.22)]",
-        className
+        className,
       )}
     >
       {children}
@@ -115,7 +116,10 @@ function tokenise(text: string) {
         <span
           key={i}
           className="rounded-[5px] px-[5px] py-px font-mono text-[13px]"
-          style={{ color: FINANCE_AMBER, background: "oklch(0.7 0.12 70 / 0.14)" }}
+          style={{
+            color: FINANCE_AMBER,
+            background: "oklch(0.7 0.12 70 / 0.14)",
+          }}
         >
           {word}
         </span>
@@ -123,14 +127,21 @@ function tokenise(text: string) {
     }
     if (word.startsWith("!") && word.length > 1) {
       return (
-        <span key={i} className="font-mono text-[13px]" style={{ color: TASK_RED }}>
+        <span
+          key={i}
+          className="font-mono text-[13px]"
+          style={{ color: TASK_RED }}
+        >
           {word}
         </span>
       );
     }
     if (DAY_RE.test(word)) {
       return (
-        <span key={i} className="text-primary underline decoration-dotted underline-offset-4">
+        <span
+          key={i}
+          className="text-primary underline decoration-dotted underline-offset-4"
+        >
           {word}
         </span>
       );
@@ -155,7 +166,7 @@ function Row({
     <div
       className={cn(
         "flex items-center gap-2.5 rounded-lg border border-border2 bg-surface px-3 py-2.5",
-        className
+        className,
       )}
       style={{ borderLeft: `3px solid ${accent}`, ...style }}
       {...rest}
@@ -186,17 +197,15 @@ const DEMO_TAGS = ["prime", "pumma", "personal"];
 
 /** The days that cycle beside the caret while you pick one. */
 const DAY_SUGGESTIONS = [
-  "friday", "tomorrow", "monday", "yesterday", "saturday", "wednesday",
+  "friday",
+  "tomorrow",
+  "monday",
+  "yesterday",
+  "saturday",
+  "wednesday",
 ];
 
-
-
-type CaptureStep =
-  | "title"
-  | "dayHash"
-  | "dayWord"
-  | "tagHash"
-  | "tagWord";
+type CaptureStep = "title" | "dayHash" | "dayWord" | "tagHash" | "tagWord";
 
 const STEP_ORDER: CaptureStep[] = [
   "title",
@@ -205,8 +214,6 @@ const STEP_ORDER: CaptureStep[] = [
   "tagHash",
   "tagWord",
 ];
-
-
 
 /**
  * The one key each step is waiting for, and the verb that goes with it.
@@ -244,7 +251,7 @@ const TITLE_ENOUGH = 4;
 function askFor(
   step: CaptureStep,
   text: string,
-  done: boolean
+  done: boolean,
 ): { ask: string; key: { key: string; type?: true } | null } {
   if (done) return { ask: "Captured.", key: null };
   const typed = tail(text);
@@ -289,7 +296,8 @@ function PressHint({ label, type }: { label: string; type?: boolean }) {
       t = (t + dt / 1100) % 1;
       const bob = Math.sin(t * Math.PI * 2);
       el.style.transform = `translateY(${(bob * -2.2).toFixed(2)}px) scale(${(
-        1 + Math.max(0, bob) * 0.06
+        1 +
+        Math.max(0, bob) * 0.06
       ).toFixed(3)})`;
       el.style.opacity = (0.75 + 0.25 * (bob * 0.5 + 0.5)).toFixed(3);
     }, false);
@@ -311,14 +319,20 @@ function PressHint({ label, type }: { label: string; type?: boolean }) {
 }
 
 const STEP_COPY: Record<CaptureStep, { ask: string; why: string }> = {
-  title: { ask: "Type a task. Anything.", why: "no field focused — it just goes in" },
+  title: {
+    ask: "Type a task. Anything.",
+    why: "no field focused — it just goes in",
+  },
   dayHash: { ask: "Type ‘#’", why: "dates start the same way tags do" },
   dayWord: {
     ask: "Type a day",
     why: "mon, fri, tomorrow, 25/12 — whatever you'd say out loud",
   },
   tagHash: { ask: "Type ‘#’ again", why: "that's how a tag starts" },
-  tagWord: { ask: "Type a tag. Anything.", why: "one that doesn't exist yet gets created" },
+  tagWord: {
+    ask: "Type a tag. Anything.",
+    why: "one that doesn't exist yet gets created",
+  },
 };
 
 export function SceneType({
@@ -335,7 +349,11 @@ export function SceneType({
   const [captured, setCaptured] = useState<string | null>(null);
   const [suggestion, setSuggestion] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const rotateRef = useRef<{ from: string; index: number; base: string } | null>(null);
+  const rotateRef = useRef<{
+    from: string;
+    index: number;
+    base: string;
+  } | null>(null);
   // Typing arrives faster than React re-renders: paste, dictation and anyone
   // typing quickly deliver several changes in a single tick, and a handler
   // reading `text` from its render closure sees the same stale value for all
@@ -360,7 +378,7 @@ export function SceneType({
       // Anything the step accepted counts as getting on with it.
       onProgress?.();
     },
-    [onProgress]
+    [onProgress],
   );
 
   /** Tell the banner what to shout. */
@@ -380,7 +398,7 @@ export function SceneType({
       setGuess("");
       rotateRef.current = null;
     },
-    [setGuess]
+    [setGuess],
   );
 
   const reject = useCallback(() => {
@@ -436,7 +454,7 @@ export function SceneType({
     if (step !== "dayWord") return;
     const id = window.setInterval(
       () => setSuggestion((n) => (n + 1) % DAY_SUGGESTIONS.length),
-      1600
+      1600,
     );
     return () => window.clearInterval(id);
   }, [step]);
@@ -551,7 +569,7 @@ export function SceneType({
       caret,
       pool,
       again ? rotateRef.current!.index + 1 : undefined,
-      again ? rotateRef.current!.base : undefined
+      again ? rotateRef.current!.base : undefined,
     );
     if (!result) return reject();
 
@@ -571,7 +589,9 @@ export function SceneType({
       : {
           from: value,
           index: again ? rotateRef.current!.index + 1 : 0,
-          base: again ? rotateRef.current!.base : tokenAtCaret(value, caret)?.word ?? "",
+          base: again
+            ? rotateRef.current!.base
+            : (tokenAtCaret(value, caret)?.word ?? ""),
         };
 
     setTabs(tabs + 1);
@@ -614,7 +634,7 @@ export function SceneType({
       <div
         className={cn(
           "flex items-center gap-2.5 rounded-[13px] border-2 bg-surface px-3.5 py-3 transition-colors",
-          shake ? "tutorial-shake border-tasks" : "border-ink"
+          shake ? "tutorial-shake border-tasks" : "border-ink",
         )}
         onClick={() => inputRef.current?.focus()}
       >
@@ -633,14 +653,21 @@ export function SceneType({
                 Parked after the placeholder it read as the end of a sentence
                 nobody had written. */}
             {!text && !done && <Caret />}
-            {text ? tokenise(text) : <span className="text-faint2">start typing…</span>}
+            {text ? (
+              tokenise(text)
+            ) : (
+              <span className="text-faint2">start typing…</span>
+            )}
             {text && !done && <Caret />}
             {/* Tab's guess: after the caret, dimmed, and not yours until you
                 take it. Type instead and it's gone. */}
             {ghost && (
               <span
                 className="shrink-0 rounded-[3px] font-mono text-[13px]"
-                style={{ color: FINANCE_AMBER, background: "oklch(0.7 0.12 70 / 0.22)" }}
+                style={{
+                  color: FINANCE_AMBER,
+                  background: "oklch(0.7 0.12 70 / 0.22)",
+                }}
               >
                 {ghost}
               </span>
@@ -685,7 +712,7 @@ export function SceneType({
         </div>
         {step === "tagWord" && tail(text).length >= 2 && (
           <kbd className="tutorial-key tutorial-nudge-soft inline-flex shrink-0 items-center rounded border border-border bg-surface2 px-1.5 py-1 text-ink">
-            <AeroEnter className="h-3 w-3" />
+            <EnterKey className="h-3 w-3" />
           </kbd>
         )}
       </div>
@@ -702,7 +729,9 @@ export function SceneType({
                 <KeyCap label="⇥ Tab" pressed={tabs} wide big />
               </span>
               <span className="font-mono text-[10.5px] text-faint">
-                {now.key && <PressHint label={now.key.key} type={now.key.type} />}
+                {now.key && (
+                  <PressHint label={now.key.key} type={now.key.type} />
+                )}
               </span>
             </div>
             <p className="m-0 font-mono text-[9.5px] text-faint2">
@@ -711,13 +740,13 @@ export function SceneType({
           </>
         ) : (
           <p className="m-0 text-center font-mono text-[10.5px] text-faint">
-            {shake ? (
-              "not that one — read the step"
-            ) : (
-              // Switching with the step, and absent when the step has no
-              // single key to name — an empty field asks for itself.
-              now.key && <PressHint label={now.key.key} type={now.key.type} />
-            )}
+            {shake
+              ? "not that one — read the step"
+              : // Switching with the step, and absent when the step has no
+                // single key to name — an empty field asks for itself.
+                now.key && (
+                  <PressHint label={now.key.key} type={now.key.type} />
+                )}
           </p>
         )}
       </div>
@@ -738,7 +767,10 @@ export function SceneType({
             <span className="h-4 w-4 shrink-0 rounded-[5px] border-[1.8px] border-border" />
             <span
               className="order-last shrink-0 rounded-[5px] px-[6px] py-px font-mono text-[10px]"
-              style={{ color: FINANCE_AMBER, background: "oklch(0.7 0.12 70 / 0.14)" }}
+              style={{
+                color: FINANCE_AMBER,
+                background: "oklch(0.7 0.12 70 / 0.14)",
+              }}
             >
               {captured.match(/#([a-z0-9-]+)/i)?.[1] ?? "tag"}
             </span>
@@ -807,7 +839,7 @@ function KeyCap({
       className={cn(
         "tutorial-key inline-flex items-center justify-center rounded-[9px] border-b-[4px] border-border bg-surface2 font-mono font-bold text-ink shadow-[0_2px_0_var(--shadow)]",
         big ? "px-4 py-2.5 text-[15px]" : "px-2.5 py-1.5 text-[12px]",
-        wide && (big ? "px-7" : "px-4")
+        wide && (big ? "px-7" : "px-4"),
       )}
     >
       {label}
@@ -839,7 +871,9 @@ export function SceneTab({
       e.preventDefault();
       setPresses((n) => n + 1);
       onProgress?.();
-      setI((prev) => (prev + (e.shiftKey ? -1 : 1) + TYPES.length) % TYPES.length);
+      setI(
+        (prev) => (prev + (e.shiftKey ? -1 : 1) + TYPES.length) % TYPES.length,
+      );
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -853,7 +887,7 @@ export function SceneTab({
     // looking at, so there is nothing here to protect from a tab switch.
     return startTutorialClock(
       (dt) => setHold((h) => nextHold(h, onTarget, dt)),
-      false
+      false,
     );
   }, [onTarget, done]);
 
@@ -866,7 +900,9 @@ export function SceneTab({
   const current = TYPES[i];
 
   useEffect(() => {
-    onInstruction?.(done ? "Locked in" : onTarget ? "Hold it there" : "Press Tab");
+    onInstruction?.(
+      done ? "Locked in" : onTarget ? "Hold it there" : "Press Tab",
+    );
   }, [onTarget, done, onInstruction]);
 
   return (
@@ -897,7 +933,7 @@ export function SceneTab({
       <div
         className={cn(
           "flex items-center gap-2.5 rounded-[13px] border-2 bg-surface px-3.5 py-3 transition-colors duration-300",
-          onTarget ? "border-habits" : "border-ink"
+          onTarget ? "border-habits" : "border-ink",
         )}
       >
         <span
@@ -925,7 +961,7 @@ export function SceneTab({
         <p
           className={cn(
             "m-0 mt-2 text-center font-mono text-[10.5px] transition-colors",
-            onTarget ? "font-bold text-habits" : "text-faint"
+            onTarget ? "font-bold text-habits" : "text-faint",
           )}
         >
           {done ? "★ goal — locked in" : current.quip}
@@ -942,11 +978,17 @@ export function SceneTab({
                 ? "border-2 font-bold text-background"
                 : idx === TAB_TARGET && !done
                   ? "border-2 border-dashed border-habits text-habits"
-                  : "border-border bg-surface2 text-faint2"
+                  : "border-border bg-surface2 text-faint2",
             )}
-            style={idx === i ? { background: t.color, borderColor: t.color } : undefined}
+            style={
+              idx === i
+                ? { background: t.color, borderColor: t.color }
+                : undefined
+            }
           >
-            {idx === TAB_TARGET && idx !== i && !done ? `★ ${t.label}` : t.label}
+            {idx === TAB_TARGET && idx !== i && !done
+              ? `★ ${t.label}`
+              : t.label}
           </span>
         ))}
       </div>
@@ -992,7 +1034,7 @@ export function SceneTabTouch({
       <div
         className={cn(
           "flex items-center gap-2.5 rounded-[13px] border-2 bg-surface px-3.5 py-3 transition-colors duration-300",
-          onTarget ? "border-habits" : "border-ink"
+          onTarget ? "border-habits" : "border-ink",
         )}
       >
         <span
@@ -1022,11 +1064,17 @@ export function SceneTabTouch({
                 ? "border-2 font-bold text-background"
                 : idx === TAB_TARGET && !done
                   ? "border-2 border-dashed border-habits text-habits tutorial-nudge"
-                  : "border-border bg-surface2 text-faint2"
+                  : "border-border bg-surface2 text-faint2",
             )}
-            style={idx === i ? { background: t.color, borderColor: t.color } : undefined}
+            style={
+              idx === i
+                ? { background: t.color, borderColor: t.color }
+                : undefined
+            }
           >
-            {idx === TAB_TARGET && idx !== i && !done ? `★ ${t.label}` : t.label}
+            {idx === TAB_TARGET && idx !== i && !done
+              ? `★ ${t.label}`
+              : t.label}
           </button>
         ))}
       </div>
@@ -1067,15 +1115,22 @@ function useClickSound(): () => void {
 
   return useCallback(() => {
     try {
-      type WithLegacy = typeof window & { webkitAudioContext?: typeof AudioContext };
-      const Ctor = window.AudioContext ?? (window as WithLegacy).webkitAudioContext;
+      type WithLegacy = typeof window & {
+        webkitAudioContext?: typeof AudioContext;
+      };
+      const Ctor =
+        window.AudioContext ?? (window as WithLegacy).webkitAudioContext;
       if (!Ctor) return;
       const ctx = (ctxRef.current ??= new Ctor());
       if (ctx.state === "suspended") void ctx.resume();
       const now = ctx.currentTime;
       // A short burst through a high-pass reads as a mouse button; a tone
       // reads as a notification, which is not what this is.
-      const noise = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * 0.02), ctx.sampleRate);
+      const noise = ctx.createBuffer(
+        1,
+        Math.ceil(ctx.sampleRate * 0.02),
+        ctx.sampleRate,
+      );
       const data = noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) {
         data[i] = (Math.random() * 2 - 1) * (1 - i / data.length) ** 6;
@@ -1152,7 +1207,8 @@ function GhostCursor({ label }: { label: string }) {
       ).toFixed(2)}px)`;
       wrap.style.opacity = String(Math.min(seg(t, 0, 0.1), 1 - seg(t, 0.9, 1)));
       arm.style.transform = `translateY(${(press * 2).toFixed(2)}px) scale(${(
-        1 - press * 0.1
+        1 -
+        press * 0.1
       ).toFixed(3)})`;
 
       // The strokes that fly off a click, out and gone.
@@ -1162,9 +1218,11 @@ function GhostCursor({ label }: { label: string }) {
 
       const say = seg(t, 0.4, 0.5) * (1 - seg(t, 0.7, 0.84));
       tag.style.opacity = String(say);
-      tag.style.transform = `translateY(${(4 - 4 * seg(t, 0.4, 0.5) - 8 * seg(t, 0.7, 0.84)).toFixed(
-        2
-      )}px)`;
+      tag.style.transform = `translateY(${(
+        4 -
+        4 * seg(t, 0.4, 0.5) -
+        8 * seg(t, 0.7, 0.84)
+      ).toFixed(2)}px)`;
 
       if (!clicked && t >= 0.4) {
         clicked = true;
@@ -1205,7 +1263,13 @@ function GhostCursor({ label }: { label: string }) {
         </svg>
 
         <span ref={armRef} className="block">
-          <svg width="20" height="25" viewBox="0 0 18 22" aria-hidden className="block">
+          <svg
+            width="20"
+            height="25"
+            viewBox="0 0 18 22"
+            aria-hidden
+            className="block"
+          >
             {/* White, the way a cursor is — with a dark edge under it, or it
                 would vanish into the card it's pointing at. */}
             <path
@@ -1246,7 +1310,7 @@ export function SceneTag({
       if (picked) return;
       setMenu({ x, y });
     },
-    [picked]
+    [picked],
   );
 
   const choose = (project: boolean) => {
@@ -1269,7 +1333,7 @@ export function SceneTag({
           ? "Pick website-redesign"
           : isTouch()
             ? "Long-press the task"
-            : "Right-click the task"
+            : "Right-click the task",
     );
   }, [menu, landed, onInstruction]);
 
@@ -1290,7 +1354,7 @@ export function SceneTag({
               accent={TASK_RED}
               className={cn(
                 "relative cursor-context-menu select-none",
-                !done && "tutorial-nudge"
+                !done && "tutorial-nudge",
               )}
               onContextMenu={(e) => {
                 e.preventDefault();
@@ -1298,7 +1362,10 @@ export function SceneTag({
               }}
               onTouchStart={(e) => {
                 const t = e.touches[0];
-                pressTimer.current = window.setTimeout(() => open(t.clientX, t.clientY), 450);
+                pressTimer.current = window.setTimeout(
+                  () => open(t.clientX, t.clientY),
+                  450,
+                );
               }}
               onTouchEnd={() => window.clearTimeout(pressTimer.current)}
               onTouchMove={() => window.clearTimeout(pressTimer.current)}
@@ -1328,7 +1395,11 @@ export function SceneTag({
             style={{ borderColor: landed ? PROJECT_BLUE : "var(--border)" }}
           >
             {landed ? (
-              <Row title="Build hero section" accent={PROJECT_BLUE} className="tutorial-in">
+              <Row
+                title="Build hero section"
+                accent={PROJECT_BLUE}
+                className="tutorial-in"
+              >
                 <span className="h-4 w-4 shrink-0 rounded-[5px] border-[1.8px] border-border" />
               </Row>
             ) : (
@@ -1346,7 +1417,10 @@ export function SceneTag({
           style={
             landed
               ? { color: "var(--faint2)", background: "var(--surface2)" }
-              : { color: GOAL_PURPLE, background: "oklch(0.58 0.17 300 / 0.14)" }
+              : {
+                  color: GOAL_PURPLE,
+                  background: "oklch(0.58 0.17 300 / 0.14)",
+                }
           }
         >
           personal
@@ -1356,7 +1430,10 @@ export function SceneTag({
           className="rounded-[5px] px-2 py-0.5 transition-colors duration-500"
           style={
             landed
-              ? { color: PROJECT_BLUE, background: "oklch(0.58 0.14 245 / 0.16)" }
+              ? {
+                  color: PROJECT_BLUE,
+                  background: "oklch(0.58 0.14 245 / 0.16)",
+                }
               : { color: "var(--faint2)", background: "var(--surface2)" }
           }
         >
@@ -1366,7 +1443,10 @@ export function SceneTag({
 
       {menu && (
         <>
-          <div className="fixed inset-0 z-[210]" onClick={() => setMenu(null)} />
+          <div
+            className="fixed inset-0 z-[210]"
+            onClick={() => setMenu(null)}
+          />
           <div
             className="tutorial-in fixed z-[211] w-[186px] rounded-lg border border-border bg-surface p-1 shadow-lg"
             style={{
@@ -1444,7 +1524,7 @@ function TargetBorder({ color }: { color: string }) {
       // the border silently renders as nothing at all.
       const dim = `color-mix(in oklch, ${color} 58%, transparent)`;
       rim.style.background = `conic-gradient(from ${deg.toFixed(
-        1
+        1,
       )}deg, ${color} 0deg, #fff 16deg, ${color} 44deg, ${dim} 140deg, ${dim} 360deg)`;
       // …and the edge letting go of a ring every other lap.
       const p = (t * 2) % 1;
@@ -1494,7 +1574,7 @@ function BulkPanel({
       <p
         className={cn(
           "m-0 text-[13px] font-bold transition-colors",
-          previewing ? "text-primary/70" : "text-ink"
+          previewing ? "text-primary/70" : "text-ink",
         )}
       >
         {count} <span className="text-[11px] font-semibold">selected</span>
@@ -1526,8 +1606,10 @@ function BulkPanel({
                 onClick={() => onPick?.(l)}
                 className={cn(
                   "relative w-full rounded-md border py-1 text-center font-mono text-[9px] font-bold uppercase transition-colors duration-300",
-                  chosen || target ? "border-2 text-ink" : "border-border bg-surface text-faint2",
-                  armed && "cursor-pointer"
+                  chosen || target
+                    ? "border-2 text-ink"
+                    : "border-border bg-surface text-faint2",
+                  armed && "cursor-pointer",
                 )}
                 style={
                   // The target wears the chosen look already — the only thing
@@ -1586,21 +1668,25 @@ function BulkRow({
       className={cn(
         "h-[44px] select-none transition-all duration-150",
         onClick && "cursor-pointer",
-        picked && !ghost && "bg-primary/[0.10] ring-1 ring-inset ring-primary/40",
+        picked &&
+          !ghost &&
+          "bg-primary/[0.10] ring-1 ring-inset ring-primary/40",
         // The proposed half of the range reads as lighter than the committed
         // half, so "about to take" never looks like "taken".
         ghost && "bg-primary/[0.05] ring-1 ring-inset ring-primary/25",
         anchor && "ring-2 ring-inset ring-primary/60",
-        nudge && "tutorial-nudge"
+        nudge && "tutorial-nudge",
       )}
     >
       <span
         className={cn(
           "flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px] border-[1.8px] transition-colors",
-          picked ? "border-primary bg-primary" : "border-border"
+          picked ? "border-primary bg-primary" : "border-border",
         )}
       >
-        {picked && <Check className="h-2.5 w-2.5 text-white" strokeWidth={3.4} />}
+        {picked && (
+          <Check className="h-2.5 w-2.5 text-white" strokeWidth={3.4} />
+        )}
       </span>
       <span
         className="order-last shrink-0 rounded-md px-1.5 py-px font-mono text-[9px] font-bold transition-colors duration-300"
@@ -1685,7 +1771,7 @@ export function SceneBulk({
         ? "Four rows, one click"
         : phase === "raise"
           ? "Now set them all to high"
-          : "Shift-click a row below"
+          : "Shift-click a row below",
     );
   }, [applied, done, phase, onInstruction]);
 
@@ -1697,7 +1783,7 @@ export function SceneBulk({
         <span
           className={cn(
             "inline-flex items-center gap-1.5 rounded-[9px] border-b-[4px] border-border bg-surface2 px-4 py-2.5 font-mono text-[15px] font-bold text-ink shadow-[0_2px_0_var(--shadow)]",
-            !applied && "tutorial-nudge-soft"
+            !applied && "tutorial-nudge-soft",
           )}
         >
           <MousePointerClick className="h-4 w-4" />
@@ -1707,7 +1793,10 @@ export function SceneBulk({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_150px]">
         <div
-          className={cn("relative flex flex-col gap-1.5", wrongClick && "tutorial-shake")}
+          className={cn(
+            "relative flex flex-col gap-1.5",
+            wrongClick && "tutorial-shake",
+          )}
           onMouseLeave={() => setHover(null)}
           onMouseDownCapture={(e) => {
             // Stop shift-drag painting a text selection down the list.
@@ -1737,7 +1826,9 @@ export function SceneBulk({
         </div>
 
         <BulkPanel
-          count={applied || sel.ids.length > 1 ? sel.ids.length : (preview ?? 0) + 1}
+          count={
+            applied || sel.ids.length > 1 ? sel.ids.length : (preview ?? 0) + 1
+          }
           applied={applied}
           previewing={preview !== null && sel.ids.length < 2}
           armed={phase === "raise"}
@@ -1748,7 +1839,7 @@ export function SceneBulk({
       <p
         className={cn(
           "m-0 mt-3 text-center font-mono text-[10.5px] transition-colors",
-          wrongClick ? "font-bold text-tasks" : "text-faint"
+          wrongClick ? "font-bold text-tasks" : "text-faint",
         )}
       >
         {done || applied
@@ -1789,7 +1880,14 @@ function RangeArrow({ rows }: { rows: number }) {
       aria-hidden
     >
       <defs>
-        <marker id="tut-arrow" markerWidth="7" markerHeight="7" refX="3.5" refY="3.5" orient="auto">
+        <marker
+          id="tut-arrow"
+          markerWidth="7"
+          markerHeight="7"
+          refX="3.5"
+          refY="3.5"
+          orient="auto"
+        >
           <path d="M0,0 L7,3.5 L0,7 z" fill="var(--primary)" opacity="0.55" />
         </marker>
       </defs>
@@ -1819,7 +1917,12 @@ export function SceneBulkWatch({ p }: { p: number }) {
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_150px]">
         <div className="flex flex-col gap-1.5">
           {BULK_ROWS.map((title, i) => (
-            <BulkRow key={title} title={title} picked={i < ranged} applied={applied} />
+            <BulkRow
+              key={title}
+              title={title}
+              picked={i < ranged}
+              applied={applied}
+            />
           ))}
         </div>
         <BulkPanel count={ranged} applied={applied} />
@@ -1881,7 +1984,14 @@ export function SceneAssistant({ p }: { p: number }) {
           ? chartIn > 0 && (
               <div className="flex items-center gap-4 rounded-lg border border-border bg-surface p-3">
                 <svg width="96" height="96" viewBox="0 0 42 42" aria-hidden>
-                  <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--border)" strokeWidth="5.5" />
+                  <circle
+                    cx="21"
+                    cy="21"
+                    r="15.9"
+                    fill="none"
+                    stroke="var(--border)"
+                    strokeWidth="5.5"
+                  />
                   {arcs.map((a) => (
                     <circle
                       key={a.label}
@@ -1899,7 +2009,10 @@ export function SceneAssistant({ p }: { p: number }) {
                 <div className="flex min-w-0 flex-1 flex-col gap-1">
                   {arcs.map((a) => (
                     <span key={a.label} className="flex items-center gap-2">
-                      <i className="h-2 w-2 shrink-0 rounded-[2px]" style={{ background: a.color }} />
+                      <i
+                        className="h-2 w-2 shrink-0 rounded-[2px]"
+                        style={{ background: a.color }}
+                      />
                       <span className="min-w-0 flex-1 truncate text-[11.5px] text-muted">
                         {a.label}
                       </span>
@@ -1912,7 +2025,10 @@ export function SceneAssistant({ p }: { p: number }) {
               </div>
             )
           : draftIn > 0 && (
-              <div className="rounded-lg border border-border bg-surface p-3" style={{ opacity: draftIn }}>
+              <div
+                className="rounded-lg border border-border bg-surface p-3"
+                style={{ opacity: draftIn }}
+              >
                 <p className="m-0 mb-2 font-mono text-[9px] uppercase tracking-widest text-faint2">
                   Changeset draft · 3 operations
                 </p>
@@ -1926,7 +2042,10 @@ export function SceneAssistant({ p }: { p: number }) {
                   <div
                     key={op.t}
                     className="tutorial-in flex items-center gap-2 border-l-2 py-1.5 pl-2.5 text-[12px]"
-                    style={{ borderColor: PROJECT_BLUE, animationDelay: `${i * 90}ms` }}
+                    style={{
+                      borderColor: PROJECT_BLUE,
+                      animationDelay: `${i * 90}ms`,
+                    }}
                   >
                     <span
                       className="flex h-3.5 w-3.5 items-center justify-center rounded-[3px]"
@@ -1934,8 +2053,12 @@ export function SceneAssistant({ p }: { p: number }) {
                     >
                       <Check className="h-2 w-2 text-white" strokeWidth={4} />
                     </span>
-                    <span className="min-w-0 flex-1 truncate text-ink">{op.t}</span>
-                    <span className="shrink-0 font-mono text-[10px] text-faint">→ {op.to}</span>
+                    <span className="min-w-0 flex-1 truncate text-ink">
+                      {op.t}
+                    </span>
+                    <span className="shrink-0 font-mono text-[10px] text-faint">
+                      → {op.to}
+                    </span>
                   </div>
                 ))}
                 <div className="mt-2.5 flex items-center gap-2">
@@ -1992,10 +2115,14 @@ export function SceneLife({ p }: { p: number }) {
               key={i}
               className={cn(
                 "aspect-square rounded-[1px]",
-                isNow && "animate-pulse ring-1 ring-[oklch(0.64_0.18_25)]"
+                isNow && "animate-pulse ring-1 ring-[oklch(0.64_0.18_25)]",
               )}
               style={{
-                background: isNow ? TASK_RED : lived ? "var(--muted)" : "var(--border2)",
+                background: isNow
+                  ? TASK_RED
+                  : lived
+                    ? "var(--muted)"
+                    : "var(--border2)",
               }}
             />
           );

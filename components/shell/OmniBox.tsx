@@ -17,7 +17,10 @@ import {
   withLifeTags,
   goalCategoryForLifeArea,
 } from "@/lib/life-area-sync";
-import { TagQuickPick, SelectedTagsTray } from "@/components/shell/TagQuickPick";
+import {
+  TagQuickPick,
+  SelectedTagsTray,
+} from "@/components/shell/TagQuickPick";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { PriorityQuickPick } from "@/components/shell/PriorityQuickPick";
 import type { TaskPriority } from "@/lib/types";
@@ -32,7 +35,7 @@ import { RESERVED_TYPE_WORDS, RESERVED_WORDS } from "@/lib/omni-reserved";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
 import { isTutorialActive } from "@/lib/tutorial-lock";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
-import { AeroEnter, Pencil, Sparkles } from "@/components/icons";
+import { EnterKey, Pencil, Sparkles } from "@/components/icons";
 
 type OmniMode = "capture" | "assistant";
 
@@ -40,9 +43,21 @@ const TYPE_META: Record<
   OmniType,
   { label: string; color: string; text: string }
 > = {
-  task: { label: "#task", color: "oklch(0.64 0.18 25)", text: "oklch(0.5 0.18 25)" },
-  habit: { label: "#habit", color: "oklch(0.6 0.13 155)", text: "oklch(0.44 0.13 155)" },
-  goal: { label: "#goal", color: "oklch(0.58 0.17 300)", text: "oklch(0.46 0.17 300)" },
+  task: {
+    label: "#task",
+    color: "oklch(0.64 0.18 25)",
+    text: "oklch(0.5 0.18 25)",
+  },
+  habit: {
+    label: "#habit",
+    color: "oklch(0.6 0.13 155)",
+    text: "oklch(0.44 0.13 155)",
+  },
+  goal: {
+    label: "#goal",
+    color: "oklch(0.58 0.17 300)",
+    text: "oklch(0.46 0.17 300)",
+  },
   note: { label: "#note", color: "var(--faint)", text: "var(--muted)" },
 };
 
@@ -91,7 +106,7 @@ function omniTabIndex(mode: OmniMode, type: OmniType): number {
 function cycleOmniTab(
   mode: OmniMode,
   type: OmniType,
-  direction: 1 | -1
+  direction: 1 | -1,
 ): { mode: OmniMode; type: OmniType } {
   const next =
     OMNI_TAB_CYCLE[
@@ -142,13 +157,13 @@ export function OmniBox({
   const taggable = mode === "capture";
   const isTask = type === "task";
   const agendaDay =
-    pathname === "/" ? searchParams.get("day")?.slice(0, 10) ?? null : null;
+    pathname === "/" ? (searchParams.get("day")?.slice(0, 10) ?? null) : null;
 
   const toggleTag = (tagId: string) => {
     setSelectedTagIds((prev) =>
       prev.includes(tagId)
         ? prev.filter((id) => id !== tagId)
-        : [...prev, tagId]
+        : [...prev, tagId],
     );
   };
 
@@ -162,9 +177,9 @@ export function OmniBox({
         pathname,
         searchParams,
         defaultType,
-        projects.map((p) => ({ id: p.id, title: p.title }))
+        projects.map((p) => ({ id: p.id, title: p.title })),
       ),
-    [pathname, searchParams, defaultType, projects]
+    [pathname, searchParams, defaultType, projects],
   );
 
   useEffect(() => {
@@ -289,7 +304,7 @@ export function OmniBox({
             // another type word, and steps on from there.
             rotateRef.current = null;
             requestAnimationFrame(() =>
-              el.setSelectionRange(cycled.caret, cycled.caret)
+              el.setSelectionRange(cycled.caret, cycled.caret),
             );
             return;
           }
@@ -300,7 +315,7 @@ export function OmniBox({
           caretNow,
           [...tags.map((t) => t.name), ...RESERVED_WORDS],
           again ? rotateRef.current!.index + 1 : undefined,
-          again ? rotateRef.current!.base : undefined
+          again ? rotateRef.current!.base : undefined,
         );
         if (done) {
           e.preventDefault();
@@ -317,7 +332,7 @@ export function OmniBox({
                 // it's what the next Tab compares against.
                 from: done.text.slice(
                   0,
-                  done.caret - (done.completion.length - typedWord.length)
+                  done.caret - (done.completion.length - typedWord.length),
                 ),
                 index: again ? rotateRef.current!.index + 1 : 0,
                 // The partial as first typed — the cycle is over that set, not
@@ -335,7 +350,8 @@ export function OmniBox({
             // instead of turning into "#primeu" — before this you had to
             // delete the suggestion to refine it, which made Tab a dead end
             // unless it guessed right first time.
-            const typedEnd = done.caret - (done.completion.length - typedWord.length);
+            const typedEnd =
+              done.caret - (done.completion.length - typedWord.length);
             el.setSelectionRange(typedEnd, done.caret);
           });
           return;
@@ -410,9 +426,9 @@ export function OmniBox({
         withLifeTags(
           [...new Set([...selectedTagIds, ...parsed.tagIds])],
           life,
-          tags
+          tags,
         ),
-        tags
+        tags,
       )
     : baseArea;
   const lifeTint = LIFE_META[captureArea];
@@ -485,7 +501,10 @@ export function OmniBox({
           ? {
               label: "UNDO",
               onClick: async () => {
-                await undoCreate(res.undo!.entity, res.undo!.snapshot as string);
+                await undoCreate(
+                  res.undo!.entity,
+                  res.undo!.snapshot as string,
+                );
                 router.refresh();
               },
             }
@@ -531,210 +550,212 @@ export function OmniBox({
       </div>
 
       <div className="relative z-[1]">
-      <div className="flex items-center gap-[11px] max-lg:flex-wrap">
-        <ModeSwitch mode={mode} onChange={setMode} />
-        {/* No type pill in assistant mode — the switch beside it already says
+        <div className="flex items-center gap-[11px] max-lg:flex-wrap">
+          <ModeSwitch mode={mode} onChange={setMode} />
+          {/* No type pill in assistant mode — the switch beside it already says
             Assistant, and there is only one kind of assistant input now. */}
-        {mode === "capture" && (
-          <span
-            className="shrink-0 rounded-[7px] px-[9px] py-1 font-mono text-xs font-semibold lowercase text-background transition-transform duration-200 group-focus-within:scale-[1.04]"
-            style={{ background: TYPE_META[type].color }}
-          >
-            {TYPE_META[type].label}
-          </span>
-        )}
-        {showLifeSignal && (
-          <span
-            className={cn(
-              "shrink-0 whitespace-nowrap rounded-[7px] border px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors",
-              !lifeTint && "border-border bg-hover text-muted"
-            )}
-            style={
-              lifeTint
-                ? {
-                    borderColor: lifeTint.border,
-                    background: lifeTint.bg,
-                    color: lifeTint.text,
-                  }
-                : undefined
-            }
-            title="Where this capture will land — follows the Personal/Work view, and work/personal tags override it"
-          >
-            → {lifeTint?.label ?? "Both"}
-          </span>
-        )}
-        {mode === "capture" && captureHint && (
-          <span className="hidden shrink-0 font-mono text-[10px] text-faint transition-colors duration-200 group-focus-within:text-muted md:inline">
-            → {captureHint}
-          </span>
-        )}
-        {mode === "capture" ? (
-          <OmniHighlightInput
-            ref={inputRef}
-            tags={tags}
-            showTags
-            showPriority={isTask}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submit();
+          {mode === "capture" && (
+            <span
+              className="shrink-0 rounded-[7px] px-[9px] py-1 font-mono text-xs font-semibold lowercase text-background transition-transform duration-200 group-focus-within:scale-[1.04]"
+              style={{ background: TYPE_META[type].color }}
+            >
+              {TYPE_META[type].label}
+            </span>
+          )}
+          {showLifeSignal && (
+            <span
+              className={cn(
+                "shrink-0 whitespace-nowrap rounded-[7px] border px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors",
+                !lifeTint && "border-border bg-hover text-muted",
+              )}
+              style={
+                lifeTint
+                  ? {
+                      borderColor: lifeTint.border,
+                      background: lifeTint.bg,
+                      color: lifeTint.text,
+                    }
+                  : undefined
               }
-            }}
-            placeholder={capture.placeholder}
-            disabled={pending || busy}
-          />
-        ) : (
-          <input
-            ref={inputRef}
-            className="w-full border-none bg-transparent text-base font-medium text-ink outline-none transition-colors duration-200 placeholder:text-faint placeholder:transition-colors group-focus-within:placeholder:text-faint2"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (aiMode) {
+              title="Where this capture will land — follows the Personal/Work view, and work/personal tags override it"
+            >
+              → {lifeTint?.label ?? "Both"}
+            </span>
+          )}
+          {mode === "capture" && captureHint && (
+            <span className="hidden shrink-0 font-mono text-[10px] text-faint transition-colors duration-200 group-focus-within:text-muted md:inline">
+              → {captureHint}
+            </span>
+          )}
+          {mode === "capture" ? (
+            <OmniHighlightInput
+              ref={inputRef}
+              tags={tags}
+              showTags
+              showPriority={isTask}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
-                  onAiSubmit();
+                  submit();
                 }
-                return;
+              }}
+              placeholder={capture.placeholder}
+              disabled={pending || busy}
+            />
+          ) : (
+            <input
+              ref={inputRef}
+              className="w-full border-none bg-transparent text-base font-medium text-ink outline-none transition-colors duration-200 placeholder:text-faint placeholder:transition-colors group-focus-within:placeholder:text-faint2"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (aiMode) {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    onAiSubmit();
+                  }
+                  return;
+                }
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              placeholder={
+                mode === "assistant"
+                  ? "Ask about your data, or describe something to change…"
+                  : capture.placeholder
               }
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            placeholder={
-              mode === "assistant"
-                ? "Ask about your data, or describe something to change…"
-                : capture.placeholder
-            }
-            disabled={pending || busy}
-          />
-        )}
-        {mode === "capture" && parsed.dateLabel && (
-          <span className="shrink-0 whitespace-nowrap rounded-md bg-primary/10 px-2 py-0.5 font-mono text-[11px] text-primary">
-            📅 {parsed.dateLabel}
-          </span>
-        )}
-        <span className="hidden shrink-0 font-mono text-[10px] text-faint2 transition-all duration-200 group-focus-within:font-semibold group-focus-within:text-ink sm:inline">
-          <AeroEnter className="mr-1 inline-block h-3 w-3 align-[-2px]" />
-          {mode === "assistant" ? "send" : "add"}
-        </span>
-      </div>
-      <div className="omni-box-scanline" aria-hidden />
-      {aiMode ? (
-        <div className="mt-2.5 flex items-center gap-2 border-t border-border2 py-2.5 pb-1">
-          <span className="shrink-0 font-mono text-[10px] text-faint2">
-            A question gets an answer · a request gets a draft you can edit
-          </span>
-          <button
-            type="button"
-            onClick={onAiSubmit}
-            disabled={busy}
-            className="ml-auto cursor-pointer rounded-lg border-none bg-primary px-4 py-1 text-[12px] font-bold text-background disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {busy ? "Thinking…" : "Send"}
-          </button>
-        </div>
-      ) : (
-      <div className="mt-2.5 flex min-w-0 items-center gap-2 overflow-x-auto border-t border-border2 py-2.5 pb-3 [scrollbar-width:none] lg:overflow-visible">
-        <span className="shrink-0 font-mono text-[10px] text-faint2">TAB FOR →</span>
-        <div className="flex shrink-0 items-center gap-1">
-          <TypeChip
-            label="Task"
-            dot="oklch(0.64 0.18 25)"
-            accent="oklch(0.64 0.18 25)"
-            textColor={TYPE_META.task.text}
-            square
-            active={type === "task"}
-            onClick={() => setType("task")}
-          />
-          <TypeChip
-            label="Habit"
-            dot="oklch(0.6 0.13 155)"
-            accent="oklch(0.6 0.13 155)"
-            textColor={TYPE_META.habit.text}
-            active={type === "habit"}
-            onClick={() => setType("habit")}
-          />
-          <TypeChip
-            label="Goal"
-            dot="oklch(0.58 0.17 300)"
-            accent="oklch(0.58 0.17 300)"
-            textColor={TYPE_META.goal.text}
-            diamond
-            active={type === "goal"}
-            onClick={() => setType("goal")}
-          />
-          <TypeChip
-            label="Note"
-            dot="var(--faint)"
-            accent="var(--ink)"
-            textColor="var(--ink)"
-            square
-            active={type === "note"}
-            onClick={() => setType("note")}
-          />
-        </div>
-        {isTask && !parsed.dateLabel && (
-          <>
-            <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />
-            <DueQuickPick
-              mode="capture"
-              value={pickedDue}
-              onChange={setPickedDue}
-              disabled={pending}
-              // With the setting off, nothing is due by default — so the picker
-              // must be able to render "no date" instead of highlighting Today.
-              nullable={!defaultDueToday}
-              clearable={!defaultDueToday}
-              clearLabel="No date"
-            />
-          </>
-        )}
-        {isTask && !parsed.hasPriorityToken && (
-          <>
-            <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />
-            <PriorityQuickPick
-              value={pickedPriority}
-              onChange={setPickedPriority}
-              disabled={pending}
-            />
-          </>
-        )}
-        {taggable && (
-          <>
-            <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />
-            <TagQuickPick
-              tags={tags}
-              tasks={tasks}
-              notes={notes}
-              selectedTagIds={selectedTagIds}
-              onToggle={toggleTag}
-              showLabel={false}
-            />
-          </>
-        )}
-        <div className="ml-auto flex shrink-0 items-center gap-2">
-          {taggable && (
-            <SelectedTagsTray
-              selectedTagIds={selectedTagIds}
-              allTags={tags}
-              onRemove={removeTag}
+              disabled={pending || busy}
             />
           )}
-          <button
-            type="button"
-            onClick={submit}
-            disabled={pending}
-            className="cursor-pointer rounded-lg border-none bg-ink px-4 py-1 text-[12px] font-bold text-background"
-          >
-            Add
-          </button>
+          {mode === "capture" && parsed.dateLabel && (
+            <span className="shrink-0 whitespace-nowrap rounded-md bg-primary/10 px-2 py-0.5 font-mono text-[11px] text-primary">
+              📅 {parsed.dateLabel}
+            </span>
+          )}
+          <span className="hidden shrink-0 font-mono text-[10px] text-faint2 transition-all duration-200 group-focus-within:font-semibold group-focus-within:text-ink sm:inline">
+            <EnterKey className="mr-1 inline-block h-3 w-3 align-[-2px]" />
+            {mode === "assistant" ? "send" : "add"}
+          </span>
         </div>
-      </div>
-      )}
+        <div className="omni-box-scanline" aria-hidden />
+        {aiMode ? (
+          <div className="mt-2.5 flex items-center gap-2 border-t border-border2 py-2.5 pb-1">
+            <span className="shrink-0 font-mono text-[10px] text-faint2">
+              A question gets an answer · a request gets a draft you can edit
+            </span>
+            <button
+              type="button"
+              onClick={onAiSubmit}
+              disabled={busy}
+              className="ml-auto cursor-pointer rounded-lg border-none bg-primary px-4 py-1 text-[12px] font-bold text-background disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? "Thinking…" : "Send"}
+            </button>
+          </div>
+        ) : (
+          <div className="mt-2.5 flex min-w-0 items-center gap-2 overflow-x-auto border-t border-border2 py-2.5 pb-3 [scrollbar-width:none] lg:overflow-visible">
+            <span className="shrink-0 font-mono text-[10px] text-faint2">
+              TAB FOR →
+            </span>
+            <div className="flex shrink-0 items-center gap-1">
+              <TypeChip
+                label="Task"
+                dot="oklch(0.64 0.18 25)"
+                accent="oklch(0.64 0.18 25)"
+                textColor={TYPE_META.task.text}
+                square
+                active={type === "task"}
+                onClick={() => setType("task")}
+              />
+              <TypeChip
+                label="Habit"
+                dot="oklch(0.6 0.13 155)"
+                accent="oklch(0.6 0.13 155)"
+                textColor={TYPE_META.habit.text}
+                active={type === "habit"}
+                onClick={() => setType("habit")}
+              />
+              <TypeChip
+                label="Goal"
+                dot="oklch(0.58 0.17 300)"
+                accent="oklch(0.58 0.17 300)"
+                textColor={TYPE_META.goal.text}
+                diamond
+                active={type === "goal"}
+                onClick={() => setType("goal")}
+              />
+              <TypeChip
+                label="Note"
+                dot="var(--faint)"
+                accent="var(--ink)"
+                textColor="var(--ink)"
+                square
+                active={type === "note"}
+                onClick={() => setType("note")}
+              />
+            </div>
+            {isTask && !parsed.dateLabel && (
+              <>
+                <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />
+                <DueQuickPick
+                  mode="capture"
+                  value={pickedDue}
+                  onChange={setPickedDue}
+                  disabled={pending}
+                  // With the setting off, nothing is due by default — so the picker
+                  // must be able to render "no date" instead of highlighting Today.
+                  nullable={!defaultDueToday}
+                  clearable={!defaultDueToday}
+                  clearLabel="No date"
+                />
+              </>
+            )}
+            {isTask && !parsed.hasPriorityToken && (
+              <>
+                <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />
+                <PriorityQuickPick
+                  value={pickedPriority}
+                  onChange={setPickedPriority}
+                  disabled={pending}
+                />
+              </>
+            )}
+            {taggable && (
+              <>
+                <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />
+                <TagQuickPick
+                  tags={tags}
+                  tasks={tasks}
+                  notes={notes}
+                  selectedTagIds={selectedTagIds}
+                  onToggle={toggleTag}
+                  showLabel={false}
+                />
+              </>
+            )}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              {taggable && (
+                <SelectedTagsTray
+                  selectedTagIds={selectedTagIds}
+                  allTags={tags}
+                  onRemove={removeTag}
+                />
+              )}
+              <button
+                type="button"
+                onClick={submit}
+                disabled={pending}
+                className="cursor-pointer rounded-lg border-none bg-ink px-4 py-1 text-[12px] font-bold text-background"
+              >
+                Add
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -757,7 +778,7 @@ function ModeSwitch({
           "flex items-center gap-1 rounded-[7px] px-2 py-1 text-[11px] font-semibold transition-all",
           mode === "capture"
             ? "bg-surface text-ink shadow-[1px_1px_0_var(--shadow)]"
-            : "text-faint hover:text-muted"
+            : "text-faint hover:text-muted",
         )}
       >
         <Pencil className="h-3 w-3" />
@@ -771,7 +792,7 @@ function ModeSwitch({
           "flex items-center gap-1 rounded-[7px] px-2 py-1 text-[11px] font-semibold transition-all",
           mode === "assistant"
             ? "bg-primary text-background shadow-[1px_1px_0_var(--shadow)]"
-            : "text-faint hover:text-muted"
+            : "text-faint hover:text-muted",
         )}
       >
         <Sparkles className="h-3 w-3" />
@@ -808,7 +829,7 @@ function TypeChip({
         "flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-[11px] transition-all",
         active
           ? "border-2 font-bold shadow-[2px_2px_0_var(--shadow)]"
-          : "border border-border bg-surface font-medium text-muted opacity-75 hover:border-faint hover:opacity-100"
+          : "border border-border bg-surface font-medium text-muted opacity-75 hover:border-faint hover:opacity-100",
       )}
       style={
         active
@@ -827,7 +848,7 @@ function TypeChip({
           "h-[6px] w-[6px]",
           square && "rounded-[2px]",
           !square && !diamond && "rounded-full",
-          diamond && "rotate-45"
+          diamond && "rotate-45",
         )}
         style={{ background: dot }}
       />

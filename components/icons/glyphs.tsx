@@ -1,25 +1,19 @@
 import type { SVGProps } from "react";
 
 /**
- * Aero pictograms.
+ * The drawn glyph set.
  *
- * Lucide draws line art. Aero's icons are the opposite — filled, glossy,
- * lit from above — and no amount of filtering turns a stroke outline into
- * one, which is why these are drawn rather than styled.
+ * Flat filled pictograms: one path, one colour, no overlay. They take their
+ * colour from `currentColor`, so every `text-tasks` / `text-habits` class at
+ * the call sites keeps working and an icon is a `d` string and nothing else.
  *
- * Each icon is one path, painted twice: once in `currentColor`, then again
- * in a gloss gradient with a hard midline. That keeps every `text-tasks` /
- * `text-habits` class at the call sites working exactly as before — the
- * icon takes the app's semantic colour and the finish rides on top of it —
- * and it means an icon is a `d` string plus nothing else.
+ * These used to carry a gloss gradient over the fill. It was subtle on a
+ * chevron and disastrous on anything round — a vertical gradient across a
+ * filled circle reads as a sphere, so the Habits tick looked moulded rather
+ * than drawn. Depth in this theme belongs to surfaces; an icon is a shape.
  *
  * Knockouts (the tick inside a circle, a calendar's day cells) are subpaths
  * relying on `evenodd`, so every icon sets it.
- *
- * The gradient id repeats once per rendered icon. That is deliberate: a
- * shared `<defs>` mounted somewhere else would make these silently render as
- * nothing wherever it wasn't. Duplicate ids all resolve to the first, and
- * every definition here is identical, so the result is the same either way.
  */
 
 type IconProps = Omit<SVGProps<SVGSVGElement>, "children"> & {
@@ -28,7 +22,7 @@ type IconProps = Omit<SVGProps<SVGSVGElement>, "children"> & {
   size?: number | string;
 };
 
-function Aero({
+function Glyph({
   d,
   strokeWidth: _sw,
   size: _size,
@@ -36,18 +30,7 @@ function Aero({
 }: IconProps & { d: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden focusable="false" {...rest}>
-      <defs>
-        {/* A whisper, not a shine. The hard midline is gone — that split was
-            the single most 2006 thing about these, and at 16px it read as a
-            highlight stuck to the glyph rather than light falling on it. */}
-        <linearGradient id="aeroGloss" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="#fff" stopOpacity="0.26" />
-          <stop offset="55%" stopColor="#fff" stopOpacity="0.06" />
-          <stop offset="100%" stopColor="#000" stopOpacity="0.07" />
-        </linearGradient>
-      </defs>
       <path d={d} fill="currentColor" fillRule="evenodd" />
-      <path d={d} fill="url(#aeroGloss)" fillRule="evenodd" />
     </svg>
   );
 }
@@ -99,15 +82,15 @@ const ASSISTANT =
   "M18.7 15.1l.85 2.35 2.35.85-2.35.85-.85 2.35-.85-2.35-2.35-.85 2.35-.85Z" +
   "M4.7 16.3l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7Z";
 
-export const AeroHome = (p: IconProps) => <Aero d={HOME} {...p} />;
-export const AeroTasks = (p: IconProps) => <Aero d={TASKS} {...p} />;
-export const AeroNotes = (p: IconProps) => <Aero d={NOTES} {...p} />;
-export const AeroHabits = (p: IconProps) => <Aero d={HABITS} {...p} />;
-export const AeroGoals = (p: IconProps) => <Aero d={GOALS} {...p} />;
-export const AeroProjects = (p: IconProps) => <Aero d={PROJECTS} {...p} />;
-export const AeroCalendar = (p: IconProps) => <Aero d={CALENDAR} {...p} />;
-export const AeroLifeCalendar = (p: IconProps) => <Aero d={LIFE} {...p} />;
-export const AeroAssistant = (p: IconProps) => <Aero d={ASSISTANT} {...p} />;
+export const HomeGlyph = (p: IconProps) => <Glyph d={HOME} {...p} />;
+export const TasksGlyph = (p: IconProps) => <Glyph d={TASKS} {...p} />;
+export const NotesGlyph = (p: IconProps) => <Glyph d={NOTES} {...p} />;
+export const HabitsGlyph = (p: IconProps) => <Glyph d={HABITS} {...p} />;
+export const GoalsGlyph = (p: IconProps) => <Glyph d={GOALS} {...p} />;
+export const ProjectsGlyph = (p: IconProps) => <Glyph d={PROJECTS} {...p} />;
+export const CalendarGlyph = (p: IconProps) => <Glyph d={CALENDAR} {...p} />;
+export const LifeCalendarGlyph = (p: IconProps) => <Glyph d={LIFE} {...p} />;
+export const AssistantGlyph = (p: IconProps) => <Glyph d={ASSISTANT} {...p} />;
 
 /* ── Chrome ──────────────────────────────────────────────────────────────
    The arrows, ticks and tools. These sit at 12–14px where a filled glyph has
@@ -150,21 +133,21 @@ const PENCIL =
 const PLAY =
   "M6.7 3.5a1.5 1.5 0 0 1 1.55.06l10.2 7a1.5 1.5 0 0 1 0 2.48l-10.2 7A1.5 1.5 0 0 1 5.9 20.8V4.8a1.5 1.5 0 0 1 .8-1.3Z";
 
-export const AeroChevronLeft = (p: IconProps) => (
-  <Aero d={CHEVRON_LEFT} {...p} />
+export const ChevronLeftGlyph = (p: IconProps) => (
+  <Glyph d={CHEVRON_LEFT} {...p} />
 );
-export const AeroChevronRight = (p: IconProps) => (
-  <Aero d={CHEVRON_RIGHT} {...p} />
+export const ChevronRightGlyph = (p: IconProps) => (
+  <Glyph d={CHEVRON_RIGHT} {...p} />
 );
-export const AeroChevronDown = (p: IconProps) => (
-  <Aero d={CHEVRON_DOWN} {...p} />
+export const ChevronDownGlyph = (p: IconProps) => (
+  <Glyph d={CHEVRON_DOWN} {...p} />
 );
-export const AeroArrowLeft = (p: IconProps) => <Aero d={ARROW_LEFT} {...p} />;
-export const AeroEnter = (p: IconProps) => <Aero d={ENTER} {...p} />;
-export const AeroCheck = (p: IconProps) => <Aero d={CHECK} {...p} />;
-export const AeroPlus = (p: IconProps) => <Aero d={PLUS} {...p} />;
-export const AeroClose = (p: IconProps) => <Aero d={CLOSE} {...p} />;
-export const AeroSearch = (p: IconProps) => <Aero d={SEARCH} {...p} />;
-export const AeroTrash = (p: IconProps) => <Aero d={TRASH} {...p} />;
-export const AeroPencil = (p: IconProps) => <Aero d={PENCIL} {...p} />;
-export const AeroPlay = (p: IconProps) => <Aero d={PLAY} {...p} />;
+export const ArrowLeftGlyph = (p: IconProps) => <Glyph d={ARROW_LEFT} {...p} />;
+export const EnterGlyph = (p: IconProps) => <Glyph d={ENTER} {...p} />;
+export const CheckGlyph = (p: IconProps) => <Glyph d={CHECK} {...p} />;
+export const PlusGlyph = (p: IconProps) => <Glyph d={PLUS} {...p} />;
+export const CloseGlyph = (p: IconProps) => <Glyph d={CLOSE} {...p} />;
+export const SearchGlyph = (p: IconProps) => <Glyph d={SEARCH} {...p} />;
+export const TrashGlyph = (p: IconProps) => <Glyph d={TRASH} {...p} />;
+export const PencilGlyph = (p: IconProps) => <Glyph d={PENCIL} {...p} />;
+export const PlayGlyph = (p: IconProps) => <Glyph d={PLAY} {...p} />;

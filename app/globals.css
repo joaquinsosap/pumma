@@ -1272,10 +1272,8 @@ select:hover:not(:disabled) {
   opacity: 1;
 }
 
-/* Icons: lit from above by a hair, no glow, no saturation boost. */
-:is(button, a[href], label, summary, aside, nav, .widget-head) svg {
-  filter: drop-shadow(0 1px 0 var(--icon-emboss));
-}
+/* Icons carry no lighting of their own. The emboss that used to sit here was
+   the same faux-3D idea as the gloss inside the glyphs, one layer out. */
 
 /* ── The tour ────────────────────────────────────────────────────────────
    A keycap still has to look like a key — that is the one place a moulded
