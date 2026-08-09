@@ -37,7 +37,7 @@ import type { WeekStart } from "@/lib/date";
 import type { HabitVisibilitySettings } from "@/lib/habit-visibility";
 import { cn } from "@/lib/utils";
 
-const CATEGORIES: GoalCategory[] = ["personal", "professional"];
+const CATEGORIES: GoalCategory[] = ["personal", "work"];
 
 type ItemsByCategory = Record<GoalCategory, Goal[]>;
 
@@ -60,8 +60,8 @@ function groupByCategory(goals: Goal[]): ItemsByCategory {
     personal: goals
       .filter((g) => g.category === "personal")
       .sort((a, b) => a.order - b.order),
-    professional: goals
-      .filter((g) => g.category === "professional")
+    work: goals
+      .filter((g) => g.category === "work")
       .sort((a, b) => a.order - b.order),
   };
 }
@@ -69,7 +69,7 @@ function groupByCategory(goals: Goal[]): ItemsByCategory {
 function layoutIds(layout: ItemsByCategory) {
   return {
     personal: layout.personal.map((g) => g.id),
-    professional: layout.professional.map((g) => g.id),
+    work: layout.work.map((g) => g.id),
   };
 }
 
@@ -78,7 +78,7 @@ function layoutChanged(a: ItemsByCategory, b: ItemsByCategory) {
   const right = layoutIds(b);
   return (
     left.personal.join() !== right.personal.join() ||
-    left.professional.join() !== right.professional.join()
+    left.work.join() !== right.work.join()
   );
 }
 
@@ -86,7 +86,7 @@ function findContainer(
   id: UniqueIdentifier,
   items: ItemsByCategory
 ): GoalCategory | undefined {
-  if (id === "personal" || id === "professional") return id;
+  if (id === "personal" || id === "work") return id;
   return CATEGORIES.find((cat) => items[cat].some((g) => g.id === id));
 }
 
@@ -144,7 +144,7 @@ export function GoalsView({
           const ids = layoutIds(next);
           // Layout action revalidates the route; the optimistic dnd order
           // holds until it lands — no extra refresh round-trip.
-          await updateGoalsLayoutAction(ids.personal, ids.professional);
+          await updateGoalsLayoutAction(ids.personal, ids.work);
         } finally {
           persistPendingRef.current = false;
         }
@@ -292,11 +292,11 @@ export function GoalsView({
                   isDragging={activeId !== null}
                 />
                 <GoalColumn
-                  title="Professional"
+                  title="Work"
                   color="oklch(0.58 0.14 245)"
                   textColor="oklch(0.44 0.14 245)"
-                  category="professional"
-                  goals={items.professional}
+                  category="work"
+                  goals={items.work}
                   projects={projects}
                   habits={habits}
                   selectedId={goalId}
@@ -342,11 +342,11 @@ export function GoalsView({
                 onSelect={setGoalId}
               />
               <GoalColumnStatic
-                title="Professional"
+                title="Work"
                 color="oklch(0.58 0.14 245)"
                 textColor="oklch(0.44 0.14 245)"
-                category="professional"
-                goals={items.professional}
+                category="work"
+                goals={items.work}
                 projects={projects}
                 habits={habits}
                 selectedId={goalId}
@@ -434,7 +434,7 @@ function GoalColumnStatic({
 }) {
   const [activeCategory, setActiveCategory] = useQueryState(
     "category",
-    parseAsStringLiteral(["personal", "professional"] as const).withDefault(
+    parseAsStringLiteral(["personal", "work"] as const).withDefault(
       "personal"
     )
   );
@@ -507,7 +507,7 @@ function GoalColumn({
 }) {
   const [activeCategory, setActiveCategory] = useQueryState(
     "category",
-    parseAsStringLiteral(["personal", "professional"] as const).withDefault(
+    parseAsStringLiteral(["personal", "work"] as const).withDefault(
       "personal"
     )
   );

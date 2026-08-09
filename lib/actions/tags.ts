@@ -154,7 +154,7 @@ export async function toggleEntityTag(
     if (!goal) return { ok: false, error: "Not found" };
     const flipped = flip(goal.tagIds);
     if (!flipped.ok) return { ok: false, error: flipped.error };
-    // The Personal/Professional column is the life tag under another name, so
+    // The Personal/Work column is the life tag under another name, so
     // it moves with it — and takes a fresh order so it lands at the end.
     const category = goalCategoryForLifeArea(flipped.lifeArea);
     await updateGoal(userId, id, {

@@ -12,11 +12,26 @@ import { cn } from "@/lib/utils";
  * This makes the whole row one bar: it bleeds out to the panel's padding on
  * all three sides so it meets the panel edge, and everything the header owns
  * sits inside it.
+ *
+ * `accent` names the panel's own semantic colour. It is published as a custom
+ * property rather than a class so the bar carries the colour but nothing
+ * decides what to *do* with it here — a theme can paint the whole bar in it,
+ * or ignore it entirely and keep a neutral strip.
  */
+export type WidgetAccent =
+  | "tasks"
+  | "habits"
+  | "goals"
+  | "projects"
+  | "notes"
+  | "primary";
+
 export function WidgetHeader({
+  accent,
   className,
   children,
 }: {
+  accent?: WidgetAccent;
   className?: string;
   children: React.ReactNode;
 }) {
@@ -26,6 +41,11 @@ export function WidgetHeader({
         "widget-head -mx-[18px] -mt-[15px] mb-3 flex items-center gap-2 px-[18px] py-2",
         className,
       )}
+      style={
+        accent
+          ? ({ "--head-accent": `var(--${accent})` } as React.CSSProperties)
+          : undefined
+      }
     >
       {children}
     </div>

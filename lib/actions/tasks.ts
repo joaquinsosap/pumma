@@ -22,7 +22,6 @@ import {
   setLifeTags,
   hasLifeTag,
   goalCategoryForLifeArea,
-  lifeViewForGoalCategory,
 } from "@/lib/life-area-sync";
 import {
   withSingleProjectTag,
@@ -37,7 +36,7 @@ const omniSchema = z.object({
   projectId: z.string().nullable().optional(),
   due: z.string().nullable().optional(),
   priority: z.enum(["low", "med", "high"]).optional(),
-  goalCategory: z.enum(["personal", "professional"]).optional(),
+  goalCategory: z.enum(["personal", "work"]).optional(),
   // The view, not a collapsed area: capturing in Both must be able to attach
   // both life tags, which "personal" | "work" can't express.
   lifeView: z.enum(["personal", "work", "both"]).optional(),
@@ -205,7 +204,7 @@ export async function createFromOmni(
   );
   const goalTagIds =
     goalCategory && !askedForLife
-      ? setLifeTags(tagIds, lifeViewForGoalCategory(goalCategory), tags)
+      ? setLifeTags(tagIds, goalCategory, tags)
       : tagIds;
   const goalLife = deriveLifeAreaFromTags(goalTagIds, tags);
   const category = goalCategoryForLifeArea(goalLife);

@@ -88,7 +88,7 @@ export function HomeHabitsGoals({
   return (
     <div className="flex flex-col gap-4 max-xl:shrink-0 xl:min-h-0">
       <section className="flex min-h-0 flex-col rounded-[13px] border border-border bg-surface px-[18px] py-[15px] max-xl:flex-none xl:flex-1 xl:overflow-hidden">
-        <WidgetHeader>
+        <WidgetHeader accent="habits">
           <WidgetHeaderLink href={hrefWithLife("/habits", lifeView)}>
             <span className="h-2.5 w-2.5 rounded-full bg-habits" />
             <h3 className="m-0 text-sm font-bold">Habits</h3>
@@ -203,7 +203,7 @@ export function HomeHabitsGoals({
       </section>
 
       <section className="rounded-[13px] border border-border bg-surface px-[18px] py-[15px]">
-        <WidgetHeader>
+        <WidgetHeader accent="goals">
           <WidgetHeaderLink href={hrefWithLife("/goals", lifeView)}>
             <span className="h-2.5 w-2.5 rotate-45 bg-goals" />
             <h3 className="m-0 text-sm font-bold">Goals</h3>
@@ -229,16 +229,17 @@ export function HomeHabitsGoals({
                   <span className="flex items-center gap-1.5">
                     <span
                       className="rounded px-1 py-px font-mono text-[9px]"
+                      /* Off the tokens rather than fixed oklch values: these
+                         were picked against a light panel and left dark text
+                         on a dark ground once the theme flipped. */
                       style={{
-                        color: personal
-                          ? "oklch(0.46 0.17 300)"
-                          : "oklch(0.44 0.14 245)",
+                        color: personal ? "var(--goals)" : "var(--projects)",
                         background: personal
-                          ? "oklch(0.58 0.17 300 / 0.12)"
-                          : "oklch(0.58 0.14 245 / 0.12)",
+                          ? "color-mix(in oklab, var(--goals) 16%, transparent)"
+                          : "color-mix(in oklab, var(--projects) 16%, transparent)",
                       }}
                     >
-                      {personal ? "PERSONAL" : "PRO"}
+                      {personal ? "PERSONAL" : "WORK"}
                     </span>
                     {g.title}
                   </span>

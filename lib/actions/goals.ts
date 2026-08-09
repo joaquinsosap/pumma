@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import {
   deriveLifeAreaFromTags,
-  lifeViewForGoalCategory,
   setLifeTags,
 } from "@/lib/life-area-sync";
 import { listTags } from "@/lib/db/tags";
@@ -22,7 +21,7 @@ import {
 } from "@/lib/db/goals";
 import type { GoalCategory } from "@/lib/types";
 
-const goalCategory = z.enum(["personal", "professional"]);
+const goalCategory = z.enum(["personal", "work"]);
 
 const addGoalSchema = z.object({ category: goalCategory, title });
 
@@ -38,7 +37,7 @@ export async function addGoalAction(
   const tags = await listTags(userId);
   const tagIds = setLifeTags(
     [],
-    lifeViewForGoalCategory(parsed.data.category),
+    parsed.data.category,
     tags
   );
   await insertGoal({
@@ -136,14 +135,14 @@ export async function deleteGoalAction(id: string): Promise<ActionResult> {
 
 const layoutSchema = z.object({
   personalIds: z.array(entityId).max(500),
-  professionalIds: z.array(entityId).max(500),
+  workIds: z.array(entityId).max(500),
 });
 
 export async function updateGoalsLayoutAction(
   personalIds: string[],
-  professionalIds: string[]
+  workIds: string[]
 ): Promise<ActionResult> {
-  const parsed = layoutSchema.safeParse({ personalIds, professionalIds });
+  const parsed = layoutSchema.safeParse({ personalIds, workIds });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   const userId = await requireUserId();
 
@@ -153,7 +152,7 @@ export async function updateGoalsLayoutAction(
   const tags = await listTags(userId);
   const columns: { category: GoalCategory; ids: string[] }[] = [
     { category: "personal", ids: parsed.data.personalIds },
-    { category: "professional", ids: parsed.data.professionalIds },
+    { category: "work", ids: parsed.data.workIds },
   ];
   for (const { category, ids } of columns) {
     for (const id of ids) {
@@ -161,7 +160,7 @@ export async function updateGoalsLayoutAction(
       if (!goal || goal.category === category) continue;
       const tagIds = setLifeTags(
         goal.tagIds,
-        lifeViewForGoalCategory(category),
+        category,
         tags
       );
       await updateGoal(userId, id, {
@@ -193,7 +192,7 @@ export async function moveGoalCategoryAction(
   const tags = await listTags(userId);
   const tagIds = setLifeTags(
     goal.tagIds,
-    lifeViewForGoalCategory(parsed.data.category),
+    parsed.data.category,
     tags
   );
   await updateGoal(userId, parsed.data.id, {

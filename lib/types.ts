@@ -10,7 +10,10 @@ export const TAG_PALETTE = [
 export type OmniType = "task" | "habit" | "goal" | "note";
 export type TaskPriority = "low" | "med" | "high";
 export type TaskStatus = "todo" | "doing" | "done";
-export type GoalCategory = "personal" | "professional";
+/** The column a goal sits in. The same two words the rest of the app
+ *  uses for a life area — goals used to say "professional" here and nothing
+ *  else did, which meant a translation on every read and write. */
+export type GoalCategory = "personal" | "work";
 export type LifeArea = "personal" | "work";
 // Tasks/notes can live in both areas at once (driven by the "work"+"personal"
 // tags); every other lifeArea-bearing entity stays 2-valued.

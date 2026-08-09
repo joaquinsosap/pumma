@@ -37,7 +37,7 @@ export function HomeTasksProjects({
       />
 
       <section className="flex min-h-0 flex-col rounded-[13px] border border-border bg-surface px-[18px] py-[15px] max-xl:flex-none xl:flex-1 xl:overflow-hidden">
-        <WidgetHeader>
+        <WidgetHeader accent="projects">
           <WidgetHeaderLink href={hrefWithLife("/projects", lifeView)}>
             <span className="h-2.5 w-2.5 rounded-[3px] bg-projects" />
             <h3 className="m-0 text-sm font-bold">Projects</h3>

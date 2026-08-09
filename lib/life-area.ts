@@ -30,17 +30,6 @@ export function filterByLifeView<T extends { lifeArea: LifeArea | "both" }>(
 export const filterByLifeArea = filterByLifeView;
 
 /**
- * Goals say personal/professional where everything else says personal/work.
- * It's the same divide under different words: the column mirrors the goal's
- * life tags rather than deciding anything itself.
- */
-export function goalLifeArea(
-  category: "personal" | "professional"
-): LifeArea {
-  return category === "professional" ? "work" : "personal";
-}
-
-/**
  * Goals filter on lifeArea like everything else now that they carry tags —
  * a goal tagged both shows in every view while still living in one column.
  */

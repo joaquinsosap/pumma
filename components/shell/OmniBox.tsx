@@ -418,11 +418,11 @@ export function OmniBox({
   const lifeTint = LIFE_META[captureArea];
   // The goals page hints which column you're capturing into. That column is
   // the life tag under another name, so a typed "#work" moves the hint too —
-  // otherwise the bar would promise Personal and file under Professional.
+  // otherwise the bar would promise Personal and file under Work.
   const captureHint =
     type === "goal"
-      ? goalCategoryForLifeArea(captureArea) === "professional"
-        ? "Professional"
+      ? goalCategoryForLifeArea(captureArea) === "work"
+        ? "Work"
         : "Personal"
       : capture.hint;
   // Only tint when the view (or a tag) pins an area; the Both view stays neutral.

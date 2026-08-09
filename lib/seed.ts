@@ -456,7 +456,7 @@ export function createSeedData(userId: string): SeedData {
       _id: oid(),
       userId,
       title: "Ship v2.0 release",
-      category: "professional",
+      category: "work",
       metricLabel: "",
       progress: 54,
       targetDate: null,

@@ -141,7 +141,9 @@ async function main() {
       if (!hasLife) {
         const area =
           name === "goals"
-            ? row.category === "professional"
+            ? // This reads pre-migration rows, so it has to know both
+              // spellings of the work column — see scripts/goal-categories.ts.
+              row.category === "work" || row.category === "professional"
               ? "work"
               : "personal"
             : row.lifeArea === "work"

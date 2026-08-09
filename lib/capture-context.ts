@@ -50,10 +50,10 @@ export function getCaptureContext(
 
   if (pathname === "/goals") {
     const category =
-      searchParams.get("category") === "professional"
-        ? "professional"
+      searchParams.get("category") === "work"
+        ? "work"
         : "personal";
-    const label = category === "professional" ? "Professional" : "Personal";
+    const label = category === "work" ? "Work" : "Personal";
     return {
       type: "goal",
       goalCategory: category,

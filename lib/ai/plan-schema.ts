@@ -16,7 +16,7 @@ export const planSchema = z.object({
     z.object({
       refId: z.string(),
       title: z.string(),
-      category: z.enum(["personal", "professional"]),
+      category: z.enum(["personal", "work"]),
       lifeArea,
       metricLabel: z.string().nullable().optional(),
       targetDate: z.string().nullable().optional(),

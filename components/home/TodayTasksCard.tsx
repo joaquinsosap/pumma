@@ -67,14 +67,16 @@ export function TodayTasksCard({
 
   return (
     <section className="flex min-h-0 flex-col rounded-[13px] border border-border bg-surface px-[18px] py-[15px] max-xl:flex-none xl:flex-[1.15]">
-      <WidgetHeader>
+      <WidgetHeader accent="tasks">
         <div className="min-w-0 flex-1">
           <WidgetHeaderLink href={tasksListHref(lifeView, "today")}>
             <span className="h-2.5 w-2.5 rounded-[3px] bg-tasks" />
             <h3 className="m-0 truncate text-sm font-bold">
               {onToday ? "Today's tasks" : dayLabel}
             </h3>
-            <span className="font-mono text-[11px] text-faint">
+            {/* Never wraps: two lines here make the titlebar taller than
+                every other panel's and squeeze the title into an ellipsis. */}
+            <span className="shrink-0 whitespace-nowrap font-mono text-[11px] text-faint">
               {done} of {dayTasks.length} done
             </span>
             {onToday && (

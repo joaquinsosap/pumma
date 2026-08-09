@@ -22,10 +22,8 @@ import { pickProjectColor } from "@/lib/project-colors";
 import { aiInput } from "@/lib/validation";
 import {
   deriveLifeAreaFromTags,
-  lifeViewForGoalCategory,
   setLifeTags,
 } from "@/lib/life-area-sync";
-import { goalLifeArea } from "@/lib/life-area";
 
 const HABIT_COLOR = "oklch(0.6 0.13 155)";
 
@@ -127,8 +125,8 @@ export async function applyPlan(
         progress: 0,
         targetDate: g.targetDate ?? null,
         // Tags carry the life area; the column mirrors them.
-        tagIds: setLifeTags([], lifeViewForGoalCategory(g.category), tags),
-        lifeArea: goalLifeArea(g.category),
+        tagIds: setLifeTags([], g.category, tags),
+        lifeArea: g.category,
         order: nextGoalOrder(goalAccum, g.category),
         createdAt: td,
       });

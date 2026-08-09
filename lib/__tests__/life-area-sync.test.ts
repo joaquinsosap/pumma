@@ -6,9 +6,8 @@ import {
   withProjectLifeTags,
   setLifeTags,
   goalCategoryForLifeArea,
-  lifeViewForGoalCategory,
 } from "@/lib/life-area-sync";
-import { filterByLifeView, filterGoalsByLifeView, goalLifeArea } from "@/lib/life-area";
+import { filterByLifeView, filterGoalsByLifeView } from "@/lib/life-area";
 
 const tags = [
   { id: "t-work", name: "work" },
@@ -132,11 +131,6 @@ describe("filterGoalsByLifeView", () => {
     { id: "b", lifeArea: "both" as const },
   ];
 
-  it("maps professional onto the work view", () => {
-    expect(goalLifeArea("professional")).toBe("work");
-    expect(goalLifeArea("personal")).toBe("personal");
-  });
-
   it("shows everything in the both view", () => {
     expect(filterGoalsByLifeView(goals, "both").map((g) => g.id)).toEqual([
       "p",
@@ -208,9 +202,9 @@ describe("setLifeTags", () => {
 });
 
 describe("goal columns mirror the life tags", () => {
-  it("maps work onto the professional column and back", () => {
-    expect(goalCategoryForLifeArea("work")).toBe("professional");
-    expect(lifeViewForGoalCategory("professional")).toBe("work");
+  it("puts a work goal in the work column", () => {
+    expect(goalCategoryForLifeArea("work")).toBe("work");
+    expect(goalCategoryForLifeArea("personal")).toBe("personal");
   });
 
   it("keeps a both-tagged goal on the personal side", () => {

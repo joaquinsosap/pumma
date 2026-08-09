@@ -186,7 +186,13 @@ export const goalSchema = z.object({
   _id: z.string(),
   userId: z.string(),
   title: z.string(),
-  category: z.enum(["personal", "professional"]),
+  // Goals stored "professional" before the wording was aligned with the rest
+  // of the app. Reads coerce it, so a database that hasn't been migrated yet
+  // still renders — `npm run db:goal-categories` rewrites the stored values.
+  category: z.preprocess(
+    (v) => (v === "professional" ? "work" : v),
+    z.enum(["personal", "work"])
+  ),
   metricLabel: z.string(),
   progress: z.number().min(0).max(100),
   targetDate: z.string().nullable(),

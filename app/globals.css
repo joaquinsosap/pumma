@@ -1534,3 +1534,138 @@ aside svg {
   border-bottom-color: var(--btn-rim) !important;
   box-shadow: inset 0 1px 0 var(--edge);
 }
+
+/* ── Coloured titlebars ──────────────────────────────────────────────────
+   Each panel's bar wears the panel's own semantic colour, the way the
+   landing miniature does: you find Habits by looking for the green bar, not
+   by reading five identical strips. The colour arrives as `--head-accent`
+   from the component; a bar without one keeps the neutral glass band. */
+.widget-head[style*="--head-accent"] {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.5) 0%,
+      rgba(255, 255, 255, 0.2) 46%,
+      rgba(0, 0, 0, 0.07) 50%,
+      rgba(255, 255, 255, 0.24) 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--head-accent) 82%, white) 0%,
+      var(--head-accent) 100%
+    );
+  border-bottom-color: color-mix(in oklab, var(--head-accent) 65%, black);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.6),
+    0 1px 3px var(--shadow);
+}
+
+/* Everything written on a saturated bar goes white — the muted greys were
+   chosen for a pale surface and are illegible here (§2). */
+.widget-head[style*="--head-accent"],
+.widget-head[style*="--head-accent"] :is(h3, span, a, p) {
+  color: #fff !important;
+  text-shadow: 0 1px 2px rgba(0, 30, 55, 0.35);
+}
+
+/* The swatch beside the title said "this panel is tasks" — the bar says it
+   now, and a red dot on a red bar is invisible. It stays as a shape. */
+.widget-head[style*="--head-accent"] :is(h3, span, a) + span[class*="h-2.5"],
+.widget-head[style*="--head-accent"] span[class*="h-2.5"][class*="w-2.5"] {
+  background-color: rgba(255, 255, 255, 0.9) !important;
+  background-image: radial-gradient(
+    circle at 32% 26%,
+    #fff 0%,
+    rgba(255, 255, 255, 0.55) 60%,
+    transparent 100%
+  ) !important;
+  box-shadow: inset 0 -1px 2px rgba(0, 40, 70, 0.3);
+}
+
+/* The progress gauge in the tasks bar: its fill was `bg-tasks` on a
+   `bg-border2` track, and both vanish on a tasks-coloured bar. */
+.widget-head[style*="--head-accent"] [class*="rounded-full"][class*="h-1.5"] {
+  background-color: rgba(0, 30, 55, 0.28) !important;
+  box-shadow: inset 0 1px 2px rgba(0, 30, 55, 0.35);
+}
+.widget-head[style*="--head-accent"] [style*="width"].h-full {
+  background-color: #fff !important;
+  background-image: linear-gradient(
+    180deg,
+    #fff 0%,
+    rgba(255, 255, 255, 0.85) 48%,
+    rgba(255, 255, 255, 0.65) 52%,
+    rgba(255, 255, 255, 0.9) 100%
+  ) !important;
+}
+
+/* Buttons keep their light Win7 face — a pale control on a coloured strip is
+   exactly what a Vista toolbar looked like — but their text must not follow
+   the white rule above. */
+.widget-head[style*="--head-accent"] :is(button, select) {
+  color: var(--ink) !important;
+  text-shadow: none;
+}
+.widget-head[style*="--head-accent"] :is(button, select) svg {
+  color: var(--ink);
+}
+
+/* ── Hover, visibly ──────────────────────────────────────────────────────
+   `--hover` is an opaque near-white picked for an opaque near-white surface.
+   On glass, over a sky, it is very nearly nothing: hovering an agenda day or
+   a goal row changed almost no pixels. Aero's answer was a lit rim, not a
+   fill, so hover gets both — a tint you can actually see, plus the rim. */
+:root {
+  --hover: rgba(120, 195, 240, 0.32);
+}
+[data-theme="dark"] {
+  --hover: rgba(120, 200, 250, 0.2);
+}
+.hover\:bg-hover:hover,
+.bg-hover {
+  background-color: var(--hover) !important;
+  background-image: linear-gradient(
+    180deg,
+    var(--gloss-mid) 0%,
+    transparent 100%
+  );
+  box-shadow:
+    inset 0 0 0 1px var(--btn-rim),
+    inset 0 1px 0 var(--btn-lip);
+}
+
+/* Cards whose only hover cue is a hairline going one shade darker. That is a
+   legible cue on opaque paper and almost nothing on glass over a sky — goal
+   cards, project cards and task rows all read as inert. Aero's cue was a lit
+   rim, which survives any ground. */
+.hover\:border-faint2:hover,
+.hover\:border-faint:hover {
+  border-color: var(--btn-rim-hot) !important;
+  box-shadow:
+    0 0 9px var(--btn-glow),
+    inset 0 1px 0 var(--btn-lip),
+    0 4px 12px var(--shadow);
+}
+
+/* Dark mode's accent tokens are already the bright end of each hue, so the
+   light recipe — mix toward white — produced pastel bars with white text on
+   them. Dark bars mix toward black instead and keep the same white type. */
+[data-theme="dark"] .widget-head[style*="--head-accent"] {
+  background-image:
+    linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.18) 0%,
+      rgba(255, 255, 255, 0.07) 46%,
+      rgba(0, 0, 0, 0.22) 50%,
+      rgba(255, 255, 255, 0.08) 100%
+    ),
+    linear-gradient(
+      180deg,
+      color-mix(in oklab, var(--head-accent) 58%, black) 0%,
+      color-mix(in oklab, var(--head-accent) 36%, black) 100%
+    );
+  border-bottom-color: color-mix(in oklab, var(--head-accent) 45%, black);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 1px 3px var(--shadow);
+}

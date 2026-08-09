@@ -1,6 +1,11 @@
 // Pure, no server-only import — unit-testable. Shared by every place that
 // mutates tagIds so the "work"/"personal" tags and lifeArea never drift apart.
-import type { EntityLifeArea, LifeArea, LifeView } from "@/lib/types";
+import type {
+  EntityLifeArea,
+  GoalCategory,
+  LifeArea,
+  LifeView,
+} from "@/lib/types";
 
 export const SPECIAL_LIFE_TAGS = ["work", "personal"] as const;
 
@@ -143,19 +148,10 @@ export function withProjectLifeTags(
 }
 
 /**
- * Goals sit in a Personal or Professional column. That column is the life tag
- * under another word, so it's derived rather than stored independently — a
- * goal tagged both is at home on the personal side and shows in every view.
+ * Goals sit in a Personal or Work column. That column is the life tag under
+ * the same word now, so the only thing left to decide is where a goal tagged
+ * "both" lives: on the personal side, while still showing in every view.
  */
-export function goalCategoryForLifeArea(
-  area: EntityLifeArea
-): "personal" | "professional" {
-  return area === "work" ? "professional" : "personal";
-}
-
-/** The life view a goal's column stands for. */
-export function lifeViewForGoalCategory(
-  category: "personal" | "professional"
-): LifeView {
-  return category === "professional" ? "work" : "personal";
+export function goalCategoryForLifeArea(area: EntityLifeArea): GoalCategory {
+  return area === "work" ? "work" : "personal";
 }

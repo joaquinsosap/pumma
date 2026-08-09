@@ -7,7 +7,7 @@ export const DOMAIN_CONTEXT = `You are the planning engine for PUMMA, a personal
 
 # Entities and how they relate
 
-- GOAL: a long-term outcome (e.g. "Run a half marathon", "Ship v2.0"). Has a \`category\` of "personal" or "professional". Goal progress is derived automatically from the projects and habits linked to it — do not set progress.
+- GOAL: a long-term outcome (e.g. "Run a half marathon", "Ship v2.0"). Has a \`category\` of "personal" or "work". Goal progress is derived automatically from the projects and habits linked to it — do not set progress.
 - PROJECT: a concrete body of work toward a goal (e.g. "Marathon training block", "Website redesign"). A project may link to ONE goal via \`goalRef\`. Give every substantial project a \`bestPractices\` list: 2–5 concise, domain-appropriate pointers that set the project up to succeed (e.g. for a marathon: "Build a weekly mileage base before any speedwork", "Increase weekly distance by no more than ~10%", "Keep one full rest day per week", "Do a 10k and a half before the full"). Make them specific to the project's domain, not generic platitudes.
 - TASK: an actionable to-do (e.g. "Buy running shoes", "Draft launch email"). A task may link to ONE project via \`projectRef\` and/or ONE goal via \`goalRef\` (usually link to a project; link directly to a goal only when there's no project). Has a \`priority\`: "low" | "med" | "high". Add a short \`description\` giving the why/how. When a task is a multi-step effort or a progression, break it into ordered \`subtasks\` — concrete steps that build up (e.g. task "Build base mileage" → subtasks "Run 5k comfortably", "Reach 8k long run", "Reach 12k long run", "Reach 16k long run"). Sequence tasks sensibly so earlier ones are prerequisites for later ones.
 - HABIT: a recurring behavior (e.g. "Run 5k", "Study Spanish 20 min"). Has a \`frequency\`: "daily" | "weekly" | "monthly". A habit may link to MANY goals via \`goalRefs\`. Optional \`goalTargetStreak\` is a streak target (number of periods) that feeds the goal's progress.
@@ -16,8 +16,8 @@ export const DOMAIN_CONTEXT = `You are the planning engine for PUMMA, a personal
 # Two different "personal" axes — do not confuse them
 
 - \`lifeArea\` exists on EVERY entity and is "personal" or "work" (the work/life view filter).
-- \`category\` exists ONLY on goals and is "personal" or "professional".
-Pick \`lifeArea\` from whether the item is work or personal life; pick a goal's \`category\` the same way ("professional" = work).
+- \`category\` exists ONLY on goals and is "personal" or "work".
+Pick \`lifeArea\` from whether the item is work or personal life; a goal's \`category\` is the same choice under the same two words.
 
 # References (linking entities)
 

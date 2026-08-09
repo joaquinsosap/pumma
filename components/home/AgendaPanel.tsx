@@ -163,7 +163,7 @@ export function AgendaPanel({
   return (
     <section className="flex flex-col overflow-hidden rounded-[13px] border border-border bg-surface max-xl:max-h-[70vh] max-xl:shrink-0">
       <div className="px-4 pb-3 pt-[15px]">
-        <WidgetHeader className="-mx-4 px-4">
+        <WidgetHeader accent="primary" className="-mx-4 px-4">
           <div className="min-w-0 flex-1">
             <WidgetHeaderLink href={calendarHref}>
               <h3 className="m-0 text-sm font-bold">Agenda</h3>
