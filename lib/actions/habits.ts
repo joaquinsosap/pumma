@@ -8,7 +8,13 @@ import { listTags } from "@/lib/db/tags";
 import { deriveLifeAreaFromTags, setLifeTags } from "@/lib/life-area-sync";
 import { userToday } from "@/lib/timezone-server";
 import { entityId, isoDate, title } from "@/lib/validation";
-import { deleteHabit, insertHabit, listHabits, updateHabit } from "@/lib/db/habits";
+import {
+  deleteHabit,
+  insertHabit,
+  listHabits,
+  updateHabit,
+  updateHabitsOrder,
+} from "@/lib/db/habits";
 import {
   toggleHabitEntry,
   habitEntriesInRange,
@@ -82,7 +88,7 @@ export async function toggleHabitPeriod(input: {
 
 export async function toggleHabitDate(
   habitId: string,
-  date: string
+  date: string,
 ): Promise<ActionResult> {
   const parsed = toggleDateSchema.safeParse({ habitId, date });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -100,7 +106,7 @@ const nameSchema = z.object({
 });
 
 export async function addHabitAction(
-  input: z.infer<typeof nameSchema>
+  input: z.infer<typeof nameSchema>,
 ): Promise<ActionResult> {
   const parsed = nameSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid name" };
@@ -131,7 +137,7 @@ const renameSchema = z.object({ id: entityId, name: title });
 
 export async function renameHabit(
   id: string,
-  name: string
+  name: string,
 ): Promise<ActionResult> {
   const parsed = renameSchema.safeParse({ id, name });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -168,11 +174,14 @@ export async function deleteHabitAction(id: string): Promise<ActionResult> {
 const frequencySchema = z.object({
   type: z.enum(["daily", "weekly", "monthly"]),
   target: z.number().min(1).max(31).optional(),
+  // Weekdays a daily habit runs on. Deduped and sorted before storing so
+  // two habits with the same schedule always compare equal.
+  days: z.array(z.number().int().min(0).max(6)).max(7).optional(),
 });
 
 export async function updateHabitFrequencyAction(
   id: string,
-  frequency: z.infer<typeof frequencySchema>
+  frequency: z.infer<typeof frequencySchema>,
 ): Promise<ActionResult> {
   const idParsed = entityId.safeParse(id);
   const parsed = frequencySchema.safeParse(frequency);
@@ -180,12 +189,40 @@ export async function updateHabitFrequencyAction(
     return { ok: false, error: "Invalid input" };
   }
   const userId = await requireUserId();
+  // Only a daily habit has weekdays; a weekly one carrying them would be a
+  // schedule nothing reads. And "all seven" is the same thing as unset, so
+  // it is stored as unset rather than as a list that means nothing.
+  const days =
+    parsed.data.type === "daily" && parsed.data.days?.length
+      ? [...new Set(parsed.data.days)].sort((a, b) => a - b)
+      : undefined;
   await updateHabit(userId, idParsed.data, {
     frequency: {
       type: parsed.data.type,
       target: parsed.data.target ?? 1,
+      ...(days && days.length < 7 ? { days } : {}),
     },
   });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+const orderSchema = z.array(entityId).max(200);
+
+/**
+ * Persist a drag-reorder. The array position is the order, so the client
+ * sends what it shows and never computes an index.
+ *
+ * Home reads the same `order`, so a habit dragged to the top here is at the
+ * top there too — which is the whole point of being able to drag it.
+ */
+export async function updateHabitsOrderAction(
+  ids: string[],
+): Promise<ActionResult> {
+  const parsed = orderSchema.safeParse(ids);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const userId = await requireUserId();
+  await updateHabitsOrder(userId, parsed.data);
   revalidatePath("/", "layout");
   return { ok: true };
 }

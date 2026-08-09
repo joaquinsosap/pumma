@@ -8,3 +8,4 @@ export const listHabits = cache(impl.listHabits);
 export const insertHabit = impl.insertHabit;
 export const updateHabit = impl.updateHabit;
 export const deleteHabit = impl.deleteHabit;
+export const updateHabitsOrder = impl.updateHabitsOrder;

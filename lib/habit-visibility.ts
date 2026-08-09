@@ -2,6 +2,48 @@ import { addDays, iso, type WeekStart } from "@/lib/date";
 
 export type HabitFrequencyType = "daily" | "weekly" | "monthly";
 
+/**
+ * Which weekdays a daily habit applies on, 0 = Sunday .. 6 = Saturday.
+ *
+ * A gym habit that runs Monday to Friday is still a *daily* habit — it just
+ * does not apply at the weekend. Modelling it as a fourth frequency would
+ * mean a second set of period, streak and heat-cell rules; modelling it as a
+ * filter over "daily" means the existing rules keep working and only need to
+ * know which days to skip.
+ *
+ * Empty or absent means every day, which is what every habit created before
+ * this existed meant.
+ */
+export type HabitSchedule = { type: string; target: number; days?: number[] };
+
+export const ALL_WEEKDAYS = [0, 1, 2, 3, 4, 5, 6];
+
+/** Does this habit apply on the given date? Only daily habits can say no. */
+export function habitAppliesOn(
+  frequency: HabitSchedule,
+  dateIso: string,
+): boolean {
+  if (normalizeHabitFrequency(frequency.type) !== "daily") return true;
+  const days = frequency.days;
+  if (!days || days.length === 0 || days.length === 7) return true;
+  return days.includes(new Date(dateIso + "T00:00").getDay());
+}
+
+/** "Mon–Fri", "Mon, Wed, Fri", "Every day". */
+export function habitScheduleLabel(frequency: HabitSchedule): string {
+  if (normalizeHabitFrequency(frequency.type) !== "daily") return "";
+  const days = [...(frequency.days ?? [])].sort((a, b) => a - b);
+  if (days.length === 0 || days.length === 7) return "Every day";
+  const NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  // A contiguous run reads better as a range than as a list, and weekdays
+  // and weekends are the two runs people actually keep.
+  const contiguous = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+  if (contiguous && days.length > 2) {
+    return `${NAMES[days[0]]}\u2013${NAMES[days[days.length - 1]]}`;
+  }
+  return days.map((d) => NAMES[d]).join(", ");
+}
+
 export type HabitVisibilitySettings = {
   dailyDays: number;
   weeklyWeeks: number;
@@ -54,7 +96,7 @@ function atLeastOne(value: number, min = 1): number {
 function hasEntryInRange(
   entries: Set<string>,
   start: string,
-  end: string
+  end: string,
 ): boolean {
   for (const date of entries) {
     if (date >= start && date <= end) return true;
@@ -79,17 +121,23 @@ function weekStartDate(d: Date, weekStart: WeekStart): Date {
 }
 
 export function visibleDayCount(visibility: HabitVisibilitySettings): number {
-  return atLeastOne(visibility.dailyDays, HABIT_VISIBILITY_DEFAULTS.dailyDays.min);
+  return atLeastOne(
+    visibility.dailyDays,
+    HABIT_VISIBILITY_DEFAULTS.dailyDays.min,
+  );
 }
 
 export function visibleWeekCount(visibility: HabitVisibilitySettings): number {
-  return atLeastOne(visibility.weeklyWeeks, HABIT_VISIBILITY_DEFAULTS.weeklyWeeks.min);
+  return atLeastOne(
+    visibility.weeklyWeeks,
+    HABIT_VISIBILITY_DEFAULTS.weeklyWeeks.min,
+  );
 }
 
 export function visibleMonthCount(visibility: HabitVisibilitySettings): number {
   return atLeastOne(
     visibility.monthlyMonths,
-    HABIT_VISIBILITY_DEFAULTS.monthlyMonths.min
+    HABIT_VISIBILITY_DEFAULTS.monthlyMonths.min,
   );
 }
 
@@ -99,7 +147,7 @@ export function habitHeatCells(
   entries: Set<string>,
   weekStart: WeekStart,
   today: string = iso(),
-  timeZone?: string
+  timeZone?: string,
 ): HabitHeatCell[] {
   const todayDate = new Date(today + "T00:00");
 
@@ -110,7 +158,7 @@ export function habitHeatCells(
       const month = new Date(
         todayDate.getFullYear(),
         todayDate.getMonth() - i,
-        1
+        1,
       );
       const start = iso(startOfMonth(month), timeZone);
       const end = iso(endOfMonth(month), timeZone);
@@ -182,7 +230,7 @@ export function habitVisibilityFromSettings(
     habitVisibleMonthsDaily?: number;
     habitVisibleMonthsWeekly?: number;
     habitVisibleMonthsMonthly?: number;
-  } | null
+  } | null,
 ): HabitVisibilitySettings {
   const dailyDays =
     settings?.habitVisibleDays ??
@@ -205,11 +253,11 @@ export function habitVisibilityFromSettings(
     dailyDays: atLeastOne(dailyDays, HABIT_VISIBILITY_DEFAULTS.dailyDays.min),
     weeklyWeeks: atLeastOne(
       weeklyWeeks,
-      HABIT_VISIBILITY_DEFAULTS.weeklyWeeks.min
+      HABIT_VISIBILITY_DEFAULTS.weeklyWeeks.min,
     ),
     monthlyMonths: atLeastOne(
       monthlyMonths,
-      HABIT_VISIBILITY_DEFAULTS.monthlyMonths.min
+      HABIT_VISIBILITY_DEFAULTS.monthlyMonths.min,
     ),
   };
 }
@@ -223,7 +271,7 @@ export function currentHabitPeriod(
   frequency: HabitFrequencyType,
   weekStart: WeekStart,
   today: string = iso(),
-  timeZone?: string
+  timeZone?: string,
 ): { start: string; end: string } {
   const cells = habitHeatCells(
     frequency,
@@ -231,7 +279,7 @@ export function currentHabitPeriod(
     new Set<string>(),
     weekStart,
     today,
-    timeZone
+    timeZone,
   );
   const last = cells[cells.length - 1];
   return { start: last.periodStart, end: last.periodEnd };
@@ -241,7 +289,7 @@ export function currentHabitPeriod(
 export function habitPeriodKey(
   frequency: HabitFrequencyType,
   date: string,
-  weekStart: WeekStart
+  weekStart: WeekStart,
 ): string {
   const d = new Date(date.slice(0, 10) + "T00:00");
   if (frequency === "monthly") return `${date.slice(0, 7)}-01`;
@@ -253,7 +301,7 @@ export function habitPeriodKey(
 export function stepHabitPeriod(
   frequency: HabitFrequencyType,
   key: string,
-  delta: number
+  delta: number,
 ): string {
   const d = new Date(key + "T00:00");
   if (frequency === "monthly") {
@@ -265,10 +313,11 @@ export function stepHabitPeriod(
 function donePeriodKeys(
   frequency: HabitFrequencyType,
   entries: Set<string>,
-  weekStart: WeekStart
+  weekStart: WeekStart,
 ): Set<string> {
   const keys = new Set<string>();
-  for (const date of entries) keys.add(habitPeriodKey(frequency, date, weekStart));
+  for (const date of entries)
+    keys.add(habitPeriodKey(frequency, date, weekStart));
   return keys;
 }
 
@@ -284,14 +333,29 @@ export function habitStreak(
   frequency: HabitFrequencyType,
   entries: Set<string>,
   weekStart: WeekStart = "mon",
-  today: string = iso()
+  today: string = iso(),
+  /** Days the habit applies on — a day it skips can't break the run. */
+  schedule?: HabitSchedule,
 ): number {
   const done = donePeriodKeys(frequency, entries, weekStart);
+  const applies = (key: string) => !schedule || habitAppliesOn(schedule, key);
   let cur = habitPeriodKey(frequency, today, weekStart);
+  // Walk back over days off before deciding the run has ended: a Mon–Fri
+  // habit must not lose its streak every Saturday for not being done on a
+  // day it was never meant to be done.
+  let guard = 0;
+  while (!done.has(cur) && !applies(cur) && guard++ < 14) {
+    cur = stepHabitPeriod(frequency, cur, -1);
+  }
   if (!done.has(cur)) cur = stepHabitPeriod(frequency, cur, -1);
   let count = 0;
-  while (done.has(cur)) {
-    count += 1;
+  guard = 0;
+  while (guard++ < 3650) {
+    if (done.has(cur)) {
+      count += 1;
+    } else if (applies(cur)) {
+      break;
+    }
     cur = stepHabitPeriod(frequency, cur, -1);
   }
   return count;
@@ -301,7 +365,7 @@ export function habitStreak(
 export function habitBestStreak(
   frequency: HabitFrequencyType,
   entries: Set<string>,
-  weekStart: WeekStart = "mon"
+  weekStart: WeekStart = "mon",
 ): number {
   const keys = [...donePeriodKeys(frequency, entries, weekStart)].sort();
   let best = 0;

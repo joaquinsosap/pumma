@@ -9,6 +9,7 @@ import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { toggleHabitPeriod } from "@/lib/actions/habits";
 import {
   currentHabitPeriod,
+  habitAppliesOn,
   habitStreak,
   normalizeHabitFrequency,
 } from "@/lib/habit-visibility";
@@ -129,7 +130,7 @@ export function HomeHabitsGoals({
             const doneToday = [...set].some(
               (d) => d >= period.start && d <= period.end,
             );
-            const streak = habitStreak(freq, set, weekStart, td);
+            const streak = habitStreak(freq, set, weekStart, td, h.frequency);
             return (
               <div key={h.id} className={habitWeekRowClass}>
                 <button
@@ -164,15 +165,25 @@ export function HomeHabitsGoals({
                       const ds = iso(d);
                       const on = set.has(ds);
                       const isToday = ds === td;
+                      // A day this habit does not run on is not a miss. An
+                      // empty box that looks identical either way is the
+                      // whole reason a Mon–Fri habit felt like it was
+                      // failing every weekend.
+                      const applies = habitAppliesOn(h.frequency, ds);
                       return (
                         <span
                           key={ds}
                           className={habitWeekCellClass}
                           style={{
+                            opacity: applies ? 1 : 0.3,
                             background: on
                               ? "oklch(0.6 0.13 155)"
                               : "transparent",
-                            border: on ? "none" : "1.5px solid var(--border)",
+                            border: on
+                              ? "none"
+                              : applies
+                                ? "1.5px solid var(--border)"
+                                : "1.5px dashed var(--border2)",
                             borderRadius: "3px",
                             outline: isToday
                               ? on

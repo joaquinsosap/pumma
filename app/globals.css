@@ -1458,3 +1458,34 @@ select:hover:not(:disabled) {
   );
   animation: omniTraceSpin 2.4s linear infinite;
 }
+
+/* ── The capture bar on focus ────────────────────────────────────────────
+   Three separate accent washes were stacking on focus and drowning the one
+   effect that is actually good — the marching trace around the edge.
+
+   The halo behind the box (14% accent at inset -10px) and the shimmer
+   sweeping across the inside (22% accent on soft-light) between them turned
+   a white bar pink the moment you clicked it, and the focus ring was a 4px
+   hard spread band, which is the same shape mistake as the card hover: it
+   has a corner to get wrong.
+
+   What is left is the trace and a soft glow of the same colour. The bar
+   stays the colour it was; the edge is what tells you it is listening. */
+.omni-box::before {
+  background: transparent !important;
+}
+.omni-box-shimmer::before {
+  background: linear-gradient(
+    105deg,
+    transparent 28%,
+    color-mix(in oklch, var(--omni-accent) 7%, transparent) 50%,
+    transparent 72%
+  );
+}
+.omni-box:focus-within {
+  border-color: color-mix(in oklab, var(--omni-accent) 45%, transparent);
+  box-shadow:
+    inset 0 1px 0 var(--lip),
+    0 0 14px -2px color-mix(in oklab, var(--omni-accent) 32%, transparent),
+    0 14px 34px -10px var(--shadow);
+}

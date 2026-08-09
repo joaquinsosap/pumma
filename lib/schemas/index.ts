@@ -133,32 +133,41 @@ export const taskSchema = z.object({
   timerStartedAt: z.string().nullable().default(null),
 });
 
-export const habitSchema = z.preprocess((raw) => {
-  if (!raw || typeof raw !== "object") return raw;
-  const doc = raw as Record<string, unknown>;
-  const goalIds = Array.isArray(doc.goalIds)
-    ? doc.goalIds
-    : doc.goalId
-      ? [doc.goalId]
-      : [];
-  const { goalId: _legacy, ...rest } = doc;
-  return { ...rest, goalIds };
-}, z.object({
-  _id: z.string(),
-  userId: z.string(),
-  name: z.string(),
-  color: z.string(),
-  frequency: z.object({ type: z.string(), target: z.number() }),
-  order: z.number(),
-  archived: z.boolean(),
-  goalIds: z.array(z.string()).default([]),
-  goalTargetStreak: z.number().nullable().default(null),
-  // Backfilled by scripts/migrate-entity-tags.ts. Default keeps pre-migration
-  // docs parseable; the life tags inside are what decide lifeArea.
-  tagIds: z.array(z.string()).default([]),
-  lifeArea: z.enum(["personal", "work", "both"]),
-  createdAt: z.string(),
-}));
+export const habitSchema = z.preprocess(
+  (raw) => {
+    if (!raw || typeof raw !== "object") return raw;
+    const doc = raw as Record<string, unknown>;
+    const goalIds = Array.isArray(doc.goalIds)
+      ? doc.goalIds
+      : doc.goalId
+        ? [doc.goalId]
+        : [];
+    const { goalId: _legacy, ...rest } = doc;
+    return { ...rest, goalIds };
+  },
+  z.object({
+    _id: z.string(),
+    userId: z.string(),
+    name: z.string(),
+    color: z.string(),
+    frequency: z.object({
+      type: z.string(),
+      target: z.number(),
+      // Weekdays a daily habit applies on, 0 = Sunday. Optional: absent means
+      // every day, which is what every habit written before this meant.
+      days: z.array(z.number().int().min(0).max(6)).optional(),
+    }),
+    order: z.number(),
+    archived: z.boolean(),
+    goalIds: z.array(z.string()).default([]),
+    goalTargetStreak: z.number().nullable().default(null),
+    // Backfilled by scripts/migrate-entity-tags.ts. Default keeps pre-migration
+    // docs parseable; the life tags inside are what decide lifeArea.
+    tagIds: z.array(z.string()).default([]),
+    lifeArea: z.enum(["personal", "work", "both"]),
+    createdAt: z.string(),
+  }),
+);
 
 export const habitEntrySchema = z.object({
   _id: z.string(),
@@ -191,7 +200,7 @@ export const goalSchema = z.object({
   // still renders — `npm run db:goal-categories` rewrites the stored values.
   category: z.preprocess(
     (v) => (v === "professional" ? "work" : v),
-    z.enum(["personal", "work"])
+    z.enum(["personal", "work"]),
   ),
   metricLabel: z.string(),
   progress: z.number().min(0).max(100),
@@ -299,7 +308,9 @@ export type SubscriptionDoc = z.infer<typeof subscriptionSchema>;
 
 export type User = Omit<UserDoc, "_id"> & { id: string };
 // The encrypted key never crosses the server/client boundary — the DTO drops it.
-export type Settings = Omit<SettingsDoc, "_id" | "aiApiKeyEnc"> & { id: string };
+export type Settings = Omit<SettingsDoc, "_id" | "aiApiKeyEnc"> & {
+  id: string;
+};
 export type Tag = Omit<TagDoc, "_id"> & { id: string };
 export type Task = Omit<TaskDoc, "_id"> & { id: string };
 export type Habit = Omit<HabitDoc, "_id"> & { id: string };
@@ -313,7 +324,7 @@ export type LifeWeek = Omit<LifeWeekDoc, "_id"> & { id: string };
 export type Subscription = Omit<SubscriptionDoc, "_id"> & { id: string };
 
 export function toDto<T extends { _id: string }>(
-  doc: T
+  doc: T,
 ): Omit<T, "_id"> & { id: string } {
   const { _id, ...rest } = doc;
   return { ...rest, id: _id } as Omit<T, "_id"> & { id: string };
