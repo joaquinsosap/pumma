@@ -36,23 +36,25 @@ export const LifeWeekCell = memo(function LifeWeekCell({
       onClick={() => onSelect(weekStart)}
       className={cn(
         "flex min-w-0 flex-1 cursor-pointer items-center justify-center",
-        fullView
-          ? "h-full min-h-[2px] rounded-[1px]"
-          : "h-2.5 rounded-[2px] sm:h-3.5",
+        // Square, and the same square either way. These are weeks of a life
+        // and there are four and a half thousand of them: at eleven pixels a
+        // rounded corner is not a corner, it is a smudge, and it made the
+        // grid read as a mesh of dots rather than a block of time.
+        fullView ? "h-full min-h-[2px]" : "h-2.5 sm:h-3.5",
+        // Filled either way too. The weeks ahead used to be an outline while
+        // the weeks behind were a fill, so half the grid was drawn one way
+        // and half the other, and the join between them read as a change of
+        // material rather than a point in a life. Now it is one form in two
+        // weights, which is what it is.
         !mc &&
-          (fullView
-            ? cn(
-                state === "past" && "bg-lived",
-                state === "future" && "bg-ahead",
-                state === "current" &&
-                  "bg-lived ring-1 ring-inset ring-primary",
-              )
-            : cn(
-                state === "past" && "bg-lived",
-                state === "future" && "border border-border2 bg-transparent",
-                state === "current" &&
-                  "bg-primary/[0.18] outline outline-[1.5px] outline-primary -outline-offset-1",
-              )),
+          cn(
+            state === "past" && "bg-lived",
+            state === "future" && "bg-ahead",
+            state === "current" &&
+              (fullView
+                ? "bg-lived ring-1 ring-inset ring-primary"
+                : "bg-lived outline outline-[1.5px] outline-primary -outline-offset-1"),
+          ),
         mc &&
           state === "current" &&
           (fullView
@@ -90,10 +92,8 @@ export const LifeWeekEmpty = memo(function LifeWeekEmpty({
   return (
     <span
       className={cn(
-        "min-w-0 flex-1",
-        fullView
-          ? "h-full min-h-[2px] rounded-[1px] bg-ahead"
-          : "h-2.5 rounded-[2px] border border-border2 bg-transparent sm:h-3.5",
+        "min-w-0 flex-1 bg-ahead",
+        fullView ? "h-full min-h-[2px]" : "h-2.5 sm:h-3.5",
       )}
       aria-hidden
     />

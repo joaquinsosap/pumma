@@ -85,8 +85,25 @@ export function CarryoverSection({
   return (
     <section
       className={cn(
-        "rounded-[13px] border border-dashed border-tasks/35 bg-tasks/[0.07] p-[9px_11px]",
-        variant === "page" && "p-3",
+        "border border-dashed border-tasks/35 bg-tasks/[0.07] p-[9px_11px]",
+        variant === "page" && "rounded-[13px] p-3",
+        // Hung off the panel's titlebar rather than floating under it.
+        //
+        // Carryover is not a card that happens to sit near the top of the
+        // list; it is the red bar's own overflow, yesterday's tasks still
+        // attached to today. Drawn as a rounded box with air above it, it
+        // read as the first item in the list, which is exactly what it is
+        // not.
+        //
+        // So it bleeds out to the titlebar's own width, meets its underside
+        // with no gap and no top edge of its own, and keeps its sides
+        // straight all the way down. Only the bottom corners round off.
+        // Collapsed it is a tab hanging from the bar; expanded it is the
+        // same shape, further down. The iPhone's island, in other words,
+        // which is the shape a thing takes when it grows out of an edge
+        // instead of sitting on a surface.
+        variant === "agenda" &&
+          "-mx-[18px] -mt-3 rounded-b-[14px] border-x-0 border-t-0 px-[18px]",
         className,
       )}
       style={
@@ -138,9 +155,14 @@ export function CarryoverSection({
       )}
 
       {variant === "agenda" ? (
-        open ? (
-          agendaList
-        ) : null
+        <div
+          className={cn(
+            "grid transition-[grid-template-rows] duration-300 ease-out",
+            open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+        >
+          <div className="overflow-hidden">{agendaList}</div>
+        </div>
       ) : (
         <div className="mt-2 overflow-hidden rounded-lg border border-tasks/20 bg-surface">
           <TaskList

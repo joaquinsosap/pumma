@@ -117,16 +117,21 @@ export function TodayTasksCard({
           </button>
         </div>
       </WidgetHeader>
+      {/* Outside the scroller, on purpose. It hangs off the titlebar, so it
+          has to stay hung off it while the list moves underneath. Inside, it
+          scrolled away like a first row, and it was also held back from the
+          right edge by the scrollbar gutter, which left the "straight sides
+          continuing down from the bar" straight on one side only. */}
+      {onToday && recentCarryover.length > 0 && (
+        <CarryoverSection
+          tasks={recentCarryover}
+          variant="agenda"
+          href={tasksListHref(lifeView, "today")}
+          taskHref={(task) => taskDetailHref(task, lifeView, td)}
+          className="mb-2 shrink-0"
+        />
+      )}
       <div className="min-h-0 flex-1 max-lg:overflow-visible @container @max-[470px]:[&_.task-tag-full]:hidden @max-[470px]:[&_.task-tag-mini]:inline @max-[360px]:[&_.task-tag-mini]:!hidden @max-[470px]:[&_.task-subcount-inline]:hidden @max-[470px]:[&_.task-subcount-side]:inline @max-[470px]:[&_.task-time-chip]:hidden @max-[470px]:[&_.task-prio-text]:!hidden @max-[470px]:[&_.task-prio-icon]:!inline-flex @max-[470px]:[&_.task-row]:!grid-cols-[18px_16px_minmax(0,1fr)_28px_44px] @[470px]:[&_.task-timer-cell]:justify-start xl:overflow-y-auto">
-        {onToday && recentCarryover.length > 0 && (
-          <CarryoverSection
-            tasks={recentCarryover}
-            variant="agenda"
-            href={tasksListHref(lifeView, "today")}
-            taskHref={(task) => taskDetailHref(task, lifeView, td)}
-            className="mb-2"
-          />
-        )}
         {dayTasks.length ? (
           <TaskList
             tasks={dayTasks}

@@ -493,7 +493,7 @@ function LegendSwatch({
   return (
     <span className="flex items-center gap-1.5">
       <span
-        className={cn("h-[11px] w-[11px] shrink-0 rounded-[2px]", className)}
+        className={cn("h-[11px] w-[11px] shrink-0", className)}
         style={style}
       />
       {label}

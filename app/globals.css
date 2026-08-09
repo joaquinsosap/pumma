@@ -195,7 +195,7 @@ body {
   opacity: 1;
   animation:
     omniHalo 2.6s ease-in-out infinite,
-    omniHaloScale 3.2s ease-in-out infinite;
+    omniHaloSpread 3.2s ease-in-out infinite;
 }
 
 @keyframes omniScrollHintRight {
@@ -246,13 +246,22 @@ body {
   }
 }
 
-@keyframes omniHaloScale {
+/* The halo widens by a fixed four pixels, not by four percent.
+   `scale(1.04)` grows by a share of the element's own width, and this element
+   is as wide as the window: at a thousand pixels that is twenty pixels a
+   side, against the twenty-four the shell's padding leaves it, and the shell
+   clips what it cannot fit. So the halo was cut off flat against the sidebar,
+   and the wider the window the harder it was cut, while the top edge stayed
+   fine because two percent of a hundred-pixel height is nothing.
+   Growing the inset instead is the same gesture at a size that does not
+   depend on how wide anyone's screen is. */
+@keyframes omniHaloSpread {
   0%,
   100% {
-    transform: scale(1);
+    inset: -10px;
   }
   50% {
-    transform: scale(1.04);
+    inset: -14px;
   }
 }
 
@@ -557,16 +566,16 @@ html {
    itself rather than as a field that is listening.
 
    It earns the exception on amplitude. The halo sits behind the box, not in
-   it: an opacity easing between 55% and 100% and a 4% scale on something
-   already blurred out to a wash. Nothing changes position, no text moves, and
-   at half speed here it reads as ambient rather than active.
+   it: an opacity easing between 55% and 100% and four pixels of spread on
+   something already blurred out to a wash. Nothing changes position, no text
+   moves, and at half speed here it reads as ambient rather than active.
 
    Everything that actually travels stays switched off. */
 @media (prefers-reduced-motion: reduce) {
   .omni-box:focus-within::before {
     animation:
       omniHalo 5s ease-in-out infinite,
-      omniHaloScale 6.2s ease-in-out infinite !important;
+      omniHaloSpread 6.2s ease-in-out infinite !important;
   }
 }
 
