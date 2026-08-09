@@ -643,7 +643,7 @@ export function OmniBox({
         </div>
         <div className="omni-box-scanline" aria-hidden />
         {aiMode ? (
-          <div className="mt-2.5 flex items-center gap-2 border-t border-border2 py-2.5 pb-1">
+          <div className="mt-2.5 flex min-h-[38px] items-center gap-2 border-t border-border2 py-2.5 pb-3">
             <span className="shrink-0 font-mono text-[10px] text-faint2">
               A question gets an answer · a request gets a draft you can edit
             </span>
@@ -657,7 +657,7 @@ export function OmniBox({
             </button>
           </div>
         ) : (
-          <div className="mt-2.5 flex min-w-0 items-center gap-2 overflow-x-auto border-t border-border2 py-2.5 pb-3 [scrollbar-width:none] lg:overflow-visible">
+          <div className="mt-2.5 flex min-h-[38px] min-w-0 items-center gap-2 overflow-x-auto border-t border-border2 py-2.5 pb-3 [scrollbar-width:none] lg:overflow-visible">
             <span className="shrink-0 font-mono text-[10px] text-faint2">
               TAB FOR →
             </span>

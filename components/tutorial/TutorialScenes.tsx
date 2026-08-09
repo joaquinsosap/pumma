@@ -1448,7 +1448,7 @@ export function SceneTag({
             onClick={() => setMenu(null)}
           />
           <div
-            className="tutorial-in fixed z-[211] w-[186px] rounded-lg border border-border bg-surface p-1 shadow-lg"
+            className="pumma-floating tutorial-in fixed z-[211] w-[186px] rounded-lg border border-border bg-surface p-1 shadow-lg"
             style={{
               left: Math.min(menu.x, window.innerWidth - 200),
               top: Math.min(menu.y, window.innerHeight - 140),

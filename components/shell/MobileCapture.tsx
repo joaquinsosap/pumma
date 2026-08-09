@@ -279,7 +279,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
 
       {open && (
         <div
-          className="fixed inset-0 z-[70] flex flex-col bg-background"
+          className="pumma-floating fixed inset-0 z-[70] flex flex-col bg-background"
           style={{ paddingTop: "calc(0.5rem + env(safe-area-inset-top))" }}
         >
           {/* Header */}

@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import {
   useQueryState,
   parseAsStringLiteral,
@@ -103,26 +110,29 @@ export function TasksView({
     "tab",
     // Opening Tasks from the nav shows everything; links that mean a specific
     // slice (Home's "Today's tasks", a task deep-link) pass ?tab= explicitly.
-    parseAsStringLiteral(tabs).withDefault("all")
+    parseAsStringLiteral(tabs).withDefault("all"),
   );
   const [group, setGroup] = useQueryState(
     "group",
-    parseAsStringLiteral(groups).withDefault("none")
+    parseAsStringLiteral(groups).withDefault("none"),
   );
   const [taskId, setTaskId] = useQueryState("task");
-  const [projectFilter, setProjectFilter] = useQueryState("project", parseAsString);
+  const [projectFilter, setProjectFilter] = useQueryState(
+    "project",
+    parseAsString,
+  );
   const [query, setQuery] = useQueryState("q", parseAsString.withDefault(""));
   const [statusFilter, setStatusFilter] = useQueryState(
     "status",
-    parseAsArrayOf(parseAsStringLiteral(TASK_STATUSES)).withDefault([])
+    parseAsArrayOf(parseAsStringLiteral(TASK_STATUSES)).withDefault([]),
   );
   const [priorityFilter, setPriorityFilter] = useQueryState(
     "priority",
-    parseAsArrayOf(parseAsStringLiteral(TASK_PRIORITIES)).withDefault([])
+    parseAsArrayOf(parseAsStringLiteral(TASK_PRIORITIES)).withDefault([]),
   );
   const [tagFilter, setTagFilter] = useQueryState(
     "tag",
-    parseAsArrayOf(parseAsString).withDefault([])
+    parseAsArrayOf(parseAsString).withDefault([]),
   );
   const listRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
@@ -132,8 +142,8 @@ export function TasksView({
   const td = iso(new Date(), timeZone);
 
   const selectedTask = useMemo(
-    () => (taskId ? tasks.find((t) => t.id === taskId) ?? null : null),
-    [tasks, taskId]
+    () => (taskId ? (tasks.find((t) => t.id === taskId) ?? null) : null),
+    [tasks, taskId],
   );
 
   useEffect(() => {
@@ -146,23 +156,25 @@ export function TasksView({
   const dragEnabled = group === "project";
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const draggingTask = useMemo(
-    () => (draggingId ? tasks.find((t) => t.id === draggingId) ?? null : null),
-    [draggingId, tasks]
+    () =>
+      draggingId ? (tasks.find((t) => t.id === draggingId) ?? null) : null,
+    [draggingId, tasks],
   );
 
   const sensors = useSensors(
     // A plain click must still open the task, so the mouse needs a little
     // travel first; touch needs a long-press or the list stops scrolling.
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 280, tolerance: 8 } }),
-    useSensor(KeyboardSensor)
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 280, tolerance: 8 },
+    }),
+    useSensor(KeyboardSensor),
   );
 
   const handleDragStart = (event: DragStartEvent) => {
     setDragActive(true);
     setDraggingId(String(event.active.id));
   };
-
 
   const handleDragEnd = (event: DragEndEvent) => {
     const taskId = String(event.active.id);
@@ -176,11 +188,14 @@ export function TasksView({
     if (!moved || moved.projectId === nextProjectId) return;
 
     const destination = nextProjectId
-      ? projects.find((p) => p.id === nextProjectId)?.title ?? "project"
+      ? (projects.find((p) => p.id === nextProjectId)?.title ?? "project")
       : "No project";
 
     startTransition(async () => {
-      const res = await setTaskProject({ id: taskId, projectId: nextProjectId });
+      const res = await setTaskProject({
+        id: taskId,
+        projectId: nextProjectId,
+      });
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -198,7 +213,7 @@ export function TasksView({
       priority: priorityFilter,
       tagIds: tagFilter,
     }),
-    [statusFilter, priorityFilter, tagFilter]
+    [statusFilter, priorityFilter, tagFilter],
   );
   const filtersActive = countActiveFilters(filters) > 0;
 
@@ -210,7 +225,7 @@ export function TasksView({
       void setPriorityFilter(next.priority.length ? next.priority : null);
       void setTagFilter(next.tagIds.length ? next.tagIds : null);
     },
-    [setStatusFilter, setPriorityFilter, setTagFilter]
+    [setStatusFilter, setPriorityFilter, setTagFilter],
   );
 
   const filtered = useMemo(() => {
@@ -277,14 +292,17 @@ export function TasksView({
 
   const showCarryover = tab === "today" && !searching;
 
-
   const taskGroups = useMemo((): Group[] => {
     if (group === "none") {
       const label =
         searching || filtersActive
           ? "Results"
-          : filteredProject?.title ??
-            (tab === "today" ? "Today" : tab === "upcoming" ? "Upcoming" : "All tasks");
+          : (filteredProject?.title ??
+            (tab === "today"
+              ? "Today"
+              : tab === "upcoming"
+                ? "Upcoming"
+                : "All tasks"));
       return [
         {
           label,
@@ -339,7 +357,16 @@ export function TasksView({
       dropProjectId: null,
     });
     return result;
-  }, [group, tags, projects, filtered, tab, filteredProject, searching, filtersActive]);
+  }, [
+    group,
+    tags,
+    projects,
+    filtered,
+    tab,
+    filteredProject,
+    searching,
+    filtersActive,
+  ]);
 
   // Every row on screen, top to bottom — a shift-range spans what the user can
   // see, so it has to follow the grouping and the carryover section rather
@@ -392,12 +419,12 @@ export function TasksView({
     : filtersActive
       ? "No tasks match these filters. Clear one above to widen the net."
       : tab === "today"
-      ? showCarryover && filteredCarryover.length
-        ? "Nothing new due today — finish carryover below or check Upcoming."
-        : "Nothing due today — capture something above or check Upcoming."
-      : tab === "upcoming"
-        ? "No upcoming tasks. You're clear ahead."
-        : "No tasks yet. Use the capture bar to add one.";
+        ? showCarryover && filteredCarryover.length
+          ? "Nothing new due today — finish carryover below or check Upcoming."
+          : "Nothing due today — capture something above or check Upcoming."
+        : tab === "upcoming"
+          ? "No upcoming tasks. You're clear ahead."
+          : "No tasks yet. Use the capture bar to add one.";
 
   return (
     <>
@@ -464,7 +491,11 @@ export function TasksView({
               onChange={setQuery}
               resultCount={searching ? filtered.length : null}
             />
-            <TaskFilterMenu filters={filters} onChange={setFilters} tags={tags} />
+            <TaskFilterMenu
+              filters={filters}
+              onChange={setFilters}
+              tags={tags}
+            />
 
             <div className="flex shrink-0 items-center gap-0.5 max-lg:hidden">
               <TaskStat
@@ -519,55 +550,56 @@ export function TasksView({
                 ) : null
               }
             >
-            <div className="flex flex-col gap-4">
-              {!filtered.length && !(showCarryover && filteredCarryover.length) ? (
-                <div className="rounded-[13px] border-2 border-dashed border-border bg-surface2/50 px-6 py-12 text-center">
-                  <div
-                    className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface"
-                    style={{ color: TASK_ACCENT }}
-                  >
-                    {searching || filtersActive ? (
-                      <Search className="h-5 w-5" />
-                    ) : (
-                      <ListTodo className="h-5 w-5" />
-                    )}
+              <div className="flex flex-col gap-4">
+                {!filtered.length &&
+                !(showCarryover && filteredCarryover.length) ? (
+                  <div className="rounded-[13px] border-2 border-dashed border-border bg-surface2/50 px-6 py-12 text-center">
+                    <div
+                      className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl border border-border bg-surface"
+                      style={{ color: TASK_ACCENT }}
+                    >
+                      {searching || filtersActive ? (
+                        <Search className="h-5 w-5" />
+                      ) : (
+                        <ListTodo className="h-5 w-5" />
+                      )}
+                    </div>
+                    <p className="m-0 text-sm font-semibold text-ink">
+                      {searching || filtersActive ? "No matches" : "All clear"}
+                    </p>
+                    <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-faint">
+                      {emptyCopy}
+                    </p>
                   </div>
-                  <p className="m-0 text-sm font-semibold text-ink">
-                    {searching || filtersActive ? "No matches" : "All clear"}
-                  </p>
-                  <p className="mx-auto mt-1.5 max-w-sm text-[13px] text-faint">
-                    {emptyCopy}
-                  </p>
-                </div>
-              ) : (
-                taskGroups
-                  // Empty project groups stay while dragging, so there's
-                  // somewhere to drop the first task into.
-                  .filter((grp) => grp.items.length > 0 || dragEnabled)
-                  .map((grp) => (
-                    <TaskGroupCard
-                      key={grp.label}
-                      group={grp}
-                      tags={tags}
-                      selectedId={taskId}
-                      onSelect={(id) => setTaskId(taskId === id ? null : id)}
-                      draggable={dragEnabled}
-                      selection={selection}
-                    />
-                  ))
-              )}
-              {showCarryover && filteredCarryover.length > 0 && (
-                <CarryoverSection
-                  tasks={filteredCarryover}
-                  tags={tags}
-                  variant="page"
-                  selectedId={taskId}
-                  onSelect={(id) => setTaskId(taskId === id ? null : id)}
-                  flat
-                  selection={selection}
-                />
-              )}
-            </div>
+                ) : (
+                  taskGroups
+                    // Empty project groups stay while dragging, so there's
+                    // somewhere to drop the first task into.
+                    .filter((grp) => grp.items.length > 0 || dragEnabled)
+                    .map((grp) => (
+                      <TaskGroupCard
+                        key={grp.label}
+                        group={grp}
+                        tags={tags}
+                        selectedId={taskId}
+                        onSelect={(id) => setTaskId(taskId === id ? null : id)}
+                        draggable={dragEnabled}
+                        selection={selection}
+                      />
+                    ))
+                )}
+                {showCarryover && filteredCarryover.length > 0 && (
+                  <CarryoverSection
+                    tasks={filteredCarryover}
+                    tags={tags}
+                    variant="page"
+                    selectedId={taskId}
+                    onSelect={(id) => setTaskId(taskId === id ? null : id)}
+                    flat
+                    selection={selection}
+                  />
+                )}
+              </div>
             </DragArea>
           </div>
 
@@ -587,7 +619,10 @@ export function TasksView({
               )
             ) : selectedTask ? (
               isDesktop && (
-                <div key={selectedTask.id} className="animate-pumma-swap h-full">
+                <div
+                  key={selectedTask.id}
+                  className="animate-pumma-swap h-full"
+                >
                   <TaskDetailPanel
                     task={selectedTask}
                     tags={tags}
@@ -599,7 +634,9 @@ export function TasksView({
               )
             ) : (
               <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-                <p className="m-0 text-sm font-semibold text-ink">Select a task</p>
+                <p className="m-0 text-sm font-semibold text-ink">
+                  Select a task
+                </p>
                 <p className="mt-1.5 max-w-[240px] text-[13px] leading-relaxed text-faint">
                   Description, subtasks, priority, and tags live here.
                 </p>
@@ -609,7 +646,9 @@ export function TasksView({
           <div className="lg:hidden">
             <BottomSheet
               open={bulkSheet || (!selection.active && !!selectedTask)}
-              onClose={() => (bulkSheet ? setBulkSheet(false) : setTaskId(null))}
+              onClose={() =>
+                bulkSheet ? setBulkSheet(false) : setTaskId(null)
+              }
             >
               {bulkSheet && !isDesktop && (
                 <BulkEditPanel
@@ -619,17 +658,20 @@ export function TasksView({
                   onClear={selection.clear}
                 />
               )}
-              {!bulkSheet && !selection.active && selectedTask && !isDesktop && (
-                <div key={selectedTask.id} className="animate-pumma-swap">
-                  <TaskDetailPanel
-                    task={selectedTask}
-                    tags={tags}
-                    projects={projects}
-                    onClose={() => setTaskId(null)}
-                    embedded
-                  />
-                </div>
-              )}
+              {!bulkSheet &&
+                !selection.active &&
+                selectedTask &&
+                !isDesktop && (
+                  <div key={selectedTask.id} className="animate-pumma-swap">
+                    <TaskDetailPanel
+                      task={selectedTask}
+                      tags={tags}
+                      projects={projects}
+                      onClose={() => setTaskId(null)}
+                      embedded
+                    />
+                  </div>
+                )}
             </BottomSheet>
           </div>
         </div>
@@ -789,7 +831,7 @@ function TaskGroupCard({
         "overflow-hidden rounded-lg border bg-surface transition-colors",
         isOver
           ? "border-primary/50 bg-primary/[0.04] ring-1 ring-inset ring-primary/25"
-          : "border-border2"
+          : "border-border2",
       )}
     >
       <header className="flex items-center gap-2.5 border-b border-border2 bg-surface2/60 px-4 py-3">
@@ -797,7 +839,9 @@ function TaskGroupCard({
           className="h-2.5 w-2.5 shrink-0 rounded-full"
           style={{ background: group.color }}
         />
-        <h3 className="m-0 text-sm font-bold capitalize text-ink">{group.label}</h3>
+        <h3 className="m-0 text-sm font-bold capitalize text-ink">
+          {group.label}
+        </h3>
         <span className="rounded-md border border-border bg-surface px-2 py-0.5 font-mono text-[10px] font-semibold text-faint">
           {group.count}
         </span>
@@ -892,7 +936,7 @@ function SegControl({
   value,
   options,
   onChange,
-  accent = "var(--ink)",
+  accent = "var(--primary)",
   compact,
 }: {
   value: string;
@@ -917,17 +961,14 @@ function SegControl({
                 : "px-3.5 py-1.5 text-[12.5px] max-lg:px-2.5 max-lg:py-1 max-lg:text-[11.5px]",
               active
                 ? "border-2 font-bold text-background shadow-[1px_1px_0_var(--shadow)]"
-                : "border border-transparent text-muted hover:bg-hover"
+                : "border border-transparent text-muted hover:bg-hover",
             )}
+            /* The default used to be `--ink`, which is near-black on light
+               and near-*white* on dark — so the selected segment became a
+               white pill carrying white text. The accent is the ground in
+               both themes now, and it is a colour by definition. */
             style={
-              active
-                ? {
-                    background: accent.includes("oklch")
-                      ? accent
-                      : "var(--ink)",
-                    borderColor: accent.includes("oklch") ? accent : "var(--ink)",
-                  }
-                : undefined
+              active ? { background: accent, borderColor: accent } : undefined
             }
           >
             {label}
