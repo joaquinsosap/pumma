@@ -4,7 +4,7 @@ import { EntityTagRow } from "@/components/tags/EntityTagRow";
 
 import { useEffect, useOptimistic, useState, useTransition } from "react";
 import { useQueryState } from "nuqs";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { toast } from "sonner";
 import type { Goal, Habit, HabitEntry, Tag } from "@/lib/schemas";
 import { iso, type WeekStart } from "@/lib/date";

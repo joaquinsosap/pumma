@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Minus, Trash2, X } from "lucide-react";
+import { Check, Minus, Trash2, X } from "@/components/icons";
 import type { Project, Tag, Task } from "@/lib/schemas";
 import { bulkDeleteTasks, bulkUpdateTasks, undoDeleteTasks } from "@/lib/actions/tasks";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";

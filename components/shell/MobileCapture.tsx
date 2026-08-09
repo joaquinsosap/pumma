@@ -9,7 +9,7 @@ import {
   Search,
   Sparkles,
   X,
-} from "lucide-react";
+} from "@/components/icons";
 import { toast } from "sonner";
 import type { EntityLifeArea, OmniType } from "@/lib/types";
 import type { Note, Project, Tag, Task } from "@/lib/schemas";

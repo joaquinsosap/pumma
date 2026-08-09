@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import type { Habit, HabitEntry } from "@/lib/schemas";
 import { iso, weekDates, dowLetters, type WeekStart } from "@/lib/date";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";

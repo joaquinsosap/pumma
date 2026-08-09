@@ -5,7 +5,7 @@
 // for the editing half.
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { KeyRound } from "lucide-react";
+import { KeyRound } from "@/components/icons";
 import { Topbar } from "@/components/shell/Topbar";
 import { AskDashboard } from "@/components/assistant/AskDashboard";
 import { ChangesetCanvas } from "@/components/assistant/ChangesetCanvas";

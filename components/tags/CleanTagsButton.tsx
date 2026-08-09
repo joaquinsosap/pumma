@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { Sparkles } from "@/components/icons";
 import { toast } from "sonner";
 import {
   cleanUnusedTagsAction,

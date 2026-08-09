@@ -1,6 +1,6 @@
 "use client";
 
-import { Play } from "lucide-react";
+import { Play } from "@/components/icons";
 import { replayTutorial } from "@/lib/actions/settings";
 import { requestTutorialReplay } from "@/lib/tutorial-replay";
 

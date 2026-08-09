@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "@/components/icons";
 import type { Note, Tag, Task } from "@/lib/schemas";
 import { tagsByUsage } from "@/lib/metrics";
 import { tagBg } from "@/lib/parse";

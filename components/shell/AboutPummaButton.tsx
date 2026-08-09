@@ -1,6 +1,6 @@
 "use client";
 
-import { HelpCircle } from "lucide-react";
+import { HelpCircle } from "@/components/icons";
 import { ABOUT_URL } from "@/lib/about-link";
 import { cn } from "@/lib/utils";
 

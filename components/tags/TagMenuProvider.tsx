@@ -11,7 +11,7 @@ import {
   useMemo,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CheckSquare, ListChecks, Plus, Square, Trash2 } from "lucide-react";
+import { Check, CheckSquare, ListChecks, Plus, Square, Trash2 } from "@/components/icons";
 import type { Tag, Task, Note } from "@/lib/schemas";
 import type { EntityLifeArea } from "@/lib/types";
 import { toggleEntityTag, type TaggableEntity } from "@/lib/actions/tags";

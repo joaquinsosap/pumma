@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Plus, X } from "lucide-react";
+import { ArrowLeft, Check, Plus, X } from "@/components/icons";
 import type { Project, Subtask, Tag, Task } from "@/lib/schemas";
 import {
   dueDatePart,

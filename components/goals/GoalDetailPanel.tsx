@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2, X } from "lucide-react";
+import { Trash2, X } from "@/components/icons";
 import { toast } from "sonner";
 import type { Goal, Habit, HabitEntry, Project, Tag, Task } from "@/lib/schemas";
 import {

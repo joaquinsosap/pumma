@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckSquare, SlidersHorizontal, X } from "lucide-react";
+import { CheckSquare, SlidersHorizontal, X } from "@/components/icons";
 
 /**
  * The phone's selection HUD, floating just above the dock.

@@ -32,7 +32,7 @@ import { RESERVED_TYPE_WORDS, RESERVED_WORDS } from "@/lib/omni-reserved";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
 import { isTutorialActive } from "@/lib/tutorial-lock";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
-import { Pencil, Sparkles } from "lucide-react";
+import { Pencil, Sparkles } from "@/components/icons";
 
 type OmniMode = "capture" | "assistant";
 

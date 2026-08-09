@@ -8,7 +8,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { Check, Pencil } from "lucide-react";
+import { Check, Pencil } from "@/components/icons";
 import {
   DndContext,
   DragOverlay,

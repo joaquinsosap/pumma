@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useOptimistic, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Check, Minus } from "lucide-react";
+import { Check, Minus } from "@/components/icons";
 import type { Task, Tag } from "@/lib/schemas";
 import {
   suppressRangeTextSelection,

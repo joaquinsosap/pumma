@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { Square } from "lucide-react";
+import { Square } from "@/components/icons";
 import { stopTaskTimer } from "@/lib/actions/task-timer";
 import { formatDurationClock, taskElapsedSec } from "@/lib/time";
 import { useNow, useTaskTimer } from "@/components/tasks/TaskTimerProvider";

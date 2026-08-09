@@ -4,7 +4,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryState, parseAsInteger } from "nuqs";
-import { Repeat } from "lucide-react";
+import { Repeat } from "@/components/icons";
 import { toast } from "sonner";
 import type { AgendaItem, Task, HabitEntry } from "@/lib/schemas";
 import { iso, parseTimeToMinutes } from "@/lib/date";

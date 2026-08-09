@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 import type { Task, Tag } from "@/lib/schemas";
 import { TaskList } from "@/components/tasks/TaskList";
 import { CarryoverSection } from "@/components/tasks/CarryoverSection";

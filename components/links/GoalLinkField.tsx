@@ -1,6 +1,6 @@
 "use client";
 
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import type { Goal } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
 

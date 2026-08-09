@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
-import { Repeat, Trash2 } from "lucide-react";
+import { Repeat, Trash2 } from "@/components/icons";
 import { toast } from "sonner";
 import {
   Dialog,

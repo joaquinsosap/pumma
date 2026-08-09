@@ -13,7 +13,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Check, TriangleAlert, MoreHorizontal, Trash2, Pencil, Sparkles, EyeOff, Eye } from "lucide-react";
+import { Plus, Check, TriangleAlert, MoreHorizontal, Trash2, Pencil, Sparkles, EyeOff, Eye } from "@/components/icons";
 import { toast } from "sonner";
 import {
   DndContext,

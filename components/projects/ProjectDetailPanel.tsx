@@ -2,7 +2,7 @@
 
 import { useCallback, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Trash2 } from "@/components/icons";
 import type { Goal, Project, Tag, Task } from "@/lib/schemas";
 import { projectProgress } from "@/lib/metrics";
 import { updateProjectDetail, deleteProjectAction } from "@/lib/actions/projects";

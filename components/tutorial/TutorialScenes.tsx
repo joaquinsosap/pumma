@@ -9,7 +9,7 @@
 // through the very selection reducer the app uses. Nothing here writes to the
 // server — it's the muscle memory that has to transfer, not the data.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, MousePointerClick, Sparkles, Tag as TagIcon } from "lucide-react";
+import { Check, MousePointerClick, Sparkles, Tag as TagIcon } from "@/components/icons";
 import { nextHold, typedChars } from "@/lib/tutorial";
 import { startTutorialClock } from "@/lib/tutorial-clock";
 import {

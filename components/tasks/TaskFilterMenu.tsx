@@ -1,6 +1,6 @@
 "use client";
 
-import { SlidersHorizontal, Check, X } from "lucide-react";
+import { SlidersHorizontal, Check, X } from "@/components/icons";
 import type { Tag } from "@/lib/schemas";
 import type { TaskStatus, TaskPriority } from "@/lib/types";
 import {

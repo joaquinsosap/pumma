@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, X, Star } from "lucide-react";
+import { Plus, X, Star } from "@/components/icons";
 import { toast } from "sonner";
 import type { Project, Tag } from "@/lib/schemas";
 import {

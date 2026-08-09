@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Download, TriangleAlert } from "lucide-react";
+import { Download, TriangleAlert } from "@/components/icons";
 import { toast } from "sonner";
 import {
   deleteAccountAction,

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus } from "@/components/icons";
 import { toast } from "sonner";
 import type { Tag } from "@/lib/schemas";
 import { toggleEntityTag, type TaggableEntity } from "@/lib/actions/tags";

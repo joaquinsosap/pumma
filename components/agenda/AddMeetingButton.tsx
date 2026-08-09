@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarPlus } from "lucide-react";
+import { CalendarPlus } from "@/components/icons";
 import { MeetingDialog } from "@/components/agenda/MeetingDialog";
 import type { LifeView } from "@/lib/life-area";
 import { cn } from "@/lib/utils";

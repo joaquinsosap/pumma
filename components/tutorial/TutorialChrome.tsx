@@ -4,7 +4,7 @@
 // down the side. Both exist so the tour never leaves you wondering what it
 // wants or how much is left — the two things that make a walkthrough feel
 // like a hostage situation.
-import { Check, Hand, X } from "lucide-react";
+import { Check, Hand, X } from "@/components/icons";
 import type { Beat } from "@/lib/tutorial";
 import { cn } from "@/lib/utils";
 

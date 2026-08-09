@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Play, Square } from "lucide-react";
+import { Play, Square } from "@/components/icons";
 import type { Task } from "@/lib/schemas";
 import { toggleTaskTimer } from "@/lib/actions/task-timer";
 import {

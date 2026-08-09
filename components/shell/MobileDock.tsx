@@ -16,7 +16,7 @@ import {
   Settings,
   Sparkles,
   Target,
-} from "lucide-react";
+} from "@/components/icons";
 import { LifeAreaToggle, type LifeAutoConfig, useLifeView } from "@/components/shell/LifeAreaToggle";
 import { hrefWithLife } from "@/lib/life-area";
 import { cn } from "@/lib/utils";

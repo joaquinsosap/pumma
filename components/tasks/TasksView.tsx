@@ -7,7 +7,7 @@ import {
   parseAsString,
   parseAsArrayOf,
 } from "nuqs";
-import { ListTodo, Search, X } from "lucide-react";
+import { ListTodo, Search, X } from "@/components/icons";
 import { searchTasks } from "@/lib/task-search";
 import { sortTasksByPriority } from "@/lib/task-order";
 import { setTaskProject } from "@/lib/actions/tasks";

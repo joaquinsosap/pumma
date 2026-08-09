@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight } from "@/components/icons";
 import { addDays, formatDayFull, formatDayShort, iso } from "@/lib/date";
 import {
   MONTH_LABELS,

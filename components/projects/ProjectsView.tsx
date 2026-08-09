@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
-import { Pencil } from "lucide-react";
+import { Pencil } from "@/components/icons";
 import { useQueryState } from "nuqs";
 import type { Goal, Project, Task, Tag } from "@/lib/schemas";
 import { projectProgress } from "@/lib/metrics";

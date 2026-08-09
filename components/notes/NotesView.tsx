@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTransition, useState, useCallback, useEffect } from "react";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
-import { Star } from "lucide-react";
+import { Star } from "@/components/icons";
 import type { Note, Tag } from "@/lib/schemas";
 import { tagBg } from "@/lib/parse";
 import {

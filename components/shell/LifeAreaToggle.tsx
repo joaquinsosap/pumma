@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryState, parseAsStringLiteral } from "nuqs";
-import { Briefcase, Hand, Heart, Layers, Minus, Plus, Zap } from "lucide-react";
+import { Briefcase, Hand, Heart, Layers, Minus, Plus, Zap } from "@/components/icons";
 import {
   LIFE_AREA_COOKIE,
   parseLifeView,

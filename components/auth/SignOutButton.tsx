@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LogOut } from "lucide-react";
+import { LogOut } from "@/components/icons";
 import { signOut } from "@/lib/auth/client";
 import { cn } from "@/lib/utils";
 

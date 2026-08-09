@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown } from "@/components/icons";
 import type { Task, Tag } from "@/lib/schemas";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { TaskList } from "@/components/tasks/TaskList";
