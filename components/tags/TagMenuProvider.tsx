@@ -314,7 +314,7 @@ export function TagMenuProvider({
           />
           <div
             ref={menuRef}
-            className="fixed z-[101] w-[200px] overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-lg"
+            className="pumma-floating fixed z-[101] w-[200px] overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-lg"
             style={{ left: pos.left, top: pos.top }}
             onContextMenu={(e) => e.preventDefault()}
           >

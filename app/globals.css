@@ -932,6 +932,7 @@ html {
   --edge: rgba(24, 38, 56, 0.1);
   --aura: rgba(70, 155, 220, 0.3);
   --well: rgba(255, 255, 255, 0.85);
+  --floating: #ffffff;
   --icon-emboss: rgba(255, 255, 255, 0.55);
 }
 
@@ -972,6 +973,7 @@ html {
   --edge: rgba(0, 8, 16, 0.5);
   --aura: rgba(80, 165, 235, 0.28);
   --well: rgba(10, 17, 24, 0.5);
+  --floating: #1b2028;
   --icon-emboss: rgba(0, 10, 20, 0.35);
 }
 
@@ -1376,4 +1378,25 @@ select:hover:not(:disabled) {
    while the token itself stays where text needs it. */
 [data-theme="dark"] .bg-ink {
   background-color: color-mix(in oklab, var(--primary) 72%, #06131f) !important;
+}
+
+/* ── Floating surfaces ───────────────────────────────────────────────────
+   A panel is part of the page, so glass is right for it — you are meant to
+   sense the page under it. A dialog, a menu, a popover and a bottom sheet
+   are *above* the page, and letting the content show through them makes
+   them read as unfinished rather than as layered. They get an opaque
+   ground, no backdrop blur, and a shadow big enough to explain the height.
+
+   The bottom sheet was the worst of it: it used `bg-background`, which this
+   theme sets to transparent so the page gradient can show through the app
+   shell. On a sheet that meant no background at all. */
+.pumma-floating {
+  background-color: var(--floating) !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-color: var(--rim) !important;
+  box-shadow:
+    0 1px 2px var(--shadow),
+    0 24px 60px -12px rgba(10, 20, 35, 0.35) !important;
 }

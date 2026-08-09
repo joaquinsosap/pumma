@@ -124,7 +124,7 @@ export function BottomSheet({
         ref={sheetRef}
         onFocusCapture={onFocusCapture}
         className={cn(
-          "animate-pumma-sheet-up absolute inset-x-0 bottom-0 flex flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-background shadow-[0_-4px_24px_rgba(0,0,0,0.18)]",
+          "pumma-floating animate-pumma-sheet-up absolute inset-x-0 bottom-0 flex flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-background shadow-[0_-4px_24px_rgba(0,0,0,0.18)]",
           dragHeight === null && "transition-[height] duration-200"
         )}
         style={{

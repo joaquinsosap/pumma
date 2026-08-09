@@ -51,7 +51,7 @@ function DeadTimeRow({
     endMins,
     showNowLine,
     remainingMins,
-    nextTime
+    nextTime,
   );
 
   return (
@@ -64,7 +64,9 @@ function DeadTimeRow({
           <span className="font-mono text-[9px] font-medium uppercase tracking-widest text-faint2">
             dead time
           </span>
-          <span className="ml-1.5 font-mono text-[9px] text-faint">{label}</span>
+          <span className="ml-1.5 font-mono text-[9px] text-faint">
+            {label}
+          </span>
         </div>
       </div>
       {showNowLine && (
@@ -96,12 +98,12 @@ function AgendaEventRow({
   const deletable = onDelete && ev.kind === "meeting";
   return (
     <div className="group relative">
-      <WidgetRowLink href={href} className="-mx-1 px-1 py-0.5">
+      <WidgetRowLink href={href}>
         <div className="flex gap-2">
           <span
             className={cn(
               "w-10 shrink-0 pt-px font-mono text-[11px]",
-              active ? "font-semibold text-ink" : "text-faint2"
+              active ? "font-semibold text-ink" : "text-faint2",
             )}
           >
             {ev.time}
@@ -109,13 +111,18 @@ function AgendaEventRow({
           <div
             className={cn(
               "flex-1 border-l-2",
-              active ? "rounded-r-lg bg-tasks/[0.07] py-1 pl-3" : "py-0 pl-[11px]"
+              active
+                ? "rounded-r-lg bg-tasks/[0.07] py-1 pl-3"
+                : "py-0 pl-[11px]",
             )}
             style={{ borderColor: ev.color }}
           >
             <div className="text-[13px] font-semibold">{ev.title}</div>
             <div
-              className={cn("text-[11px]", active ? "text-tasks/80" : "text-faint")}
+              className={cn(
+                "text-[11px]",
+                active ? "text-tasks/80" : "text-faint",
+              )}
             >
               {ev.sub}
             </div>
@@ -152,9 +159,16 @@ type Props = {
   onDeleteItem?: (id: string) => void;
 };
 
-export function AgendaTodayList({ agenda, href, live = false, onDeleteItem }: Props) {
+export function AgendaTodayList({
+  agenda,
+  href,
+  live = false,
+  onDeleteItem,
+}: Props) {
   const timeZone = useTimezone();
-  const [nowLabel, setNowLabel] = useState(() => formatTimeHM(new Date(), timeZone));
+  const [nowLabel, setNowLabel] = useState(() =>
+    formatTimeHM(new Date(), timeZone),
+  );
 
   useEffect(() => {
     if (!live) return;
@@ -172,7 +186,9 @@ export function AgendaTodayList({ agenda, href, live = false, onDeleteItem }: Pr
 
   if (!blocks.length) {
     return (
-      <p className="py-2 font-mono text-[11px] text-faint2">Nothing scheduled</p>
+      <p className="py-2 font-mono text-[11px] text-faint2">
+        Nothing scheduled
+      </p>
     );
   }
 
@@ -200,9 +216,7 @@ export function AgendaTodayList({ agenda, href, live = false, onDeleteItem }: Pr
         }
 
         const active =
-          live &&
-          placement?.kind === "event" &&
-          placement.blockIndex === i;
+          live && placement?.kind === "event" && placement.blockIndex === i;
         const showNowLine = active;
         const nowProgress =
           placement?.kind === "event" && placement.blockIndex === i
@@ -222,9 +236,7 @@ export function AgendaTodayList({ agenda, href, live = false, onDeleteItem }: Pr
           />
         );
       })}
-      {live && placement?.kind === "after" && (
-        <AgendaNowLine time={nowLabel} />
-      )}
+      {live && placement?.kind === "after" && <AgendaNowLine time={nowLabel} />}
     </div>
   );
 }

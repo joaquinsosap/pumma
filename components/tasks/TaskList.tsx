@@ -350,8 +350,8 @@ export function TaskList({
             ? cn(
                 "cursor-pointer gap-x-2.5 border-b border-border2 px-3 py-2.5 last:border-b-0",
                 showDelete
-                  ? "grid-cols-[20px_34px_minmax(0,1fr)_72px_28px] max-sm:grid-cols-[20px_16px_minmax(0,1fr)_72px_28px]"
-                  : "grid-cols-[20px_34px_minmax(0,1fr)_72px] max-sm:grid-cols-[20px_16px_minmax(0,1fr)_72px]",
+                  ? "grid-cols-[20px_34px_minmax(0,1fr)_72px_28px] max-sm:grid-cols-[20px_14px_minmax(0,1fr)_46px_24px]"
+                  : "grid-cols-[20px_34px_minmax(0,1fr)_72px] max-sm:grid-cols-[20px_14px_minmax(0,1fr)_46px]",
                 picked
                   ? "border-l-[3px] border-l-primary bg-primary/[0.10] ring-1 ring-inset ring-primary/40"
                   : selected
@@ -364,8 +364,8 @@ export function TaskList({
                   ? "border-b border-border2 px-4 py-2.5 last:border-b-0 hover:bg-hover"
                   : "rounded-lg px-1.5 py-1 transition-colors duration-150 hover:bg-hover",
                 showDelete
-                  ? "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px_16px] max-sm:grid-cols-[18px_16px_minmax(0,1fr)_40px_44px_16px]"
-                  : "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px] max-sm:grid-cols-[18px_16px_minmax(0,1fr)_40px_44px]",
+                  ? "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px_16px] max-sm:grid-cols-[18px_14px_minmax(0,1fr)_0px_44px_16px]"
+                  : "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px] max-sm:grid-cols-[18px_14px_minmax(0,1fr)_0px_44px]",
                 isPage && t.status === "doing" && "bg-primary/[0.03]",
                 picked &&
                   "border-l-[3px] border-l-primary bg-primary/[0.10] ring-1 ring-inset ring-primary/40",
@@ -592,11 +592,16 @@ export function TaskList({
                 className="flex flex-col items-end justify-center gap-0.5"
                 onClick={(e) => e.stopPropagation()}
               >
-                <TaskTimer
-                  task={t}
-                  compact
-                  stopPropagation={Boolean(rowHref || onSelect)}
-                />
+                {/* The stopwatch is a desk feature. On a phone it costs the
+                    title a third of its width, so below sm only the date
+                    stays and the row becomes one line. */}
+                <span className="max-sm:hidden">
+                  <TaskTimer
+                    task={t}
+                    compact
+                    stopPropagation={Boolean(rowHref || onSelect)}
+                  />
+                </span>
                 <span className="font-mono text-[10px] tabular-nums text-faint">
                   {due}
                 </span>
@@ -604,7 +609,7 @@ export function TaskList({
             ) : (
               <>
                 <div
-                  className="task-timer-cell flex items-center justify-end gap-1.5"
+                  className="task-timer-cell flex items-center justify-end gap-1.5 max-sm:hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <TaskTimer

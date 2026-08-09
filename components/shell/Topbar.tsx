@@ -81,7 +81,7 @@ export function Topbar({
           <ActiveTaskTimer className="min-w-0 flex-1" />
         </div>
       </div>
-      <div className="flex items-center gap-1 self-stretch sm:self-auto">
+      <div className="flex min-w-0 shrink items-center gap-1 self-stretch sm:self-auto">
         <Stat
           value={`${dayPct}`}
           suffix="%"
@@ -146,7 +146,7 @@ function Stat({
       <Link
         href={href}
         className={cn(
-          "flex-1 rounded-lg px-2.5 py-1 text-right transition-colors hover:bg-hover sm:flex-none sm:px-4",
+          "min-w-0 flex-1 shrink rounded-lg px-2.5 py-1 text-right transition-colors hover:bg-hover sm:flex-none sm:px-2.5 lg:px-4",
           className,
         )}
       >

@@ -223,7 +223,6 @@ export function HomeHabitsGoals({
                   `/goals?category=${g.category}&goal=${g.id}`,
                   lifeView,
                 )}
-                className="-mx-1 px-1 py-0.5"
               >
                 <div className="mb-1.5 flex justify-between text-[13px]">
                   <span className="flex items-center gap-1.5">

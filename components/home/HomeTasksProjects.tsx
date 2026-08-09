@@ -54,7 +54,6 @@ export function HomeTasksProjects({
                 <WidgetRowLink
                   key={p.id}
                   href={hrefWithLife(`/projects?project=${p.id}`, lifeView)}
-                  className="-mx-1 px-1 py-0.5"
                 >
                   <div className="mb-1.5 flex min-w-0 items-center gap-2 text-[13.5px] font-semibold">
                     <span

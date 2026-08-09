@@ -87,7 +87,11 @@ export function WidgetRowLink({
     <Link
       href={href}
       className={cn(
-        "block rounded-lg transition-colors hover:bg-hover",
+        // The padding lives here, not at the call sites. Every one of them
+        // was passing the same cramped "-mx-1 px-1 py-0.5", which made the
+        // hover fill hug the text so tightly it read as a highlight rather
+        // than as a row.
+        "-mx-2 block rounded-lg px-2 py-1.5 transition-colors hover:bg-hover",
         className,
       )}
     >
