@@ -559,11 +559,6 @@ export function OmniBox({
         } as React.CSSProperties
       }
     >
-      <div className="omni-box-motion" aria-hidden>
-        <div className="omni-box-trace" />
-        <div className="omni-box-shimmer" />
-      </div>
-
       <div className="relative z-[1]">
         <div className="flex items-center gap-[11px] max-lg:flex-wrap">
           <ModeSwitch mode={mode} onChange={setMode} />
@@ -656,7 +651,6 @@ export function OmniBox({
             {mode === "assistant" ? "send" : "add"}
           </span>
         </div>
-        <div className="omni-box-scanline" aria-hidden />
         {aiMode ? (
           <div className={cn(OMNI_FOOT, "items-center")}>
             <span className="shrink-0 font-mono text-[10px] text-faint2">
