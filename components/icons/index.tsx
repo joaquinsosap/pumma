@@ -41,6 +41,15 @@ export {
   PlusGlyph as Plus,
   SearchGlyph as Search,
   TrashGlyph as Trash2,
+  HomeTile,
+  TasksTile,
+  NotesTile,
+  HabitsTile,
+  GoalsTile,
+  ProjectsTile,
+  CalendarTile,
+  LifeCalendarTile,
+  AssistantTile,
 } from "./glyphs";
 
 export {

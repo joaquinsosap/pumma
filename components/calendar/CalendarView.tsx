@@ -26,6 +26,7 @@ import { Topbar } from "@/components/shell/Topbar";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
 import { cn } from "@/lib/utils";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 
 const PRIO = CALENDAR_PRIO;
 
@@ -65,7 +66,10 @@ export function CalendarView({
   };
   const [editingMeeting, setEditingMeeting] = useState<AgendaItem | null>(null);
   const td = iso(new Date(), timeZone);
-  const [offset, setOffset] = useQueryState("month", parseAsInteger.withDefault(0));
+  const [offset, setOffset] = useQueryState(
+    "month",
+    parseAsInteger.withDefault(0),
+  );
   // On small screens the month grid is taller than the viewport — land the
   // user on today's row instead of the top of the month.
   const todayCellRef = useRef<HTMLDivElement>(null);
@@ -96,7 +100,7 @@ export function CalendarView({
     const ds = iso(d, timeZone);
     const inM = d.getMonth() === mm;
     const dts = sortCalendarDayTasks(
-      tasks.filter((t) => (t.due ?? "").slice(0, 10) === ds)
+      tasks.filter((t) => (t.due ?? "").slice(0, 10) === ds),
     );
     const meetings = meetingsFor(ds);
     // Cells fit ~3 rows: meetings first (max 2), tasks fill the rest.
@@ -148,16 +152,18 @@ export function CalendarView({
               <button
                 type="button"
                 onClick={() => setOffset(offset - 1)}
+                aria-label="Previous month"
                 className="flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-border text-muted hover:border-faint2"
               >
-                ‹
+                <ChevronLeft className="h-3 w-3" />
               </button>
               <button
                 type="button"
                 onClick={() => setOffset(offset + 1)}
+                aria-label="Next month"
                 className="flex h-[30px] w-[30px] items-center justify-center rounded-lg border border-border text-muted hover:border-faint2"
               >
-                ›
+                <ChevronRight className="h-3 w-3" />
               </button>
             </div>
             <button
@@ -217,16 +223,23 @@ export function CalendarView({
                 }}
                 className={cn(
                   "flex min-h-0 cursor-pointer flex-col overflow-hidden rounded-lg border p-[6px_7px] text-left",
-                  c.isSel ? "border-primary bg-primary/[0.06]" : "border-border2",
-                  c.isTdy && "max-lg:ring-2 max-lg:ring-inset max-lg:ring-primary/60",
-                  c.inM ? "bg-surface" : "bg-transparent"
+                  c.isSel
+                    ? "border-primary bg-primary/[0.06]"
+                    : "border-border2",
+                  c.isTdy &&
+                    "max-lg:ring-2 max-lg:ring-inset max-lg:ring-primary/60",
+                  c.inM ? "bg-surface" : "bg-transparent",
                 )}
               >
                 <div className="mb-0.5 flex items-center gap-1">
                   <span
                     className={cn(
                       "text-xs",
-                      c.isTdy ? "font-bold text-primary" : c.inM ? "text-ink" : "text-faint2"
+                      c.isTdy
+                        ? "font-bold text-primary"
+                        : c.inM
+                          ? "text-ink"
+                          : "text-faint2",
                     )}
                   >
                     {c.day}
@@ -255,7 +268,12 @@ export function CalendarView({
                   ))}
                   {c.dts.slice(0, c.shownTasks).map((t) => {
                     if (isMeetingTask(t) && t.due) {
-                      const past = isMeetingPast(t.due, c.ds, new Date(), timeZone);
+                      const past = isMeetingPast(
+                        t.due,
+                        c.ds,
+                        new Date(),
+                        timeZone,
+                      );
                       const color = PRIO[t.priority];
                       return (
                         <span
@@ -272,7 +290,7 @@ export function CalendarView({
                           <span
                             className={cn(
                               "min-w-0 truncate font-medium",
-                              past ? "text-faint line-through" : "text-ink"
+                              past ? "text-faint line-through" : "text-ink",
                             )}
                           >
                             {t.title}
@@ -289,14 +307,14 @@ export function CalendarView({
                         <span
                           className={cn(
                             "h-2 w-2 shrink-0 rounded-[3px] border-[1.5px]",
-                            done ? "border-none bg-habits" : "border-border"
+                            done ? "border-none bg-habits" : "border-border",
                           )}
                           aria-hidden
                         />
                         <span
                           className={cn(
                             "min-w-0 truncate",
-                            done ? "text-faint line-through" : "text-ink"
+                            done ? "text-faint line-through" : "text-ink",
                           )}
                         >
                           {t.title}
@@ -316,7 +334,9 @@ export function CalendarView({
                   {[
                     ...c.meetings.map((m) => m.color),
                     ...c.dts.map((t) =>
-                      t.status === "done" ? "oklch(0.6 0.13 155 / 0.55)" : PRIO[t.priority]
+                      t.status === "done"
+                        ? "oklch(0.6 0.13 155 / 0.55)"
+                        : PRIO[t.priority],
                     ),
                   ]
                     .slice(0, 4)

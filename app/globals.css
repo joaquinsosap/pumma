@@ -883,9 +883,14 @@ html {
   --border: rgba(22, 38, 58, 0.095);
   --border2: rgba(22, 38, 58, 0.055);
   --ink: #171b21;
+  /* Measured on the panel these actually sit on, the light ramp was 7.0 /
+     3.6 / 2.5 — only the first cleared the 4.5 small text needs, and the
+     last was barely there. Translucent surfaces eat contrast, and these
+     values predate the surfaces going translucent. Now 7.0 / 5.6 / 4.5,
+     which is still three distinct steps. */
   --muted: #4e5866;
-  --faint: #7b8695;
-  --faint2: #98a2ae;
+  --faint: #5d6775;
+  --faint2: #6b7686;
   --hover: rgba(58, 120, 190, 0.09);
   --chip: rgba(255, 255, 255, 0.72);
   --shadow: rgba(20, 34, 54, 0.1);
@@ -937,9 +942,13 @@ html {
   --border: rgba(168, 202, 238, 0.13);
   --border2: rgba(168, 202, 238, 0.075);
   --ink: #e7ebf0;
-  --muted: #a6b2c0;
-  --faint: #808d9b;
-  --faint2: #68747f;
+  /* The dark ramp sits one notch higher than it looks like it should.
+     `--faint2` at #68747f measured 3.36:1 on a panel — under the 4.5 small
+     text needs — and simply raising it to pass put it on top of `--faint`,
+     which collapses the three-step ramp into two. So all three move. */
+  --muted: #b3bfcc;
+  --faint: #94a0ad;
+  --faint2: #828e9b;
   --hover: rgba(90, 160, 225, 0.14);
   --chip: rgba(46, 58, 71, 0.7);
   --shadow: rgba(0, 6, 14, 0.5);
@@ -1359,4 +1368,12 @@ select:hover:not(:disabled) {
 [data-theme="dark"] [role="switch"][data-state="checked"] {
   background-color: var(--primary) !important;
   border-color: color-mix(in oklab, var(--primary) 65%, black) !important;
+}
+
+/* `--primary` is tuned bright for dark mode because it is mostly a
+   foreground there — a link, an active label. As the ground under white
+   button text it measured 2.64:1, so the filled button takes a deeper mix
+   while the token itself stays where text needs it. */
+[data-theme="dark"] .bg-ink {
+  background-color: color-mix(in oklab, var(--primary) 72%, #06131f) !important;
 }
