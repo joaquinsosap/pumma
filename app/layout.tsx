@@ -1,5 +1,10 @@
 import type { Metadata, Viewport } from "next";
-import { Schibsted_Grotesk, JetBrains_Mono } from "next/font/google";
+import {
+  Schibsted_Grotesk,
+  JetBrains_Mono,
+  Open_Sans,
+  Inconsolata,
+} from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Providers } from "@/components/providers/nuqs-provider";
@@ -17,6 +22,30 @@ const jetbrains = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains",
   weight: ["400", "500", "600"],
+});
+
+/**
+ * Windows 7's two faces, as close as can legally be shipped.
+ *
+ * Segoe UI and Consolas are Microsoft's and cannot be served, so the theme
+ * asks for them *first* — anyone on Windows gets the genuine article and
+ * these are never downloaded — and falls back to these two for everyone
+ * else. Open Sans is the closest humanist on Google Fonts; Inconsolata was
+ * drawn with Consolas in mind.
+ *
+ * Loaded here rather than in the theme because next/font has to be a module
+ * constant. Deleting the Aero block should take these two with it.
+ */
+const openSans = Open_Sans({
+  subsets: ["latin"],
+  variable: "--font-opensans",
+  weight: ["400", "500", "600", "700", "800"],
+});
+
+const inconsolata = Inconsolata({
+  subsets: ["latin"],
+  variable: "--font-inconsolata",
+  weight: ["400", "500", "600", "700"],
 });
 
 /** The canonical origin. Overridable so a preview deploy links to itself. */
@@ -50,8 +79,16 @@ export default async function RootLayout({
   const defaultTheme = settings?.theme ?? "light";
 
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${schibsted.variable} ${jetbrains.variable} antialiased`}>
+    // The font variables live on <html>, not <body>. `--font-sans` is composed
+    // at :root, and a custom property is substituted where it is *declared* —
+    // so a family variable that only existed on <body> was out of scope there
+    // and the whole stack silently collapsed to the generic fallback.
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={`${schibsted.variable} ${jetbrains.variable} ${openSans.variable} ${inconsolata.variable}`}
+    >
+      <body className="antialiased">
         <Providers>
           <ThemeProvider
             attribute="data-theme"

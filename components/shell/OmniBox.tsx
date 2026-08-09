@@ -32,7 +32,7 @@ import { RESERVED_TYPE_WORDS, RESERVED_WORDS } from "@/lib/omni-reserved";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
 import { isTutorialActive } from "@/lib/tutorial-lock";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
-import { Pencil, Sparkles } from "@/components/icons";
+import { AeroEnter, Pencil, Sparkles } from "@/components/icons";
 
 type OmniMode = "capture" | "assistant";
 
@@ -618,7 +618,8 @@ export function OmniBox({
           </span>
         )}
         <span className="hidden shrink-0 font-mono text-[10px] text-faint2 transition-all duration-200 group-focus-within:font-semibold group-focus-within:text-ink sm:inline">
-          {mode === "assistant" ? "↵ send" : "↵ add"}
+          <AeroEnter className="mr-1 inline-block h-3 w-3 align-[-2px]" />
+          {mode === "assistant" ? "send" : "add"}
         </span>
       </div>
       <div className="omni-box-scanline" aria-hidden />

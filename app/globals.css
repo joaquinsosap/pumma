@@ -915,6 +915,17 @@ html {
   --notes: #ffd257;
 }
 
+/* Type. Segoe UI and Consolas are named first, so a Windows machine renders
+   the real Windows 7 faces and never downloads anything; everyone else gets
+   the closest free stand-ins (see app/layout.tsx). Both `font-sans` and
+   `font-mono` utilities read these, so the swap reaches the whole app rather
+   than only what inherits from body. */
+@theme inline {
+  --font-sans:
+    "Segoe UI", var(--font-opensans), system-ui, -apple-system, sans-serif;
+  --font-mono: "Consolas", var(--font-inconsolata), ui-monospace, monospace;
+}
+
 /* The landscape, fixed behind everything. Pure gradients — no images, no
    requests, and it scales to any page height. */
 body {
@@ -929,11 +940,7 @@ body {
     #74cf55 100%
   );
   background-attachment: fixed;
-  font-family:
-    "Segoe UI",
-    system-ui,
-    -apple-system,
-    sans-serif;
+  font-family: var(--font-sans);
 }
 
 [data-theme="dark"] body {
@@ -1668,4 +1675,54 @@ aside svg {
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.18),
     0 1px 3px var(--shadow);
+}
+
+/* ── The tour ────────────────────────────────────────────────────────────
+   The tutorial is the one place the app draws a keyboard, and its keycap was
+   a flat tinted rectangle with a thick bottom border. Aero's keys were
+   moulded: a domed face, a white lip along the top, and a base the cap sits
+   on that shortens when it goes down.
+
+   Painted here rather than on the component because it is presentation —
+   the press animation, which already varies `border-bottom-width`, stays
+   where it is. */
+.tutorial-key {
+  background-color: transparent !important;
+  background-image: var(--btn-face) !important;
+  border-color: var(--btn-rim) !important;
+  border-bottom-color: color-mix(
+    in oklab,
+    var(--btn-rim) 70%,
+    black
+  ) !important;
+  border-radius: 9px;
+  box-shadow:
+    inset 0 1px 0 var(--btn-lip),
+    inset 0 -3px 6px rgba(20, 70, 105, 0.12),
+    0 3px 6px var(--shadow);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.7);
+}
+[data-theme="dark"] .tutorial-key {
+  text-shadow: none;
+}
+
+/* The tour's own cards: the same glass as a panel, plus the halo Aero used
+   for "this is the thing you are being asked about". */
+.tutorial-in > div,
+[class*="max-w-[560px]"].bg-surface {
+  backdrop-filter: blur(18px) saturate(170%);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+}
+
+/* The dim behind it. A flat black wash over a sky reads as a dead screen;
+   Aero's modal scrims kept the colour underneath and drowned it instead. */
+.bg-black\/70,
+.bg-black\/55,
+.bg-black\/50 {
+  background-color: rgba(6, 42, 68, 0.62) !important;
+  background-image: radial-gradient(
+    ellipse 80% 60% at 50% 40%,
+    rgba(40, 130, 185, 0.35),
+    transparent 70%
+  );
 }

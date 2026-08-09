@@ -28,7 +28,12 @@ type IconProps = Omit<SVGProps<SVGSVGElement>, "children"> & {
   size?: number | string;
 };
 
-function Aero({ d, strokeWidth: _sw, size: _size, ...rest }: IconProps & { d: string }) {
+function Aero({
+  d,
+  strokeWidth: _sw,
+  size: _size,
+  ...rest
+}: IconProps & { d: string }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden focusable="false" {...rest}>
       <defs>
@@ -101,3 +106,68 @@ export const AeroProjects = (p: IconProps) => <Aero d={PROJECTS} {...p} />;
 export const AeroCalendar = (p: IconProps) => <Aero d={CALENDAR} {...p} />;
 export const AeroLifeCalendar = (p: IconProps) => <Aero d={LIFE} {...p} />;
 export const AeroAssistant = (p: IconProps) => <Aero d={ASSISTANT} {...p} />;
+
+/* ── Chrome ──────────────────────────────────────────────────────────────
+   The arrows, ticks and tools. These sit at 12–14px where a filled glyph has
+   to stay blunt to survive, so they are chunkier than the nav set and carry
+   less internal detail. */
+
+const CHEVRON_LEFT =
+  "M15.4 3.6a1.9 1.9 0 0 1 0 2.7L9.7 12l5.7 5.7a1.9 1.9 0 0 1-2.7 2.7l-7-7a1.9 1.9 0 0 1 0-2.7l7-7a1.9 1.9 0 0 1 2.7 0Z";
+
+const CHEVRON_RIGHT =
+  "M8.6 3.6a1.9 1.9 0 0 0 0 2.7l5.7 5.7-5.7 5.7a1.9 1.9 0 0 0 2.7 2.7l7-7a1.9 1.9 0 0 0 0-2.7l-7-7a1.9 1.9 0 0 0-2.7 0Z";
+
+const CHEVRON_DOWN =
+  "M3.6 8.6a1.9 1.9 0 0 1 2.7 0l5.7 5.7 5.7-5.7a1.9 1.9 0 0 1 2.7 2.7l-7 7a1.9 1.9 0 0 1-2.7 0l-7-7a1.9 1.9 0 0 1 0-2.7Z";
+
+const ARROW_LEFT =
+  "M10.5 3.7a1.8 1.8 0 0 1 0 2.6L6.6 10.2h13.6a1.8 1.8 0 0 1 0 3.6H6.6l3.9 3.9a1.8 1.8 0 0 1-2.6 2.6l-7-7a1.8 1.8 0 0 1 0-2.6l7-7a1.8 1.8 0 0 1 2.6 0Z";
+
+/* The Return key's own arrow: down the right-hand stem, then left into the
+   head. This replaces a bare "↵" in the capture bar and the tutorial, where
+   the glyph was whatever the fallback font happened to draw. */
+const ENTER =
+  "M20.4 3.4a1.7 1.7 0 0 1 1.7 1.7v7.6a1.7 1.7 0 0 1-1.7 1.7H7.9v3.1a1.1 1.1 0 0 1-1.8.85l-5.1-4.2a1.1 1.1 0 0 1 0-1.7l5.1-4.2a1.1 1.1 0 0 1 1.8.85v3.1h10.8V5.1a1.7 1.7 0 0 1 1.7-1.7Z";
+
+const CHECK =
+  "M21 5.1a1.9 1.9 0 0 1 .2 2.7L11 19.9a1.9 1.9 0 0 1-2.8.1L3 14.8a1.9 1.9 0 1 1 2.7-2.7l3.7 3.7 8.9-10.5a1.9 1.9 0 0 1 2.7-.2Z";
+
+const PLUS =
+  "M12 2.6a1.9 1.9 0 0 1 1.9 1.9v5.6h5.6a1.9 1.9 0 0 1 0 3.8h-5.6v5.6a1.9 1.9 0 0 1-3.8 0v-5.6H4.5a1.9 1.9 0 0 1 0-3.8h5.6V4.5A1.9 1.9 0 0 1 12 2.6Z";
+
+const CLOSE =
+  "M4.5 4.5a1.8 1.8 0 0 1 2.6 0L12 9.4l4.9-4.9a1.8 1.8 0 1 1 2.6 2.6L14.6 12l4.9 4.9a1.8 1.8 0 1 1-2.6 2.6L12 14.6l-4.9 4.9a1.8 1.8 0 0 1-2.6-2.6L9.4 12 4.5 7.1a1.8 1.8 0 0 1 0-2.6Z";
+
+const SEARCH =
+  "M10.4 2.2a8.2 8.2 0 1 0 4.9 14.8l4.4 4.4a1.8 1.8 0 0 0 2.6-2.6l-4.4-4.4A8.2 8.2 0 0 0 10.4 2.2Zm0 3.4a4.8 4.8 0 1 1 0 9.6 4.8 4.8 0 0 1 0-9.6Z";
+
+const TRASH =
+  "M9.4 1.8h5.2a1.4 1.4 0 0 1 1.4 1.4v1.2h4.6a1.3 1.3 0 0 1 0 2.6H3.4a1.3 1.3 0 0 1 0-2.6H8V3.2a1.4 1.4 0 0 1 1.4-1.4Zm1.2 2.6h2.8v-.6h-2.8Z" +
+  "M5.6 8.4h12.8l-.9 12.1a1.5 1.5 0 0 1-1.5 1.4H8a1.5 1.5 0 0 1-1.5-1.4Zm3.3 2.4v8.4h1.9v-8.4Zm4.3 0v8.4h1.9v-8.4Z";
+
+const PENCIL =
+  "M17.1 1.9a1.6 1.6 0 0 1 2.3 0l2.7 2.7a1.6 1.6 0 0 1 0 2.3l-1.9 1.9-5-5Z" +
+  "M14.1 4.9l5 5L9 20a1.6 1.6 0 0 1-.7.4l-5.2 1.5a.9.9 0 0 1-1.1-1.1l1.5-5.2a1.6 1.6 0 0 1 .4-.7Z";
+
+const PLAY =
+  "M7.6 3.5a1.5 1.5 0 0 1 1.55.06l10.2 7a1.5 1.5 0 0 1 0 2.48l-10.2 7A1.5 1.5 0 0 1 6.8 20.8V4.8a1.5 1.5 0 0 1 .8-1.3Z";
+
+export const AeroChevronLeft = (p: IconProps) => (
+  <Aero d={CHEVRON_LEFT} {...p} />
+);
+export const AeroChevronRight = (p: IconProps) => (
+  <Aero d={CHEVRON_RIGHT} {...p} />
+);
+export const AeroChevronDown = (p: IconProps) => (
+  <Aero d={CHEVRON_DOWN} {...p} />
+);
+export const AeroArrowLeft = (p: IconProps) => <Aero d={ARROW_LEFT} {...p} />;
+export const AeroEnter = (p: IconProps) => <Aero d={ENTER} {...p} />;
+export const AeroCheck = (p: IconProps) => <Aero d={CHECK} {...p} />;
+export const AeroPlus = (p: IconProps) => <Aero d={PLUS} {...p} />;
+export const AeroClose = (p: IconProps) => <Aero d={CLOSE} {...p} />;
+export const AeroSearch = (p: IconProps) => <Aero d={SEARCH} {...p} />;
+export const AeroTrash = (p: IconProps) => <Aero d={TRASH} {...p} />;
+export const AeroPencil = (p: IconProps) => <Aero d={PENCIL} {...p} />;
+export const AeroPlay = (p: IconProps) => <Aero d={PLAY} {...p} />;

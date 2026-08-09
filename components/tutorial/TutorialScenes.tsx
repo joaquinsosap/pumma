@@ -9,7 +9,13 @@
 // through the very selection reducer the app uses. Nothing here writes to the
 // server — it's the muscle memory that has to transfer, not the data.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, MousePointerClick, Sparkles, Tag as TagIcon } from "@/components/icons";
+import {
+  AeroEnter,
+  Check,
+  MousePointerClick,
+  Sparkles,
+  Tag as TagIcon,
+} from "@/components/icons";
 import { nextHold, typedChars } from "@/lib/tutorial";
 import { startTutorialClock } from "@/lib/tutorial-clock";
 import {
@@ -294,7 +300,9 @@ function PressHint({ label, type }: { label: string; type?: boolean }) {
       {type ? "type" : "press"}
       <span
         ref={ref}
-        className="inline-block rounded-[7px] border-2 border-ink/25 bg-ink/[0.07] px-3 py-1 text-[17px] font-black tracking-normal text-ink"
+        /* Same cap as KeyCap — this one bobs instead of being pressed, but
+           two pictures of a key on one card have to be the same key. */
+        className="tutorial-key inline-block rounded-[7px] border-2 border-ink/25 px-3 py-1 text-[17px] font-black tracking-normal text-ink"
       >
         {type ? `‘${label}’` : label}
       </span>
@@ -676,8 +684,8 @@ export function SceneType({
           />
         </div>
         {step === "tagWord" && tail(text).length >= 2 && (
-          <kbd className="tutorial-nudge-soft shrink-0 rounded border border-border bg-surface2 px-1.5 py-0.5 font-mono text-[10px] text-ink">
-            ↵
+          <kbd className="tutorial-key tutorial-nudge-soft inline-flex shrink-0 items-center rounded border border-border bg-surface2 px-1.5 py-1 text-ink">
+            <AeroEnter className="h-3 w-3" />
           </kbd>
         )}
       </div>
