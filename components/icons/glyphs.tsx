@@ -35,62 +35,74 @@ function Glyph({
   );
 }
 
-const HOME =
-  "M12 2.3 1.7 11.9h3.05v9.85h14.5V11.9h3.05Z" + "M10.15 21.75v-5.6h3.7v5.6Z";
+/**
+ * The nine that name a place or a kind of thing are tiles: a rounded square
+ * in the entity's own colour with one white mark in the middle. Identical
+ * outer geometry means none of them can weigh more than another, which is
+ * what kept going wrong when each was a free-standing silhouette.
+ *
+ * A tile is a noun. Everything under "Chrome" below is a verb, and those
+ * stay as bare marks — a tile on a "next page" arrow would be nonsense.
+ *
+ * Marks are drawn directly at tile scale, roughly x/y 6.4–17.6, so nothing
+ * is scaled at render and the centring is the geometry rather than a
+ * transform.
+ */
+function Tile({
+  mark,
+  strokeWidth: _sw,
+  size: _size,
+  ...rest
+}: IconProps & { mark: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden focusable="false" {...rest}>
+      <rect x="1" y="1" width="22" height="22" rx="6.4" fill="currentColor" />
+      <path d={mark} fill="#fff" fillRule="evenodd" />
+    </svg>
+  );
+}
 
-const TASKS =
-  "M3.4 4.6h3.5a1 1 0 0 1 1 1V9a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V5.6a1 1 0 0 1 1-1Z" +
-  "M3.4 14h3.5a1 1 0 0 1 1 1v3.4a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V15a1 1 0 0 1 1-1Z" +
-  "M10.6 6.1h10.2a1.15 1.15 0 0 1 0 2.3H10.6a1.15 1.15 0 0 1 0-2.3Z" +
-  "M10.6 15.5h10.2a1.15 1.15 0 0 1 0 2.3H10.6a1.15 1.15 0 0 1 0-2.3Z";
+const M_HOME = "M12 6.6 6.4 11.7h1.7v5.7h7.8v-5.7h1.7Z";
+const M_TASKS =
+  "M6.6 8.7h2.2v2.2H6.6Z" +
+  "M10.4 8.9h7v1.8h-7Z" +
+  "M6.6 13.1h2.2v2.2H6.6Z" +
+  "M10.4 13.3h7v1.8h-7Z";
+const M_NOTES = "M7 7h10v2H7Z" + "M7 11h10v2H7Z" + "M7 15h6.4v2H7Z";
+const M_HABITS = "M17.6 7.85 10.4 16.15 6.4 12.45l1.7-1.8 2.2 2 5.6-6.4Z";
+const M_GOALS =
+  "M12 6.2a5.8 5.8 0 1 0 0 11.6 5.8 5.8 0 0 0 0-11.6Zm0 2.4a3.4 3.4 0 1 1 0 6.8 3.4 3.4 0 0 1 0-6.8Z" +
+  "M12 10.3a1.7 1.7 0 1 1 0 3.4 1.7 1.7 0 0 1 0-3.4Z";
+const M_PROJECTS = "M6.4 7.6h3.6l1.3 1.5h6.3v7.3H6.4Z";
+const M_CALENDAR =
+  "M6.6 8.4h2.6v2.6H6.6Z" +
+  "M10.7 8.4h2.6v2.6h-2.6Z" +
+  "M14.8 8.4h2.6v2.6h-2.6Z" +
+  "M6.6 13h2.6v2.6H6.6Z" +
+  "M10.7 13h2.6v2.6h-2.6Z" +
+  "M14.8 13h2.6v2.6h-2.6Z";
+const M_LIFE =
+  "M7.6 6.6h8.8v2.2c0 1.9-1.1 3-2.6 3.2 1.5.2 2.6 1.3 2.6 3.2v2.2H7.6v-2.2c0-1.9 1.1-3 2.6-3.2-1.5-.2-2.6-1.3-2.6-3.2Z";
+const M_ASSISTANT =
+  "M12 6.2l1.55 4.25L17.8 12l-4.25 1.55L12 17.8l-1.55-4.25L6.2 12l4.25-1.55Z";
 
-const NOTES =
-  "M5.6 2.4h12.8a1 1 0 0 1 1 1v17.2a1 1 0 0 1-1 1H5.6a1 1 0 0 1-1-1V3.4a1 1 0 0 1 1-1Z" +
-  "M7.6 6.8v1.9h8.8V6.8Z" +
-  "M7.6 11v1.9h8.8V11Z" +
-  "M7.6 15.2v1.9h5.6v-1.9Z";
-
-const HABITS =
-  "M12 2.2a9.8 9.8 0 1 0 0 19.6 9.8 9.8 0 0 0 0-19.6Z" +
-  "M17.3 8.5 11.2 16a1 1 0 0 1-1.5.06L6.7 13.1l1.6-1.6 2.3 2.3 5.2-6.2Z";
-
-const GOALS =
-  "M12 2.2a9.8 9.8 0 1 0 0 19.6 9.8 9.8 0 0 0 0-19.6Z" +
-  "M12 4.9a7.1 7.1 0 1 1 0 14.2 7.1 7.1 0 0 1 0-14.2Z" +
-  "M12 7.6a4.4 4.4 0 1 0 0 8.8 4.4 4.4 0 0 0 0-8.8Z" +
-  "M12 10.2a1.8 1.8 0 1 1 0 3.6 1.8 1.8 0 0 1 0-3.6Z";
-
-const PROJECTS =
-  "M3.4 3.95h5.7l2 2.2h9.5a1 1 0 0 1 1 1v11.9a1 1 0 0 1-1 1H3.4a1 1 0 0 1-1-1V4.95a1 1 0 0 1 1-1Z" +
-  "M7.25 10.35v6.4h3.4v-6.4Z" +
-  "M13.35 10.35v4.2h3.4v-4.2Z";
-
-const CALENDAR =
-  "M6.3 1.8a1.15 1.15 0 0 1 1.15 1.15V4h9.1V2.95a1.15 1.15 0 0 1 2.3 0V4h1.25a1 1 0 0 1 1 1v15.9a1 1 0 0 1-1 1H3.9a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h1.25V2.95A1.15 1.15 0 0 1 6.3 1.8Z" +
-  "M5.1 10.2v2.4h3v-2.4Z" +
-  "M10.5 10.2v2.4h3v-2.4Z" +
-  "M15.9 10.2v2.4h3v-2.4Z" +
-  "M5.1 15v2.4h3V15Z" +
-  "M10.5 15v2.4h3V15Z" +
-  "M15.9 15v2.4h3V15Z";
-
-const LIFE =
-  "M6 2.2h12a1.1 1.1 0 0 1 0 2.2h-.6v1.9c0 2.1-1.1 4-2.9 5.1l-1.3.8 1.3.8c1.8 1.1 2.9 3 2.9 5.1v1.9h.6a1.1 1.1 0 0 1 0 2.2H6a1.1 1.1 0 0 1 0-2.2h.6v-1.9c0-2.1 1.1-4 2.9-5.1l1.3-.8-1.3-.8C7.7 10.3 6.6 8.4 6.6 6.3V4.4H6a1.1 1.1 0 0 1 0-2.2Z";
-
-const ASSISTANT =
-  "M11.5 2.5 13.4 7.7l5.2 1.9-5.2 1.9-1.9 5.2-1.9-5.2L4.4 9.6l5.2-1.9Z" +
-  "M18.7 15.1l.85 2.35 2.35.85-2.35.85-.85 2.35-.85-2.35-2.35-.85 2.35-.85Z" +
-  "M4.7 16.3l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7Z";
-
-export const HomeGlyph = (p: IconProps) => <Glyph d={HOME} {...p} />;
-export const TasksGlyph = (p: IconProps) => <Glyph d={TASKS} {...p} />;
-export const NotesGlyph = (p: IconProps) => <Glyph d={NOTES} {...p} />;
-export const HabitsGlyph = (p: IconProps) => <Glyph d={HABITS} {...p} />;
-export const GoalsGlyph = (p: IconProps) => <Glyph d={GOALS} {...p} />;
-export const ProjectsGlyph = (p: IconProps) => <Glyph d={PROJECTS} {...p} />;
-export const CalendarGlyph = (p: IconProps) => <Glyph d={CALENDAR} {...p} />;
-export const LifeCalendarGlyph = (p: IconProps) => <Glyph d={LIFE} {...p} />;
-export const AssistantGlyph = (p: IconProps) => <Glyph d={ASSISTANT} {...p} />;
+export const HomeGlyph = (p: IconProps) => <Tile mark={M_HOME} {...p} />;
+export const TasksGlyph = (p: IconProps) => <Tile mark={M_TASKS} {...p} />;
+export const NotesGlyph = (p: IconProps) => <Tile mark={M_NOTES} {...p} />;
+export const HabitsGlyph = (p: IconProps) => <Tile mark={M_HABITS} {...p} />;
+export const GoalsGlyph = (p: IconProps) => <Tile mark={M_GOALS} {...p} />;
+export const ProjectsGlyph = (p: IconProps) => (
+  <Tile mark={M_PROJECTS} {...p} />
+);
+export const CalendarGlyph = (p: IconProps) => (
+  <Tile mark={M_CALENDAR} {...p} />
+);
+export const LifeCalendarGlyph = (p: IconProps) => (
+  <Tile mark={M_LIFE} {...p} />
+);
+export const AssistantGlyph = (p: IconProps) => (
+  <Tile mark={M_ASSISTANT} {...p} />
+);
 
 /* ── Chrome ──────────────────────────────────────────────────────────────
    The arrows, ticks and tools. These sit at 12–14px where a filled glyph has

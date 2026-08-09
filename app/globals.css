@@ -24,6 +24,9 @@
   --goals: oklch(0.58 0.17 300);
   --projects: oklch(0.58 0.14 245);
   --notes: oklch(0.7 0.12 70);
+  --calendar: oklch(0.6 0.11 200);
+  --life: oklch(0.52 0.09 265);
+  --assistant: oklch(0.6 0.19 330);
 }
 
 [data-theme="dark"] {
@@ -61,6 +64,9 @@
   --color-goals: var(--goals);
   --color-projects: var(--projects);
   --color-notes: var(--notes);
+  --color-calendar: var(--calendar);
+  --color-life: var(--life);
+  --color-assistant: var(--assistant);
   --color-lived: var(--lived);
   --color-ahead: var(--ahead);
   --font-sans: var(--font-schibsted);
@@ -895,6 +901,12 @@ html {
   --goals: #6357bd;
   --projects: #2b78a8;
   --notes: #c2871f;
+  /* Three sections had no colour of their own and fell back to grey. Once
+     every icon is a coloured tile, one grey tile reads as broken rather than
+     as quiet. */
+  --calendar: #1f8f9c;
+  --life: #4a5da8;
+  --assistant: #a8459c;
 
   /* Depth tokens. `--rim` is the hairline every surface shares; `--lip` is
      the one-pixel catch of light along a top edge; `--aura` is the only
@@ -940,6 +952,9 @@ html {
   --goals: #9184e0;
   --projects: #4fa3cf;
   --notes: #dda63f;
+  --calendar: #3fb4c2;
+  --life: #7b8cd4;
+  --assistant: #d071c6;
 
   --rim: rgba(168, 202, 238, 0.2);
   --lip: rgba(200, 225, 250, 0.1);
@@ -1011,18 +1026,22 @@ body {
     0 10px 26px -6px var(--shadow);
 }
 
-/* Panels lift, controls do not. */
+/* Panels respond without moving. A widget that lifts under the cursor drags
+   every row inside it along by a pixel, which is a lot of motion to pay for
+   "you are over this" — and on a dense grid the whole page twitches as the
+   pointer crosses it. The shadow deepens and the rim warms instead; nothing
+   changes position. */
 .rounded-\[13px\].border.bg-surface {
   transition:
-    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow 220ms ease,
+    border-color 220ms ease;
 }
 .rounded-\[13px\].border.bg-surface:hover {
-  transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--primary) 26%, var(--rim)) !important;
   box-shadow:
     inset 0 1px 0 var(--lip),
-    0 2px 4px var(--shadow),
-    0 16px 34px -8px var(--shadow);
+    0 2px 5px var(--shadow),
+    0 18px 38px -10px var(--shadow);
 }
 
 /* ── Titlebars ───────────────────────────────────────────────────────────
@@ -1106,8 +1125,7 @@ select {
   text-shadow: none;
   transition:
     box-shadow 150ms ease,
-    border-color 150ms ease,
-    transform 150ms cubic-bezier(0.22, 1, 0.36, 1);
+    border-color 150ms ease;
 }
 
 :is(button, [role="button"], select, summary):is(
@@ -1133,7 +1151,6 @@ select:hover:not(:disabled) {
     .bg-chip
   ):not(.border-\[1\.8px\]):not([role="switch"]):active:not(:disabled),
 .widget-head button:not(.bg-ink):active {
-  transform: translateY(0.5px);
   box-shadow: inset 0 1px 3px var(--edge);
 }
 

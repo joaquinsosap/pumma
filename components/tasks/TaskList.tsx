@@ -11,7 +11,11 @@ import {
 } from "@/lib/use-task-selection";
 import { tagBg } from "@/lib/parse";
 import { dueDatePart } from "@/lib/date";
-import { toggleTask, cycleTaskPriority, deleteTaskAction } from "@/lib/actions/tasks";
+import {
+  toggleTask,
+  cycleTaskPriority,
+  deleteTaskAction,
+} from "@/lib/actions/tasks";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -34,12 +38,6 @@ import {
 
 // Widget rows keep the bar as hover garnish — the HIGH/MID/LOW chip states the
 // priority outright now, so a permanent stripe on every row was just noise.
-const PRIO_BORDER_HOVER = {
-  high: "hover:border-l-[oklch(0.64_0.18_25)]",
-  med: "hover:border-l-[oklch(0.7_0.12_70)]",
-  low: "hover:border-l-[oklch(0.58_0.14_245)]",
-} as const;
-
 const PRIO_BORDER = {
   high: "border-l-[oklch(0.64_0.18_25)]",
   med: "border-l-[oklch(0.7_0.12_70)]",
@@ -86,7 +84,7 @@ function DraggableRow({
       ref={setNodeRef}
       className={cn(
         "cursor-grab touch-manipulation active:cursor-grabbing",
-        isDragging && "opacity-35"
+        isDragging && "opacity-35",
       )}
       {...attributes}
       {...listeners}
@@ -157,8 +155,8 @@ export function TaskList({
                 ...t,
                 status: t.status === "done" ? "todo" : "done",
               }
-            : t
-        )
+            : t,
+        ),
       );
       // The action's revalidatePath already re-renders the current route in the
       // same response, so no explicit router.refresh() round-trip is needed.
@@ -171,8 +169,8 @@ export function TaskList({
     startTransition(async () => {
       setOptimistic(
         optimistic.map((t) =>
-          t.id === id ? { ...t, priority: PRIO_NEXT[t.priority] } : t
-        )
+          t.id === id ? { ...t, priority: PRIO_NEXT[t.priority] } : t,
+        ),
       );
       await cycleTaskPriority(id);
     });
@@ -223,7 +221,7 @@ export function TaskList({
         const titleClass = cn(
           compact ? "text-[15px] font-semibold leading-snug" : "text-sm",
           "truncate",
-          done ? "text-faint2 line-through" : "text-ink"
+          done ? "text-faint2 line-through" : "text-ink",
         );
 
         if (isCalendar && isMeetingTask(t) && t.due) {
@@ -257,7 +255,7 @@ export function TaskList({
                     href={detailHref}
                     className={cn(
                       "block min-w-0 truncate text-[13px] font-medium hover:underline",
-                      past ? "text-faint line-through" : "text-ink"
+                      past ? "text-faint line-through" : "text-ink",
                     )}
                   >
                     {t.title}
@@ -266,7 +264,7 @@ export function TaskList({
                   <span
                     className={cn(
                       "block truncate text-[13px] font-medium",
-                      past ? "text-faint line-through" : "text-ink"
+                      past ? "text-faint line-through" : "text-ink",
                     )}
                   >
                     {t.title}
@@ -299,7 +297,9 @@ export function TaskList({
                 }}
                 className={cn(
                   "flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] border-[1.8px]",
-                  done ? "border-none bg-habits" : "border-border bg-transparent"
+                  done
+                    ? "border-none bg-habits"
+                    : "border-border bg-transparent",
                 )}
               >
                 {done && (
@@ -319,7 +319,7 @@ export function TaskList({
                   href={detailHref}
                   className={cn(
                     "min-w-0 flex-1 truncate text-[13px] hover:underline",
-                    done ? "text-faint2 line-through" : "text-ink"
+                    done ? "text-faint2 line-through" : "text-ink",
                   )}
                 >
                   {t.title}
@@ -328,7 +328,7 @@ export function TaskList({
                 <span
                   className={cn(
                     "min-w-0 flex-1 truncate text-[13px]",
-                    done ? "text-faint2 line-through" : "text-ink"
+                    done ? "text-faint2 line-through" : "text-ink",
                   )}
                 >
                   {t.title}
@@ -356,16 +356,13 @@ export function TaskList({
                   ? "border-l-[3px] border-l-primary bg-primary/[0.10] ring-1 ring-inset ring-primary/40"
                   : selected
                     ? "border-l-[3px] border-l-tasks bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35"
-                    : cn("hover:bg-surface2/50", accentBorder)
+                    : cn("hover:bg-hover", accentBorder),
               )
             : cn(
                 "gap-x-[11px]",
                 isPage
-                  ? "border-b border-border2 px-4 py-2.5 last:border-b-0 hover:bg-surface2/70"
-                  : cn(
-                      "rounded-lg border-l-[3px] border-l-transparent px-1 py-1 transition-all duration-150 hover:bg-surface2 hover:pl-1.5",
-                      PRIO_BORDER_HOVER[t.priority]
-                    ),
+                  ? "border-b border-border2 px-4 py-2.5 last:border-b-0 hover:bg-hover"
+                  : "rounded-lg px-1.5 py-1 transition-colors duration-150 hover:bg-hover",
                 showDelete
                   ? "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px_16px] max-sm:grid-cols-[18px_16px_minmax(0,1fr)_40px_44px_16px]"
                   : "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px] max-sm:grid-cols-[18px_16px_minmax(0,1fr)_40px_44px]",
@@ -375,8 +372,8 @@ export function TaskList({
                 !picked &&
                   selected &&
                   "border-l-[3px] border-l-tasks bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35",
-                !picked && !selected && accentBorder
-              )
+                !picked && !selected && accentBorder,
+              ),
         );
 
         const openDetail = () => onSelect?.(t.id);
@@ -393,9 +390,10 @@ export function TaskList({
           openDetail();
         };
 
-        const rowHref = linkTaskDetail && lifeView
-          ? taskDetailHref(t, lifeView, today)
-          : linkRowsTo;
+        const rowHref =
+          linkTaskDetail && lifeView
+            ? taskDetailHref(t, lifeView, today)
+            : linkRowsTo;
 
         const row = (
           <Taggable
@@ -424,7 +422,9 @@ export function TaskList({
               <button
                 type="button"
                 aria-pressed={picked}
-                aria-label={picked ? `Deselect ${t.title}` : `Select ${t.title}`}
+                aria-label={
+                  picked ? `Deselect ${t.title}` : `Select ${t.title}`
+                }
                 onClick={(e) => {
                   e.stopPropagation();
                   selection.toggle(t.id);
@@ -436,7 +436,7 @@ export function TaskList({
                     : "h-[18px] w-[18px] max-lg:h-5 max-lg:w-5",
                   picked
                     ? "border-primary bg-primary"
-                    : "border-faint2 bg-transparent hover:border-primary"
+                    : "border-faint2 bg-transparent hover:border-primary",
                 )}
               >
                 {picked ? (
@@ -445,7 +445,10 @@ export function TaskList({
                     strokeWidth={3.2}
                   />
                 ) : done ? (
-                  <Minus className="h-[10px] w-[10px] text-faint2" strokeWidth={3} />
+                  <Minus
+                    className="h-[10px] w-[10px] text-faint2"
+                    strokeWidth={3}
+                  />
                 ) : null}
               </button>
             ) : (
@@ -457,14 +460,19 @@ export function TaskList({
                 }}
                 className={cn(
                   "flex shrink-0 items-center justify-center rounded-[5px] border-[1.8px]",
-                  isPage ? "h-5 w-5 max-lg:h-6 max-lg:w-6" : "h-[18px] w-[18px] max-lg:h-5 max-lg:w-5",
+                  isPage
+                    ? "h-5 w-5 max-lg:h-6 max-lg:w-6"
+                    : "h-[18px] w-[18px] max-lg:h-5 max-lg:w-5",
                   done
                     ? "border-none bg-habits"
-                    : "border-border bg-transparent"
+                    : "border-border bg-transparent",
                 )}
               >
                 {done && (
-                  <Check className="h-[11px] w-[11px] animate-pumma-pop text-white" strokeWidth={3.2} />
+                  <Check
+                    className="h-[11px] w-[11px] animate-pumma-pop text-white"
+                    strokeWidth={3.2}
+                  />
                 )}
               </button>
             )}
@@ -480,7 +488,7 @@ export function TaskList({
               className={cn(
                 "min-w-0",
                 !compact && "flex min-w-0 items-center gap-1.5 overflow-hidden",
-                !compact && onSelect && "cursor-pointer"
+                !compact && onSelect && "cursor-pointer",
               )}
               onClick={
                 !compact && onSelect
@@ -507,7 +515,7 @@ export function TaskList({
                 <span
                   className={cn(
                     "shrink-0 rounded-md border px-1.5 py-px font-mono text-[9px] font-bold uppercase tracking-wide",
-                    STATUS_STYLE[t.status]
+                    STATUS_STYLE[t.status],
                   )}
                 >
                   {t.status}
@@ -532,14 +540,20 @@ export function TaskList({
                       <span key={tg.id} className="contents">
                         <span
                           className="task-inline-tag task-tag-full shrink-0 rounded-[5px] px-[7px] py-0.5 font-mono text-[10px] no-underline"
-                          style={{ color: tg.color, background: tagBg(tg.color) }}
+                          style={{
+                            color: tg.color,
+                            background: tagBg(tg.color),
+                          }}
                         >
                           {tg.name}
                         </span>
                         <span
                           className="task-inline-tag task-tag-mini hidden shrink-0 rounded-[5px] px-[6px] py-0.5 font-mono text-[10px] font-bold uppercase no-underline"
                           title={tg.name}
-                          style={{ color: tg.color, background: tagBg(tg.color) }}
+                          style={{
+                            color: tg.color,
+                            background: tagBg(tg.color),
+                          }}
                         >
                           {tg.name.charAt(0)}
                         </span>
@@ -553,7 +567,9 @@ export function TaskList({
                 </Link>
               ) : (
                 <>
-                  <span className={cn(titleClass, "block truncate")}>{t.title}</span>
+                  <span className={cn(titleClass, "block truncate")}>
+                    {t.title}
+                  </span>
                   {compact && subtaskTotal > 0 && (
                     <SubtaskProgress done={subtaskDone} total={subtaskTotal} />
                   )}
@@ -600,7 +616,7 @@ export function TaskList({
                 <span
                   className={cn(
                     "text-right font-mono tabular-nums text-faint",
-                    isPage ? "text-[11px]" : "text-[10px]"
+                    isPage ? "text-[11px]" : "text-[10px]",
                   )}
                 >
                   {due}
