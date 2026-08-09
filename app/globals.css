@@ -1151,7 +1151,7 @@ select:hover:not(:disabled) {
   border-color: color-mix(in oklab, var(--primary) 45%, transparent) !important;
   box-shadow:
     inset 0 1px 0 var(--lip),
-    0 0 0 3px var(--aura);
+    0 0 9px -1px color-mix(in oklab, var(--primary) 38%, transparent);
 }
 
 :is(button, [role="button"], select, summary):is(
@@ -1272,8 +1272,10 @@ select:hover:not(:disabled) {
 }
 .hover\:border-faint2:hover,
 .hover\:border-faint:hover {
-  border-color: color-mix(in oklab, var(--primary) 40%, transparent) !important;
-  box-shadow: 0 0 0 3px var(--aura);
+  border-color: color-mix(in oklab, var(--primary) 45%, transparent) !important;
+  box-shadow:
+    0 0 10px -1px color-mix(in oklab, var(--primary) 40%, transparent),
+    0 4px 14px -4px var(--shadow);
 }
 
 /* The streak card keeps its warmth — it is the one celebratory surface in
