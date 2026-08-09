@@ -26,7 +26,7 @@ export default async function HomePage({ searchParams }: Props) {
         birthDate={data.birthDate}
         lifeSpanYears={data.lifeSpanYears}
       />
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-5 max-lg:pb-28 animate-pumma-view md:grid md:grid-cols-2 md:[&>*:nth-child(3)]:col-span-2 xl:grid-cols-[304px_1fr_340px] xl:overflow-hidden xl:[&>*:nth-child(3)]:col-span-1">
+      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-5 max-lg:pb-28 animate-pumma-view md:grid md:grid-cols-2 md:[&>*]:min-w-0 md:[&>*:nth-child(3)]:col-span-2 xl:grid-cols-[304px_1fr_340px] xl:overflow-hidden xl:[&>*:nth-child(3)]:col-span-1">
         <AgendaPanel
           agenda={data.agenda}
           tasks={data.allTasks}

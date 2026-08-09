@@ -8,6 +8,9 @@ import { Taggable } from "@/components/tags/TagMenuProvider";
 import { TaskList } from "@/components/tasks/TaskList";
 import { PriorityChip } from "@/components/tasks/PriorityChip";
 import type { SelectionController } from "@/lib/use-task-selection";
+import { carryoverSpanLabel } from "@/lib/carryover";
+import { iso } from "@/lib/date";
+import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -39,13 +42,27 @@ export function CarryoverSection({
 }: Props) {
   const [open, setOpen] = useState(defaultOpen);
   const collapsible = variant === "agenda";
+  const timeZone = useTimezone();
+  const today = iso(new Date(), timeZone);
 
   if (!tasks.length) return null;
 
   const headerClass =
     "font-mono text-[10px] font-semibold tracking-wide text-tasks/80";
 
-  const headerLabel = `↩ CARRYOVER · ${tasks.length} UNFINISHED`;
+  // "2 unfinished" is a count with no weight to it. How far back the pile
+  // reaches is the part that tells you whether to worry about it.
+  const span = carryoverSpanLabel(
+    tasks.map((t) => t.due ?? ""),
+    today,
+  );
+  const aged = `${tasks.length} UNFINISHED${
+    span ? ` FROM ${span.toUpperCase()}` : ""
+  }`;
+  // The tab hanging off the titlebar is deliberately narrow, and the word
+  // CARRYOVER costs it a third of its line for something the ↩ and the
+  // position already say. The full-width page variant keeps it.
+  const headerLabel = collapsible ? `↩ ${aged}` : `↩ CARRYOVER · ${aged}`;
 
   const agendaList = (
     <div className="mt-1.5 flex flex-col gap-1">
@@ -108,7 +125,7 @@ export function CarryoverSection({
         //
         // Collapsed it is a tab; expanded it is the same shape, further
         // down.
-        variant === "agenda" && "mx-3 -mt-3 rounded-b-[14px] border-t-0",
+        variant === "agenda" && "mx-2 -mt-3 rounded-b-[14px] border-t-0 px-2.5",
         className,
       )}
       style={
@@ -134,7 +151,14 @@ export function CarryoverSection({
                 !open && "-rotate-90",
               )}
             />
-            <span className="min-w-0 truncate">{headerLabel}</span>
+            {/* Wraps rather than truncates. The tab is narrow on purpose and
+                the label grows with the age of the pile, so sooner or later
+                it will not fit on one line, and a label ending in "FROM
+                YESTER…" has thrown away the only part worth reading. Two
+                lines is a taller tab, which is still a tab. */}
+            <span className="line-clamp-2 min-w-0 [overflow-wrap:anywhere]">
+              {headerLabel}
+            </span>
           </button>
           {href ? (
             <Link
