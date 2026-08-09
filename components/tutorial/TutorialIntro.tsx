@@ -45,7 +45,7 @@ export function TutorialIntro({ onStart }: { onStart: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-[420px] rounded-[20px] border-2 border-ink bg-surface p-6 shadow-[0_24px_64px_rgba(0,0,0,0.35)]">
+      <div className="w-full max-w-[420px] rounded-[20px] border-2 border-ink bg-surface p-6 shadow-[0_1px_2px_var(--shadow),0_24px_60px_-12px_var(--shadow)]">
         <PummaMark className="h-11 w-11 shrink-0 rounded-[12px]" />
         <h2 className="m-0 mt-4 text-[22px] font-extrabold leading-tight tracking-tight text-ink">
           Sixty seconds, then it&apos;s yours.

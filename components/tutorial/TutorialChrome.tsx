@@ -26,14 +26,17 @@ export function MissionBanner({
 }) {
   const isMission = beat.kind === "do";
   return (
-    <div key={beat.id} className="tutorial-in mx-auto w-full max-w-[620px] text-center">
+    <div
+      key={beat.id}
+      className="tutorial-in mx-auto w-full max-w-[620px] text-center"
+    >
       <div className="mb-2 flex items-center justify-center gap-2">
         <span
           className={cn(
             "rounded-full px-2.5 py-0.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.16em]",
             isMission
               ? "bg-primary text-background"
-              : "border border-white/25 text-white/60"
+              : "border border-white/25 text-white/60",
           )}
         >
           {isMission ? `Mission ${index + 1}/${total}` : "Watch"}
@@ -59,9 +62,14 @@ export function MissionBanner({
           /* A dark halo under white type: the stage behind it is a blurred
              screenshot, and white-on-whatever-is-behind-it was the one thing
              making the biggest line on screen hard to read. */
-          style={{ textShadow: "0 2px 18px rgba(0,0,0,0.75), 0 1px 3px rgba(0,0,0,0.55)" }}
+          style={{
+            textShadow:
+              "0 2px 18px rgba(0,0,0,0.75), 0 1px 3px rgba(0,0,0,0.55)",
+          }}
         >
-          {cleared && beat.done ? `✓ ${beat.done}` : instruction ?? beat.caption}
+          {cleared && beat.done
+            ? `✓ ${beat.done}`
+            : (instruction ?? beat.caption)}
         </p>
       </div>
 
@@ -70,10 +78,10 @@ export function MissionBanner({
           className={cn(
             "m-0 leading-relaxed transition-colors",
             cleared
-              // The payoff line was mid-green on a dark backdrop and barely
-              // legible — the one line you actually want read.
-              ? "text-[16px] font-bold text-[oklch(0.86_0.17_152)]"
-              : "text-[14.5px] font-medium text-white/80"
+              ? // The payoff line was mid-green on a dark backdrop and barely
+                // legible — the one line you actually want read.
+                "text-[16px] font-bold text-[oklch(0.86_0.17_152)]"
+              : "text-[14.5px] font-medium text-white/80",
           )}
         >
           {instruction ? beat.caption : beat.sub}
@@ -96,7 +104,7 @@ export function TutorialChecklist({
     <ol
       className={cn(
         "m-0 flex list-none flex-col gap-1 rounded-xl border border-white/10 bg-white/[0.06] p-2 backdrop-blur-sm",
-        className
+        className,
       )}
     >
       {beats.map((b, i) => {
@@ -107,7 +115,7 @@ export function TutorialChecklist({
             key={b.id}
             className={cn(
               "flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors",
-              now && "bg-white/10"
+              now && "bg-white/10",
             )}
           >
             <span
@@ -117,16 +125,22 @@ export function TutorialChecklist({
                   ? "border-habits bg-habits"
                   : now
                     ? "border-white/70"
-                    : "border-white/25"
+                    : "border-white/25",
               )}
             >
-              {done && <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />}
+              {done && (
+                <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />
+              )}
               {now && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
             </span>
             <span
               className={cn(
                 "font-mono text-[10.5px] uppercase tracking-wider transition-colors",
-                done ? "text-white/45 line-through" : now ? "font-bold text-white" : "text-white/40"
+                done
+                  ? "text-white/45 line-through"
+                  : now
+                    ? "font-bold text-white"
+                    : "text-white/40",
               )}
             >
               {b.step}
@@ -157,13 +171,13 @@ export function TokenChecks({
             "flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-all",
             c.ok
               ? "border-habits bg-habits/10 font-semibold text-habits"
-              : "border-border bg-surface2 text-faint2"
+              : "border-border bg-surface2 text-faint2",
           )}
         >
           <span
             className={cn(
               "flex h-3 w-3 items-center justify-center rounded-full border",
-              c.ok ? "border-habits bg-habits" : "border-faint2"
+              c.ok ? "border-habits bg-habits" : "border-faint2",
             )}
           >
             {c.ok && <Check className="h-2 w-2 text-white" strokeWidth={5} />}
@@ -191,7 +205,7 @@ export function FlounderCard({
 }) {
   return (
     <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
-      <div className="tutorial-in w-full max-w-[400px] rounded-[20px] border-2 border-ink bg-surface p-6 shadow-[0_24px_64px_rgba(0,0,0,0.35)]">
+      <div className="tutorial-in w-full max-w-[400px] rounded-[20px] border-2 border-ink bg-surface p-6 shadow-[0_1px_2px_var(--shadow),0_24px_60px_-12px_var(--shadow)]">
         <span className="text-[28px]">🕯️</span>
         <h2 className="m-0 mt-2 text-[19px] font-extrabold leading-tight tracking-tight text-ink">
           Not the brightest candle in the drawer.

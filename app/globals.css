@@ -1400,3 +1400,30 @@ select:hover:not(:disabled) {
     0 1px 2px var(--shadow),
     0 24px 60px -12px rgba(10, 20, 35, 0.35) !important;
 }
+
+/* ── The tour ────────────────────────────────────────────────────────────
+   The tutorial was styled before this theme existed and still carries the
+   vocabulary of the last one: 2px `border-ink` rims, hard offset shadows,
+   and a focus ring in a hardcoded violet that was `--primary` two themes
+   ago.
+
+   `border-ink` is the sharpest of these. On light it is a near-black 2px
+   outline — deliberate then, far heavier than anything else on screen now —
+   and on dark `--ink` is near-*white*, so every tour card wore a thick white
+   frame. It takes the same rim as every other surface. */
+.border-ink.border-2 {
+  border-width: 1px !important;
+}
+.border-ink {
+  border-color: var(--rim) !important;
+}
+.border-ink\/20,
+.border-ink\/25 {
+  border-color: var(--border) !important;
+}
+
+.shadow-\[0_2px_0_var\(--shadow\)\] {
+  box-shadow:
+    inset 0 1px 0 var(--lip),
+    0 2px 4px var(--shadow) !important;
+}

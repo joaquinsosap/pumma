@@ -6,7 +6,12 @@
 // card sets up, and it's short enough to be one.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { BEATS, flounderLimit, isFloundering, progressAt } from "@/lib/tutorial";
+import {
+  BEATS,
+  flounderLimit,
+  isFloundering,
+  progressAt,
+} from "@/lib/tutorial";
 import { markTutorialSeen } from "@/lib/actions/settings";
 import { setTutorialActive } from "@/lib/tutorial-lock";
 import { onTutorialReplay } from "@/lib/tutorial-replay";
@@ -89,7 +94,7 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
     () =>
       typeof window !== "undefined" &&
       window.matchMedia?.("(pointer: fine)").matches !== false,
-    []
+    [],
   );
 
   const beat = BEATS[index];
@@ -197,7 +202,7 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
       setInstruction(next);
       noteProgress();
     },
-    [noteProgress]
+    [noteProgress],
   );
 
   useEffect(() => {
@@ -207,7 +212,7 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
         isFloundering(
           performance.now() - beatOpenedAt.current,
           strayKeys.current,
-          flounderLimit(beat.id)
+          flounderLimit(beat.id),
         )
       ) {
         setFloundering(true);
@@ -282,18 +287,23 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
       />
     );
 
-  const missionNumber = BEATS.slice(0, index).filter((b) => b.kind === "do").length;
+  const missionNumber = BEATS.slice(0, index).filter(
+    (b) => b.kind === "do",
+  ).length;
   const missionTotal = BEATS.filter((b) => b.kind === "do").length;
 
   return (
     <div
       className={cn(
         "fixed inset-0 z-[200] flex flex-col bg-black/70 backdrop-blur-[3px]",
-        outro && "tutorial-outro"
+        outro && "tutorial-outro",
       )}
     >
       {outro && (
-        <span className="tutorial-sweep pointer-events-none absolute inset-0" aria-hidden />
+        <span
+          className="tutorial-sweep pointer-events-none absolute inset-0"
+          aria-hidden
+        />
       )}
       <div className="h-[3px] w-full shrink-0 bg-white/15">
         <div
@@ -323,7 +333,6 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
             onProgress={noteProgress}
           />
         </div>
-
       </div>
 
       {/* Desktop: down the left, out of the way. Phone: a strip along the
@@ -355,9 +364,8 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
             // The card had focus; without this you'd have to click the field
             // before you could type again.
             window.setTimeout(() => {
-              const field = document.querySelector<HTMLInputElement>(
-                '.z-\\[200\\] input'
-              );
+              const field =
+                document.querySelector<HTMLInputElement>(".z-\\[200\\] input");
               field?.focus();
             }, 60);
           }}
@@ -392,7 +400,11 @@ function Scene({
       return <SceneType {...shared} />;
     case "tab":
       // No Tab key on a phone: the beat becomes the pills it maps to.
-      return asMission ? <SceneTab {...shared} /> : <SceneTabTouch {...shared} />;
+      return asMission ? (
+        <SceneTab {...shared} />
+      ) : (
+        <SceneTabTouch {...shared} />
+      );
     case "tag":
       return <SceneTag {...shared} />;
     case "bulk":

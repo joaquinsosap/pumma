@@ -81,9 +81,12 @@ function Frame({
     <div
       className={cn(
         "w-full max-w-[560px] rounded-[16px] border bg-surface p-4 transition-shadow duration-300",
+        // The ring used to be a hardcoded violet — `--primary` from two
+        // themes ago — and the drop shadow a heavy black sized for a light
+        // page. Both follow the tokens now, so the tour tracks the app.
         glow
-          ? "border-primary shadow-[0_0_0_4px_oklch(0.55_0.16_274/0.25),0_18px_50px_rgba(0,0,0,0.22)]"
-          : "border-border shadow-[0_18px_50px_rgba(0,0,0,0.22)]",
+          ? "border-primary shadow-[0_0_0_4px_color-mix(in_oklab,var(--primary)_22%,transparent),0_24px_60px_-12px_var(--shadow)]"
+          : "border-border shadow-[0_1px_2px_var(--shadow),0_24px_60px_-12px_var(--shadow)]",
         className,
       )}
     >
