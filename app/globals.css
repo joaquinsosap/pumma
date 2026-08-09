@@ -193,9 +193,7 @@ body {
 
 .omni-box:focus-within::before {
   opacity: 1;
-  animation:
-    omniHalo 2.6s ease-in-out infinite,
-    omniHaloSpread 3.2s ease-in-out infinite;
+  animation: omniHalo 2.6s ease-in-out infinite;
 }
 
 @keyframes omniScrollHintRight {
@@ -236,32 +234,25 @@ body {
   -webkit-text-fill-color: var(--ink);
 }
 
+/* The halo breathes with opacity and nothing else.
+   It used to pulse its size too: first `scale(1.04)`, which grows by a share
+   of the element's width and so got clipped by the shell on a wide window,
+   and then a four-pixel `inset`, which fixed the clipping and broke the
+   motion. Insets are layout, and layout animations run on the main thread —
+   this one crawled, advancing only when something else forced a repaint, so
+   it appeared to move a frame at a time while you typed and to sit still
+   otherwise. Four pixels over three seconds was invisible even when it did
+   run.
+   Opacity is the one property here the compositor can animate on its own. It
+   cannot be clipped, it cannot stall behind layout, and on a wash this soft
+   it is the part of the effect that was doing the work anyway. */
 @keyframes omniHalo {
   0%,
   100% {
-    opacity: 0.55;
+    opacity: 0.42;
   }
   50% {
     opacity: 1;
-  }
-}
-
-/* The halo widens by a fixed four pixels, not by four percent.
-   `scale(1.04)` grows by a share of the element's own width, and this element
-   is as wide as the window: at a thousand pixels that is twenty pixels a
-   side, against the twenty-four the shell's padding leaves it, and the shell
-   clips what it cannot fit. So the halo was cut off flat against the sidebar,
-   and the wider the window the harder it was cut, while the top edge stayed
-   fine because two percent of a hundred-pixel height is nothing.
-   Growing the inset instead is the same gesture at a size that does not
-   depend on how wide anyone's screen is. */
-@keyframes omniHaloSpread {
-  0%,
-  100% {
-    inset: -10px;
-  }
-  50% {
-    inset: -14px;
   }
 }
 
@@ -566,16 +557,14 @@ html {
    itself rather than as a field that is listening.
 
    It earns the exception on amplitude. The halo sits behind the box, not in
-   it: an opacity easing between 55% and 100% and four pixels of spread on
-   something already blurred out to a wash. Nothing changes position, no text
-   moves, and at half speed here it reads as ambient rather than active.
+   it, and all that changes is how bright it is. Nothing moves, nothing
+   resizes, no text shifts, and at half speed here it reads as ambient rather
+   than active.
 
    Everything that actually travels stays switched off. */
 @media (prefers-reduced-motion: reduce) {
   .omni-box:focus-within::before {
-    animation:
-      omniHalo 5s ease-in-out infinite,
-      omniHaloSpread 6.2s ease-in-out infinite !important;
+    animation: omniHalo 5s ease-in-out infinite !important;
   }
 }
 
