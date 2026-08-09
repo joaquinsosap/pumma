@@ -1,9 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import {
-  Schibsted_Grotesk,
-  IBM_Plex_Sans,
-  IBM_Plex_Mono,
-} from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Providers } from "@/components/providers/nuqs-provider";
@@ -30,12 +26,6 @@ const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   variable: "--font-plex-mono",
   weight: ["400", "500", "600"],
-});
-
-const schibsted = Schibsted_Grotesk({
-  subsets: ["latin"],
-  variable: "--font-schibsted",
-  weight: ["400", "500", "600", "700", "800"],
 });
 
 /** The canonical origin. Overridable so a preview deploy links to itself. */
@@ -76,7 +66,7 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${schibsted.variable} ${plex.variable} ${plexMono.variable}`}
+      className={`${plex.variable} ${plexMono.variable}`}
     >
       <body className="antialiased">
         <Providers>

@@ -69,7 +69,7 @@
   --color-assistant: var(--assistant);
   --color-lived: var(--lived);
   --color-ahead: var(--ahead);
-  --font-sans: var(--font-schibsted);
+  --font-sans: var(--font-plex);
   --font-mono: var(--font-plex-mono);
   --radius-card: 13px;
   --radius-input: 8px;
@@ -128,7 +128,7 @@ body {
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: var(--font-schibsted), sans-serif;
+  font-family: var(--font-sans);
 }
 
 * {
