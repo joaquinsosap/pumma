@@ -69,6 +69,7 @@
   --color-assistant: var(--assistant);
   --color-lived: var(--lived);
   --color-ahead: var(--ahead);
+  --color-skeleton: var(--skeleton);
   --font-sans: var(--font-plex);
   --font-mono: var(--font-plex-mono);
   --radius-card: 13px;
@@ -934,6 +935,12 @@ html {
   --well: rgba(255, 255, 255, 0.85);
   --floating: #ffffff;
   --icon-emboss: rgba(255, 255, 255, 0.55);
+  /* Skeleton fill. Mixed off `--ink` rather than picked, because `--ink`
+     already flips with the theme — so one declaration reads as a light grey
+     on the dark ground and a dark one on the light ground. `--surface2` used
+     to do this job and could not: on dark it is *darker* than the panel it
+     sits on, so a whole page of placeholders all but disappeared. */
+  --skeleton: color-mix(in oklab, var(--ink) 16%, transparent);
 }
 
 [data-theme="dark"] {

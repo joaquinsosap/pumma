@@ -56,6 +56,7 @@ import {
   type HabitVisibilitySettings,
 } from "@/lib/habit-visibility";
 import { Switch } from "@/components/ui/switch";
+import { EditableTitle } from "@/components/ui/editable-title";
 import { cn } from "@/lib/utils";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 
@@ -466,20 +467,16 @@ function HabitName({
   };
 
   return (
-    <input
+    <EditableTitle
       value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onBlur={save}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") e.currentTarget.blur();
-        if (e.key === "Escape") {
-          setDraft(name);
-          e.currentTarget.blur();
-        }
-      }}
+      onChange={setDraft}
+      onCommit={save}
+      onCancel={() => setDraft(name)}
       maxLength={200}
-      aria-label="Habit name"
-      className="min-w-0 flex-1 truncate rounded-md border border-transparent bg-transparent px-1 py-0.5 -mx-1 text-[14.5px] font-semibold text-ink outline-none transition-colors hover:border-border focus:border-faint focus:bg-background/50"
+      ariaLabel="Habit name"
+      wrapperClassName="min-w-0 flex-1"
+      className="py-0.5 text-[14.5px] font-semibold text-ink"
+      iconClassName="h-3 w-3"
     />
   );
 }

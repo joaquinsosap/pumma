@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { greeting } from "@/lib/date";
+import { usePathname } from "next/navigation";
+import { greeting, iso } from "@/lib/date";
 import { formatTopbarDateLine } from "@/lib/date-context";
 import { DEFAULT_USER_NAME } from "@/lib/user-display";
 import { ActiveTaskTimer } from "@/components/shell/ActiveTaskTimer";
 import { TopbarProjectPill } from "@/components/shell/TopbarProjectPill";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
+import { useLifeView } from "@/components/shell/LifeAreaToggle";
+import { hrefWithLife } from "@/lib/life-area";
 import { cn } from "@/lib/utils";
 
 type ActiveProject = {
@@ -23,12 +26,6 @@ type Props = {
   showGreeting?: boolean;
   userName?: string;
   activeProject?: ActiveProject;
-  statLinks?: {
-    dayDone?: string;
-    habits?: string;
-    streak?: string;
-    calendar?: string;
-  };
   birthDate?: string | null;
   lifeSpanYears?: number;
 };
@@ -41,7 +38,6 @@ export function Topbar({
   showGreeting = false,
   userName = DEFAULT_USER_NAME,
   activeProject,
-  statLinks,
   birthDate = null,
   lifeSpanYears,
 }: Props) {
@@ -52,10 +48,32 @@ export function Topbar({
     lifeSpanYears,
     timeZone,
   });
+
+  // Where each stat goes. These used to be passed in, which meant only the
+  // home page bothered — everywhere else the same three numbers sat there
+  // looking identical and doing nothing. They are the same destinations on
+  // every page, so the bar works them out itself.
+  //
+  // A stat pointing at the page you are already on stays plain text: a link
+  // that goes nowhere is worse than no link, because you learn to distrust
+  // the other two.
+  const pathname = usePathname();
+  const [life] = useLifeView();
+  const linkTo = (path: string) => {
+    const [base] = path.split("?");
+    return base === pathname ? undefined : hrefWithLife(path, life);
+  };
+  const statLinks = {
+    calendar: linkTo(`/calendar?day=${iso(now, timeZone)}`),
+    dayDone: linkTo("/tasks?tab=today"),
+    habits: linkTo("/habits"),
+    streak: linkTo("/habits"),
+  };
+
   return (
     <div className="mb-3 flex shrink-0 flex-col gap-2 sm:mb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-0">
       <div className="min-w-0">
-        {statLinks?.calendar ? (
+        {statLinks.calendar ? (
           <Link
             href={statLinks.calendar}
             className="mb-1 block max-w-[min(100%,52rem)] truncate font-mono text-[10px] leading-relaxed tracking-wide text-faint transition-colors hover:text-muted sm:text-[11px]"
@@ -86,21 +104,17 @@ export function Topbar({
           value={`${dayPct}`}
           suffix="%"
           label="DAY DONE"
-          href={statLinks?.dayDone}
+          href={statLinks.dayDone}
         />
         <StatRule />
         <Stat
           value={habitsLabel}
           label="HABITS"
           className="text-habits"
-          href={statLinks?.habits}
+          href={statLinks.habits}
         />
         <StatRule />
-        <Stat
-          value={`${topStreak}🔥`}
-          label="STREAK"
-          href={statLinks?.streak}
-        />
+        <Stat value={`${topStreak}🔥`} label="STREAK" href={statLinks.streak} />
       </div>
     </div>
   );

@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import { Trash2 } from "@/components/icons";
 import type { Goal, Project, Tag, Task } from "@/lib/schemas";
 import { projectProgress } from "@/lib/metrics";
-import { updateProjectDetail, deleteProjectAction } from "@/lib/actions/projects";
+import {
+  updateProjectDetail,
+  deleteProjectAction,
+} from "@/lib/actions/projects";
 import { linkProjectToGoal } from "@/lib/actions/links";
 import { GoalLinkField } from "@/components/links/GoalLinkField";
 import { ProjectTagsField } from "@/components/projects/ProjectTagsField";
@@ -22,6 +25,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollHint } from "@/components/ui/scroll-hint";
+import { EditableTitle } from "@/components/ui/editable-title";
 import { toast } from "sonner";
 
 type Props = {
@@ -48,21 +52,17 @@ export function ProjectDetailPanel({
 
   const prog = projectProgress(project.id, tasks);
   const openTasks = tasks.filter(
-    (t) => t.projectId === project.id && t.status !== "done"
+    (t) => t.projectId === project.id && t.status !== "done",
   ).length;
 
   const persist = useCallback(
-    (patch: {
-      title?: string;
-      description?: string;
-      color?: string;
-    }) => {
+    (patch: { title?: string; description?: string; color?: string }) => {
       startTransition(async () => {
         await updateProjectDetail({ id: project.id, ...patch });
         router.refresh();
       });
     },
-    [project.id, router]
+    [project.id, router],
   );
 
   // Autosaves, and survives closing the panel / switching project mid-sentence.
@@ -72,8 +72,8 @@ export function ProjectDetailPanel({
     useCallback(
       (id: string, value: string) =>
         void updateProjectDetail({ id, description: value }),
-      []
-    )
+      [],
+    ),
   );
 
   const saveTitle = () => {
@@ -97,7 +97,7 @@ export function ProjectDetailPanel({
       toast.success(
         deleteTasks && taskCount > 0
           ? `Project + ${taskCount} task${taskCount === 1 ? "" : "s"} deleted`
-          : "Project deleted"
+          : "Project deleted",
       );
       onDeleted?.();
       router.refresh();
@@ -124,19 +124,19 @@ export function ProjectDetailPanel({
       style={{ boxShadow: "2px 2px 0 var(--shadow)" }}
     >
       <header className="border-b border-border2 bg-surface2/60 px-4 py-3">
-        <input
+        <EditableTitle
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={saveTitle}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
-          }}
-          className="w-full border-none bg-transparent p-0 text-lg font-bold text-ink outline-none placeholder:text-faint2"
+          onChange={setTitle}
+          onCommit={saveTitle}
+          onCancel={() => setTitle(project.title)}
           placeholder="Project title"
+          ariaLabel="Project title"
+          className="text-lg font-bold text-ink"
         />
         <div className="mt-2 flex items-center gap-3 font-mono text-[10px] text-faint">
           <span>
-            <span className="font-semibold text-ink">{prog.label}</span> tasks done
+            <span className="font-semibold text-ink">{prog.label}</span> tasks
+            done
           </span>
           <span>{openTasks} open</span>
           <span className="font-semibold text-ink">{prog.progress}%</span>
@@ -175,7 +175,8 @@ export function ProjectDetailPanel({
             selectedTagIds={project.tagIds}
           />
           <p className="m-0 mt-1.5 text-[11px] leading-relaxed text-faint">
-            Personal or work — switching takes this project&apos;s tasks with it.
+            Personal or work — switching takes this project&apos;s tasks with
+            it.
           </p>
         </section>
 
@@ -195,7 +196,7 @@ export function ProjectDetailPanel({
                 }}
                 className={cn(
                   "h-7 w-7 rounded-lg border-2 transition-transform hover:scale-105",
-                  color === c ? "border-ink" : "border-transparent"
+                  color === c ? "border-ink" : "border-transparent",
                 )}
                 style={{ background: c }}
               />

@@ -20,6 +20,7 @@ import { TagGridPicker } from "@/components/tags/TagGridPicker";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { ScrollHint } from "@/components/ui/scroll-hint";
+import { EditableTitle } from "@/components/ui/editable-title";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
@@ -64,7 +65,10 @@ export function TaskDetailPanel({
   const [newSubtask, setNewSubtask] = useState("");
   const [status, setStatus] = useSyncedDraft(task.status, task.id);
   const [priority, setPriority] = useSyncedDraft(task.priority, task.id);
-  const [dueDate, setDueDate] = useSyncedDraft(taskDueDateInput(task.due), task.id);
+  const [dueDate, setDueDate] = useSyncedDraft(
+    taskDueDateInput(task.due),
+    task.id,
+  );
   const [pending, startTransition] = useTransition();
 
   const project = projects.find((p) => p.id === task.projectId);
@@ -103,7 +107,7 @@ export function TaskDetailPanel({
         await updateTaskDetail({ id: task.id, ...patch });
       });
     },
-    [task.id]
+    [task.id],
   );
 
   // Autosaves, and survives closing the panel / switching tasks mid-sentence.
@@ -113,8 +117,8 @@ export function TaskDetailPanel({
     useCallback(
       (id: string, value: string) =>
         void updateTaskDetail({ id, description: value }),
-      []
-    )
+      [],
+    ),
   );
 
   // Closing commits any pending description first. The unmount cleanup above is
@@ -140,13 +144,13 @@ export function TaskDetailPanel({
 
   const toggleSubtask = (id: string) => {
     saveSubtasks(
-      subtasks.map((s) => (s.id === id ? { ...s, done: !s.done } : s))
+      subtasks.map((s) => (s.id === id ? { ...s, done: !s.done } : s)),
     );
   };
 
   const updateSubtaskTitle = (id: string, value: string) => {
     setSubtasks((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, title: value } : s))
+      prev.map((s) => (s.id === id ? { ...s, title: value } : s)),
     );
   };
 
@@ -160,7 +164,7 @@ export function TaskDetailPanel({
     }
     if (nextTitle !== task.subtasks.find((s) => s.id === id)?.title) {
       saveSubtasks(
-        subtasks.map((s) => (s.id === id ? { ...s, title: nextTitle } : s))
+        subtasks.map((s) => (s.id === id ? { ...s, title: nextTitle } : s)),
       );
     }
   };
@@ -184,7 +188,7 @@ export function TaskDetailPanel({
         setTagIds((prev) =>
           res.data!.applied
             ? [...prev, tagId]
-            : prev.filter((id) => id !== tagId)
+            : prev.filter((id) => id !== tagId),
         );
       }
       // A project tag rewrites projectId and strips the old project's tags, so
@@ -223,7 +227,7 @@ export function TaskDetailPanel({
         "relative flex h-full min-h-0 flex-col overflow-hidden bg-surface",
         embedded
           ? "rounded-none border-0 shadow-none"
-          : "rounded-[13px] border border-border"
+          : "rounded-[13px] border border-border",
       )}
       style={embedded ? undefined : { boxShadow: "2px 2px 0 var(--shadow)" }}
     >
@@ -243,15 +247,14 @@ export function TaskDetailPanel({
         )}
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <input
+            <EditableTitle
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              onBlur={saveTitle}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") e.currentTarget.blur();
-              }}
-              className="w-full border-none bg-transparent p-0 text-lg font-bold text-ink outline-none placeholder:text-faint2"
+              onChange={setTitle}
+              onCommit={saveTitle}
+              onCancel={() => setTitle(task.title)}
               placeholder="Task title"
+              ariaLabel="Task title"
+              className="text-lg font-bold text-ink"
             />
             <div className="mt-1.5 flex flex-wrap gap-2 font-mono text-[10px] text-faint">
               {project && (
@@ -291,7 +294,7 @@ export function TaskDetailPanel({
                   "rounded-md border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide transition-colors",
                   active
                     ? "border-ink bg-ink text-background"
-                    : "border-border bg-surface2 text-faint hover:border-faint hover:text-ink"
+                    : "border-border bg-surface2 text-faint hover:border-faint hover:text-ink",
                 )}
               >
                 {label}
@@ -345,7 +348,7 @@ export function TaskDetailPanel({
                     "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wide transition-all",
                     active
                       ? "border-2 text-ink shadow-[1px_1px_0_var(--shadow)]"
-                      : "border-border bg-surface2 text-faint hover:border-faint"
+                      : "border-border bg-surface2 text-faint hover:border-faint",
                   )}
                   style={
                     active
@@ -446,11 +449,14 @@ export function TaskDetailPanel({
                     "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.8px]",
                     sub.done
                       ? "border-none bg-habits"
-                      : "border-border bg-transparent"
+                      : "border-border bg-transparent",
                   )}
                 >
                   {sub.done && (
-                    <Check className="h-[10px] w-[10px] text-white" strokeWidth={3.2} />
+                    <Check
+                      className="h-[10px] w-[10px] text-white"
+                      strokeWidth={3.2}
+                    />
                   )}
                 </button>
                 <input
@@ -461,8 +467,11 @@ export function TaskDetailPanel({
                     if (e.key === "Enter") e.currentTarget.blur();
                   }}
                   className={cn(
-                    "min-w-0 flex-1 border-none bg-transparent p-0 text-[13px] outline-none",
-                    sub.done ? "text-faint2 line-through" : "text-ink"
+                    // Same tell as the titles above, minus the pencil: one
+                    // icon per subtask row would be noise, but the row still
+                    // has to look like something you can type in.
+                    "-mx-1 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[13px] outline-none transition-colors hover:border-border focus:border-faint focus:bg-background/50",
+                    sub.done ? "text-faint2 line-through" : "text-ink",
                   )}
                 />
               </div>

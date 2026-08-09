@@ -16,6 +16,7 @@ import {
 import { Topbar } from "@/components/shell/Topbar";
 import { toast } from "sonner";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { EditableTitle } from "@/components/ui/editable-title";
 import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 import { Taggable } from "@/components/tags/TagMenuProvider";
@@ -50,7 +51,7 @@ function NotePinButton({
       className={cn(
         "shrink-0 rounded-md p-1 transition-colors hover:bg-hover",
         pinned ? "text-amber-500" : "text-faint2 hover:text-faint",
-        className
+        className,
       )}
       title={pinned ? "Remove from favorites" : "Add to favorites"}
       aria-label={pinned ? "Unfavorite note" : "Favorite note"}
@@ -78,12 +79,14 @@ export function NotesView({
   const sorted = [...notes].sort(
     (a, b) =>
       Number(b.pinned) - Number(a.pinned) ||
-      (a.updatedAt < b.updatedAt ? 1 : -1)
+      (a.updatedAt < b.updatedAt ? 1 : -1),
   );
   const selected = sorted.find((n) => n.id === selectedId) ?? sorted[0] ?? null;
   // Phone master-detail: /notes shows the list; /notes/[id] shows the editor
   // with a back link. Wider screens show both side by side.
-  const explicit = Boolean(selectedId && sorted.some((n) => n.id === selectedId));
+  const explicit = Boolean(
+    selectedId && sorted.some((n) => n.id === selectedId),
+  );
   const tagMap = new Map(tags.map((t) => [t.id, t]));
 
   const togglePin = (noteId: string) => {
@@ -111,7 +114,7 @@ export function NotesView({
         <div
           className={cn(
             "flex min-h-0 shrink-0 flex-col md:w-[260px] lg:w-[300px]",
-            explicit ? "max-md:hidden" : "max-md:min-h-0 max-md:flex-1"
+            explicit ? "max-md:hidden" : "max-md:min-h-0 max-md:flex-1",
           )}
         >
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto max-lg:pb-24">
@@ -126,10 +129,13 @@ export function NotesView({
                   "flex items-start gap-1 rounded-[10px] border p-3 hover:bg-hover",
                   selected?.id === n.id
                     ? "border-faint2 bg-hover"
-                    : "border-border"
+                    : "border-border",
                 )}
               >
-                <Link href={hrefWithLife(`/notes/${n.id}`, lifeView)} className="min-w-0 flex-1">
+                <Link
+                  href={hrefWithLife(`/notes/${n.id}`, lifeView)}
+                  className="min-w-0 flex-1"
+                >
                   <div className="mb-1 flex items-center gap-1.5">
                     <span className="flex-1 truncate text-[13.5px] font-bold">
                       {n.title}
@@ -146,7 +152,10 @@ export function NotesView({
                         <span
                           key={id}
                           className="rounded px-1.5 py-px font-mono text-[9px]"
-                          style={{ color: tg.color, background: tagBg(tg.color) }}
+                          style={{
+                            color: tg.color,
+                            background: tagBg(tg.color),
+                          }}
                         >
                           {tg.name}
                         </span>
@@ -170,7 +179,7 @@ export function NotesView({
             key={selected.id}
             className={cn(
               "animate-pumma-swap flex min-w-0 flex-1 flex-col",
-              !explicit && "max-md:hidden"
+              !explicit && "max-md:hidden",
             )}
           >
             {explicit && (
@@ -217,7 +226,7 @@ function NoteEditor({
         onRefresh();
       });
     },
-    [onRefresh, startTransition]
+    [onRefresh, startTransition],
   );
 
   // The editor advertises "autosaves" — so it must actually survive closing the
@@ -225,12 +234,12 @@ function NoteEditor({
   const [title, setTitle, flushTitle] = useAutosaveDraft(
     note.title,
     note.id,
-    useCallback((id, value) => save("title", id, value), [save])
+    useCallback((id, value) => save("title", id, value), [save]),
   );
   const [body, setBody, flushBody] = useAutosaveDraft(
     note.body,
     note.id,
-    useCallback((id, value) => save("body", id, value), [save])
+    useCallback((id, value) => save("body", id, value), [save]),
   );
 
   const handleTogglePin = () => {
@@ -241,11 +250,14 @@ function NoteEditor({
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[13px] border border-border bg-surface">
       <div className="flex items-center gap-2.5 border-b border-border2 px-5 py-4">
-        <input
-          className="min-w-0 flex-1 border-none bg-transparent text-xl font-bold tracking-tight text-ink outline-none max-lg:text-lg"
+        <EditableTitle
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          onBlur={flushTitle}
+          onChange={setTitle}
+          onCommit={flushTitle}
+          placeholder="Untitled"
+          ariaLabel="Note title"
+          wrapperClassName="flex-1"
+          className="text-xl font-bold tracking-tight text-ink max-lg:text-lg"
         />
         <NotePinButton pinned={pinned} onToggle={handleTogglePin} />
         <button
