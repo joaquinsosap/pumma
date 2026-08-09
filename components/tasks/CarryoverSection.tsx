@@ -95,15 +95,20 @@ export function CarryoverSection({
         // read as the first item in the list, which is exactly what it is
         // not.
         //
-        // So it bleeds out to the titlebar's own width, meets its underside
-        // with no gap and no top edge of its own, and keeps its sides
-        // straight all the way down. Only the bottom corners round off.
-        // Collapsed it is a tab hanging from the bar; expanded it is the
-        // same shape, further down. The iPhone's island, in other words,
-        // which is the shape a thing takes when it grows out of an edge
-        // instead of sitting on a surface.
-        variant === "agenda" &&
-          "-mx-[18px] -mt-3 rounded-b-[14px] border-x-0 border-t-0 px-[18px]",
+        // So it meets the bar's underside with no gap and no top edge of its
+        // own, and keeps its sides straight all the way down. Only the
+        // bottom corners round off.
+        //
+        // Narrower than the bar, though, and narrower than the list below
+        // it. That inset is the whole illusion: the bar runs edge to edge
+        // and the tab hangs inside it, which is the relationship the
+        // iPhone's island has with the top of the screen. Matched to the
+        // bar's width it stopped being a thing hanging off an edge and went
+        // back to being the top of the panel.
+        //
+        // Collapsed it is a tab; expanded it is the same shape, further
+        // down.
+        variant === "agenda" && "mx-3 -mt-3 rounded-b-[14px] border-t-0",
         className,
       )}
       style={
