@@ -951,13 +951,13 @@ html {
   --icon-emboss: rgba(0, 10, 20, 0.35);
 }
 
-/* Native UI type. A "modern OS" direction should use the OS's own face —
-   that is the whole conceit — so this resolves to San Francisco on a Mac,
-   Segoe UI on Windows, Roboto on Android. Nothing is downloaded for it. */
+/* Montserrat, with the native UI face behind it. A geometric sans with a
+   tall x-height and wide, even letterforms — more voice than a system font
+   has, at the cost of some width in the denser rows. */
 @theme inline {
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, Roboto,
-    "Helvetica Neue", Arial, sans-serif;
+    var(--font-montserrat), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    system-ui, sans-serif;
   --font-mono:
     var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
   --radius-card: 12px;
@@ -1055,10 +1055,27 @@ body {
 .bg-surface2\/60 {
   background-color: color-mix(
     in oklab,
-    var(--primary) 12%,
+    var(--primary) 19%,
     transparent
   ) !important;
-  border-bottom-color: var(--border) !important;
+  border-bottom-color: color-mix(
+    in oklab,
+    var(--primary) 42%,
+    transparent
+  ) !important;
+}
+.bg-surface2\/60 h3 {
+  color: color-mix(in oklab, var(--primary) 34%, var(--ink));
+}
+
+/* A surface keeps the rim whichever border utility it also carries. The task
+   group cards say `border-border2` as well as `bg-surface`, and both rules
+   are !important — so the *weakest* hairline in the system was winning on
+   the one element that most needs an edge, which is what made those cards
+   read as a white background with a band floating on it. */
+.bg-surface.border-border2,
+.bg-surface.border-border {
+  border-color: var(--rim) !important;
 }
 
 /* ── Controls ────────────────────────────────────────────────────────────
@@ -1071,7 +1088,7 @@ body {
     .bg-surface,
     .bg-surface2,
     .bg-chip
-  ):not(.border-\[1\.8px\]),
+  ):not(.border-\[1\.8px\]):not([role="switch"]),
 .widget-head button:not(.bg-ink),
 select {
   background-color: var(--well) !important;
@@ -1097,7 +1114,7 @@ select {
     .bg-surface,
     .bg-surface2,
     .bg-chip
-  ):not(.border-\[1\.8px\]):hover:not(:disabled),
+  ):not(.border-\[1\.8px\]):not([role="switch"]):hover:not(:disabled),
 .widget-head button:not(.bg-ink):hover,
 select:hover:not(:disabled) {
   border-color: color-mix(in oklab, var(--primary) 45%, transparent) !important;
@@ -1112,7 +1129,7 @@ select:hover:not(:disabled) {
     .bg-surface,
     .bg-surface2,
     .bg-chip
-  ):not(.border-\[1\.8px\]):active:not(:disabled),
+  ):not(.border-\[1\.8px\]):not([role="switch"]):active:not(:disabled),
 .widget-head button:not(.bg-ink):active {
   transform: translateY(0.5px);
   box-shadow: inset 0 1px 3px var(--edge);
@@ -1278,4 +1295,51 @@ select:hover:not(:disabled) {
 .bg-black\/50 {
   background-color: rgba(12, 20, 30, 0.6) !important;
   background-image: none;
+}
+
+/* ── Switches ────────────────────────────────────────────────────────────
+   Off is a well, on is the accent, and the thumb is the one part that sits
+   above the track — the same raised/sunken logic as buttons and inputs. */
+[role="switch"] {
+  border-radius: 999px !important;
+  border: 1px solid var(--border) !important;
+  background-color: var(--well) !important;
+  background-image: none !important;
+  box-shadow: inset 0 1px 2px var(--edge);
+  transition:
+    background-color 180ms ease,
+    border-color 180ms ease;
+}
+[role="switch"][data-state="checked"] {
+  background-color: var(--primary) !important;
+  border-color: color-mix(in oklab, var(--primary) 70%, black) !important;
+  box-shadow:
+    var(--on-color-rim),
+    inset 0 1px 2px rgba(0, 20, 40, 0.2);
+}
+[role="switch"] > span {
+  background-color: #fff !important;
+  box-shadow:
+    0 1px 2px rgba(20, 34, 54, 0.3),
+    0 0 0 0.5px rgba(20, 34, 54, 0.12);
+}
+[role="switch"]:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--primary) 45%, transparent) !important;
+}
+[role="switch"][data-state="checked"]:hover:not(:disabled) {
+  border-color: color-mix(in oklab, var(--primary) 80%, black) !important;
+}
+
+/* Dark mode inverts what a switch track has to be. A sunken well works on
+   light because the ground around it is brighter; on a dark panel the well
+   and the panel are the same darkness, so the white thumb floats alone with
+   nothing to sit in. Off is a visible raised track here instead. */
+[data-theme="dark"] [role="switch"] {
+  background-color: rgba(168, 202, 238, 0.15) !important;
+  border-color: rgba(168, 202, 238, 0.24) !important;
+  box-shadow: inset 0 1px 1px rgba(0, 8, 16, 0.35);
+}
+[data-theme="dark"] [role="switch"][data-state="checked"] {
+  background-color: var(--primary) !important;
+  border-color: color-mix(in oklab, var(--primary) 65%, black) !important;
 }

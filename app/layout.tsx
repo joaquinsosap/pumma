@@ -1,5 +1,9 @@
 import type { Metadata, Viewport } from "next";
-import { Schibsted_Grotesk, JetBrains_Mono } from "next/font/google";
+import {
+  Schibsted_Grotesk,
+  JetBrains_Mono,
+  Montserrat,
+} from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Providers } from "@/components/providers/nuqs-provider";
@@ -19,6 +23,11 @@ const jetbrains = JetBrains_Mono({
   weight: ["400", "500", "600"],
 });
 
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  variable: "--font-montserrat",
+  weight: ["400", "500", "600", "700", "800"],
+});
 
 /** The canonical origin. Overridable so a preview deploy links to itself. */
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://pumma.app";
@@ -58,7 +67,7 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${schibsted.variable} ${jetbrains.variable}`}
+      className={`${schibsted.variable} ${jetbrains.variable} ${montserrat.variable}`}
     >
       <body className="antialiased">
         <Providers>
