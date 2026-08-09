@@ -64,7 +64,7 @@
   --color-lived: var(--lived);
   --color-ahead: var(--ahead);
   --font-sans: var(--font-schibsted);
-  --font-mono: var(--font-jetbrains);
+  --font-mono: var(--font-plex-mono);
   --radius-card: 13px;
   --radius-input: 8px;
   --radius-omni: 14px;
@@ -951,15 +951,17 @@ html {
   --icon-emboss: rgba(0, 10, 20, 0.35);
 }
 
-/* Montserrat, with the native UI face behind it. A geometric sans with a
-   tall x-height and wide, even letterforms — more voice than a system font
-   has, at the cost of some width in the denser rows. */
+/* IBM Plex, sans and mono, with the native UI face behind them. Plex is a
+   humanist with engineered detailing — flared stems, a double-storey g,
+   slightly squared bowls — so it keeps letterforms distinct at the 11–13px
+   this app spends most of its time at, where a geometric face turns o, e, c
+   and a into the same circle. Half the labels here are monospace, and now
+   both cuts come from one family. */
 @theme inline {
   --font-sans:
-    var(--font-montserrat), -apple-system, BlinkMacSystemFont, "Segoe UI",
-    system-ui, sans-serif;
-  --font-mono:
-    var(--font-jetbrains), ui-monospace, SFMono-Regular, Menlo, monospace;
+    var(--font-plex), -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui,
+    sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, SFMono-Regular, monospace;
   --radius-card: 12px;
   --radius-input: 8px;
   --radius-omni: 14px;
