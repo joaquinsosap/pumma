@@ -90,8 +90,10 @@ export function WidgetRowLink({
         // The padding lives here, not at the call sites. Every one of them
         // was passing the same cramped "-mx-1 px-1 py-0.5", which made the
         // hover fill hug the text so tightly it read as a highlight rather
-        // than as a row.
-        "-mx-2 block rounded-lg px-2 py-1.5 transition-colors hover:bg-hover",
+        // than as a row. These rows are two lines — a title and a progress
+        // bar — so the fill needs real room above and below both, not just
+        // enough to clear the glyphs.
+        "-mx-3 block rounded-lg px-3 py-2.5 transition-colors hover:bg-hover",
         className,
       )}
     >
