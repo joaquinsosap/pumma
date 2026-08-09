@@ -4,6 +4,7 @@ import {
   uniqueTagName,
   projectIdFromTags,
   withSingleProjectTag,
+  withProjectPrimaryTag,
   tagsForProject,
   isProjectTag,
   splitTagsByProject,
@@ -79,7 +80,7 @@ describe("withSingleProjectTag", () => {
 
   it("keeps every ordinary tag — those are shareable", () => {
     expect(
-      withSingleProjectTag(["t-work", "t-idea", "t-ai"], "p-ai", tags)
+      withSingleProjectTag(["t-work", "t-idea", "t-ai"], "p-ai", tags),
     ).toEqual(["t-work", "t-idea", "t-ai"]);
   });
 
@@ -133,7 +134,7 @@ describe("splitTagsByProject", () => {
   it("puts unprojected tags on every copy", () => {
     // Life and ordinary tags aren't about projects, so both tasks get them.
     expect(
-      splitTagsByProject(["t-work", "t-idea", "t-ai", "t-web"], tags)
+      splitTagsByProject(["t-work", "t-idea", "t-ai", "t-web"], tags),
     ).toEqual([
       { projectId: "p-ai", tagIds: ["t-work", "t-idea", "t-ai"] },
       { projectId: "p-web", tagIds: ["t-work", "t-idea", "t-web"] },
@@ -153,7 +154,40 @@ describe("splitTagsByProject", () => {
   });
 
   it("orders buckets by the order the projects were typed", () => {
-    expect(splitTagsByProject(["t-web", "t-ai"], tags).map((b) => b.projectId))
-      .toEqual(["p-web", "p-ai"]);
+    expect(
+      splitTagsByProject(["t-web", "t-ai"], tags).map((b) => b.projectId),
+    ).toEqual(["p-web", "p-ai"]);
+  });
+});
+
+describe("withProjectPrimaryTag", () => {
+  it("adds the flagship tag when a task is filed under a project", () => {
+    expect(withProjectPrimaryTag(["t-work"], "p-ai", tags)).toEqual([
+      "t-work",
+      "t-ai",
+    ]);
+  });
+
+  it("adds nothing when the tag is already there", () => {
+    expect(withProjectPrimaryTag(["t-ai"], "p-ai", tags)).toEqual(["t-ai"]);
+  });
+
+  it("adds only the flagship, never the project's other tags", () => {
+    expect(withProjectPrimaryTag([], "p-ai", tags)).toEqual(["t-ai"]);
+  });
+
+  it("leaves an unfiled task alone", () => {
+    expect(withProjectPrimaryTag(["t-work"], null, tags)).toEqual(["t-work"]);
+  });
+
+  it("falls back to any tag of the project when none is flagged primary", () => {
+    const noPrimary = [{ id: "t-x", name: "x", projectId: "p-z" }];
+    expect(withProjectPrimaryTag([], "p-z", noPrimary)).toEqual(["t-x"]);
+  });
+
+  it("adds nothing when the project owns no tags at all", () => {
+    expect(withProjectPrimaryTag(["t-work"], "p-none", tags)).toEqual([
+      "t-work",
+    ]);
   });
 });

@@ -60,7 +60,7 @@ export function uniqueTagName(base: string, taken: string[]): string {
  */
 export function projectIdFromTags(
   tagIds: string[],
-  tags: ProjectTagLike[]
+  tags: ProjectTagLike[],
 ): string | null {
   const byId = new Map(tags.map((t) => [t.id, t]));
   let found: string | null = null;
@@ -78,7 +78,7 @@ export function projectIdFromTags(
 export function withSingleProjectTag(
   tagIds: string[],
   keepProjectId: string | null,
-  tags: ProjectTagLike[]
+  tags: ProjectTagLike[],
 ): string[] {
   const byId = new Map(tags.map((t) => [t.id, t]));
   return tagIds.filter((id) => {
@@ -88,10 +88,36 @@ export function withSingleProjectTag(
   });
 }
 
+/**
+ * Make sure a task filed under a project also *says* so.
+ *
+ * `withSingleProjectTag` only removes other projects' tags; it never adds
+ * the one the task is being filed under. That is the right split when the
+ * project came from a tag in the text — the tag is already there — but not
+ * when it came from the view you were looking at. Capturing inside a project
+ * used to set `projectId` and leave the task with no project tag at all,
+ * which made it invisible to every tag-based filter.
+ *
+ * Flagship tag only: a project can own several tags, and inheriting all of
+ * them would put words on the task nobody typed.
+ */
+export function withProjectPrimaryTag(
+  tagIds: string[],
+  projectId: string | null,
+  tags: ProjectTagLike[],
+): string[] {
+  if (!projectId) return tagIds;
+  const primary =
+    tags.find((t) => t.projectId === projectId && t.isProjectPrimary) ??
+    tags.find((t) => t.projectId === projectId);
+  if (!primary || tagIds.includes(primary.id)) return tagIds;
+  return [...tagIds, primary.id];
+}
+
 /** Every tag currently attached to a project, flagship first. */
 export function tagsForProject<T extends ProjectTagLike>(
   tags: T[],
-  projectId: string
+  projectId: string,
 ): T[] {
   return tags
     .filter((t) => t.projectId === projectId)
@@ -111,7 +137,7 @@ export function tagsForProject<T extends ProjectTagLike>(
  */
 export function splitTagsByProject(
   tagIds: string[],
-  tags: ProjectTagLike[]
+  tags: ProjectTagLike[],
 ): { projectId: string | null; tagIds: string[] }[] {
   const byId = new Map(tags.map((t) => [t.id, t]));
   const shared: string[] = [];

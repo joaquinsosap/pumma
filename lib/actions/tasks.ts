@@ -6,7 +6,11 @@ import type { ActionResult } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
 import { parseOmni, defaultDue, parseNoteCapture } from "@/lib/parse";
 import { listTags, ensureTags } from "@/lib/db/tags";
-import { insertTask, updateTask, deleteTask as removeTask } from "@/lib/db/tasks";
+import {
+  insertTask,
+  updateTask,
+  deleteTask as removeTask,
+} from "@/lib/db/tasks";
 import { getProject } from "@/lib/db/projects";
 import { insertNote } from "@/lib/db/notes";
 import { insertHabit } from "@/lib/db/habits";
@@ -24,6 +28,7 @@ import {
   goalCategoryForLifeArea,
 } from "@/lib/life-area-sync";
 import {
+  withProjectPrimaryTag,
   withSingleProjectTag,
   splitTagsByProject,
   projectIdFromTags,
@@ -44,7 +49,7 @@ const omniSchema = z.object({
 });
 
 export async function createFromOmni(
-  input: z.infer<typeof omniSchema>
+  input: z.infer<typeof omniSchema>,
 ): Promise<ActionResult<{ id: string; label: string }>> {
   const parsed = omniSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -63,12 +68,18 @@ export async function createFromOmni(
   const settings = await getSettings(userId);
   const tags = await listTags(userId);
   const { timeZone, today: td } = await userToday();
-  const p = parseOmni(text, tags, undefined, { dateOrder: settings?.dateOrder }, timeZone);
+  const p = parseOmni(
+    text,
+    tags,
+    undefined,
+    { dateOrder: settings?.dateOrder },
+    timeZone,
+  );
   const newTagIds = await ensureTags(userId, p.newTagNames);
   // A stale client can send ids of tags/projects deleted since its last render —
   // silently drop dead links instead of persisting dangling references.
   const validPickedTagIds = (pickedTagIds ?? []).filter((id) =>
-    tags.some((t) => t.id === id)
+    tags.some((t) => t.id === id),
   );
   const view = lifeView ?? "personal";
   // Every item leaves here carrying a life tag — that's the only thing the
@@ -76,13 +87,15 @@ export async function createFromOmni(
   const tagIds = withLifeTags(
     [...new Set([...validPickedTagIds, ...p.tagIds, ...newTagIds])],
     view,
-    tags
+    tags,
   );
   const title = p.title || text.trim();
 
   if (type === "task") {
     const due =
-      p.due ?? dueOverride ?? defaultDue(null, settings?.defaultDueToday ?? true, td);
+      p.due ??
+      dueOverride ??
+      defaultDue(null, settings?.defaultDueToday ?? true, td);
 
     // Tags from two projects mean two pieces of work. Rather than pick a
     // winner, the capture becomes one task per project, each carrying only
@@ -99,9 +112,13 @@ export async function createFromOmni(
       const bucketTags = withProjectLifeTags(
         bucket.projectId
           ? bucket.tagIds
-          : withSingleProjectTag(bucket.tagIds, target?.id ?? null, tags),
+          : withProjectPrimaryTag(
+              withSingleProjectTag(bucket.tagIds, target?.id ?? null, tags),
+              target?.id ?? null,
+              tags,
+            ),
         target?.lifeArea,
-        tags
+        tags,
       );
       created.push(
         await insertTask({
@@ -113,7 +130,7 @@ export async function createFromOmni(
           // over whatever the picker is showing — the picker hides itself then.
           priority: p.hasPriorityToken
             ? p.priority
-            : priorityOverride ?? p.priority,
+            : (priorityOverride ?? p.priority),
           status: "todo",
           due,
           projectId: target?.id ?? null,
@@ -122,7 +139,7 @@ export async function createFromOmni(
           order: -Date.now(),
           createdAt: td,
           completedAt: null,
-        })
+        }),
       );
     }
 
@@ -152,7 +169,7 @@ export async function createFromOmni(
     const noteTagIds = withLifeTags(
       [...new Set([...validPickedTagIds, ...noteParsed.tagIds, ...newTagIds])],
       view,
-      tags
+      tags,
     );
     const note = await insertNote({
       userId,
@@ -200,7 +217,7 @@ export async function createFromOmni(
   // was actually asked for rather than one the view supplied.
   const askedForLife = hasLifeTag(
     [...validPickedTagIds, ...p.tagIds, ...newTagIds],
-    tags
+    tags,
   );
   const goalTagIds =
     goalCategory && !askedForLife
@@ -238,7 +255,7 @@ const addTaskSchema = z.object({
 });
 
 export async function addTask(
-  input: z.infer<typeof addTaskSchema>
+  input: z.infer<typeof addTaskSchema>,
 ): Promise<ActionResult<Task>> {
   const parsed = addTaskSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -247,12 +264,18 @@ export async function addTask(
   const tags = await listTags(userId);
   const settings = await getSettings(userId);
   const { timeZone, today: td } = await userToday();
-  const p = parseOmni(parsed.data.text, tags, undefined, { dateOrder: settings?.dateOrder }, timeZone);
+  const p = parseOmni(
+    parsed.data.text,
+    tags,
+    undefined,
+    { dateOrder: settings?.dateOrder },
+    timeZone,
+  );
   const newTagIds = await ensureTags(userId, p.newTagNames);
   const tagIds = withLifeTags(
     [...new Set([...p.tagIds, ...newTagIds])],
     parsed.data.lifeView ?? "personal",
-    tags
+    tags,
   );
   // A project tag in the text wins; otherwise the caller's project, if it
   // still exists (stale clients can point at a deleted one).
@@ -262,14 +285,19 @@ export async function addTask(
     : parsed.data.projectId
       ? await getProject(userId, parsed.data.projectId)
       : null;
+  // Same rule as quick capture: a task filed under a project carries that
+  // project's tag, whether the project came from the text or from the view.
+  const finalTagIds = withProjectPrimaryTag(tagIds, project?.id ?? null, tags);
   const task = await insertTask({
     userId,
     title: p.title,
     description: p.description,
-    tagIds,
+    tagIds: finalTagIds,
     // A "!high" in the text is the more specific instruction, so it wins over
     // whatever the picker is showing — the picker hides itself in that case.
-    priority: p.hasPriorityToken ? p.priority : parsed.data.priority ?? p.priority,
+    priority: p.hasPriorityToken
+      ? p.priority
+      : (parsed.data.priority ?? p.priority),
     status: "todo",
     // Respect "default due today" — this used to hardcode today, so turning
     // the setting off changed nothing.
@@ -278,13 +306,17 @@ export async function addTask(
       defaultDue(p.due, settings?.defaultDueToday ?? true, td),
     projectId: project?.id ?? null,
     goalId: null,
-    lifeArea: deriveLifeAreaFromTags(tagIds, tags),
+    lifeArea: deriveLifeAreaFromTags(finalTagIds, tags),
     order: -Date.now(),
     createdAt: td,
     completedAt: null,
   });
   revalidatePath("/", "layout");
-  return { ok: true, data: task, undo: { type: "create", entity: "task", snapshot: task.id } };
+  return {
+    ok: true,
+    data: task,
+    undo: { type: "create", entity: "task", snapshot: task.id },
+  };
 }
 
 export async function toggleTask(id: string): Promise<ActionResult> {
@@ -315,7 +347,10 @@ export async function cycleTaskPriority(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-export async function renameTask(id: string, title: string): Promise<ActionResult> {
+export async function renameTask(
+  id: string,
+  title: string,
+): Promise<ActionResult> {
   const parsedTitle = titleField.safeParse(title);
   if (!parsedTitle.success) return { ok: false, error: "Invalid title" };
   const userId = await requireUserId();
@@ -339,7 +374,7 @@ export async function deleteTaskAction(id: string): Promise<ActionResult> {
 
 export async function moveTaskStatus(
   id: string,
-  status: "todo" | "doing" | "done"
+  status: "todo" | "doing" | "done",
 ): Promise<ActionResult> {
   // Runtime-guard the status: the TS union doesn't constrain the deserialized
   // action argument, so a crafted call could otherwise $set an arbitrary string.
@@ -360,7 +395,10 @@ export async function moveTaskStatus(
   return { ok: true };
 }
 
-export async function undoCreate(entity: string, id: string): Promise<ActionResult> {
+export async function undoCreate(
+  entity: string,
+  id: string,
+): Promise<ActionResult> {
   const userId = await requireUserId();
   // A capture tagged for several projects creates one task each, so undo has
   // to take them all back — the snapshot is a comma-joined list.
@@ -390,8 +428,13 @@ export async function undoDeleteTask(snapshot: string): Promise<ActionResult> {
   }
   // Linked entities may have been deleted since the snapshot was taken —
   // restore the task without the dead links.
-  const [tags, goals] = await Promise.all([listTags(userId), listGoals(userId)]);
-  const project = task.projectId ? await getProject(userId, task.projectId) : null;
+  const [tags, goals] = await Promise.all([
+    listTags(userId),
+    listGoals(userId),
+  ]);
+  const project = task.projectId
+    ? await getProject(userId, task.projectId)
+    : null;
   await insertTask({
     ...task,
     _id: task.id,
@@ -429,7 +472,7 @@ const bulkUpdateSchema = z.object({
 export type BulkTaskPatch = z.infer<typeof bulkUpdateSchema>;
 
 export async function bulkUpdateTasks(
-  input: BulkTaskPatch
+  input: BulkTaskPatch,
 ): Promise<ActionResult<{ updated: number }>> {
   const parsed = bulkUpdateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -501,7 +544,7 @@ export async function bulkUpdateTasks(
         // is work, whatever it used to carry.
         tagIds = withProjectLifeTags(tagIds, dest?.lifeArea, tags);
         const flagship = tags.find(
-          (t) => t.projectId === nextProjectId && t.isProjectPrimary
+          (t) => t.projectId === nextProjectId && t.isProjectPrimary,
         );
         if (flagship && !tagIds.includes(flagship.id)) tagIds.push(flagship.id);
       }
@@ -536,7 +579,7 @@ const bulkDeleteSchema = z.object({
  * toast brings the whole batch back.
  */
 export async function bulkDeleteTasks(
-  input: z.infer<typeof bulkDeleteSchema>
+  input: z.infer<typeof bulkDeleteSchema>,
 ): Promise<ActionResult<{ deleted: number }>> {
   const parsed = bulkDeleteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -580,13 +623,18 @@ export async function undoDeleteTasks(snapshot: string): Promise<ActionResult> {
     return { ok: false, error: "Invalid snapshot" };
   }
 
-  const [tags, goals] = await Promise.all([listTags(userId), listGoals(userId)]);
+  const [tags, goals] = await Promise.all([
+    listTags(userId),
+    listGoals(userId),
+  ]);
   const projectsToSync = new Set<string>();
   for (const task of batch) {
     if (!task || typeof task !== "object" || !task.id) continue;
     // Linked entities may have gone since the snapshot was taken — restore
     // without the dead links rather than resurrecting a dangling reference.
-    const project = task.projectId ? await getProject(userId, task.projectId) : null;
+    const project = task.projectId
+      ? await getProject(userId, task.projectId)
+      : null;
     await insertTask({
       ...task,
       _id: task.id,
@@ -616,7 +664,7 @@ const setTaskProjectSchema = z.object({
  * resync.
  */
 export async function setTaskProject(
-  input: z.infer<typeof setTaskProjectSchema>
+  input: z.infer<typeof setTaskProjectSchema>,
 ): Promise<ActionResult<Task>> {
   const parsed = setTaskProjectSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -645,7 +693,8 @@ export async function setTaskProject(
     ? tags.find((t) => t.projectId === nextProjectId && t.isProjectPrimary)
     : null;
   let tagIds = withSingleProjectTag(existing.tagIds, nextProjectId, tags);
-  if (flagship && !tagIds.includes(flagship.id)) tagIds = [...tagIds, flagship.id];
+  if (flagship && !tagIds.includes(flagship.id))
+    tagIds = [...tagIds, flagship.id];
   // The project decides the side of life now, replacing whatever the task had.
   tagIds = withProjectLifeTags(tagIds, project?.lifeArea, tags);
 
@@ -681,13 +730,14 @@ const updateTaskDetailSchema = z.object({
 });
 
 export async function updateTaskDetail(
-  input: z.infer<typeof updateTaskDetailSchema>
+  input: z.infer<typeof updateTaskDetailSchema>,
 ): Promise<ActionResult<Task>> {
   const parsed = updateTaskDetailSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
   const { id, ...patch } = parsed.data;
-  if (!Object.keys(patch).length) return { ok: false, error: "Nothing to update" };
+  if (!Object.keys(patch).length)
+    return { ok: false, error: "Nothing to update" };
 
   const userId = await requireUserId();
   const { getTask } = await import("@/lib/db/tasks");
