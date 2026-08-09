@@ -46,7 +46,7 @@ export function HomeTasksProjects({
             </span>
           </WidgetHeaderLink>
         </WidgetHeader>
-        <div className="min-h-0 flex-1 overflow-x-hidden max-xl:overflow-y-visible xl:overflow-y-auto">
+        <div className="glow-room min-h-0 flex-1 overflow-x-hidden max-xl:overflow-y-visible xl:overflow-y-auto">
           <div className="flex flex-col gap-3">
             {projects.map((p) => {
               const prog = projectProgress(p.id, allTasks);

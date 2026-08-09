@@ -287,10 +287,17 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
       />
     );
 
-  const missionNumber = BEATS.slice(0, index).filter(
-    (b) => b.kind === "do",
-  ).length;
-  const missionTotal = BEATS.filter((b) => b.kind === "do").length;
+  // The badge counts each kind against its own total — "3 of 6" is no use when
+  // four of the six want something from you and two do not. Scoped to the kind
+  // a beat ACTUALLY plays as: on touch two missions become watch beats, so a
+  // count taken off `beat.kind` would promise gestures the device can't make.
+  const playsAsMission = (b: (typeof BEATS)[number]) =>
+    b.kind === "do" &&
+    (["bulk", "tab"].includes(b.id) ? canModifierClick : true);
+  const sameKind = (b: (typeof BEATS)[number]) =>
+    playsAsMission(b) === isMission;
+  const kindTotal = BEATS.filter(sameKind).length;
+  const kindIndex = BEATS.slice(0, index + 1).filter(sameKind).length;
 
   return (
     <div
@@ -315,8 +322,8 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-5 px-4 py-4">
         <MissionBanner
           beat={{ ...beat, kind: isMission ? "do" : "watch" }}
-          index={missionNumber}
-          total={missionTotal}
+          kindIndex={kindIndex}
+          kindTotal={kindTotal}
           cleared={cleared}
           instruction={isMission ? instruction : undefined}
         />

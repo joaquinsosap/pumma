@@ -211,7 +211,7 @@ export function HabitsView({
         birthDate={birthDate}
         lifeSpanYears={lifeSpanYears}
       />
-      <div className="min-h-0 flex-1 overflow-y-auto pb-6 max-lg:pb-28 animate-pumma-view">
+      <div className="glow-room min-h-0 flex-1 overflow-y-auto pb-6 max-lg:pb-28 animate-pumma-view">
         <div className="mb-4 flex items-center gap-3">
           <span className="font-mono text-[11px] text-faint">
             {stats.habitsLabel} done today · best streak {stats.topStreak}🔥

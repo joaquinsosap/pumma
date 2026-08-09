@@ -1,13 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Check, Pencil } from "@/components/icons";
 import {
   DndContext,
@@ -86,22 +80,20 @@ const boardCollisionDetection: CollisionDetection = (args) => {
   const railHit = pointerWithin(args).find(
     (collision) =>
       args.droppableContainers.find((d) => d.id === collision.id)?.data.current
-        ?.type ===
-      "project-card"
+        ?.type === "project-card",
   );
   if (railHit) return [railHit];
   // Never let a chip win on proximity alone once the pointer has left it.
   return closestCorners(args).filter(
     (collision) =>
       args.droppableContainers.find((d) => d.id === collision.id)?.data.current
-        ?.type !==
-      "project-card"
+        ?.type !== "project-card",
   );
 };
 
 function findContainer(
   id: UniqueIdentifier,
-  items: ItemsByColumn
+  items: ItemsByColumn,
 ): ColumnId | undefined {
   if (id === "todo" || id === "doing" || id === "done") return id;
   return COLS.find((col) => items[col.key].some((t) => t.id === id))?.key;
@@ -167,10 +159,12 @@ export function KanbanBoard({
   // plain swipes keep scrolling the board instead of grabbing cards.
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 280, tolerance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 280, tolerance: 8 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const activeTask = useMemo(() => {
@@ -188,7 +182,6 @@ export function KanbanBoard({
     setActiveId(event.active.id);
   };
 
-
   const releaseClickSuppression = () => {
     window.setTimeout(() => {
       suppressClickRef.current = false;
@@ -201,7 +194,11 @@ export function KanbanBoard({
 
     const activeContainer = findContainer(active.id, items);
     const overContainer = findContainer(over.id, items);
-    if (!activeContainer || !overContainer || activeContainer === overContainer) {
+    if (
+      !activeContainer ||
+      !overContainer ||
+      activeContainer === overContainer
+    ) {
       return;
     }
 
@@ -222,7 +219,7 @@ export function KanbanBoard({
       overItems.splice(
         overIndex >= 0 ? overIndex : overItems.length,
         0,
-        updated
+        updated,
       );
 
       return {
@@ -270,7 +267,11 @@ export function KanbanBoard({
       if (oldIndex !== newIndex && newIndex >= 0) {
         setItems((prev) => ({
           ...prev,
-          [activeContainer]: arrayMove(prev[activeContainer], oldIndex, newIndex),
+          [activeContainer]: arrayMove(
+            prev[activeContainer],
+            oldIndex,
+            newIndex,
+          ),
         }));
       }
       nextStatus = activeContainer;
@@ -322,16 +323,16 @@ export function KanbanBoard({
       <>
         {railPortal}
         <div className="h-full min-h-0 flex-1 gap-3.5 max-lg:flex max-lg:snap-x max-lg:snap-mandatory max-lg:gap-3 max-lg:overflow-x-auto max-lg:overscroll-x-contain max-lg:scroll-px-3 lg:grid lg:grid-cols-3">
-        {COLS.map((col) => (
-          <KanbanColumnStatic
-            key={col.key}
-            label={col.label}
-            color={col.color}
-            count={items[col.key].length}
-          >
-            {columnBody(col)}
-          </KanbanColumnStatic>
-        ))}
+          {COLS.map((col) => (
+            <KanbanColumnStatic
+              key={col.key}
+              label={col.label}
+              color={col.color}
+              count={items[col.key].length}
+            >
+              {columnBody(col)}
+            </KanbanColumnStatic>
+          ))}
         </div>
       </>
     );
@@ -412,14 +413,11 @@ function KanbanColumnStatic({
   return (
     <div className="kanban-column flex min-h-0 flex-col rounded-xl border border-border bg-surface2 p-3 max-lg:w-[76vw] md:max-lg:w-[44vw] max-lg:max-w-[360px] max-lg:shrink-0 max-lg:snap-center">
       <div className="mb-2.5 flex items-center gap-1.5 px-0.5">
-        <span
-          className="h-2 w-2 rounded-full"
-          style={{ background: color }}
-        />
+        <span className="h-2 w-2 rounded-full" style={{ background: color }} />
         <span className="text-[12.5px] font-bold">{label}</span>
         <span className="font-mono text-[10px] text-faint">{count}</span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <div className="glow-room flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {children}
       </div>
     </div>
@@ -451,7 +449,7 @@ function KanbanColumn({
         isOver
           ? "kanban-column--over border-primary/40 bg-primary/[0.04] shadow-[inset_0_0_0_1px_oklch(0.55_0.16_274/0.15)]"
           : "border-border bg-surface2",
-        isDragging && !isOver && "opacity-95"
+        isDragging && !isOver && "opacity-95",
       )}
     >
       <div className="mb-2.5 flex items-center gap-1.5 px-0.5">
@@ -465,7 +463,7 @@ function KanbanColumn({
         <span className="text-[12.5px] font-bold">{label}</span>
         <span className="font-mono text-[10px] text-faint">{count}</span>
       </div>
-      <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <div className="glow-room flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
         {children}
       </div>
     </div>
@@ -503,7 +501,7 @@ function KanbanCard({
       style={style}
       className={cn(
         "kanban-card cursor-grab touch-manipulation active:cursor-grabbing",
-        isDragging && "kanban-card--dragging opacity-35"
+        isDragging && "kanban-card--dragging opacity-35",
       )}
       {...attributes}
       {...listeners}
@@ -564,7 +562,7 @@ function KanbanCardShell({
           : "border-border",
         overlay
           ? "kanban-card--overlay rotate-[1.5deg] cursor-grabbing"
-          : "cursor-pointer hover:border-faint2 hover:shadow-sm"
+          : "cursor-pointer hover:border-faint2 hover:shadow-sm",
       )}
     >
       <div className="mb-2 flex items-start gap-1.5">
@@ -572,7 +570,9 @@ function KanbanCardShell({
           <button
             type="button"
             aria-pressed={picked}
-            aria-label={picked ? `Deselect ${task.title}` : `Select ${task.title}`}
+            aria-label={
+              picked ? `Deselect ${task.title}` : `Select ${task.title}`
+            }
             onClick={(e) => {
               e.stopPropagation();
               selection.toggle(task.id);
@@ -582,7 +582,7 @@ function KanbanCardShell({
               "mt-px flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-[4px] border-[1.8px] transition-colors",
               picked
                 ? "border-primary bg-primary"
-                : "border-faint2 hover:border-primary"
+                : "border-faint2 hover:border-primary",
             )}
           >
             {picked && (

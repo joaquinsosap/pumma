@@ -10,14 +10,15 @@ import { cn } from "@/lib/utils";
 
 export function MissionBanner({
   beat,
-  index,
-  total,
+  kindIndex,
+  kindTotal,
   cleared,
   instruction,
 }: {
   beat: Beat;
-  index: number;
-  total: number;
+  /** Position among beats of THIS kind, 1-based — see the badge below. */
+  kindIndex: number;
+  kindTotal: number;
   cleared: boolean;
   /** The step's actual ask. It gets the big type — "Type u" is what you need
    *  to read, and it was being whispered under a caption that never changed
@@ -30,19 +31,29 @@ export function MissionBanner({
       key={beat.id}
       className="tutorial-in mx-auto w-full max-w-[620px] text-center"
     >
+      {/* The two kinds of beat, told apart at a glance.
+
+          They used to be a filled "Mission 3/6" against an outlined "Watch" —
+          same size, and the outlined one nearly vanished against a blurred
+          screenshot, so the one thing you needed to know (do I press
+          something, or do I sit still?) was the hardest thing on the card to
+          read. Both are filled now, in colours that aren't each other's, and
+          the word says which it is rather than what number it is.
+
+          The count is scoped to its own kind: there is no use knowing you are
+          on 3 of 6 when four of them want something from you and two do not.
+          Four to do and two to watch is the shape of the thing. */}
       <div className="mb-2 flex items-center justify-center gap-2">
         <span
           className={cn(
-            "rounded-full px-2.5 py-0.5 font-mono text-[9.5px] font-bold uppercase tracking-[0.16em]",
-            isMission
-              ? "bg-primary text-background"
-              : "border border-white/25 text-white/60",
+            "rounded-full px-3 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.16em] text-background",
+            isMission ? "bg-primary" : "bg-[oklch(0.72_0.15_85)]",
           )}
         >
-          {isMission ? `Mission ${index + 1}/${total}` : "Watch"}
+          {isMission ? "Interactive" : "Just watch"} {kindIndex}/{kindTotal}
         </span>
         {isMission && !cleared && (
-          <span className="font-mono text-[9.5px] uppercase tracking-[0.16em] text-white/60">
+          <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-white/70">
             your turn
           </span>
         )}
@@ -232,7 +243,7 @@ export function FlounderCard({
             onClick={onStay}
             className="rounded-xl border-2 border-border px-3 py-3 text-[13px] font-bold leading-tight text-muted transition-colors hover:border-faint hover:text-ink"
           >
-            I&apos;m dumb but hard{" "}
+            I&apos;m hard{" "}
             <span className="font-mono text-[10px] font-semibold text-faint">
               (continue)
             </span>

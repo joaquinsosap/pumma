@@ -228,7 +228,12 @@ const STEP_ORDER: CaptureStep[] = [
 const STEP_KEY: Record<CaptureStep, { key: string; type?: true }> = {
   title: { key: "space" },
   dayHash: { key: "#", type: true },
-  dayWord: { key: "Tab" },
+  // Tab completes this word, and Tab is *not* named here. This card already
+  // asks for four keys in a row, and putting a Tab cap next to "press ENTER"
+  // read as a chord — two keys to press together — which is the one thing it
+  // isn't. Tab still works; you find it on your own the first time you have
+  // more tags than you can remember, which is when it means anything.
+  dayWord: { key: "space" },
   tagHash: { key: "#", type: true },
   tagWord: { key: "Enter" },
 };
@@ -267,10 +272,10 @@ function askFor(
         ? { ask: "Now press space", key: STEP_KEY.title }
         : { ask: STEP_COPY.title.ask, key: null };
     case "dayWord":
-      // Tab is offered, never demanded — type the whole word and the space
-      // that ends it does the same job.
-      return typed
-        ? { ask: "Tab finishes it", key: STEP_KEY.dayWord }
+      // The space is only named once the word IS a day, because that is the
+      // only point at which pressing it does anything.
+      return typed && resolveDateToken(typed, new Date())
+        ? { ask: "Now press space", key: STEP_KEY.dayWord }
         : { ask: STEP_COPY.dayWord.ask, key: null };
     case "tagWord":
       return typed.length >= 2
@@ -720,38 +725,25 @@ export function SceneType({
         )}
       </div>
 
-      {/* The Tab prompt only exists while Tab is the answer — but the room for
-          it is always there. It appears three steps into a seven-step mission,
-          and without the reservation the whole card jumped 50px under the
-          cursor at the exact moment someone was reading it. */}
+      {/* One key at a time, and never two side by side.
+
+          This used to show a Tab cap next to the step's own key, which read as
+          a chord: "⇥ Tab  PRESS ENTER" looks like something you hold together,
+          on the one card where every step is a single press. Tab still
+          completes the word — it just isn't taught here, because completion
+          only means anything once you have more tags than you can remember.
+
+          The height is reserved either way: the line changes on nearly every
+          keystroke, and a block that resizes drags the card out from under
+          whoever is reading it. */}
       <div className="mt-3 flex min-h-[68px] flex-col items-center justify-center gap-1.5">
-        {(step === "dayWord" || step === "tagWord") && tail(text) && !done ? (
-          <>
-            <div className="flex items-center gap-2.5">
-              <span className="tutorial-nudge-soft">
-                <KeyCap label="⇥ Tab" pressed={tabs} wide big />
-              </span>
-              <span className="font-mono text-[10.5px] text-faint">
-                {now.key && (
-                  <PressHint label={now.key.key} type={now.key.type} />
-                )}
-              </span>
-            </div>
-            <p className="m-0 font-mono text-[9.5px] text-faint2">
-              shift + Tab goes back
-            </p>
-          </>
-        ) : (
-          <p className="m-0 text-center font-mono text-[10.5px] text-faint">
-            {shake
-              ? "not that one — read the step"
-              : // Switching with the step, and absent when the step has no
-                // single key to name — an empty field asks for itself.
-                now.key && (
-                  <PressHint label={now.key.key} type={now.key.type} />
-                )}
-          </p>
-        )}
+        <p className="m-0 text-center font-mono text-[10.5px] text-faint">
+          {shake
+            ? "not that one — read the step"
+            : // Switching with the step, and absent when the step has no
+              // single key to name — an empty field asks for itself.
+              now.key && <PressHint label={now.key.key} type={now.key.type} />}
+        </p>
       </div>
 
       {/* The reason, at the bottom, as the aside it is — it explains the step
@@ -787,11 +779,25 @@ export function SceneType({
 // ---------------------------------------------------------------------------
 // 2 — Tab cycles what you're making · MISSION
 
+/**
+ * One line, already typed, that does NOT change as you Tab.
+ *
+ * Each stop used to carry its own example — "pay rent friday" became "read 20
+ * min daily" became "run a half marathon" — which is not what the bar does.
+ * In the real bar what you typed stays exactly where it is and Tab changes
+ * only what you're filing it as, and that is the entire point of the key. A
+ * line that rewrote itself taught the opposite.
+ *
+ * "Run a marathon" because it has to make sense at every stop you pass on the
+ * way to goal: it reads fine as a task, as a habit, as a goal, and as a
+ * question for the assistant.
+ */
+const TAB_TEXT = "run a marathon";
+
 const TYPES = [
   {
     label: "task",
     color: TASK_RED,
-    hint: "pay rent friday",
     // A line per stop. Being told "wrong, try again" four times is a form;
     // being told you took a wrong door is a game.
     quip: "task. everything starts here.",
@@ -799,25 +805,21 @@ const TYPES = [
   {
     label: "habit",
     color: HABIT_GREEN,
-    hint: "read 20 min daily",
     quip: "habit — the things you repeat. keep going.",
   },
   {
     label: "goal",
     color: GOAL_PURPLE,
-    hint: "run a half marathon",
     quip: "goal. hold it there.",
   },
   {
     label: "note",
     color: "var(--ink)",
-    hint: "kitchen quotes",
     quip: "note. one too far — shift+Tab back.",
   },
   {
     label: "assistant",
     color: "var(--primary)",
-    hint: "where did my time go?",
     quip: "assistant. lovely, wrong door.",
   },
 ];
@@ -945,8 +947,11 @@ export function SceneTab({
         >
           {current.label}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-faint2">
-          {current.hint}
+        {/* Full-strength ink, not the placeholder grey it wore before: this is
+            text you already typed, and the lesson is that switching type
+            leaves it exactly where it is. */}
+        <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">
+          {TAB_TEXT}
         </span>
       </div>
 
@@ -1046,8 +1051,11 @@ export function SceneTabTouch({
         >
           {current.label}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-faint2">
-          {current.hint}
+        {/* Full-strength ink, not the placeholder grey it wore before: this is
+            text you already typed, and the lesson is that switching type
+            leaves it exactly where it is. */}
+        <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-ink">
+          {TAB_TEXT}
         </span>
       </div>
 
@@ -1091,10 +1099,33 @@ export function SceneTabTouch({
 // A real context menu on a real right-click, plus a long-press for touch —
 // exactly the two ways the menu opens in the app.
 
+/**
+ * Two places the task could go, and the side of life each one drags with it.
+ *
+ * Both are real answers. The menu used to offer these two and only count one
+ * of them — pick health and nothing happened — which taught that the menu is
+ * a quiz with a right answer rather than a filing decision. The lesson is the
+ * *consequence*: whichever you pick, the task moves there AND picks up that
+ * place's tag, because in PUMMA a tag is the address, not the sticker.
+ */
 const TAG_OPTIONS = [
-  { name: "website-redesign", color: PROJECT_BLUE, project: true },
-  { name: "health", color: HABIT_GREEN, project: false },
+  {
+    name: "website-redesign",
+    label: "Website redesign",
+    color: PROJECT_BLUE,
+    tag: "work",
+    tagColor: PROJECT_BLUE,
+  },
+  {
+    name: "health",
+    label: "Health",
+    color: HABIT_GREEN,
+    tag: "personal",
+    tagColor: GOAL_PURPLE,
+  },
 ];
+
+type TagOption = (typeof TAG_OPTIONS)[number];
 
 /**
  * Mimes the gesture on a loop until it's performed. "Right-click the task" is
@@ -1305,7 +1336,7 @@ export function SceneTag({
   onProgress,
 }: SceneProps) {
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
-  const [picked, setPicked] = useState(false);
+  const [picked, setPicked] = useState<TagOption | null>(null);
   const pressTimer = useRef(0);
 
   const open = useCallback(
@@ -1316,24 +1347,26 @@ export function SceneTag({
     [picked],
   );
 
-  const choose = (project: boolean) => {
+  // Either one is an answer. The task goes where you send it, and arrives
+  // wearing that place's tag — which is the whole beat.
+  const choose = (option: TagOption) => {
     onProgress?.();
     setMenu(null);
-    // The other tag is a label, not a place — picking it files nothing, which
-    // is the distinction this beat is about.
-    if (!project) return;
-    setPicked(true);
+    setPicked(option);
     window.setTimeout(onDone, 900);
   };
 
-  const landed = picked || done;
+  const landed = !!picked || done;
+  // Once the tour has moved on the scene still has to show its outcome, so a
+  // finished beat with nothing picked falls back to the first destination.
+  const home = picked ?? (done ? TAG_OPTIONS[0] : null);
 
   useEffect(() => {
     onInstruction?.(
       landed
         ? "Filed"
         : menu
-          ? "Pick website-redesign"
+          ? "Pick where it lives"
           : isTouch()
             ? "Long-press the task"
             : "Right-click the task",
@@ -1386,59 +1419,87 @@ export function SceneTag({
           style={{ opacity: landed ? 1 : 0.4 }}
         />
 
-        <div>
-          <p
-            className="m-0 mb-1.5 font-mono text-[9.5px] uppercase tracking-widest"
-            style={{ color: landed ? PROJECT_BLUE : "var(--faint2)" }}
-          >
-            Website redesign
-          </p>
-          <div
-            className="rounded-lg border border-dashed p-1 transition-colors duration-500"
-            style={{ borderColor: landed ? PROJECT_BLUE : "var(--border)" }}
-          >
-            {landed ? (
-              <Row
-                title="Build hero section"
-                accent={PROJECT_BLUE}
-                className="tutorial-in"
-              >
-                <span className="h-4 w-4 shrink-0 rounded-[5px] border-[1.8px] border-border" />
-              </Row>
-            ) : (
-              <p className="m-0 px-2 py-2.5 text-center font-mono text-[10px] text-faint2">
-                empty
-              </p>
-            )}
-          </div>
+        {/* Both destinations, stacked and numbered, each showing the tag it
+            will hand over. Two boxes rather than one is the point: the menu
+            asks you to choose, so the scene has to have somewhere for the
+            other choice to have gone. */}
+        <div className="flex flex-col gap-2">
+          {TAG_OPTIONS.map((opt, n) => {
+            const here = home?.name === opt.name;
+            return (
+              <div key={opt.name}>
+                <div className="mb-1 flex items-center gap-1.5">
+                  <span
+                    className="font-mono text-[9px] font-bold tabular-nums"
+                    style={{ color: here ? opt.color : "var(--faint2)" }}
+                  >
+                    {n + 1}
+                  </span>
+                  <p
+                    className="m-0 min-w-0 flex-1 truncate font-mono text-[9.5px] uppercase tracking-widest"
+                    style={{ color: here ? opt.color : "var(--faint2)" }}
+                  >
+                    {opt.label}
+                  </p>
+                  {/* The side of life that comes with the address. */}
+                  <span
+                    className="shrink-0 rounded-[5px] px-1.5 py-px font-mono text-[9px] transition-opacity duration-500"
+                    style={{
+                      color: opt.tagColor,
+                      background: `color-mix(in oklch, ${opt.tagColor} 15%, transparent)`,
+                      opacity: !landed || here ? 1 : 0.3,
+                    }}
+                  >
+                    #{opt.tag}
+                  </span>
+                </div>
+                <div
+                  className="rounded-lg border border-dashed p-1 transition-colors duration-500"
+                  style={{ borderColor: here ? opt.color : "var(--border)" }}
+                >
+                  {here ? (
+                    <Row
+                      title="Build hero section"
+                      accent={opt.color}
+                      className="tutorial-in"
+                    >
+                      <span className="h-4 w-4 shrink-0 rounded-[5px] border-[1.8px] border-border" />
+                    </Row>
+                  ) : (
+                    <p className="m-0 px-2 py-1.5 text-center font-mono text-[10px] text-faint2">
+                      empty
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
+      {/* Not a one-way trip. The arrow used to point personal → work, which
+          made filing look like something you do once and live with; it is two
+          keystrokes to send it back. Both ends read as live for the same
+          reason. */}
       <div className="mt-3.5 flex items-center justify-center gap-2 font-mono text-[10px]">
         <span
-          className="rounded-[5px] px-2 py-0.5 transition-colors duration-500"
-          style={
-            landed
-              ? { color: "var(--faint2)", background: "var(--surface2)" }
-              : {
-                  color: GOAL_PURPLE,
-                  background: "oklch(0.58 0.17 300 / 0.14)",
-                }
-          }
+          className="rounded-[5px] px-2 py-0.5"
+          style={{
+            color: GOAL_PURPLE,
+            background: "oklch(0.58 0.17 300 / 0.14)",
+          }}
         >
           personal
         </span>
-        <span className="text-faint2">→</span>
+        <span className="text-faint" aria-label="either way">
+          ↔
+        </span>
         <span
-          className="rounded-[5px] px-2 py-0.5 transition-colors duration-500"
-          style={
-            landed
-              ? {
-                  color: PROJECT_BLUE,
-                  background: "oklch(0.58 0.14 245 / 0.16)",
-                }
-              : { color: "var(--faint2)", background: "var(--surface2)" }
-          }
+          className="rounded-[5px] px-2 py-0.5"
+          style={{
+            color: PROJECT_BLUE,
+            background: "oklch(0.58 0.14 245 / 0.16)",
+          }}
         >
           work
         </span>
@@ -1464,7 +1525,7 @@ export function SceneTag({
               <button
                 key={t.name}
                 type="button"
-                onClick={() => choose(t.project)}
+                onClick={() => choose(t)}
                 className="flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[12px] text-muted transition-colors hover:bg-hover hover:text-ink"
               >
                 <span
@@ -1472,6 +1533,12 @@ export function SceneTag({
                   style={{ background: t.color }}
                 />
                 <span className="min-w-0 flex-1 truncate">{t.name}</span>
+                <span
+                  className="shrink-0 font-mono text-[9px]"
+                  style={{ color: t.tagColor }}
+                >
+                  #{t.tag}
+                </span>
               </button>
             ))}
           </div>
@@ -1487,6 +1554,17 @@ export function SceneTag({
 // Runs through the app's own selection reducer, so ⌘-click and shift-click
 // behave here exactly as they will on the real list.
 
+/**
+ * The colour of the range sketch, deliberately not the selection blue.
+ *
+ * The rows already wear `--primary` when they're taken, so an arrow in the
+ * same blue drew "about to happen" in the colour of "already happened". Mixed
+ * toward `--ink` it stays in the same family and reads a full step darker —
+ * and because `--ink` flips with the theme, it darkens on light and brightens
+ * on dark rather than disappearing into one of them.
+ */
+const RANGE_INK = "color-mix(in oklch, var(--primary) 55%, var(--ink))";
+
 const BULK_ROWS = [
   "Scroll IG for 2 hours",
   "Play Deadlock",
@@ -1495,13 +1573,17 @@ const BULK_ROWS = [
 ];
 
 /**
- * The target: the button already wearing its chosen colours, with the border
- * itself alive — one bright segment running the rim, and a hairline that
- * expands out of the edge and fades.
+ * The target: the button in its chosen colours, with waves of light leaving
+ * the edge and fading out.
  *
- * The rim is a conic gradient in the 2px gutter between two rounded boxes, so
- * what shows is a moving *border*, not a glow bleeding over the label. No
- * blur, no washed-out halo: the button stays as readable as the one beside it.
+ * It used to be a hard-edged ring scaled outwards over a travelling conic
+ * border. At this size that reads as a stack of offset rectangles rather than
+ * a pulse — the ring keeps its corners the whole way out, so what you see is
+ * three sharp copies of the button sliding apart, not one thing radiating.
+ *
+ * A blurred shadow has no corner geometry to get wrong: it leaves the shape,
+ * softens and goes. Two of them, half a cycle apart, so the waves overlap and
+ * the edge is never bare.
  *
  * On the same rAF clock as the scenes rather than a CSS keyframe — a browser
  * stops CSS animation dead both on a page it thinks is hidden and under
@@ -1509,46 +1591,40 @@ const BULK_ROWS = [
  * marker nobody sees.
  */
 function TargetBorder({ color }: { color: string }) {
-  const rimRef = useRef<HTMLSpanElement>(null);
-  const pulseRef = useRef<HTMLSpanElement>(null);
+  const waveRefs = [
+    useRef<HTMLSpanElement>(null),
+    useRef<HTMLSpanElement>(null),
+  ];
 
   useEffect(() => {
-    const rim = rimRef.current;
-    const pulse = pulseRef.current;
-    if (!rim || !pulse) return;
+    const waves = waveRefs.map((r) => r.current);
+    if (waves.some((w) => !w)) return;
     let t = 0;
     return startTutorialClock((dt) => {
-      t = (t + dt / 2000) % 1;
-      const deg = t * 360;
-      // A tight bright arc on a steady base, so the border reads as lit all
-      // the way round with one segment travelling it.
-      // color-mix, not a "#rrggbbaa" suffix: these tokens are oklch(), and
-      // "oklch(…)88" is not a colour — it invalidates the whole gradient and
-      // the border silently renders as nothing at all.
-      const dim = `color-mix(in oklch, ${color} 58%, transparent)`;
-      rim.style.background = `conic-gradient(from ${deg.toFixed(
-        1,
-      )}deg, ${color} 0deg, #fff 16deg, ${color} 44deg, ${dim} 140deg, ${dim} 360deg)`;
-      // …and the edge letting go of a ring every other lap.
-      const p = (t * 2) % 1;
-      pulse.style.transform = `scale(${(1 + p * 0.34).toFixed(3)})`;
-      pulse.style.opacity = (0.5 * (1 - p) ** 1.6).toFixed(3);
+      t = (t + dt / 1900) % 1;
+      waves.forEach((w, i) => {
+        // Half a cycle apart: as one wave dies the next is already leaving.
+        const p = (t + i * 0.5) % 1;
+        // Grows and softens together — a shadow that spreads without also
+        // blurring reads as a solid outline creeping outwards.
+        const spread = (p * 7).toFixed(2);
+        const blur = (5 + p * 16).toFixed(2);
+        const alpha = (0.5 * (1 - p) ** 1.5 * 100).toFixed(1);
+        w!.style.boxShadow = `0 0 ${blur}px ${spread}px color-mix(in oklch, ${color} ${alpha}%, transparent)`;
+      });
     }, false);
   }, [color]);
 
   return (
     <>
-      <span
-        ref={pulseRef}
-        aria-hidden
-        className="pointer-events-none absolute inset-0 rounded-md border-2"
-        style={{ borderColor: color, opacity: 0 }}
-      />
-      <span
-        ref={rimRef}
-        aria-hidden
-        className="pointer-events-none absolute -inset-[2px] rounded-[8px]"
-      />
+      {waveRefs.map((ref, i) => (
+        <span
+          key={i}
+          ref={ref}
+          aria-hidden
+          className="pointer-events-none absolute inset-0 rounded-md"
+        />
+      ))}
     </>
   );
 }
@@ -1615,16 +1691,12 @@ function BulkPanel({
                   armed && "cursor-pointer",
                 )}
                 style={
-                  // The target wears the chosen look already — the only thing
-                  // telling it apart is that its border is moving. An opaque
-                  // fill, so the rim behind it shows as a border and not a
-                  // wash across the word.
+                  // The target wears the chosen look already — what tells it
+                  // apart is the light coming off it. An opaque fill, so the
+                  // waves stay outside the word rather than washing over it.
                   chosen || target
                     ? {
-                        borderColor: target ? "transparent" : TASK_RED,
-                        // Opaque, not a 12% wash: the travelling rim sits
-                        // directly behind this and would show straight through
-                        // a translucent face.
+                        borderColor: TASK_RED,
                         background: `color-mix(in oklch, ${TASK_RED} 13%, var(--surface))`,
                         backgroundClip: "padding-box",
                       }
@@ -1868,42 +1940,62 @@ function RangeArrow({ rows }: { rows: number }) {
   // rather than a measurement — no observers, no reflow, no lag behind the
   // pointer.
   //
-  // Down the middle rather than the edge, dashed and half-transparent: it's a
-  // sketch of a range you haven't taken yet, and a solid line at the margin
-  // looked like a permanent part of the list.
+  // Down the middle rather than the edge, dashed: it's a sketch of a range you
+  // haven't taken yet, and a solid line at the margin looked like a permanent
+  // part of the list.
+  //
+  // Both ends are pulled well inside the rows they mark. Running centre-to-
+  // centre made the line touch the text at each end, so it read as part of the
+  // rows rather than as a measurement across them — and it was long enough
+  // that the arrowhead had left the screen's centre of attention by the time
+  // your eye followed it down.
   const ROW = 44;
   const GAP = 6;
-  const top = ROW / 2;
-  const height = rows * (ROW + GAP);
+  const INSET = 15;
+  const top = ROW / 2 + INSET;
+  const end = ROW / 2 + rows * (ROW + GAP) - INSET;
   return (
     <svg
       className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 overflow-visible"
       width="18"
-      height={top + height}
+      height={end + 2}
       aria-hidden
     >
       <defs>
+        {/* Hollow, not solid. A filled triangle at this size is a blob, and it
+            was the same blue as the selection ring behind it — so the marker
+            for "the range you are about to take" was drawn in the colour of
+            "already taken". */}
         <marker
           id="tut-arrow"
-          markerWidth="7"
-          markerHeight="7"
-          refX="3.5"
-          refY="3.5"
+          markerWidth="8"
+          markerHeight="8"
+          refX="5"
+          refY="4"
           orient="auto"
         >
-          <path d="M0,0 L7,3.5 L0,7 z" fill="var(--primary)" opacity="0.55" />
+          {/* `stroke` as a style rather than an attribute: `color-mix()` is a
+              CSS value, and presentation attributes are not guaranteed to
+              parse one — a browser that doesn't drops the marker entirely. */}
+          <path
+            d="M1.4,1 L5.6,4 L1.4,7"
+            fill="none"
+            style={{ stroke: RANGE_INK }}
+            strokeWidth="1.7"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
         </marker>
       </defs>
       <line
         x1="9"
         y1={top}
         x2="9"
-        y2={top + height - 9}
-        stroke="var(--primary)"
+        y2={end - 6}
+        style={{ stroke: RANGE_INK }}
         strokeWidth="2"
         strokeDasharray="5 5"
         strokeLinecap="round"
-        opacity="0.55"
         markerEnd="url(#tut-arrow)"
         className="tutorial-arrow"
       />

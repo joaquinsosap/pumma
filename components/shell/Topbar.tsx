@@ -113,7 +113,7 @@ export function Topbar({
           className="text-habits"
           href={statLinks.habits}
         />
-        <StatRule />
+        <StatFrom />
         <Stat value={`${topStreak}🔥`} label="STREAK" href={statLinks.streak} />
       </div>
     </div>
@@ -130,6 +130,28 @@ export function Topbar({
  */
 function StatRule() {
   return <span aria-hidden className="h-7 w-px shrink-0 bg-border" />;
+}
+
+/**
+ * Not a divider — a consequence.
+ *
+ * Day done and Habits are two unrelated readings and a rule between them says
+ * so. Habits and Streak are not: the streak is what the habits ticked off
+ * added up to, and separating them with the same line made three numbers that
+ * happen to sit near each other. An arrow says the second is made out of the
+ * first, which is the one thing about that number worth knowing.
+ *
+ * In the habits colour, so it belongs to the side it comes from.
+ */
+function StatFrom() {
+  return (
+    <span
+      aria-hidden
+      className="shrink-0 px-0.5 font-mono text-[13px] leading-none text-habits/55"
+    >
+      →
+    </span>
+  );
 }
 
 function Stat({

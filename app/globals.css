@@ -1062,6 +1062,26 @@ body {
     0 18px 38px -10px var(--shadow);
 }
 
+/* ── Room for a glow inside a box that clips ─────────────────────────────
+   A card answers the pointer with a soft shadow spreading past its edge. Put
+   that card in a scroller — a kanban column, a widget's list — and the
+   scroller cuts the shadow off flush with the card's own border, so the
+   bottom half of the effect simply isn't there and the card looks like it was
+   trimmed rather than lit.
+
+   `overflow` is not negotiable on those boxes: they scroll. So instead of
+   asking the clip to move, this moves the content in from it — a few pixels
+   of padding for the glow to happen in, pulled straight back out with an
+   equal negative margin so nothing shifts and no row gets narrower. The clip
+   is still there; it just no longer falls exactly where the light does.
+
+   Sized to the blur these shadows actually use. More would waste scroll
+   width; less and the tail still gets cut. */
+.glow-room {
+  padding: 8px;
+  margin: -8px;
+}
+
 /* ── Titlebars ───────────────────────────────────────────────────────────
    The one concession to colour in the chrome, and it earns it: five panels
    that look identical are five panels you have to read. This is a 12% tint

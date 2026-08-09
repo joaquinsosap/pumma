@@ -58,8 +58,8 @@ export const BEATS: Beat[] = [
     kind: "do",
     step: "File it",
     caption: "A tag isn't a label. It's where the thing lives.",
-    sub: "Right-click the task — long-press on a phone — and pick website-redesign.",
-    done: "It moved into the project, and took the project's side of life with it.",
+    sub: "Right-click the task — long-press on a phone — and send it somewhere.",
+    done: "It moved, and took that place's side of life with it.",
   },
   {
     id: "bulk",
@@ -94,7 +94,10 @@ export function progressAt(index: number, beats: Beat[] = BEATS): number {
 
 /** What the self-playing beats add up to — the honest part of "60 seconds". */
 export function watchMs(beats: Beat[] = BEATS): number {
-  return beats.reduce((sum, b) => sum + (b.kind === "watch" ? b.ms ?? 0 : 0), 0);
+  return beats.reduce(
+    (sum, b) => sum + (b.kind === "watch" ? (b.ms ?? 0) : 0),
+    0,
+  );
 }
 
 /**
@@ -106,7 +109,7 @@ export function typedChars(
   text: string,
   progress: number,
   startAt = 0,
-  endAt = 1
+  endAt = 1,
 ): string {
   if (progress <= startAt) return "";
   if (progress >= endAt) return text;
@@ -127,10 +130,12 @@ export const HOLD_MS = 1400;
 const DRAIN_RATE = 2.2;
 
 /** The meter after `dtMs` more milliseconds, clamped to 0–1. */
-export function nextHold(hold: number, onTarget: boolean, dtMs: number): number {
-  const delta = onTarget
-    ? dtMs / HOLD_MS
-    : -(dtMs * DRAIN_RATE) / HOLD_MS;
+export function nextHold(
+  hold: number,
+  onTarget: boolean,
+  dtMs: number,
+): number {
+  const delta = onTarget ? dtMs / HOLD_MS : -(dtMs * DRAIN_RATE) / HOLD_MS;
   return Math.min(1, Math.max(0, hold + delta));
 }
 
@@ -165,7 +170,7 @@ export function flounderLimit(beatId: string): number {
 export function isFloundering(
   msOnBeat: number,
   strayKeys: number,
-  limitMs: number = FLOUNDER_MS
+  limitMs: number = FLOUNDER_MS,
 ): boolean {
   return msOnBeat >= limitMs || strayKeys >= FLOUNDER_KEYS;
 }
