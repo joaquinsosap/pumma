@@ -14,7 +14,11 @@ import {
 } from "@/lib/habit-visibility";
 import { cn } from "@/lib/utils";
 import type { Goal } from "@/lib/schemas";
-import { WidgetHeaderLink, WidgetRowLink } from "@/components/home/WidgetLink";
+import {
+  WidgetHeader,
+  WidgetHeaderLink,
+  WidgetRowLink,
+} from "@/components/home/WidgetLink";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 import {
   habitWeekRowClass,
@@ -48,11 +52,11 @@ export function HomeHabitsGoals({
 
   const entriesFor = (habitId: string) =>
     new Set(
-      optimisticEntries.filter((e) => e.habitId === habitId).map((e) => e.date)
+      optimisticEntries.filter((e) => e.habitId === habitId).map((e) => e.date),
     );
 
   const habitsDone = habits.filter((h) =>
-    optimisticEntries.some((e) => e.habitId === h.id && e.date === td)
+    optimisticEntries.some((e) => e.habitId === h.id && e.date === td),
   ).length;
 
   // Toggles the habit's own period: for a weekly habit "undone" has to clear
@@ -66,8 +70,14 @@ export function HomeHabitsGoals({
           ? optimisticEntries.filter((e) => !inRange(e))
           : [
               ...optimisticEntries,
-              { id: "tmp", userId: "optimistic", habitId, date: td, done: true },
-            ]
+              {
+                id: "tmp",
+                userId: "optimistic",
+                habitId,
+                date: td,
+                done: true,
+              },
+            ],
       );
       // The action revalidates the route; the optimistic entry above holds
       // until that lands — no extra refresh round-trip.
@@ -78,14 +88,18 @@ export function HomeHabitsGoals({
   return (
     <div className="flex flex-col gap-4 max-xl:shrink-0 xl:min-h-0">
       <section className="flex min-h-0 flex-col rounded-[13px] border border-border bg-surface px-[18px] py-[15px] max-xl:flex-none xl:flex-1 xl:overflow-hidden">
-        <WidgetHeaderLink href={hrefWithLife("/habits", lifeView)}>
-          <span className="h-2.5 w-2.5 rounded-full bg-habits" />
-          <h3 className="m-0 text-sm font-bold">Habits</h3>
-          <span className="font-mono text-[11px] text-faint">
-            {habitsDone} / {habits.length} today
-          </span>
-        </WidgetHeaderLink>
-        <div className={cn("mb-2 border-b border-border2 pb-2", habitWeekRowClass)}>
+        <WidgetHeader>
+          <WidgetHeaderLink href={hrefWithLife("/habits", lifeView)}>
+            <span className="h-2.5 w-2.5 rounded-full bg-habits" />
+            <h3 className="m-0 text-sm font-bold">Habits</h3>
+            <span className="font-mono text-[11px] text-faint">
+              {habitsDone} / {habits.length} today
+            </span>
+          </WidgetHeaderLink>
+        </WidgetHeader>
+        <div
+          className={cn("mb-2 border-b border-border2 pb-2", habitWeekRowClass)}
+        >
           <span />
           <span />
           <HabitWeekStrip>
@@ -97,7 +111,7 @@ export function HomeHabitsGoals({
                   className={cn(
                     habitWeekCellClass,
                     "text-center font-mono text-[9px] leading-3",
-                    isToday ? "font-bold text-ink" : "text-faint2"
+                    isToday ? "font-bold text-ink" : "text-faint2",
                   )}
                 >
                   {letters[i]}
@@ -113,7 +127,7 @@ export function HomeHabitsGoals({
             const freq = normalizeHabitFrequency(h.frequency.type);
             const period = currentHabitPeriod(freq, weekStart, td, timeZone);
             const doneToday = [...set].some(
-              (d) => d >= period.start && d <= period.end
+              (d) => d >= period.start && d <= period.end,
             );
             const streak = habitStreak(freq, set, weekStart, td);
             return (
@@ -123,18 +137,23 @@ export function HomeHabitsGoals({
                   onClick={() => toggle(h.id, period.start, period.end)}
                   className={cn(
                     "flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-md border-[1.8px]",
-                    doneToday ? "border-none bg-habits" : "border-border bg-transparent"
+                    doneToday
+                      ? "border-none bg-habits"
+                      : "border-border bg-transparent",
                   )}
                 >
                   {doneToday && (
-                    <Check className="h-[11px] w-[11px] text-white" strokeWidth={3.2} />
+                    <Check
+                      className="h-[11px] w-[11px] text-white"
+                      strokeWidth={3.2}
+                    />
                   )}
                 </button>
                 <Link
                   href={hrefWithLife(`/habits?habit=${h.id}`, lifeView)}
                   className={cn(
                     "min-w-0 truncate text-[13px] transition-colors hover:underline",
-                    doneToday ? "text-ink" : "text-muted"
+                    doneToday ? "text-ink" : "text-muted",
                   )}
                 >
                   {h.name}
@@ -150,7 +169,9 @@ export function HomeHabitsGoals({
                           key={ds}
                           className={habitWeekCellClass}
                           style={{
-                            background: on ? "oklch(0.6 0.13 155)" : "transparent",
+                            background: on
+                              ? "oklch(0.6 0.13 155)"
+                              : "transparent",
                             border: on ? "none" : "1.5px solid var(--border)",
                             borderRadius: "3px",
                             outline: isToday
@@ -165,16 +186,12 @@ export function HomeHabitsGoals({
                     })}
                   </HabitWeekStrip>
                 ) : (
-                  <CadencePill
-                    frequency={freq}
-                    done={doneToday}
-                    today={td}
-                  />
+                  <CadencePill frequency={freq} done={doneToday} today={td} />
                 )}
                 <span
                   className={cn(
                     "text-right font-mono text-[10px] font-semibold",
-                    streak > 0 ? "text-habits" : "text-faint2"
+                    streak > 0 ? "text-habits" : "text-faint2",
                   )}
                 >
                   {streak}
@@ -186,19 +203,26 @@ export function HomeHabitsGoals({
       </section>
 
       <section className="rounded-[13px] border border-border bg-surface px-[18px] py-[15px]">
-        <WidgetHeaderLink href={hrefWithLife("/goals", lifeView)}>
-          <span className="h-2.5 w-2.5 rotate-45 bg-goals" />
-          <h3 className="m-0 text-sm font-bold">Goals</h3>
-          <span className="font-mono text-[11px] text-faint">Q3</span>
-          <span className="ml-auto text-xs font-medium text-primary">View all →</span>
-        </WidgetHeaderLink>
+        <WidgetHeader>
+          <WidgetHeaderLink href={hrefWithLife("/goals", lifeView)}>
+            <span className="h-2.5 w-2.5 rotate-45 bg-goals" />
+            <h3 className="m-0 text-sm font-bold">Goals</h3>
+            <span className="font-mono text-[11px] text-faint">Q3</span>
+            <span className="ml-auto text-xs font-medium text-primary">
+              View all →
+            </span>
+          </WidgetHeaderLink>
+        </WidgetHeader>
         <div className="flex flex-col gap-3">
           {goals.slice(0, 3).map((g) => {
             const personal = g.category === "personal";
             return (
               <WidgetRowLink
                 key={g.id}
-                href={hrefWithLife(`/goals?category=${g.category}&goal=${g.id}`, lifeView)}
+                href={hrefWithLife(
+                  `/goals?category=${g.category}&goal=${g.id}`,
+                  lifeView,
+                )}
                 className="-mx-1 px-1 py-0.5"
               >
                 <div className="mb-1.5 flex justify-between text-[13px]">
@@ -276,7 +300,9 @@ function CadencePill({
   const label =
     frequency === "weekly"
       ? "this week"
-      : new Date(today + "T00:00").toLocaleDateString("en-US", { month: "long" });
+      : new Date(today + "T00:00").toLocaleDateString("en-US", {
+          month: "long",
+        });
 
   return (
     <span
@@ -289,7 +315,7 @@ function CadencePill({
         "flex h-[15px] min-w-[102px] items-center justify-center gap-1 rounded-full border px-2 font-mono text-[8.5px] uppercase tracking-wider",
         done
           ? "border-transparent bg-habits/15 font-bold text-habits"
-          : "border-border text-faint2"
+          : "border-border text-faint2",
       )}
     >
       {done && <Check className="h-2 w-2" strokeWidth={4} />}

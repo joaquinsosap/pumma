@@ -376,7 +376,11 @@ export function TaskDetailPanel({
           <div className="flex items-center gap-2">
             <span
               className="h-2.5 w-2.5 shrink-0 rounded-[3px] transition-colors"
-              style={{ background: project?.color ?? "var(--border)" }}
+              /* `--border` is a hairline, not a swatch: on a light theme the
+                 dot disappeared entirely and "No project" started flush left
+                 while every real project sat one dot-width in. `--faint2` is
+                 what the task list already uses for the same bucket. */
+              style={{ background: project?.color ?? "var(--faint2)" }}
               aria-hidden
             />
             <select

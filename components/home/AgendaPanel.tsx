@@ -18,7 +18,7 @@ import type { AgendaItem, Task } from "@/lib/schemas";
 import { deleteMeetingAction } from "@/lib/actions/agenda";
 import { meetingsOnDay, meetingTimeRange } from "@/lib/meetings";
 import { MeetingDialog } from "@/components/agenda/MeetingDialog";
-import { WidgetHeaderLink } from "@/components/home/WidgetLink";
+import { WidgetHeader, WidgetHeaderLink } from "@/components/home/WidgetLink";
 import { AgendaTodayList } from "@/components/home/AgendaTodayList";
 import { AddMeetingButton } from "@/components/agenda/AddMeetingButton";
 import { cn } from "@/lib/utils";
@@ -54,12 +54,14 @@ function AgendaDayTasks({
   today: string;
 }) {
   const sorted = [...tasks].sort(
-    (a, b) => taskSortKey(a.due) - taskSortKey(b.due)
+    (a, b) => taskSortKey(a.due) - taskSortKey(b.due),
   );
 
   if (!sorted.length) {
     return (
-      <p className="py-2 font-mono text-[11px] text-faint2">Nothing scheduled</p>
+      <p className="py-2 font-mono text-[11px] text-faint2">
+        Nothing scheduled
+      </p>
     );
   }
 
@@ -155,13 +157,13 @@ export function AgendaPanel({
         .toUpperCase();
 
   const dayTasks = tasks.filter(
-    (t) => (t.due ?? "").slice(0, 10) === selectedDay
+    (t) => (t.due ?? "").slice(0, 10) === selectedDay,
   );
 
   return (
     <section className="flex flex-col overflow-hidden rounded-[13px] border border-border bg-surface max-xl:max-h-[70vh] max-xl:shrink-0">
       <div className="px-4 pb-3 pt-[15px]">
-        <div className="flex items-start gap-2">
+        <WidgetHeader className="-mx-4 px-4">
           <div className="min-w-0 flex-1">
             <WidgetHeaderLink href={calendarHref}>
               <h3 className="m-0 text-sm font-bold">Agenda</h3>
@@ -173,9 +175,9 @@ export function AgendaPanel({
           <AddMeetingButton
             defaultDate={selectedDay}
             lifeView={lifeView}
-            className="-mt-0.5 shrink-0"
+            className="shrink-0"
           />
-        </div>
+        </WidgetHeader>
         <div className="grid grid-cols-7 gap-1">
           {week.map((d, i) => (
             <div
@@ -200,7 +202,7 @@ export function AgendaPanel({
                     ? "bg-ink font-bold text-background"
                     : isDayToday
                       ? "font-semibold text-ink ring-1 ring-border hover:bg-hover"
-                      : "font-normal text-muted hover:bg-hover"
+                      : "font-normal text-muted hover:bg-hover",
                 )}
               >
                 {d.getDate()}
@@ -262,7 +264,7 @@ function DayMeetings({
 }) {
   if (!meetings.length) return null;
   const sorted = [...meetings].sort(
-    (a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time)
+    (a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time),
   );
   return (
     <div className="mb-2 flex flex-col gap-0.5">

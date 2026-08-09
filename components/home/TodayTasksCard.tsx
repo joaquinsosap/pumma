@@ -5,7 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Task, Tag } from "@/lib/schemas";
 import { TaskList } from "@/components/tasks/TaskList";
 import { CarryoverSection } from "@/components/tasks/CarryoverSection";
-import { WidgetHeaderLink } from "@/components/home/WidgetLink";
+import { WidgetHeader, WidgetHeaderLink } from "@/components/home/WidgetLink";
 import { addDays, iso } from "@/lib/date";
 import { type LifeView } from "@/lib/life-area";
 import { taskDetailHref, tasksListHref } from "@/lib/task-links";
@@ -39,19 +39,24 @@ export function TodayTasksCard({
   const onToday = day === td;
 
   const stepDay = (delta: number) =>
-    setDay((d) => iso(addDays(delta, new Date(d + "T00:00"), timeZone), timeZone));
+    setDay((d) =>
+      iso(addDays(delta, new Date(d + "T00:00"), timeZone), timeZone),
+    );
 
   // Highest priority first — this widget is the "what should I do next" glance,
   // so the answer belongs at the top rather than wherever capture order put it.
   const dayTasks = sortTasksByPriority(
-    allTasks.filter((t) => (t.due ?? "").slice(0, 10) === day)
+    allTasks.filter((t) => (t.due ?? "").slice(0, 10) === day),
   );
   const done = dayTasks.filter((t) => t.status === "done").length;
   const pct = dayTasks.length ? Math.round((done / dayTasks.length) * 100) : 0;
 
-  const carryoverCutoff = iso(addDays(-CARRYOVER_DAYS, new Date(), timeZone), timeZone);
+  const carryoverCutoff = iso(
+    addDays(-CARRYOVER_DAYS, new Date(), timeZone),
+    timeZone,
+  );
   const recentCarryover = sortTasksByPriority(
-    carryover.filter((t) => (t.due ?? "").slice(0, 10) >= carryoverCutoff)
+    carryover.filter((t) => (t.due ?? "").slice(0, 10) >= carryoverCutoff),
   );
 
   const dayLabel = new Date(day + "T00:00").toLocaleDateString("en-US", {
@@ -62,9 +67,9 @@ export function TodayTasksCard({
 
   return (
     <section className="flex min-h-0 flex-col rounded-[13px] border border-border bg-surface px-[18px] py-[15px] max-xl:flex-none xl:flex-[1.15]">
-      <div className="mb-3 flex items-center gap-2">
+      <WidgetHeader>
         <div className="min-w-0 flex-1">
-          <WidgetHeaderLink href={tasksListHref(lifeView, "today")} className="mb-0">
+          <WidgetHeaderLink href={tasksListHref(lifeView, "today")}>
             <span className="h-2.5 w-2.5 rounded-[3px] bg-tasks" />
             <h3 className="m-0 truncate text-sm font-bold">
               {onToday ? "Today's tasks" : dayLabel}
@@ -109,7 +114,7 @@ export function TodayTasksCard({
             <ChevronRight className="h-3 w-3" />
           </button>
         </div>
-      </div>
+      </WidgetHeader>
       <div className="min-h-0 flex-1 max-lg:overflow-visible @container @max-[470px]:[&_.task-tag-full]:hidden @max-[470px]:[&_.task-tag-mini]:inline @max-[360px]:[&_.task-tag-mini]:!hidden @max-[470px]:[&_.task-subcount-inline]:hidden @max-[470px]:[&_.task-subcount-side]:inline @max-[470px]:[&_.task-time-chip]:hidden @max-[470px]:[&_.task-prio-text]:!hidden @max-[470px]:[&_.task-prio-icon]:!inline-flex @max-[470px]:[&_.task-row]:!grid-cols-[18px_16px_minmax(0,1fr)_28px_44px] @[470px]:[&_.task-timer-cell]:justify-start xl:overflow-y-auto">
         {onToday && recentCarryover.length > 0 && (
           <CarryoverSection

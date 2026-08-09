@@ -1,7 +1,11 @@
 import type { Project, Task } from "@/lib/schemas";
 import { projectProgress } from "@/lib/metrics";
 import type { Tag } from "@/lib/schemas";
-import { WidgetHeaderLink, WidgetRowLink } from "@/components/home/WidgetLink";
+import {
+  WidgetHeader,
+  WidgetHeaderLink,
+  WidgetRowLink,
+} from "@/components/home/WidgetLink";
 import { TodayTasksCard } from "@/components/home/TodayTasksCard";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 
@@ -33,13 +37,15 @@ export function HomeTasksProjects({
       />
 
       <section className="flex min-h-0 flex-col rounded-[13px] border border-border bg-surface px-[18px] py-[15px] max-xl:flex-none xl:flex-1 xl:overflow-hidden">
-        <WidgetHeaderLink href={hrefWithLife("/projects", lifeView)}>
-          <span className="h-2.5 w-2.5 rounded-[3px] bg-projects" />
-          <h3 className="m-0 text-sm font-bold">Projects</h3>
-          <span className="font-mono text-[11px] text-faint">
-            {projects.length} active
-          </span>
-        </WidgetHeaderLink>
+        <WidgetHeader>
+          <WidgetHeaderLink href={hrefWithLife("/projects", lifeView)}>
+            <span className="h-2.5 w-2.5 rounded-[3px] bg-projects" />
+            <h3 className="m-0 text-sm font-bold">Projects</h3>
+            <span className="font-mono text-[11px] text-faint">
+              {projects.length} active
+            </span>
+          </WidgetHeaderLink>
+        </WidgetHeader>
         <div className="min-h-0 flex-1 overflow-x-hidden max-xl:overflow-y-visible xl:overflow-y-auto">
           <div className="flex flex-col gap-3">
             {projects.map((p) => {
