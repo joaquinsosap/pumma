@@ -47,7 +47,7 @@ function chipClass(active: boolean) {
     chipBase,
     active
       ? "border-2 border-primary bg-primary/25 font-bold text-primary shadow-[2px_2px_0_var(--primary)]"
-      : "border border-border bg-surface font-medium text-muted hover:border-faint hover:bg-surface2"
+      : "border border-border bg-surface font-medium text-muted hover:border-faint hover:bg-surface2",
   );
 }
 
@@ -81,7 +81,7 @@ function selectClassName() {
   return cn(
     "min-w-0 flex-1 rounded-lg border border-border bg-surface px-2 py-1",
     "font-mono text-[11px] font-semibold text-ink outline-none",
-    "focus:border-faint hover:border-faint"
+    "focus:border-faint hover:border-faint",
   );
 }
 
@@ -104,19 +104,29 @@ export function DueQuickPick({
   className,
 }: Props) {
   const timeZone = useTimezone();
-  const config = resolveDatePickConfig(mode, {
-    ...(quickPicksProp !== undefined ? { quickPicks: quickPicksProp } : {}),
-    ...(clearableProp !== undefined ? { clearable: clearableProp } : {}),
-    ...(clearLabelProp !== undefined ? { clearLabel: clearLabelProp } : {}),
-    ...(nullableProp !== undefined ? { nullable: nullableProp } : {}),
-    ...(layoutProp !== undefined ? { layout: layoutProp } : {}),
-    ...(navigationProp !== undefined ? { navigation: navigationProp } : {}),
-    ...(showJumpTodayProp !== undefined ? { showJumpToday: showJumpTodayProp } : {}),
-    ...(fallbackValueProp !== undefined ? { fallbackValue: fallbackValueProp } : {}),
-    ...(minYearProp !== undefined ? { minYear: minYearProp } : {}),
-    ...(maxYearProp !== undefined ? { maxYear: maxYearProp } : {}),
-    ...(displayFormatProp !== undefined ? { displayFormat: displayFormatProp } : {}),
-  }, timeZone);
+  const config = resolveDatePickConfig(
+    mode,
+    {
+      ...(quickPicksProp !== undefined ? { quickPicks: quickPicksProp } : {}),
+      ...(clearableProp !== undefined ? { clearable: clearableProp } : {}),
+      ...(clearLabelProp !== undefined ? { clearLabel: clearLabelProp } : {}),
+      ...(nullableProp !== undefined ? { nullable: nullableProp } : {}),
+      ...(layoutProp !== undefined ? { layout: layoutProp } : {}),
+      ...(navigationProp !== undefined ? { navigation: navigationProp } : {}),
+      ...(showJumpTodayProp !== undefined
+        ? { showJumpToday: showJumpTodayProp }
+        : {}),
+      ...(fallbackValueProp !== undefined
+        ? { fallbackValue: fallbackValueProp }
+        : {}),
+      ...(minYearProp !== undefined ? { minYear: minYearProp } : {}),
+      ...(maxYearProp !== undefined ? { maxYear: maxYearProp } : {}),
+      ...(displayFormatProp !== undefined
+        ? { displayFormat: displayFormatProp }
+        : {}),
+    },
+    timeZone,
+  );
 
   const [open, setOpen] = useState(false);
   // Touch devices get the platform's own date picker — the custom popover is
@@ -140,7 +150,7 @@ export function DueQuickPick({
 
   const years = useMemo(
     () => yearRange(config.minYear, config.maxYear),
-    [config.minYear, config.maxYear]
+    [config.minYear, config.maxYear],
   );
 
   useEffect(() => {
@@ -152,7 +162,7 @@ export function DueQuickPick({
 
   const { monthLabel, cells } = useMemo(
     () => buildMonthCells(viewYear, viewMonth, timeZone),
-    [viewYear, viewMonth, timeZone]
+    [viewYear, viewMonth, timeZone],
   );
 
   const shiftMonth = (delta: number) => {
@@ -213,7 +223,7 @@ export function DueQuickPick({
                 "flex items-center justify-center px-1.5 py-1",
                 calendarActive
                   ? "border-2 border-primary bg-primary/25 text-primary shadow-[2px_2px_0_var(--primary)]"
-                  : "border border-border bg-surface text-muted"
+                  : "border border-border bg-surface text-muted",
               )}
             >
               <Calendar
@@ -234,138 +244,138 @@ export function DueQuickPick({
             />
           </div>
         ) : (
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              disabled={disabled}
-              className={cn(
-                chipBase,
-                "flex items-center justify-center px-1.5 py-1",
-                calendarActive
-                  ? "border-2 border-primary bg-primary/25 text-primary shadow-[2px_2px_0_var(--primary)]"
-                  : "border border-border bg-surface text-muted hover:border-faint hover:bg-surface2"
-              )}
-            >
-              <Calendar
-                className="h-3.5 w-3.5"
-                strokeWidth={calendarActive ? 2.5 : 2}
-              />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[268px] p-0" align="start">
-            <div className="border-b border-border2 px-3 py-2.5">
-              {config.navigation === "month-year" ? (
-                <div className="flex items-center gap-1">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                disabled={disabled}
+                className={cn(
+                  chipBase,
+                  "flex items-center justify-center px-1.5 py-1",
+                  calendarActive
+                    ? "border-2 border-primary bg-primary/25 text-primary shadow-[2px_2px_0_var(--primary)]"
+                    : "border border-border bg-surface text-muted hover:border-faint hover:bg-surface2",
+                )}
+              >
+                <Calendar
+                  className="h-3.5 w-3.5"
+                  strokeWidth={calendarActive ? 2.5 : 2}
+                />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[268px] p-0" align="start">
+              <div className="border-b border-border2 px-3 py-2.5">
+                {config.navigation === "month-year" ? (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => shiftMonth(-1)}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:border-faint hover:bg-surface2"
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                    <select
+                      aria-label="Month"
+                      value={viewMonth}
+                      onChange={(e) => setViewMonth(Number(e.target.value))}
+                      className={selectClassName()}
+                    >
+                      {MONTH_LABELS.map((label, i) => (
+                        <option key={label} value={i}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Year"
+                      value={viewYear}
+                      onChange={(e) => setViewYear(Number(e.target.value))}
+                      className={cn(selectClassName(), "max-w-[76px]")}
+                    >
+                      {years.map((y) => (
+                        <option key={y} value={y}>
+                          {y}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => shiftMonth(1)}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:border-faint hover:bg-surface2"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => shiftMonth(-1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-faint hover:bg-surface2"
+                      aria-label="Previous month"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                    <span className="min-w-0 flex-1 truncate text-center text-[12px] font-bold text-ink">
+                      {monthLabel}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => shiftMonth(1)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-faint hover:bg-surface2"
+                      aria-label="Next month"
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                )}
+                {config.showJumpToday && (
                   <button
                     type="button"
-                    onClick={() => shiftMonth(-1)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:border-faint hover:bg-surface2"
-                    aria-label="Previous month"
+                    onClick={() => pickDate(today)}
+                    className="mt-2 w-full rounded-lg border border-border bg-surface2 py-1 font-mono text-[10px] font-semibold text-muted hover:border-faint"
                   >
-                    <ChevronLeft className="h-3.5 w-3.5" />
+                    Jump to today
                   </button>
-                  <select
-                    aria-label="Month"
-                    value={viewMonth}
-                    onChange={(e) => setViewMonth(Number(e.target.value))}
-                    className={selectClassName()}
+                )}
+              </div>
+              <div className="grid grid-cols-7 gap-0.5 px-2.5 pt-2">
+                {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
+                  <div
+                    key={`${d}-${i}`}
+                    className="py-0.5 text-center font-mono text-[9px] font-medium text-faint2"
                   >
-                    {MONTH_LABELS.map((label, i) => (
-                      <option key={label} value={i}>
-                        {label}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    aria-label="Year"
-                    value={viewYear}
-                    onChange={(e) => setViewYear(Number(e.target.value))}
-                    className={cn(selectClassName(), "max-w-[76px]")}
-                  >
-                    {years.map((y) => (
-                      <option key={y} value={y}>
-                        {y}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => shiftMonth(1)}
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-border text-muted hover:border-faint hover:bg-surface2"
-                    aria-label="Next month"
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => shiftMonth(-1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-faint hover:bg-surface2"
-                    aria-label="Previous month"
-                  >
-                    <ChevronLeft className="h-3.5 w-3.5" />
-                  </button>
-                  <span className="min-w-0 flex-1 truncate text-center text-[12px] font-bold text-ink">
-                    {monthLabel}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => shiftMonth(1)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg border border-border text-muted hover:border-faint hover:bg-surface2"
-                    aria-label="Next month"
-                  >
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-              {config.showJumpToday && (
-                <button
-                  type="button"
-                  onClick={() => pickDate(today)}
-                  className="mt-2 w-full rounded-lg border border-border bg-surface2 py-1 font-mono text-[10px] font-semibold text-muted hover:border-faint"
-                >
-                  Jump to today
-                </button>
-              )}
-            </div>
-            <div className="grid grid-cols-7 gap-0.5 px-2.5 pt-2">
-              {["M", "T", "W", "T", "F", "S", "S"].map((d, i) => (
-                <div
-                  key={`${d}-${i}`}
-                  className="py-0.5 text-center font-mono text-[9px] font-medium text-faint2"
-                >
-                  {d}
-                </div>
-              ))}
-            </div>
-            <div className="grid grid-cols-7 gap-0.5 px-2.5 pb-3 pt-1">
-              {cells.map((c) => {
-                const isSelected = selected !== null && c.ds === selected;
-                const isToday = c.ds === today;
-                return (
-                  <button
-                    key={c.ds}
-                    type="button"
-                    onClick={() => pickDate(c.ds)}
-                    className={cn(
-                      "flex h-8 w-full items-center justify-center rounded-lg font-mono text-[11px] transition-all",
-                      isSelected
-                        ? "border-2 border-primary bg-primary/20 font-bold text-primary shadow-[1px_1px_0_var(--primary)]"
-                        : "border border-transparent text-ink hover:border-border hover:bg-surface2",
-                      !c.inMonth && !isSelected && "text-faint2",
-                      isToday && !isSelected && "font-bold text-primary"
-                    )}
-                  >
-                    {c.day}
-                  </button>
-                );
-              })}
-            </div>
-          </PopoverContent>
-        </Popover>
+                    {d}
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-7 gap-0.5 px-2.5 pb-3 pt-1">
+                {cells.map((c) => {
+                  const isSelected = selected !== null && c.ds === selected;
+                  const isToday = c.ds === today;
+                  return (
+                    <button
+                      key={c.ds}
+                      type="button"
+                      onClick={() => pickDate(c.ds)}
+                      className={cn(
+                        "flex h-8 w-full items-center justify-center rounded-lg font-mono text-[11px] transition-all",
+                        isSelected
+                          ? "border-2 border-primary bg-primary/20 font-bold text-primary shadow-[1px_1px_0_var(--primary)]"
+                          : "border border-transparent text-ink hover:border-border hover:bg-surface2",
+                        !c.inMonth && !isSelected && "text-faint2",
+                        isToday && !isSelected && "font-bold text-primary",
+                      )}
+                    >
+                      {c.day}
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
         )}
         {showDateLabel && selected && (
           <span
@@ -384,7 +394,7 @@ export function DueQuickPick({
       <div
         className={cn(
           "flex flex-wrap items-center gap-1 rounded-lg border border-border bg-surface2/50 p-2",
-          className
+          className,
         )}
       >
         {inner}

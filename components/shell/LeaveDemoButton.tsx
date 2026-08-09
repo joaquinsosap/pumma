@@ -31,7 +31,7 @@ export function LeaveDemoButton({
       disabled={pending}
       className={cn(
         "text-[12px] font-semibold text-ink underline underline-offset-2 hover:text-primary disabled:opacity-60",
-        className
+        className,
       )}
     >
       {pending ? "One sec…" : children}

@@ -1,7 +1,10 @@
 "use client";
 
 import type { TaskPriority } from "@/lib/types";
-import { PRIORITY_COLOR, PRIORITY_GLYPH } from "@/components/tasks/PriorityChip";
+import {
+  PRIORITY_COLOR,
+  PRIORITY_GLYPH,
+} from "@/components/tasks/PriorityChip";
 import { cn } from "@/lib/utils";
 
 const OPTIONS: { value: TaskPriority; label: string }[] = [
@@ -48,7 +51,7 @@ export function PriorityQuickPick({
               "flex items-center gap-1 rounded-lg border px-1.5 py-1 font-mono text-[11px] transition-all disabled:pointer-events-none disabled:opacity-50",
               active
                 ? "font-bold shadow-[2px_2px_0_var(--shadow)]"
-                : "border-border bg-surface font-medium text-muted hover:border-faint hover:bg-surface2"
+                : "border-border bg-surface font-medium text-muted hover:border-faint hover:bg-surface2",
             )}
             style={
               active

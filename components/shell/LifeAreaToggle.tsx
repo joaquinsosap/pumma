@@ -3,7 +3,15 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryState, parseAsStringLiteral } from "nuqs";
-import { Briefcase, Hand, Heart, Layers, Minus, Plus, Zap } from "@/components/icons";
+import {
+  Briefcase,
+  Hand,
+  Heart,
+  Layers,
+  Minus,
+  Plus,
+  Zap,
+} from "@/components/icons";
 import {
   LIFE_AREA_COOKIE,
   parseLifeView,
@@ -89,7 +97,7 @@ export function LifeAreaToggle({
   const syncedFromCookie = useRef(false);
   const [life, setLife] = useQueryState(
     "life",
-    parseAsStringLiteral(options).withDefault("both")
+    parseAsStringLiteral(options).withDefault("both"),
   );
   // Ticks every 30s so the schedule check and countdown label stay current.
   // Also gates the indicator to post-mount (its text depends on the clock, so
@@ -117,7 +125,9 @@ export function LifeAreaToggle({
   // is still fresh. Runs on mount and every 30s. The enabled flag is mirrored
   // optimistically so the toggle flips the instant it's tapped instead of
   // waiting for the server round-trip + refresh.
-  const [optimisticEnabled, setOptimisticEnabled] = useState<boolean | null>(null);
+  const [optimisticEnabled, setOptimisticEnabled] = useState<boolean | null>(
+    null,
+  );
   const enabled = optimisticEnabled ?? auto?.enabled ?? false;
   useEffect(() => {
     setOptimisticEnabled(null);
@@ -138,7 +148,14 @@ export function LifeAreaToggle({
     const id = window.setInterval(tick, 30_000);
     return () => window.clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enabled, auto?.workStart, auto?.workEnd, auto?.overrideMins, auto?.workDays.join(","), timeZone]);
+  }, [
+    enabled,
+    auto?.workStart,
+    auto?.workEnd,
+    auto?.overrideMins,
+    auto?.workDays.join(","),
+    timeZone,
+  ]);
 
   const select = (next: LifeView) => {
     if (next === life) return;
@@ -179,7 +196,7 @@ export function LifeAreaToggle({
   // blown away by a router.refresh() before the new value round-trips back.
   const [minsDraft, setMinsDraft] = useSyncedDraft(
     String(auto?.overrideMins ?? 60),
-    "life-auto-override-mins"
+    "life-auto-override-mins",
   );
   const [, startMinsTransition] = useTransition();
   const commitMins = () => {
@@ -234,10 +251,25 @@ export function LifeAreaToggle({
         : `${Math.floor(holdMins / 60)}h`;
 
   if (variant === "fun") {
-    const FUN: { key: LifeView; label: string; icon: typeof Heart; color: string }[] = [
-      { key: "personal", label: "Personal", icon: Heart, color: "oklch(0.58 0.17 300)" },
+    const FUN: {
+      key: LifeView;
+      label: string;
+      icon: typeof Heart;
+      color: string;
+    }[] = [
+      {
+        key: "personal",
+        label: "Personal",
+        icon: Heart,
+        color: "oklch(0.58 0.17 300)",
+      },
       { key: "both", label: "Both", icon: Layers, color: "var(--muted)" },
-      { key: "work", label: "Work", icon: Briefcase, color: "oklch(0.58 0.14 245)" },
+      {
+        key: "work",
+        label: "Work",
+        icon: Briefcase,
+        color: "oklch(0.58 0.14 245)",
+      },
     ];
     return (
       <div className={className}>
@@ -252,7 +284,7 @@ export function LifeAreaToggle({
                 onClick={() => select(key)}
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-xl border-2 px-1 py-2.5 text-[11px] font-semibold transition-all duration-150 active:scale-95",
-                  !active && "border-border bg-surface text-muted"
+                  !active && "border-border bg-surface text-muted",
                 )}
                 style={
                   active
@@ -266,7 +298,11 @@ export function LifeAreaToggle({
                     : undefined
                 }
               >
-                <Icon className="h-[18px] w-[18px]" strokeWidth={2.2} style={{ color }} />
+                <Icon
+                  className="h-[18px] w-[18px]"
+                  strokeWidth={2.2}
+                  style={{ color }}
+                />
                 {label}
               </button>
             );
@@ -277,8 +313,18 @@ export function LifeAreaToggle({
             <div className="mt-2 grid grid-cols-2 gap-1.5">
               {(
                 [
-                  { mode: "manual", label: "Manual", icon: Hand, color: "oklch(0.7 0.12 70)" },
-                  { mode: "auto", label: "Auto", icon: Zap, color: "oklch(0.6 0.13 155)" },
+                  {
+                    mode: "manual",
+                    label: "Manual",
+                    icon: Hand,
+                    color: "oklch(0.7 0.12 70)",
+                  },
+                  {
+                    mode: "auto",
+                    label: "Auto",
+                    icon: Zap,
+                    color: "oklch(0.6 0.13 155)",
+                  },
                 ] as const
               ).map(({ mode, label, icon: Icon, color }) => {
                 const active = mode === "auto" ? enabled : !enabled;
@@ -290,7 +336,7 @@ export function LifeAreaToggle({
                     onClick={() => setAutoSwitch(mode === "auto")}
                     className={cn(
                       "flex items-center justify-center gap-1.5 rounded-xl border-2 px-2 py-2 text-[11px] font-semibold transition-all duration-150 active:scale-95 disabled:opacity-50",
-                      !active && "border-border bg-surface text-muted"
+                      !active && "border-border bg-surface text-muted",
                     )}
                     style={
                       active
@@ -302,7 +348,11 @@ export function LifeAreaToggle({
                         : undefined
                     }
                   >
-                    <Icon className="h-3.5 w-3.5" strokeWidth={2.2} style={{ color }} />
+                    <Icon
+                      className="h-3.5 w-3.5"
+                      strokeWidth={2.2}
+                      style={{ color }}
+                    />
                     {label}
                   </button>
                 );
@@ -370,7 +420,7 @@ export function LifeAreaToggle({
                     : key === "personal"
                       ? "bg-[oklch(0.58_0.17_300/0.14)] text-[oklch(0.46_0.17_300)]"
                       : "bg-hover text-ink"
-                  : "text-muted hover:bg-hover"
+                  : "text-muted hover:bg-hover",
               )}
             >
               {labels[key]}
@@ -394,7 +444,9 @@ export function LifeAreaToggle({
                   onClick={() => setAutoSwitch(mode === "auto")}
                   className={cn(
                     "rounded px-1.5 py-0.5 font-mono text-[9px] font-semibold lowercase tracking-wide transition-colors disabled:opacity-50",
-                    active ? "bg-hover text-ink" : "text-faint2 hover:text-muted"
+                    active
+                      ? "bg-hover text-ink"
+                      : "text-faint2 hover:text-muted",
                   )}
                 >
                   {mode}
@@ -438,7 +490,7 @@ export function LifeAreaToggle({
 export function useLifeView() {
   return useQueryState(
     "life",
-    parseAsStringLiteral(options).withDefault("both")
+    parseAsStringLiteral(options).withDefault("both"),
   );
 }
 

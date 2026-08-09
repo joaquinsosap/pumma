@@ -20,7 +20,7 @@ export function DemoBanner({
     <div
       className={cn(
         "flex min-w-0 shrink-0 items-center gap-1.5 rounded-full border border-primary/25 bg-primary/[0.08] py-1 pl-2.5 pr-1",
-        className
+        className,
       )}
       title={
         hoursLeft

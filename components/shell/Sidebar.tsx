@@ -25,20 +25,75 @@ import {
 } from "./LifeAreaToggle";
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { PummaWordmark } from "@/components/shell/PummaWordmark";
+import { PummaMark } from "@/components/shell/PummaMark";
 import { AboutPummaButton } from "@/components/shell/AboutPummaButton";
 import { DemoBanner } from "@/components/shell/DemoBanner";
 import type { Tag, Task, Note } from "@/lib/schemas";
 
 const nav = [
-  { href: "/", label: "Home", icon: Home, color: "text-primary", countKey: null },
-  { href: "/tasks", label: "Tasks", icon: ListTodo, color: "text-tasks", countKey: "openTasks" as const },
-  { href: "/notes", label: "Notes", icon: StickyNote, color: "text-notes", countKey: "notes" as const },
-  { href: "/habits", label: "Habits", icon: CircleCheck, color: "text-habits", countKey: "habits" as const },
-  { href: "/goals", label: "Goals", icon: Target, color: "text-goals", countKey: "goals" as const },
-  { href: "/projects", label: "Projects", icon: FolderKanban, color: "text-projects", countKey: "projects" as const },
-  { href: "/calendar", label: "Calendar", icon: Calendar, color: "text-faint", countKey: null },
-  { href: "/life", label: "Life calendar", icon: Hourglass, color: "text-primary", countKey: null },
-  { href: "/assistant", label: "Assistant", icon: Sparkles, color: "text-primary", countKey: null },
+  {
+    href: "/",
+    label: "Home",
+    icon: Home,
+    color: "text-primary",
+    countKey: null,
+  },
+  {
+    href: "/tasks",
+    label: "Tasks",
+    icon: ListTodo,
+    color: "text-tasks",
+    countKey: "openTasks" as const,
+  },
+  {
+    href: "/notes",
+    label: "Notes",
+    icon: StickyNote,
+    color: "text-notes",
+    countKey: "notes" as const,
+  },
+  {
+    href: "/habits",
+    label: "Habits",
+    icon: CircleCheck,
+    color: "text-habits",
+    countKey: "habits" as const,
+  },
+  {
+    href: "/goals",
+    label: "Goals",
+    icon: Target,
+    color: "text-goals",
+    countKey: "goals" as const,
+  },
+  {
+    href: "/projects",
+    label: "Projects",
+    icon: FolderKanban,
+    color: "text-projects",
+    countKey: "projects" as const,
+  },
+  {
+    href: "/calendar",
+    label: "Calendar",
+    icon: Calendar,
+    color: "text-faint",
+    countKey: null,
+  },
+  {
+    href: "/life",
+    label: "Life calendar",
+    icon: Hourglass,
+    color: "text-primary",
+    countKey: null,
+  },
+  {
+    href: "/assistant",
+    label: "Assistant",
+    icon: Sparkles,
+    color: "text-primary",
+    countKey: null,
+  },
 ];
 
 type Counts = {
@@ -76,9 +131,7 @@ export function Sidebar({
   return (
     <aside className="flex h-full min-h-0 w-[236px] shrink-0 flex-col border-r border-border bg-surface2 px-3 py-4">
       <div className="mb-3 flex shrink-0 items-center gap-2 px-2 py-1.5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-ink text-[13px] font-extrabold text-background">
-          P
-        </div>
+        <PummaMark className="h-7 w-7 shrink-0 rounded-lg" />
         <PummaWordmark className="text-[15px] font-bold tracking-tight" />
         <AboutPummaButton />
         <div className="ml-auto">
@@ -98,43 +151,45 @@ export function Sidebar({
           SPACES
         </div>
         <nav className="flex flex-col gap-px">
-        {nav.map((item) => {
-          const active =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
-          const Icon = item.icon;
-          const count = item.countKey ? counts[item.countKey] : null;
-          return (
-            <Link
-              key={item.href}
-              href={hrefWithAppParams(item.href, life)}
-              className={cn(
-                "group flex items-center gap-[11px] rounded-lg px-2.5 py-2 text-[13.5px] text-muted transition-all duration-150 hover:translate-x-[2px] hover:bg-hover",
-                active && "bg-surface font-semibold text-ink shadow-sm"
-              )}
-            >
-              <Icon
+          {nav.map((item) => {
+            const active =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname.startsWith(item.href);
+            const Icon = item.icon;
+            const count = item.countKey ? counts[item.countKey] : null;
+            return (
+              <Link
+                key={item.href}
+                href={hrefWithAppParams(item.href, life)}
                 className={cn(
-                  "h-[17px] w-[17px] transition-transform duration-150 group-hover:scale-110",
-                  item.color
+                  "group flex items-center gap-[11px] rounded-lg px-2.5 py-2 text-[13.5px] text-muted transition-all duration-150 hover:translate-x-[2px] hover:bg-hover",
+                  active && "bg-surface font-semibold text-ink shadow-sm",
                 )}
-                strokeWidth={2}
-              />
-              {item.label}
-              {count !== null && (
-                <span
+              >
+                <Icon
                   className={cn(
-                    "ml-auto font-mono text-[11px] font-semibold",
-                    item.countKey === "openTasks" ? "text-tasks" : "text-faint2"
+                    "h-[17px] w-[17px] transition-transform duration-150 group-hover:scale-110",
+                    item.color,
                   )}
-                >
-                  {count}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+                  strokeWidth={2}
+                />
+                {item.label}
+                {count !== null && (
+                  <span
+                    className={cn(
+                      "ml-auto font-mono text-[11px] font-semibold",
+                      item.countKey === "openTasks"
+                        ? "text-tasks"
+                        : "text-faint2",
+                    )}
+                  >
+                    {count}
+                  </span>
+                )}
+              </Link>
+            );
+          })}
         </nav>
       </div>
 
@@ -153,7 +208,7 @@ export function Sidebar({
           title="Settings"
           className={cn(
             "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-faint transition-colors hover:bg-hover hover:text-ink",
-            pathname.startsWith("/settings") && "bg-surface text-ink shadow-sm"
+            pathname.startsWith("/settings") && "bg-surface text-ink shadow-sm",
           )}
         >
           <Settings className="h-4 w-4" strokeWidth={2} />

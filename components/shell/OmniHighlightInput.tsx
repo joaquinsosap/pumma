@@ -7,11 +7,7 @@ import {
   type ComponentPropsWithoutRef,
 } from "react";
 import type { Tag } from "@/lib/schemas";
-import {
-  NEW_TAG_PREVIEW_COLOR,
-  tagBg,
-  tokenizeOmniInput,
-} from "@/lib/parse";
+import { NEW_TAG_PREVIEW_COLOR, tagBg, tokenizeOmniInput } from "@/lib/parse";
 import { CALENDAR_PRIO } from "@/lib/calendar-tasks";
 import { cn } from "@/lib/utils";
 
@@ -72,13 +68,21 @@ const INPUT_LAYER =
 
 export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
   function OmniHighlightInput(
-    { value, tags, showTags = true, showPriority = true, className, onScroll, ...props },
-    ref
+    {
+      value,
+      tags,
+      showTags = true,
+      showPriority = true,
+      className,
+      onScroll,
+      ...props
+    },
+    ref,
   ) {
     const [scrollLeft, setScrollLeft] = useState(0);
     const tokens = useMemo(
       () => tokenizeOmniInput(value, tags, { showTags, showPriority }),
-      [value, tags, showTags, showPriority]
+      [value, tags, showTags, showPriority],
     );
 
     return (
@@ -88,7 +92,10 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
           className="pointer-events-none absolute inset-0 overflow-hidden"
         >
           <div
-            className={cn(INPUT_LAYER, "inline-block w-max min-w-full whitespace-pre text-ink")}
+            className={cn(
+              INPUT_LAYER,
+              "inline-block w-max min-w-full whitespace-pre text-ink",
+            )}
             style={{ transform: `translateX(-${scrollLeft}px)` }}
           >
             {tokens.map((token, i) => {
@@ -96,7 +103,10 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
                 return (
                   // Colour only — anything that changes glyph width here
                   // drifts this layer out of step with the input under it.
-                  <span key={i} className={token.dim ? "text-faint" : undefined}>
+                  <span
+                    key={i}
+                    className={token.dim ? "text-faint" : undefined}
+                  >
                     {token.text}
                   </span>
                 );
@@ -142,7 +152,7 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
           className={cn(
             INPUT_LAYER,
             "omni-highlight-input relative text-transparent caret-ink outline-none [-webkit-text-fill-color:transparent] placeholder:text-faint placeholder:[-webkit-text-fill-color:var(--faint)] placeholder:transition-colors group-focus-within:placeholder:text-faint2 group-focus-within:placeholder:[-webkit-text-fill-color:var(--faint2)]",
-            className
+            className,
           )}
           onScroll={(e) => {
             setScrollLeft(e.currentTarget.scrollLeft);
@@ -152,5 +162,5 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
         />
       </div>
     );
-  }
+  },
 );

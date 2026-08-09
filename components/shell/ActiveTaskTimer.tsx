@@ -29,7 +29,7 @@ export function ActiveTaskTimer({ className }: { className?: string }) {
         runningTask
           ? "max-w-[min(340px,42vw)] border-primary/35 bg-primary/[0.08] opacity-100"
           : "max-w-0 border-transparent p-0 opacity-0",
-        className
+        className,
       )}
       style={
         runningTask

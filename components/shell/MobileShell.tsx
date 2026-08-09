@@ -2,6 +2,7 @@
 
 import { DemoBanner } from "@/components/shell/DemoBanner";
 import { AboutPummaButton } from "@/components/shell/AboutPummaButton";
+import { PummaMark } from "@/components/shell/PummaMark";
 
 /**
  * Phone header: just the brand row. Navigation lives in the floating dock
@@ -20,10 +21,10 @@ export function MobileShell({
         className="mb-3 flex shrink-0 items-center gap-2.5"
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
-        <span className="grid h-7 w-7 place-items-center rounded-lg bg-ink text-[13px] font-extrabold text-background">
-          P
+        <PummaMark className="h-7 w-7 shrink-0 rounded-lg" />
+        <span className="text-[15px] font-extrabold tracking-tight">
+          P.U.M.M.A
         </span>
-        <span className="text-[15px] font-extrabold tracking-tight">P.U.M.M.A</span>
         <AboutPummaButton />
         {demo && <DemoBanner expiresAt={demo.expiresAt} className="ml-auto" />}
       </div>

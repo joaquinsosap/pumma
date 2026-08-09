@@ -1,10 +1,7 @@
 "use client";
 
 import { addTagAction } from "@/lib/actions/settings";
-import {
-  cleanUnusedTagsAction,
-  restoreTagsAction,
-} from "@/lib/actions/tags";
+import { cleanUnusedTagsAction, restoreTagsAction } from "@/lib/actions/tags";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -78,7 +75,7 @@ export function TagRailClient({ tags }: { tags: TagItem[] }) {
                 },
               }
             : undefined,
-        }
+        },
       );
       router.refresh();
     } finally {

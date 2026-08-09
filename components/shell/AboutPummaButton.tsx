@@ -18,7 +18,7 @@ export function AboutPummaButton({ className }: { className?: string }) {
       aria-label="What is PUMMA?"
       className={cn(
         "flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-faint2 transition-colors hover:bg-hover hover:text-ink",
-        className
+        className,
       )}
     >
       <HelpCircle className="h-3.5 w-3.5" strokeWidth={2.2} />

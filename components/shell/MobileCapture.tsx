@@ -18,16 +18,16 @@ import { parseOmni, tagBg } from "@/lib/parse";
 import { getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
-import {
-  deriveLifeAreaFromTags,
-  withLifeTags,
-} from "@/lib/life-area-sync";
+import { deriveLifeAreaFromTags, withLifeTags } from "@/lib/life-area-sync";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
 import { isTutorialActive } from "@/lib/tutorial-lock";
 import { sectionMetaFor } from "@/components/shell/MobileDock";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { cn } from "@/lib/utils";
-import { PRIORITY_COLOR, PRIORITY_GLYPH } from "@/components/tasks/PriorityChip";
+import {
+  PRIORITY_COLOR,
+  PRIORITY_GLYPH,
+} from "@/components/tasks/PriorityChip";
 import type { TaskPriority } from "@/lib/types";
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
@@ -47,9 +47,19 @@ const TYPES: {
   color: string;
   shape: "square" | "dot" | "diamond";
 }[] = [
-  { type: "task", label: "Task", color: "oklch(0.64 0.18 25)", shape: "square" },
+  {
+    type: "task",
+    label: "Task",
+    color: "oklch(0.64 0.18 25)",
+    shape: "square",
+  },
   { type: "habit", label: "Habit", color: "oklch(0.6 0.13 155)", shape: "dot" },
-  { type: "goal", label: "Goal", color: "oklch(0.58 0.17 300)", shape: "diamond" },
+  {
+    type: "goal",
+    label: "Goal",
+    color: "oklch(0.58 0.17 300)",
+    shape: "diamond",
+  },
   { type: "note", label: "Note", color: "var(--faint)", shape: "square" },
 ];
 
@@ -110,9 +120,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
         pathname,
         searchParams,
         defaultType,
-        projects.map((p) => ({ id: p.id, title: p.title }))
+        projects.map((p) => ({ id: p.id, title: p.title })),
       ),
-    [pathname, searchParams, defaultType, projects]
+    [pathname, searchParams, defaultType, projects],
   );
 
   const openWith = (t: OmniType) => {
@@ -162,8 +172,12 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
   // create unless one was typed or picked. Every capture type carries tags —
   // habits and goals included — so the chip is true for all of them.
   const captureArea: EntityLifeArea = deriveLifeAreaFromTags(
-    withLifeTags([...new Set([...selectedTagIds, ...parsed.tagIds])], life, tags),
-    tags
+    withLifeTags(
+      [...new Set([...selectedTagIds, ...parsed.tagIds])],
+      life,
+      tags,
+    ),
+    tags,
   );
   const lifeTint = LIFE_META[captureArea];
 
@@ -172,7 +186,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
 
   const toggleTag = (id: string) => {
     setSelectedTagIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
@@ -194,7 +208,8 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
         text: trimmed,
         type,
         projectId: type === "task" ? capture.projectId : undefined,
-        due: type === "task" ? parsed.due ?? pickedDue ?? undefined : undefined,
+        due:
+          type === "task" ? (parsed.due ?? pickedDue ?? undefined) : undefined,
         priority: type === "task" ? pickedPriority : undefined,
         goalCategory: type === "goal" ? capture.goalCategory : undefined,
         lifeView: life,
@@ -209,7 +224,10 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
           ? {
               label: "UNDO",
               onClick: async () => {
-                await undoCreate(res.undo!.entity, res.undo!.snapshot as string);
+                await undoCreate(
+                  res.undo!.entity,
+                  res.undo!.snapshot as string,
+                );
                 router.refresh();
               },
             }
@@ -341,7 +359,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                         ? m === "assistant"
                           ? "bg-primary text-background"
                           : "bg-surface text-ink shadow-[1px_1px_0_var(--shadow)]"
-                        : "text-faint"
+                        : "text-faint",
                     )}
                   >
                     <Icon className="h-4 w-4" />
@@ -371,7 +389,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                           "flex flex-col items-center gap-1.5 rounded-2xl border py-3 text-[13px] transition-all",
                           active
                             ? "border-2 font-bold shadow-[2px_2px_0_var(--shadow)]"
-                            : "border-border bg-surface font-medium text-muted"
+                            : "border-border bg-surface font-medium text-muted",
                         )}
                         style={
                           active
@@ -389,7 +407,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                             "h-2.5 w-2.5",
                             t.shape === "square" && "rounded-[3px]",
                             t.shape === "dot" && "rounded-full",
-                            t.shape === "diamond" && "rotate-45"
+                            t.shape === "diamond" && "rotate-45",
                           )}
                           style={{ background: t.color }}
                         />
@@ -416,14 +434,12 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                           <button
                             key={value}
                             type="button"
-                            onClick={() =>
-                              setPickedDue(active ? null : value)
-                            }
+                            onClick={() => setPickedDue(active ? null : value)}
                             className={cn(
                               "rounded-xl border px-4 py-2.5 font-mono text-[13px] font-semibold transition-colors",
                               active
                                 ? "border-primary bg-primary/10 text-primary"
-                                : "border-border bg-surface text-muted"
+                                : "border-border bg-surface text-muted",
                             )}
                           >
                             {label}
@@ -435,7 +451,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                         <input
                           type="date"
                           value={
-                            pickedDue && pickedDue !== td && pickedDue !== tomorrow
+                            pickedDue &&
+                            pickedDue !== td &&
+                            pickedDue !== tomorrow
                               ? pickedDue
                               : ""
                           }
@@ -465,13 +483,16 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                               "flex items-center gap-1.5 rounded-xl border px-4 py-2.5 font-mono text-[13px] font-semibold transition-colors",
                               active
                                 ? "border-2"
-                                : "border-border bg-surface text-muted"
+                                : "border-border bg-surface text-muted",
                             )}
                             style={
                               active
                                 ? {
                                     borderColor: PRIORITY_COLOR[value],
-                                    background: PRIORITY_COLOR[value].replace(")", " / 0.12)"),
+                                    background: PRIORITY_COLOR[value].replace(
+                                      ")",
+                                      " / 0.12)",
+                                    ),
                                     color: PRIORITY_COLOR[value],
                                   }
                                 : undefined
@@ -480,7 +501,11 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                             <span
                               aria-hidden
                               className="w-3 text-center text-[17px] font-bold leading-[13px]"
-                              style={active ? undefined : { color: PRIORITY_COLOR[value] }}
+                              style={
+                                active
+                                  ? undefined
+                                  : { color: PRIORITY_COLOR[value] }
+                              }
                             >
                               {PRIORITY_GLYPH[value]}
                             </span>
@@ -509,7 +534,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                               "rounded-xl border px-3.5 py-2 font-mono text-[13px] font-medium transition-all",
                               active
                                 ? "border-2 font-semibold"
-                                : "border-border bg-surface text-muted"
+                                : "border-border bg-surface text-muted",
                             )}
                             style={
                               active
@@ -531,9 +556,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
               </>
             ) : (
               <p className="rounded-2xl border border-dashed border-border bg-surface2/50 px-4 py-5 text-center text-[13.5px] leading-relaxed text-faint">
-                Ask a question about your own data, or describe a change to
-                make — the assistant works out which you meant. Changes arrive
-                as a draft you review before anything is saved.
+                Ask a question about your own data, or describe a change to make
+                — the assistant works out which you meant. Changes arrive as a
+                draft you review before anything is saved.
               </p>
             )}
           </div>
@@ -541,7 +566,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
           {/* Pinned submit */}
           <div
             className="shrink-0 border-t border-border2 bg-background px-4 pt-3"
-            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+            style={{
+              paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))",
+            }}
           >
             <button
               type="button"
@@ -549,7 +576,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
               disabled={pending || busy || !text.trim()}
               className={cn(
                 "w-full rounded-2xl py-3.5 text-[15px] font-bold text-background transition-opacity disabled:opacity-40",
-                mode === "assistant" ? "bg-primary" : "bg-ink"
+                mode === "assistant" ? "bg-primary" : "bg-ink",
               )}
             >
               {pending ? "Adding…" : submitLabel}

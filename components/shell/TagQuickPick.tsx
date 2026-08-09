@@ -79,13 +79,10 @@ export function TagQuickPick({
 }: PickProps) {
   const ranked = useMemo(
     () => tagsByUsage(tags, tasks, notes),
-    [tags, tasks, notes]
+    [tags, tasks, notes],
   );
 
-  const selected = useMemo(
-    () => new Set(selectedTagIds),
-    [selectedTagIds]
-  );
+  const selected = useMemo(() => new Set(selectedTagIds), [selectedTagIds]);
 
   const { scrollRef, edges } = useHorizontalScrollState([ranked]);
 
@@ -141,7 +138,7 @@ export function TagQuickPick({
                     "flex shrink-0 items-center gap-1 rounded-lg px-2 py-0.5 font-mono text-[10px] transition-all",
                     active
                       ? "border-2 font-bold shadow-[2px_2px_0_var(--shadow)]"
-                      : "border border-border bg-surface font-medium text-muted opacity-75 hover:border-faint hover:bg-surface2 hover:opacity-100"
+                      : "border border-border bg-surface font-medium text-muted opacity-75 hover:border-faint hover:bg-surface2 hover:opacity-100",
                   )}
                   style={
                     active
@@ -189,9 +186,9 @@ export function SelectedTagsTray({
 }) {
   const selectedTags =
     tags ??
-    selectedTagIds
+    (selectedTagIds
       .map((id) => allTags.find((t) => t.id === id))
-      .filter(Boolean) as Tag[];
+      .filter(Boolean) as Tag[]);
 
   if (!selectedTags.length) return null;
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Play, X } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { PummaMark } from "@/components/shell/PummaMark";
 
 /**
  * The card that opens the tour, and the joke it tells.
@@ -45,9 +46,7 @@ export function TutorialIntro({ onStart }: { onStart: () => void }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/55 px-4 backdrop-blur-sm">
       <div className="w-full max-w-[420px] rounded-[20px] border-2 border-ink bg-surface p-6 shadow-[0_24px_64px_rgba(0,0,0,0.35)]">
-        <span className="inline-grid h-11 w-11 place-items-center rounded-[12px] bg-ink font-mono text-[18px] font-extrabold text-background">
-          P
-        </span>
+        <PummaMark className="h-11 w-11 shrink-0 rounded-[12px]" />
         <h2 className="m-0 mt-4 text-[22px] font-extrabold leading-tight tracking-tight text-ink">
           Sixty seconds, then it&apos;s yours.
         </h2>
@@ -66,7 +65,7 @@ export function TutorialIntro({ onStart }: { onStart: () => void }) {
               "flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-3 text-[13.5px] font-bold transition-[transform,background-color,border-color,color] duration-500 [transition-timing-function:cubic-bezier(0.34,1.4,0.64,1)]",
               stage === 2
                 ? "border-primary bg-primary text-background"
-                : "border-tasks/50 text-tasks hover:bg-tasks/10"
+                : "border-tasks/50 text-tasks hover:bg-tasks/10",
             )}
           >
             {stage === 2 ? (
@@ -94,7 +93,7 @@ export function TutorialIntro({ onStart }: { onStart: () => void }) {
         <p
           className={cn(
             "m-0 mt-3 text-center font-mono text-[10.5px] transition-colors duration-300",
-            stage === 2 ? "font-semibold text-primary" : "text-faint2"
+            stage === 2 ? "font-semibold text-primary" : "text-faint2",
           )}
         >
           {stage === 0 && "60 seconds. You can spare it."}
