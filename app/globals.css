@@ -1427,3 +1427,32 @@ select:hover:not(:disabled) {
     inset 0 1px 0 var(--lip),
     0 2px 4px var(--shadow) !important;
 }
+
+/* ── The capture bar's trace ─────────────────────────────────────────────
+   The marching light around a focused capture bar is the same code here as
+   on the landing, but it does not read the same. The landing draws it on a
+   short miniature, where one bright arc is a large fraction of the
+   perimeter; the app's bar is three times as wide, so that single arc spends
+   most of its lap somewhere you are not looking.
+
+   Two arcs, opposite each other, so there is always one in motion on the
+   half of the bar you happen to be watching — and a wider sweep, because
+   arc length is what makes movement legible at this size. */
+.omni-box-trace::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 128deg,
+    color-mix(in oklch, var(--omni-accent) 60%, transparent) 152deg,
+    var(--omni-accent) 172deg,
+    color-mix(in oklch, var(--omni-accent) 88%, white) 180deg,
+    var(--omni-accent) 188deg,
+    color-mix(in oklch, var(--omni-accent) 60%, transparent) 208deg,
+    transparent 232deg,
+    transparent 308deg,
+    color-mix(in oklch, var(--omni-accent) 60%, transparent) 332deg,
+    var(--omni-accent) 352deg,
+    color-mix(in oklch, var(--omni-accent) 88%, white) 360deg
+  );
+  animation: omniTraceSpin 2.4s linear infinite;
+}
