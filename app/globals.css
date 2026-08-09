@@ -870,8 +870,12 @@ html {
   --bg: #eef2f6;
   --surface: rgba(255, 255, 255, 0.74);
   --surface2: rgba(255, 255, 255, 0.5);
-  --border: rgba(24, 38, 56, 0.11);
-  --border2: rgba(24, 38, 56, 0.07);
+  /* One hairline family, three steps, all off the same hue. The rim of a
+     raised surface reads stronger than a divider inside it, and a divider
+     between rows reads weaker still — the ratio is the polish. Two values a
+     hair apart just render as an inconsistent line. */
+  --border: rgba(22, 38, 58, 0.095);
+  --border2: rgba(22, 38, 58, 0.055);
   --ink: #171b21;
   --muted: #5c6672;
   --faint: #8b95a1;
@@ -895,8 +899,19 @@ html {
   /* Depth tokens. `--rim` is the hairline every surface shares; `--lip` is
      the one-pixel catch of light along a top edge; `--aura` is the only
      place the old theme is allowed to show through. */
-  --rim: rgba(255, 255, 255, 0.75);
-  --lip: rgba(255, 255, 255, 0.85);
+  /* `--rim` is the edge of a raised surface, `--lip` the catch of light along
+     its top. On a light ground a white lip is invisible and only serves to
+     hold the next line away from the edge — so here it is nothing, and the
+     rim does the work alone. Dark mode is the opposite and keeps it. */
+  --rim: rgba(22, 38, 58, 0.15);
+  --lip: transparent;
+  /* The one detail worth stealing from the old theme, kept where it works.
+     A translucent white rim with a brighter lip just inside it reads as a
+     crisp double edge — but only over a saturated ground. On a near-white
+     panel both lines vanish, which is why `--lip` above is nothing and
+     panels rely on `--rim` alone. */
+  --on-color-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.24);
+  --on-color-lip: inset 0 1.5px 0 rgba(255, 255, 255, 0.42);
   --edge: rgba(24, 38, 56, 0.1);
   --aura: rgba(70, 155, 220, 0.3);
   --well: rgba(255, 255, 255, 0.85);
@@ -907,8 +922,8 @@ html {
   --bg: #10151a;
   --surface: rgba(30, 39, 49, 0.72);
   --surface2: rgba(22, 30, 38, 0.6);
-  --border: rgba(150, 180, 210, 0.16);
-  --border2: rgba(150, 180, 210, 0.1);
+  --border: rgba(168, 202, 238, 0.13);
+  --border2: rgba(168, 202, 238, 0.075);
   --ink: #e7ebf0;
   --muted: #9aa6b4;
   --faint: #737f8c;
@@ -926,8 +941,10 @@ html {
   --projects: #4fa3cf;
   --notes: #dda63f;
 
-  --rim: rgba(190, 215, 240, 0.14);
-  --lip: rgba(200, 225, 250, 0.13);
+  --rim: rgba(168, 202, 238, 0.2);
+  --lip: rgba(200, 225, 250, 0.1);
+  --on-color-rim: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  --on-color-lip: inset 0 1.5px 0 rgba(255, 255, 255, 0.3);
   --edge: rgba(0, 8, 16, 0.5);
   --aura: rgba(80, 165, 235, 0.28);
   --well: rgba(10, 17, 24, 0.5);
@@ -1013,11 +1030,14 @@ body {
    find Habits by its green without the bar shouting. */
 .widget-head {
   --head-accent: var(--primary);
-  background-color: color-mix(in oklab, var(--head-accent) 11%, transparent);
+  background-color: color-mix(in oklab, var(--head-accent) 12%, transparent);
+  /* One rule, at the bottom, and that is the whole boundary. The lit top
+     edge this used to carry was an inset shadow with a negative spread,
+     which a rounded box pinches at both corners — it read as a short dash
+     floating under the panel edge rather than as an edge. A tint plus a
+     single crisp rule says the same thing and survives the corner. */
   border-bottom: 1px solid
-    color-mix(in oklab, var(--head-accent) 24%, transparent);
-  box-shadow: inset 0 2px 0 -1px
-    color-mix(in oklab, var(--head-accent) 55%, transparent);
+    color-mix(in oklab, var(--head-accent) 30%, transparent);
   border-radius: 12px 12px 0 0;
 }
 [data-theme="dark"] .widget-head {
@@ -1105,13 +1125,15 @@ select:hover:not(:disabled) {
   background-image: none !important;
   border-radius: 7px !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    var(--on-color-rim),
+    var(--on-color-lip),
     0 1px 2px var(--shadow),
     0 4px 12px -2px color-mix(in oklab, var(--primary) 40%, transparent);
 }
 .bg-ink:hover:not(:disabled) {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    var(--on-color-rim),
+    var(--on-color-lip),
     0 2px 4px var(--shadow),
     0 8px 20px -3px color-mix(in oklab, var(--primary) 50%, transparent);
 }
@@ -1212,9 +1234,10 @@ select:hover:not(:disabled) {
 .bg-\[\#1b1a18\] {
   background-color: #c8761f !important;
   background-image: none !important;
-  border-color: rgba(255, 255, 255, 0.28) !important;
+  border-color: transparent !important;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    var(--on-color-rim),
+    var(--on-color-lip),
     0 8px 22px -6px rgba(160, 90, 20, 0.4);
   text-shadow: none;
 }
