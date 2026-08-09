@@ -153,6 +153,126 @@ function tokenise(text: string) {
   });
 }
 
+/**
+ * Where the thing you just made went to live.
+ *
+ * The payoff used to be one white sentence over a blurred screenshot, which
+ * told you it had worked without showing you anything. This shows it: the
+ * sidebar you are about to be handed, the section it landed in lit up, and
+ * the item itself popping into place inside it.
+ *
+ * It plays inside the card rather than over it because that is where you were
+ * already looking, and it holds for a beat longer than a caption would, since
+ * there is now something to actually watch.
+ */
+const NAV = [
+  { label: "Home", section: "home" },
+  { label: "Tasks", section: "task" },
+  { label: "Notes", section: "note" },
+  { label: "Habits", section: "habit" },
+  { label: "Goals", section: "goal" },
+  { label: "Projects", section: "project" },
+] as const;
+
+const NAV_COLOR: Record<string, string> = {
+  home: "var(--primary)",
+  task: TASK_RED,
+  note: "var(--ink)",
+  habit: HABIT_GREEN,
+  goal: GOAL_PURPLE,
+  project: PROJECT_BLUE,
+};
+
+function LandedIn({
+  section,
+  title,
+  note,
+  tag,
+}: {
+  /** Which sidebar row lights up. */
+  section: keyof typeof NAV_COLOR;
+  /** The item that pops into it. */
+  title: string;
+  /** The line under the heading, in the section's own colour. */
+  note: string;
+  tag?: { label: string; color: string };
+}) {
+  const accent = NAV_COLOR[section];
+  return (
+    <div className="tutorial-in">
+      <p
+        className="m-0 mb-2.5 text-center font-mono text-[11px] font-bold uppercase tracking-[0.14em]"
+        style={{ color: accent }}
+      >
+        {note}
+      </p>
+      <div className="grid grid-cols-[104px_minmax(0,1fr)] gap-3">
+        {/* The sidebar, as much of it as makes the point. */}
+        <div className="flex flex-col gap-[3px] rounded-lg border border-border bg-surface2 p-1.5">
+          {NAV.map((n) => {
+            const here = n.section === section;
+            return (
+              <span
+                key={n.label}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-1.5 py-1 font-mono text-[10px] transition-colors",
+                  here ? "font-bold" : "text-faint2",
+                )}
+                style={
+                  here
+                    ? ({
+                        color: accent,
+                        background: `color-mix(in oklch, ${accent} 15%, transparent)`,
+                        "--land-accent": `color-mix(in oklch, ${accent} 45%, transparent)`,
+                      } as React.CSSProperties)
+                    : undefined
+                }
+              >
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ background: here ? accent : "var(--border)" }}
+                />
+                {n.label}
+              </span>
+            );
+          })}
+        </div>
+
+        <div
+          className="tutorial-land-glow rounded-lg border p-1.5"
+          style={
+            {
+              borderColor: `color-mix(in oklch, ${accent} 45%, transparent)`,
+              background: `color-mix(in oklch, ${accent} 7%, transparent)`,
+              "--land-accent": `color-mix(in oklch, ${accent} 30%, transparent)`,
+            } as React.CSSProperties
+          }
+        >
+          <Row title={title} accent={accent} className="tutorial-pop">
+            <span
+              className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px]"
+              style={{ background: accent }}
+            >
+              <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />
+            </span>
+            {tag && (
+              <span
+                className="order-last shrink-0 rounded-[5px] px-[6px] py-px font-mono text-[10px]"
+                style={{
+                  color: tag.color,
+                  background: `color-mix(in oklch, ${tag.color} 16%, transparent)`,
+                }}
+              >
+                {tag.label}
+              </span>
+            )}
+          </Row>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Row({
   title,
   accent,
@@ -243,6 +363,20 @@ function tail(text: string): string {
   return text.match(/#([a-z0-9-]*)$/i)?.[1] ?? "";
 }
 
+/**
+ * Can the space bar end the day word as it stands?
+ *
+ * True either because it is already a date the parser knows, or because only
+ * one day can still be meant, in which case space writes the rest of it. The
+ * hint and the keystroke handler both read this, so the card can never point
+ * at a key that then refuses.
+ */
+function dayCanEnd(typed: string): boolean {
+  if (!typed) return false;
+  if (resolveDateToken(typed, new Date())) return true;
+  return candidatesFor(typed, DATE_COMPLETIONS).length === 1;
+}
+
 /** How much of a task counts as enough before the tour asks for the next thing. */
 const TITLE_ENOUGH = 4;
 
@@ -272,9 +406,10 @@ function askFor(
         ? { ask: "Now press space", key: STEP_KEY.title }
         : { ask: STEP_COPY.title.ask, key: null };
     case "dayWord":
-      // The space is only named once the word IS a day, because that is the
-      // only point at which pressing it does anything.
-      return typed && resolveDateToken(typed, new Date())
+      // Named exactly when pressing it would do something: either the word is
+      // already a day, or it is far enough along that only one day is left
+      // and the space bar will finish it.
+      return dayCanEnd(typed)
         ? { ask: "Now press space", key: STEP_KEY.dayWord }
         : { ask: STEP_COPY.dayWord.ask, key: null };
     case "tagWord":
@@ -524,13 +659,30 @@ export function SceneType({
       }
       case "dayWord": {
         const typed = tail(current);
-        // A space ends the day — but only once it IS a day. Otherwise it's
-        // someone pressing space mid-word.
         if (ch === " ") {
-          if (!resolveDateToken(typed, new Date())) return reject();
-          commit(current + " ");
-          goStep("tagHash");
-          return;
+          // A whole day word: end it and move on.
+          if (resolveDateToken(typed, new Date())) {
+            commit(current + " ");
+            goStep("tagHash");
+            return;
+          }
+          // Half a day word that can only mean one thing: finish it for them.
+          //
+          // This is the hole someone found in about a minute. "#frid" is a
+          // perfectly good thing to have typed, but it is not yet a date, so
+          // space was refused, and the only way on was Tab, which this card
+          // no longer mentions. You were left holding a word the tour would
+          // not take and given nothing to do about it. Now the space bar
+          // finishes the word itself.
+          const only = candidatesFor(typed, DATE_COMPLETIONS);
+          if (typed && only.length === 1) {
+            commit(
+              current.slice(0, current.length - typed.length) + only[0] + " ",
+            );
+            goStep("tagHash");
+            return;
+          }
+          return reject();
         }
         // Any letter that still leads somewhere. "f", "fr", "mo", "tomo" —
         // whatever day you were going to write. The tour showed a list of
@@ -746,30 +898,25 @@ export function SceneType({
         </p>
       </div>
 
-      {/* The reason, at the bottom, as the aside it is — it explains the step
+      {/* The reason, at the bottom, as the aside it is: it explains the step
           rather than instructing it, and it was competing with the key. */}
-      <p className="m-0 mt-3 text-center font-mono text-[10.5px] leading-relaxed text-faint2">
-        {done ? "* one line, fully parsed" : `* ${copy.why}`}
-      </p>
+      {!captured && (
+        <p className="m-0 mt-3 text-center font-mono text-[10.5px] leading-relaxed text-faint2">
+          * {copy.why}
+        </p>
+      )}
 
       <div className="mt-3 min-h-[46px]">
         {captured && (
-          <Row
+          <LandedIn
+            section="task"
+            note="Saved as a task"
             title={titleOf(captured)}
-            accent={TASK_RED}
-            className="tutorial-in"
-          >
-            <span className="h-4 w-4 shrink-0 rounded-[5px] border-[1.8px] border-border" />
-            <span
-              className="order-last shrink-0 rounded-[5px] px-[6px] py-px font-mono text-[10px]"
-              style={{
-                color: FINANCE_AMBER,
-                background: "oklch(0.7 0.12 70 / 0.14)",
-              }}
-            >
-              {captured.match(/#([a-z0-9-]+)/i)?.[1] ?? "tag"}
-            </span>
-          </Row>
+            tag={{
+              label: captured.match(/#([a-z0-9-]+)/i)?.[1] ?? "tag",
+              color: FINANCE_AMBER,
+            }}
+          />
         )}
       </div>
     </Frame>
@@ -910,12 +1057,23 @@ export function SceneTab({
     );
   }, [onTarget, done, onInstruction]);
 
+  // The same payoff the capture beat ends on: the thing you were making,
+  // arriving where that kind of thing lives. "same for goal next time" was the
+  // note, and it is the same picture with a different colour.
+  if (done)
+    return (
+      <Frame>
+        <LandedIn section="goal" note="Saved as a goal" title={TAB_TEXT} />
+      </Frame>
+    );
+
   return (
     <Frame glow={!done}>
-      {/* The instruction, as the key itself — nobody reads "press Tab", they
-          look at a picture of the key. One key, on its own. Showing "⇧ shift + ⇥ Tab" side by side read as
-          a chord you had to press together — shift is only the way back, so
-          it says so underneath in small type. */}
+      {/* The instruction, as the key itself: nobody reads "press Tab", they
+          look at a picture of the key. One key, on its own. Showing
+          "⇧ shift + ⇥ Tab" side by side read as a chord you had to press
+          together, and shift is only the way back, so it says so underneath
+          in small type. */}
       <div className="mb-4 flex flex-col items-center gap-2">
         <span className={cn(!presses && "tutorial-nudge-soft")}>
           <KeyCap label="⇥ Tab" pressed={presses} wide big />
@@ -1461,7 +1619,7 @@ export function SceneTag({
                     <Row
                       title="Build hero section"
                       accent={opt.color}
-                      className="tutorial-in"
+                      className="tutorial-pop"
                     >
                       <span className="h-4 w-4 shrink-0 rounded-[5px] border-[1.8px] border-border" />
                     </Row>
@@ -1987,11 +2145,14 @@ function RangeArrow({ rows }: { rows: number }) {
           />
         </marker>
       </defs>
+      {/* The dashes stop well short of the head. Running the line all the way
+          into the marker put a dash directly under the chevron, so the two
+          overlapped into a smudge at exactly the point the eye lands. */}
       <line
         x1="9"
         y1={top}
         x2="9"
-        y2={end - 6}
+        y2={end - 13}
         style={{ stroke: RANGE_INK }}
         strokeWidth="2"
         strokeDasharray="5 5"
@@ -2043,16 +2204,33 @@ const SLICES = [
   { label: "Work", value: 7, color: HABIT_GREEN },
 ];
 
-export function SceneAssistant({ p }: { p: number }) {
-  const asking = p < 0.5;
+/**
+ * `half` is which of the two things this beat is showing.
+ *
+ * The scene was written as one twelve second run with a question in the first
+ * half and an instruction in the second, and it is still exactly that: the
+ * beat maps its own 0..1 onto its half of the original timeline. Splitting the
+ * beats rather than the scene keeps every offset below untouched, and lets
+ * each half hold on its payoff for as long as it needs rather than racing the
+ * other one.
+ */
+export function SceneAssistant({
+  p,
+  half,
+}: {
+  p: number;
+  half: "ask" | "request";
+}) {
+  const t = half === "ask" ? p * 0.5 : 0.5 + p * 0.5;
+  const asking = half === "ask";
   // Both lines are things a person would actually say. "File my unfiled
   // tasks" was the app's own vocabulary talking back at you — nobody calls a
   // task unfiled, they call it not in a project. The scene shows exactly that
   // happening underneath, so the words may as well match the picture.
-  const q = typedChars("where did my time go?", p, 0.02, 0.16);
-  const cmd = typedChars("assign all my free tasks to a project", p, 0.5, 0.66);
-  const chartIn = ease(phase(p, 0.2, 0.42));
-  const draftIn = phase(p, 0.66, 0.84);
+  const q = typedChars("where did my time go?", t, 0.02, 0.16);
+  const cmd = typedChars("assign all my free tasks to a project", t, 0.5, 0.66);
+  const chartIn = ease(phase(t, 0.2, 0.42));
+  const draftIn = phase(t, 0.66, 0.84);
 
   let offset = 25;
   const arcs = SLICES.map((s) => {

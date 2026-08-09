@@ -67,9 +67,24 @@ export function MissionBanner({
           drags the whole scene up and down the screen while you are trying to
           type into it. Reserving the room costs a little whitespace on the
           short lines and buys a stage that never moves. */}
-      <div className="flex min-h-[70px] items-center justify-center sm:min-h-[96px]">
+      {/* Once a mission is cleared the scene shows what happened, in the card,
+          where you were already looking. A forty-pixel "✓ that's the whole
+          capture flow" over the top of it is the tour talking over its own
+          demonstration, so the payoff line shrinks to a caption and lets the
+          picture do it. */}
+      <div
+        className={cn(
+          "flex items-center justify-center",
+          cleared ? "min-h-[44px]" : "min-h-[70px] sm:min-h-[96px]",
+        )}
+      >
         <p
-          className="m-0 text-[28px] font-black leading-[1.06] tracking-tight text-white sm:text-[40px]"
+          className={cn(
+            "m-0 font-black leading-[1.06] tracking-tight text-white",
+            cleared
+              ? "text-[17px] sm:text-[19px]"
+              : "text-[28px] sm:text-[40px]",
+          )}
           /* A dark halo under white type: the stage behind it is a blurred
              screenshot, and white-on-whatever-is-behind-it was the one thing
              making the biggest line on screen hard to read. */

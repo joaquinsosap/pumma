@@ -745,6 +745,50 @@ html {
   animation: tutorialIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
+/* The thing you just made, arriving where it now lives.
+   Overshoots on the way in, because a row that simply fades on reads as
+   having been there all along, and the whole point of the beat is that you
+   put it there. Slow enough to be watched: this plays once, at the moment
+   somebody is looking for the result of what they just did. */
+@keyframes tutorialPop {
+  0% {
+    opacity: 0;
+    transform: scale(0.72) translateY(6px);
+  }
+  55% {
+    opacity: 1;
+    transform: scale(1.06) translateY(0);
+  }
+  75% {
+    transform: scale(0.985);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tutorial-pop {
+  animation: tutorialPop 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* …and the nav row it landed in, lighting up under it. */
+@keyframes tutorialLandGlow {
+  0% {
+    box-shadow: 0 0 0 0 var(--land-accent);
+  }
+  40% {
+    box-shadow: 0 0 16px 3px var(--land-accent);
+  }
+  100% {
+    box-shadow: 0 0 0 0 var(--land-accent);
+  }
+}
+
+.tutorial-land-glow {
+  animation: tutorialLandGlow 1.6s ease-out 0.15s 2;
+}
+
 /* A wrong answer in the tour shakes rather than scolds. */
 @keyframes tutorialShake {
   0%,
@@ -1103,11 +1147,14 @@ body {
    equal negative margin so nothing shifts and no row gets narrower. The clip
    is still there; it just no longer falls exactly where the light does.
 
-   Sized to the blur these shadows actually use. More would waste scroll
-   width; less and the tail still gets cut. */
+   Sized off what the cards in the MIDDLE of a list get for free: the gap
+   between two cards is room the shadow can spread into, which is why only the
+   first and last ones looked trimmed. So the padding has to be at least that
+   gap, and a little more above, because these shadows are cast downward and
+   the top of the first card is where the eye notices the cut. */
 .glow-room {
-  padding: 8px;
-  margin: -8px;
+  padding: 16px 14px 14px;
+  margin: -16px -14px -14px;
 }
 
 /* ── Titlebars ───────────────────────────────────────────────────────────

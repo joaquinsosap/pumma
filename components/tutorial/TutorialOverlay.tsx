@@ -35,8 +35,16 @@ import {
 } from "@/components/tutorial/TutorialScenes";
 import { cn } from "@/lib/utils";
 
-/** How long a cleared mission holds on its "✓ …" before moving on. */
-const CLEARED_HOLD_MS = 1400;
+/**
+ * How long a cleared mission holds before moving on.
+ *
+ * It used to be 1.4s, which was fine when the payoff was a line of text you
+ * could read in one go. Now the card plays the thing landing where it lives,
+ * and 1.4s meant the pop was still finishing as the scene was swapped out:
+ * you saw a flicker of something and then the next beat. Long enough to
+ * watch, short enough not to sit through.
+ */
+const CLEARED_HOLD_MS = 2800;
 /** The closing sweep — long enough to read as a transition, short enough not
  *  to be a thing you sit through. */
 const OUTRO_MS = 900;
@@ -416,8 +424,10 @@ function Scene({
       return <SceneTag {...shared} />;
     case "bulk":
       return asMission ? <SceneBulk {...shared} /> : <SceneBulkWatch p={p} />;
-    case "assistant":
-      return <SceneAssistant p={p} />;
+    case "ask":
+      return <SceneAssistant p={p} half="ask" />;
+    case "request":
+      return <SceneAssistant p={p} half="request" />;
     case "life":
       return <SceneLife p={p} />;
   }

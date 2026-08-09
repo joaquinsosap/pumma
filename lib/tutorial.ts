@@ -19,7 +19,14 @@
 //
 // A mission has no duration. It ends when it's done.
 
-export type BeatId = "type" | "tab" | "tag" | "bulk" | "assistant" | "life";
+export type BeatId =
+  | "type"
+  | "tab"
+  | "tag"
+  | "bulk"
+  | "ask"
+  | "request"
+  | "life";
 
 export type Beat = {
   id: BeatId;
@@ -69,13 +76,25 @@ export const BEATS: Beat[] = [
     sub: "Shift-click a range, then move the lot of them at once.",
     done: "Whatever you select changes together.",
   },
+  // Two beats, because it was always two scenes. The assistant half asks a
+  // question and gets an answer; the other half gives an instruction and gets
+  // a draft. Counting them as one told you there were two things to watch
+  // while you sat through three.
   {
-    id: "assistant",
+    id: "ask",
     kind: "watch",
-    step: "Assistant",
-    caption: "Ask it, or tell it.",
+    step: "Ask",
+    caption: "Ask it about your own data.",
+    sub: "It reads what you already have and answers from it.",
+    ms: 7_000,
+  },
+  {
+    id: "request",
+    kind: "watch",
+    step: "Tell it",
+    caption: "Or tell it what to change.",
     sub: "It proposes. You edit. Nothing is saved until you say so.",
-    ms: 12_000,
+    ms: 8_000,
   },
   {
     id: "life",
