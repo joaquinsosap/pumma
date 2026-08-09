@@ -22,7 +22,7 @@ export function useAutosaveDraft(
   serverValue: string,
   entityKey: string,
   save: (entityKey: string, value: string) => void,
-  delay = 500
+  delay = 500,
 ): [string, (value: string) => void, () => void] {
   const [draft, setDraft] = useState(serverValue);
   const pendingRef = useRef<{ key: string; value: string } | null>(null);

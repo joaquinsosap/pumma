@@ -5,10 +5,7 @@ import {
   decryptFor,
   encryptFor,
 } from "@/lib/db/mongo/encrypted";
-import {
-  SPECIAL_LIFE_TAGS,
-  LIFE_TAG_COLORS,
-} from "@/lib/life-area-sync";
+import { SPECIAL_LIFE_TAGS, LIFE_TAG_COLORS } from "@/lib/life-area-sync";
 import { newId } from "@/lib/store/memory";
 import { toDto, type Tag, tagSchema } from "@/lib/schemas";
 import type { NoteDoc, TagDoc, TaskDoc } from "@/lib/schemas";
@@ -39,7 +36,7 @@ async function findByName(
   c: Awaited<ReturnType<typeof col>>,
   userId: string,
   name: string,
-  extra: Record<string, unknown> = {}
+  extra: Record<string, unknown> = {},
 ): Promise<StoredTag | null> {
   const nameKey = await blindIndexFor(userId, name);
   const byKey = await c.findOne({ userId, nameKey, ...extra } as never);
@@ -56,7 +53,7 @@ export async function listTags(userId: string): Promise<Tag[]> {
 
 export async function getTagByName(
   userId: string,
-  name: string
+  name: string,
 ): Promise<Tag | null> {
   const c = await col();
   const doc = await findByName(c, userId, name);
@@ -67,7 +64,11 @@ export async function getTagByName(
 export async function insertTag(
   userId: string,
   name: string,
-  opts?: { projectId?: string | null; isProjectPrimary?: boolean; color?: string }
+  opts?: {
+    projectId?: string | null;
+    isProjectPrimary?: boolean;
+    color?: string;
+  },
 ): Promise<Tag | null> {
   const c = await col();
   const existing = await findByName(c, userId, name);
@@ -124,7 +125,7 @@ export async function ensureLifeTags(userId: string): Promise<void> {
 export async function updateTag(
   userId: string,
   id: string,
-  patch: { name?: string; color?: string }
+  patch: { name?: string; color?: string },
 ): Promise<Tag | null> {
   const c = await col();
   if (patch.name) {
@@ -140,7 +141,7 @@ export async function updateTag(
   const doc = await c.findOneAndUpdate(
     { _id: id, userId },
     { $set },
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   if (!doc) return null;
   return toDto(tagSchema.parse(await decryptFor("tags", userId, doc)));
@@ -149,7 +150,7 @@ export async function updateTag(
 /** Re-insert whole tag docs — used to undo a cleanup, so ids/colors survive. */
 export async function restoreTags(
   userId: string,
-  docs: TagDoc[]
+  docs: TagDoc[],
 ): Promise<number> {
   if (!docs.length) return 0;
   const c = await col();
@@ -164,7 +165,7 @@ export async function restoreTags(
           nameKey: await blindIndexFor(userId, doc.name),
         },
       },
-      { upsert: true }
+      { upsert: true },
     );
     if (res.upsertedCount) restored += 1;
   }
@@ -188,7 +189,7 @@ export async function deleteTag(userId: string, id: string): Promise<boolean> {
 
 export async function ensureTags(
   userId: string,
-  names: string[]
+  names: string[],
 ): Promise<string[]> {
   const ids: string[] = [];
   for (const name of names) {
@@ -203,12 +204,12 @@ export async function ensureTags(
 
 export async function detachTagFromProject(
   userId: string,
-  id: string
+  id: string,
 ): Promise<void> {
   const c = await col();
   await c.updateOne(
     { _id: id, userId },
-    { $set: { projectId: null, isProjectPrimary: false } }
+    { $set: { projectId: null, isProjectPrimary: false } },
   );
 }
 
@@ -216,7 +217,7 @@ export async function setTagProject(
   userId: string,
   id: string,
   projectId: string,
-  opts: { primary?: boolean } = {}
+  opts: { primary?: boolean } = {},
 ): Promise<void> {
   const c = await col();
   await c.updateOne(
@@ -224,8 +225,10 @@ export async function setTagProject(
     {
       $set: {
         projectId,
-        ...(opts.primary === undefined ? {} : { isProjectPrimary: opts.primary }),
+        ...(opts.primary === undefined
+          ? {}
+          : { isProjectPrimary: opts.primary }),
       },
-    }
+    },
   );
 }

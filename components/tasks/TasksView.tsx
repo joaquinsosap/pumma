@@ -420,8 +420,8 @@ export function TasksView({
       ? "No tasks match these filters. Clear one above to widen the net."
       : tab === "today"
         ? showCarryover && filteredCarryover.length
-          ? "Nothing new due today — finish carryover below or check Upcoming."
-          : "Nothing due today — capture something above or check Upcoming."
+          ? "Nothing new due today. Finish carryover below, or check Upcoming."
+          : "Nothing due today. Capture something above, or check Upcoming."
         : tab === "upcoming"
           ? "No upcoming tasks. You're clear ahead."
           : "No tasks yet. Use the capture bar to add one.";

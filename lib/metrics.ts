@@ -5,12 +5,12 @@ export function dayDonePercent(
   tasks: Task[],
   habits: Habit[],
   habitEntries: HabitEntry[],
-  today: string = iso()
+  today: string = iso(),
 ): number {
   const todayTasks = tasks.filter((t) => (t.due ?? "").slice(0, 10) === today);
   const tasksDone = todayTasks.filter((t) => t.status === "done").length;
   const habitsDone = habits.filter((h) =>
-    habitEntries.some((e) => e.habitId === h.id && e.date === today)
+    habitEntries.some((e) => e.habitId === h.id && e.date === today),
   ).length;
   const total = todayTasks.length + habits.length;
   if (!total) return 0;
@@ -19,7 +19,7 @@ export function dayDonePercent(
 
 export function projectProgress(
   projectId: string,
-  tasks: Task[]
+  tasks: Task[],
 ): { progress: number; label: string } {
   const linked = tasks.filter((t) => t.projectId === projectId);
   if (!linked.length) return { progress: 0, label: "0/0" };
@@ -33,7 +33,7 @@ export function projectProgress(
 export function tagCount(
   tagId: string,
   tasks: Task[],
-  notes: { tagIds: string[] }[]
+  notes: { tagIds: string[] }[],
 ): number {
   return (
     tasks.filter((t) => t.tagIds.includes(tagId)).length +
@@ -44,7 +44,7 @@ export function tagCount(
 export function tagsByUsage<T extends { id: string; name: string }>(
   tags: T[],
   tasks: Task[],
-  notes: { tagIds: string[] }[]
+  notes: { tagIds: string[] }[],
 ): (T & { count: number })[] {
   return [...tags]
     .map((tag) => ({
@@ -61,10 +61,10 @@ export function openTaskCount(tasks: Task[]): number {
 export function habitsDoneToday(
   habits: Habit[],
   habitEntries: HabitEntry[],
-  today: string = iso()
+  today: string = iso(),
 ): { done: number; total: number; label: string } {
   const done = habits.filter((h) =>
-    habitEntries.some((e) => e.habitId === h.id && e.date === today)
+    habitEntries.some((e) => e.habitId === h.id && e.date === today),
   ).length;
   return { done, total: habits.length, label: `${done} / ${habits.length}` };
 }
@@ -72,15 +72,15 @@ export function habitsDoneToday(
 export function topStreak(
   habits: Habit[],
   habitEntries: HabitEntry[],
-  streakFn: (dates: Set<string>, habit: Habit) => number
+  streakFn: (dates: Set<string>, habit: Habit) => number,
 ): number {
   return Math.max(
     0,
     ...habits.map((h) => {
       const set = new Set(
-        habitEntries.filter((e) => e.habitId === h.id).map((e) => e.date)
+        habitEntries.filter((e) => e.habitId === h.id).map((e) => e.date),
       );
       return streakFn(set, h);
-    })
+    }),
   );
 }

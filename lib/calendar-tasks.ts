@@ -29,15 +29,13 @@ export function isMeetingPast(
   due: string,
   day: string,
   now: Date = new Date(),
-  timeZone?: string
+  timeZone?: string,
 ): boolean {
   const today = iso(now, timeZone);
   if (day < today) return true;
   if (day > today) return false;
   if (!due.includes("T")) return false;
-  const nowMins = parseTimeToMinutes(
-    formatTimeHM(now, timeZone)
-  );
+  const nowMins = parseTimeToMinutes(formatTimeHM(now, timeZone));
   return parseTimeToMinutes(due.split("T")[1] ?? "00:00") < nowMins;
 }
 

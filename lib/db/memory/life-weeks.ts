@@ -12,23 +12,23 @@ export async function listLifeWeeks(userId: string): Promise<LifeWeek[]> {
 
 export async function getLifeWeek(
   userId: string,
-  weekStart: string
+  weekStart: string,
 ): Promise<LifeWeek | null> {
   const store = getStore();
   const key = weekStart.slice(0, 10);
   const doc = store.lifeWeeks.find(
-    (w) => w.userId === userId && w.weekStart === key
+    (w) => w.userId === userId && w.weekStart === key,
   );
   return doc ? toDto(lifeWeekSchema.parse(doc)) : null;
 }
 
 export async function upsertLifeWeek(
-  doc: Omit<LifeWeekDoc, "_id" | "updatedAt"> & { _id?: string }
+  doc: Omit<LifeWeekDoc, "_id" | "updatedAt"> & { _id?: string },
 ): Promise<LifeWeek> {
   const store = getStore();
   const weekStart = doc.weekStart.slice(0, 10);
   const idx = store.lifeWeeks.findIndex(
-    (w) => w.userId === doc.userId && w.weekStart === weekStart
+    (w) => w.userId === doc.userId && w.weekStart === weekStart,
   );
   const updatedAt = iso();
   const full = {
@@ -47,11 +47,11 @@ export async function upsertLifeWeek(
 
 export async function removeLifeWeeksByDates(
   userId: string,
-  dates: string[]
+  dates: string[],
 ): Promise<void> {
   const store = getStore();
   const keys = new Set(dates.map((d) => d.slice(0, 10)));
   store.lifeWeeks = store.lifeWeeks.filter(
-    (w) => !(w.userId === userId && keys.has(w.weekStart))
+    (w) => !(w.userId === userId && keys.has(w.weekStart)),
   );
 }

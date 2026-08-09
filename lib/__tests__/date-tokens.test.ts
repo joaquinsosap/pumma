@@ -38,8 +38,12 @@ describe("weekdays", () => {
   });
 
   it("takes the short forms too", () => {
-    expect(resolveDateToken("fri", TUE)?.date).toBe(resolveDateToken("friday", TUE)?.date);
-    expect(resolveDateToken("weds", TUE)?.date).toBe(resolveDateToken("wednesday", TUE)?.date);
+    expect(resolveDateToken("fri", TUE)?.date).toBe(
+      resolveDateToken("friday", TUE)?.date,
+    );
+    expect(resolveDateToken("weds", TUE)?.date).toBe(
+      resolveDateToken("wednesday", TUE)?.date,
+    );
   });
 
   it("labels with the full name whichever form was typed", () => {
@@ -88,7 +92,13 @@ describe("numeric dates", () => {
 
 describe("what isn't a date", () => {
   it("leaves ordinary tag names alone", () => {
-    for (const w of ["work", "finance", "prime", "website-redesign", "mon-project"]) {
+    for (const w of [
+      "work",
+      "finance",
+      "prime",
+      "website-redesign",
+      "mon-project",
+    ]) {
       expect(resolveDateToken(w, TUE)).toBeNull();
     }
   });
@@ -108,7 +118,9 @@ describe("the completion vocabulary", () => {
   });
 
   it("puts the long names first, so the list reads as English", () => {
-    expect(DATE_WORDS.indexOf("monday")).toBeLessThan(DATE_WORDS.indexOf("mon"));
+    expect(DATE_WORDS.indexOf("monday")).toBeLessThan(
+      DATE_WORDS.indexOf("mon"),
+    );
   });
 });
 

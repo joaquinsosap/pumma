@@ -65,7 +65,7 @@ export function hasActiveFilters(filters: TaskFilters): boolean {
 export function toggleFilterValue<T extends string>(
   current: T[],
   value: T,
-  order?: readonly T[]
+  order?: readonly T[],
 ): T[] {
   const next = current.includes(value)
     ? current.filter((v) => v !== value)

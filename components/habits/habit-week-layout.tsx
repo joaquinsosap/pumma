@@ -14,7 +14,5 @@ export function HabitWeekStrip({
   children: ReactNode;
   className?: string;
 }) {
-  return (
-    <div className={cn("flex gap-[3px]", className)}>{children}</div>
-  );
+  return <div className={cn("flex gap-[3px]", className)}>{children}</div>;
 }

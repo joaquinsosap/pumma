@@ -10,7 +10,11 @@ import { iso } from "@/lib/date";
 import { userToday } from "@/lib/timezone-server";
 import { interpret } from "@/lib/ai/interpret";
 import { ask } from "@/lib/ai/ask";
-import { planSchema, type PlanGraph, type PlanResult } from "@/lib/ai/plan-schema";
+import {
+  planSchema,
+  type PlanGraph,
+  type PlanResult,
+} from "@/lib/ai/plan-schema";
 import type { AskResult } from "@/lib/ai/ask-schema";
 import { insertGoal, listGoals, nextGoalOrder } from "@/lib/db/goals";
 import { insertProject, listProjects } from "@/lib/db/projects";
@@ -20,19 +24,19 @@ import { insertNote } from "@/lib/db/notes";
 import { ensureTags, listTags } from "@/lib/db/tags";
 import { pickProjectColor } from "@/lib/project-colors";
 import { aiInput } from "@/lib/validation";
-import {
-  deriveLifeAreaFromTags,
-  setLifeTags,
-} from "@/lib/life-area-sync";
+import { deriveLifeAreaFromTags, setLifeTags } from "@/lib/life-area-sync";
 
 const HABIT_COLOR = "oklch(0.6 0.13 155)";
 
 export async function interpretIntent(
-  intent: string
+  intent: string,
 ): Promise<ActionResult<PlanResult>> {
   const parsed = aiInput.safeParse(intent);
   if (!parsed.success) {
-    return { ok: false, error: "Describe what you want to plan (3–2000 characters)." };
+    return {
+      ok: false,
+      error: "Describe what you want to plan (3 to 2000 characters).",
+    };
   }
   const userId = await requireUserId();
   if (!(await reserveAiCall(userId))) {
@@ -50,11 +54,14 @@ export async function interpretIntent(
 }
 
 export async function askAssistant(
-  question: string
+  question: string,
 ): Promise<ActionResult<AskResult>> {
   const parsed = aiInput.safeParse(question);
   if (!parsed.success) {
-    return { ok: false, error: "Ask a question about your data (3–2000 characters)." };
+    return {
+      ok: false,
+      error: "Ask a question about your data (3 to 2000 characters).",
+    };
   }
   const userId = await requireUserId();
   if (!(await reserveAiCall(userId))) {
@@ -79,7 +86,7 @@ type ApplyCounts = {
 };
 
 export async function applyPlan(
-  plan: PlanGraph
+  plan: PlanGraph,
 ): Promise<ActionResult<ApplyCounts>> {
   // Never trust the client — re-validate the plan shape.
   const parsed = planSchema.safeParse(plan);
@@ -101,17 +108,25 @@ export async function applyPlan(
 
   // Resolve a ref to a real id: a plan ref we just created, an existing id, else null.
   const resolveGoal = (ref?: string | null): string | null =>
-    ref ? goalIdByRef.get(ref) ?? (existingGoalIds.has(ref) ? ref : null) : null;
+    ref
+      ? (goalIdByRef.get(ref) ?? (existingGoalIds.has(ref) ? ref : null))
+      : null;
   const resolveProject = (ref?: string | null): string | null =>
     ref
-      ? projectIdByRef.get(ref) ?? (existingProjectIds.has(ref) ? ref : null)
+      ? (projectIdByRef.get(ref) ?? (existingProjectIds.has(ref) ? ref : null))
       : null;
 
   // Life tags are attached to everything the plan creates, so the personal /
   // work split reads the same way as it does for hand-made items.
   const tags = await listTags(userId);
 
-  const counts: ApplyCounts = { goals: 0, projects: 0, habits: 0, tasks: 0, notes: 0 };
+  const counts: ApplyCounts = {
+    goals: 0,
+    projects: 0,
+    habits: 0,
+    tasks: 0,
+    notes: 0,
+  };
 
   try {
     // 1. Goals (orders recomputed as we add so same-category goals don't collide).
@@ -141,7 +156,9 @@ export async function applyPlan(
       const bp = p.bestPractices ?? [];
       const description = [
         p.description ?? "",
-        bp.length ? `Best practices:\n${bp.map((b) => `- ${b}`).join("\n")}` : "",
+        bp.length
+          ? `Best practices:\n${bp.map((b) => `- ${b}`).join("\n")}`
+          : "",
       ]
         .filter(Boolean)
         .join("\n\n");
@@ -233,7 +250,10 @@ export async function applyPlan(
       counts.notes++;
     }
   } catch {
-    return { ok: false, error: "Failed to create some items. Please try again." };
+    return {
+      ok: false,
+      error: "Failed to create some items. Please try again.",
+    };
   }
 
   revalidatePath("/", "layout");

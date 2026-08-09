@@ -39,6 +39,21 @@ import { EnterKey, Pencil, Sparkles } from "@/components/icons";
 
 type OmniMode = "capture" | "assistant";
 
+/**
+ * The bar's bottom row, the same height in both modes.
+ *
+ * Capture fills it with type chips, the assistant with one hint and a Send
+ * button, and the chips are a few pixels taller. Letting each row size itself
+ * meant the whole bar hopped every time you switched, under the cursor and
+ * mid-thought, for no reason a reader could see. So the row is told what it
+ * is: 52px, which is what the taller of the two comes to, and the shorter one
+ * carries the spare space rather than the layout carrying the difference.
+ *
+ * One string, used by both, so they cannot drift apart again.
+ */
+const OMNI_FOOT =
+  "mt-2.5 flex min-h-[52px] gap-2 border-t border-border2 py-2.5 pb-3";
+
 const TYPE_META: Record<
   OmniType,
   { label: string; color: string; text: string }
@@ -577,7 +592,7 @@ export function OmniBox({
                     }
                   : undefined
               }
-              title="Where this capture will land — follows the Personal/Work view, and work/personal tags override it"
+              title="Where this capture will land. It follows the Personal/Work view, and work/personal tags override it"
             >
               → {lifeTint?.label ?? "Both"}
             </span>
@@ -643,7 +658,7 @@ export function OmniBox({
         </div>
         <div className="omni-box-scanline" aria-hidden />
         {aiMode ? (
-          <div className="mt-2.5 flex min-h-[38px] items-center gap-2 border-t border-border2 py-2.5 pb-3">
+          <div className={cn(OMNI_FOOT, "items-center")}>
             <span className="shrink-0 font-mono text-[10px] text-faint2">
               A question gets an answer · a request gets a draft you can edit
             </span>
@@ -657,7 +672,12 @@ export function OmniBox({
             </button>
           </div>
         ) : (
-          <div className="mt-2.5 flex min-h-[38px] min-w-0 items-center gap-2 overflow-x-auto border-t border-border2 py-2.5 pb-3 [scrollbar-width:none] lg:overflow-visible">
+          <div
+            className={cn(
+              OMNI_FOOT,
+              "min-w-0 items-center overflow-x-auto [scrollbar-width:none] lg:overflow-visible",
+            )}
+          >
             <span className="shrink-0 font-mono text-[10px] text-faint2">
               TAB FOR →
             </span>

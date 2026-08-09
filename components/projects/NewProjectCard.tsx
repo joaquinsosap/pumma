@@ -38,11 +38,11 @@ export function NewProjectCard({ lifeArea, onCreated, className }: Props) {
       // silently reassigning someone's work is not a nice surprise.
       toast.success(
         adopted
-          ? `Created "${project.title}" — #${adopted.tagName} files here now` +
+          ? `Created "${project.title}", #${adopted.tagName} files here now` +
               (adopted.filed
                 ? `, ${adopted.filed} unfiled task${adopted.filed === 1 ? "" : "s"} moved in`
                 : "")
-          : `Created "${project.title}"`
+          : `Created "${project.title}"`,
       );
       setTitle("");
       setOpen(false);
@@ -58,7 +58,7 @@ export function NewProjectCard({ lifeArea, onCreated, className }: Props) {
         onClick={() => setOpen(true)}
         className={cn(
           "flex min-h-[88px] min-w-[160px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[11px] border border-dashed border-border bg-surface/50 p-[11px_14px] text-faint transition-colors hover:border-faint2 hover:bg-surface hover:text-muted",
-          className
+          className,
         )}
       >
         <Plus className="h-4 w-4" strokeWidth={2.5} />
@@ -71,7 +71,7 @@ export function NewProjectCard({ lifeArea, onCreated, className }: Props) {
     <div
       className={cn(
         "flex min-w-[200px] flex-col gap-2 rounded-[11px] border border-border bg-surface p-[11px_14px]",
-        className
+        className,
       )}
     >
       <input

@@ -393,7 +393,7 @@ export function LifeAreaToggle({
               <p className="mt-1.5 px-1 font-mono text-[9.5px] text-faint2">
                 {indicator === "auto"
                   ? "⚡ following your work-hours schedule"
-                  : `✋ holding your pick — back to ${indicator}`}
+                  : `✋ holding your pick, back to ${indicator}`}
               </p>
             )}
           </>
@@ -463,7 +463,7 @@ export function LifeAreaToggle({
               )}
               <label
                 className="flex items-center gap-0.5"
-                title="Minutes a manual pick holds before auto takes back over (5–720)"
+                title="Minutes a manual pick holds before auto takes back over (5 to 720)"
               >
                 <input
                   type="number"

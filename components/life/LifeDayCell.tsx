@@ -36,9 +36,10 @@ export const LifeDayCell = memo(function LifeDayCell({
         "h-[5px] w-[5px] sm:h-1.5 sm:w-1.5",
         state === "future" && "bg-border2/50",
         state === "past" && !mc && "bg-faint2/70",
-        state === "today" && "z-10 h-2 w-2 ring-2 ring-primary ring-offset-1 ring-offset-surface sm:h-2.5 sm:w-2.5",
+        state === "today" &&
+          "z-10 h-2 w-2 ring-2 ring-primary ring-offset-1 ring-offset-surface sm:h-2.5 sm:w-2.5",
         marked && state !== "future" && "ring-1 ring-ink/25",
-        mc && state === "past" && "ring-0"
+        mc && state === "past" && "ring-0",
       )}
       style={mc && state === "past" ? { background: mc } : undefined}
     />

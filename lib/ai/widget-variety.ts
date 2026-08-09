@@ -18,7 +18,12 @@ export function diversifyWidgets(widgets: Widget[]): Widget[] {
         unit: w.unit,
         centerLabel: "",
       };
-    } else if (w.type === "pie" && w.altBar && seen.has("pie") && !seen.has("bar")) {
+    } else if (
+      w.type === "pie" &&
+      w.altBar &&
+      seen.has("pie") &&
+      !seen.has("bar")
+    ) {
       out = {
         type: "bar",
         title: w.title,

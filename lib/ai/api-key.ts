@@ -33,18 +33,18 @@ export type AiCredentials = {
  * the server at a host this repo doesn't name.
  */
 export async function resolveAiCredentials(
-  userId: string
+  userId: string,
 ): Promise<AiCredentials | null> {
   const settings = await getSettings(userId);
   const provider: ProviderId = isProviderId(settings?.aiProvider)
     ? settings.aiProvider
-    : envProvider() ?? DEFAULT_PROVIDER;
+    : (envProvider() ?? DEFAULT_PROVIDER);
   const def = providerDef(provider);
 
   const model = resolveModel(
     provider,
     settings?.aiModel ?? null,
-    process.env.ASSISTANT_MODEL
+    process.env.ASSISTANT_MODEL,
   );
   const baseUrl = providerBaseUrl(provider);
 

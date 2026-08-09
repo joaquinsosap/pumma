@@ -119,7 +119,9 @@ export function contextForMode(mode: "auto" | "answer" | "changeset"): string {
       HYGIENE,
     ].join("\n\n");
   }
-  return [PREAMBLE, ROUTING, ANSWER_RULES, CHANGESET_RULES, HYGIENE].join("\n\n");
+  return [PREAMBLE, ROUTING, ANSWER_RULES, CHANGESET_RULES, HYGIENE].join(
+    "\n\n",
+  );
 }
 
 /** Back-compat for the node reprompt, which is always a changeset. */

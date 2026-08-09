@@ -9,7 +9,7 @@ async function col() {
 }
 
 export async function getSubscriptionByUserId(
-  userId: string
+  userId: string,
 ): Promise<Subscription | null> {
   const c = await col();
   const doc = await c.findOne({ userId });
@@ -19,7 +19,7 @@ export async function getSubscriptionByUserId(
 /** Looked up by provider subscriptionId — subscription-resource webhooks and
  *  license-link dedupe don't carry our userId, only the provider's id. */
 export async function getSubscriptionBySubscriptionId(
-  subscriptionId: string
+  subscriptionId: string,
 ): Promise<Subscription | null> {
   const c = await col();
   const doc = await c.findOne({ subscriptionId });
@@ -28,13 +28,13 @@ export async function getSubscriptionBySubscriptionId(
 
 /** One subscription row per user — webhook upserts keyed by userId. */
 export async function upsertSubscription(
-  doc: Omit<SubscriptionDoc, "_id">
+  doc: Omit<SubscriptionDoc, "_id">,
 ): Promise<Subscription> {
   const c = await col();
   const saved = await c.findOneAndUpdate(
     { userId: doc.userId },
     { $set: doc, $setOnInsert: { _id: newId() } },
-    { upsert: true, returnDocument: "after" }
+    { upsert: true, returnDocument: "after" },
   );
   return toDto(subscriptionSchema.parse(saved));
 }

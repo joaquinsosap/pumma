@@ -3,8 +3,22 @@ import { searchTasks, searchTerms, normalizeSearch } from "@/lib/task-search";
 import type { Task, Tag, Project } from "@/lib/schemas";
 
 const tags: Tag[] = [
-  { id: "t1", userId: "u", name: "gym", color: "#f00", order: 0, createdAt: "" },
-  { id: "t2", userId: "u", name: "work", color: "#00f", order: 1, createdAt: "" },
+  {
+    id: "t1",
+    userId: "u",
+    name: "gym",
+    color: "#f00",
+    order: 0,
+    createdAt: "",
+  },
+  {
+    id: "t2",
+    userId: "u",
+    name: "work",
+    color: "#00f",
+    order: 1,
+    createdAt: "",
+  },
 ] as unknown as Tag[];
 
 const projects: Project[] = [
@@ -96,7 +110,10 @@ describe("searchTasks", () => {
     expect(searchTasks(items, "#gym", ctx).map((t) => t.id)).toEqual(["3"]);
     // "gym" as a bare word would also match a task merely mentioning it.
     const mentions = [...items, task({ id: "7", title: "Cancel gym" })];
-    expect(searchTasks(mentions, "gym", ctx).map((t) => t.id)).toEqual(["3", "7"]);
+    expect(searchTasks(mentions, "gym", ctx).map((t) => t.id)).toEqual([
+      "3",
+      "7",
+    ]);
     expect(searchTasks(mentions, "#gym", ctx).map((t) => t.id)).toEqual(["3"]);
   });
 

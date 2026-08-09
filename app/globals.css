@@ -683,6 +683,34 @@ html {
   }
 }
 
+/* …with one exception, granted deliberately.
+
+   The rule above is the right default: it flattens every transition and
+   keyframe so nothing moves and nothing is left stranded part way. But it is
+   written with `*`, so it also switches off the two effects that are not
+   decoration: the light travelling the capture bar's rim, and the sweep
+   across it. Those say "this field is listening", and with them stopped the
+   bar reads as a screenshot of itself.
+
+   They earn the exception on amplitude. Neither moves anything: no element
+   changes position, nothing grows or lurches, no parallax. It is a hue
+   sliding around a border and an opacity crossing a box, which is the class
+   of motion the preference is least about, and they are slowed to roughly
+   half speed here so they read as ambient rather than active.
+
+   Everything that actually travels stays switched off. */
+@media (prefers-reduced-motion: reduce) {
+  .omni-box-trace::before {
+    animation: omniTraceSpin 3.5s linear infinite !important;
+  }
+  .omni-box-shimmer::before {
+    animation: omniShimmer 5.2s ease-in-out infinite !important;
+  }
+  .omni-box:focus-within .omni-box-scanline::before {
+    animation: omniScan 3.8s ease-in-out infinite !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .ask-shimmer,
   .ask-spinner,

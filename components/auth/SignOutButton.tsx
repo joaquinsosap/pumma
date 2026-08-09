@@ -38,7 +38,7 @@ export function SignOutButton({
         aria-label="Sign out"
         className={cn(
           "flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] text-faint transition-colors hover:bg-hover hover:text-tasks disabled:opacity-50",
-          className
+          className,
         )}
       >
         <LogOut className="h-4 w-4" strokeWidth={2} />
@@ -53,7 +53,7 @@ export function SignOutButton({
       disabled={pending}
       className={cn(
         "flex items-center justify-center gap-2 rounded-lg border border-tasks/30 bg-tasks/[0.06] px-3 py-2 text-[13px] font-semibold text-tasks transition-colors hover:border-tasks/50 hover:bg-tasks/10 disabled:opacity-50",
-        className
+        className,
       )}
     >
       <LogOut className="h-4 w-4" />

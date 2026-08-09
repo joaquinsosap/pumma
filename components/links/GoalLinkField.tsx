@@ -44,7 +44,7 @@ function LinkDot({
         "h-2 w-2 shrink-0",
         shape === "square" && "rounded-[2px]",
         shape === "circle" && "rounded-full",
-        shape === "diamond" && "rotate-45"
+        shape === "diamond" && "rotate-45",
       )}
       style={{ background: color ?? "var(--faint)" }}
     />
@@ -66,7 +66,9 @@ export function GoalLinkField({ goals, value, onChange, className }: Props) {
       {linked ? (
         <span className={chipClass}>
           <LinkDot color="var(--goals)" shape="diamond" />
-          <span className="max-w-[180px] truncate font-medium">{linked.title}</span>
+          <span className="max-w-[180px] truncate font-medium">
+            {linked.title}
+          </span>
           <RemoveButton
             onClick={() => onChange(null)}
             title="Remove goal link"
@@ -118,7 +120,9 @@ export function GoalMultiLinkField({
       {items.map((item) => (
         <span key={item.id} className={chipClass}>
           <LinkDot color={item.color} shape={dotShape} />
-          <span className="max-w-[140px] truncate font-medium">{item.title}</span>
+          <span className="max-w-[140px] truncate font-medium">
+            {item.title}
+          </span>
           <RemoveButton
             onClick={() => onDetach(item.id)}
             title={`Remove ${label.toLowerCase()}`}

@@ -62,7 +62,8 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
         if (json.ok) outcome = json.data;
         else error = json.error;
       } catch {
-        error = "Couldn't reach the assistant. Check your connection and try again.";
+        error =
+          "Couldn't reach the assistant. Check your connection and try again.";
       }
       // Only the newest request may write; a superseded one falls through.
       setState((s) =>
@@ -70,7 +71,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
           ? outcome
             ? { ...s, status: "ready", outcome }
             : { ...s, status: "error", error }
-          : s
+          : s,
       );
     })();
   }, []);

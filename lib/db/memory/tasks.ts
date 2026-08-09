@@ -9,7 +9,10 @@ export async function listTasks(userId: string): Promise<Task[]> {
     .map((t) => toDto(taskSchema.parse(t)));
 }
 
-export async function getTask(userId: string, id: string): Promise<Task | null> {
+export async function getTask(
+  userId: string,
+  id: string,
+): Promise<Task | null> {
   const store = getStore();
   const doc = store.tasks.find((t) => t._id === id && t.userId === userId);
   return doc ? toDto(taskSchema.parse(doc)) : null;
@@ -17,7 +20,7 @@ export async function getTask(userId: string, id: string): Promise<Task | null> 
 
 export async function getTasksByDue(
   userId: string,
-  date: string
+  date: string,
 ): Promise<Task[]> {
   const tasks = await listTasks(userId);
   return tasks.filter((t) => (t.due ?? "").slice(0, 10) === date);
@@ -25,20 +28,20 @@ export async function getTasksByDue(
 
 export async function getCarryoverTasks(
   userId: string,
-  today: string
+  today: string,
 ): Promise<Task[]> {
   const tasks = await listTasks(userId);
   return tasks.filter(
     (t) =>
       t.status !== "done" &&
       (t.due ?? "").slice(0, 10) < today &&
-      (t.due ?? "") !== ""
+      (t.due ?? "") !== "",
   );
 }
 
 export async function getTasksByProject(
   userId: string,
-  projectId: string
+  projectId: string,
 ): Promise<Task[]> {
   const tasks = await listTasks(userId);
   return tasks.filter((t) => t.projectId === projectId);
@@ -54,7 +57,7 @@ export async function insertTask(
     timerStartedAt?: string | null;
     description?: string;
     subtasks?: Subtask[];
-  }
+  },
 ): Promise<Task> {
   const store = getStore();
   const full = {
@@ -72,7 +75,7 @@ export async function insertTask(
 export async function updateTask(
   userId: string,
   id: string,
-  patch: Partial<TaskDoc>
+  patch: Partial<TaskDoc>,
 ): Promise<Task | null> {
   const store = getStore();
   const idx = store.tasks.findIndex((t) => t._id === id && t.userId === userId);
@@ -81,7 +84,9 @@ export async function updateTask(
   return toDto(taskSchema.parse(store.tasks[idx]));
 }
 
-export async function getRunningTimerTask(userId: string): Promise<Task | null> {
+export async function getRunningTimerTask(
+  userId: string,
+): Promise<Task | null> {
   const tasks = await listTasks(userId);
   return tasks.find((t) => t.timerStartedAt) ?? null;
 }
@@ -89,14 +94,14 @@ export async function getRunningTimerTask(userId: string): Promise<Task | null> 
 async function accumulateRunningTime(task: Task): Promise<number> {
   if (!task.timerStartedAt) return task.timeSpentSec;
   const elapsed = Math.floor(
-    (Date.now() - new Date(task.timerStartedAt).getTime()) / 1000
+    (Date.now() - new Date(task.timerStartedAt).getTime()) / 1000,
   );
   return task.timeSpentSec + Math.max(0, elapsed);
 }
 
 export async function stopRunningTimers(
   userId: string,
-  exceptId?: string
+  exceptId?: string,
 ): Promise<void> {
   const tasks = await listTasks(userId);
   for (const task of tasks) {
@@ -111,6 +116,8 @@ export { accumulateRunningTime };
 export async function deleteTask(userId: string, id: string): Promise<boolean> {
   const store = getStore();
   const before = store.tasks.length;
-  store.tasks = store.tasks.filter((t) => !(t._id === id && t.userId === userId));
+  store.tasks = store.tasks.filter(
+    (t) => !(t._id === id && t.userId === userId),
+  );
   return store.tasks.length < before;
 }

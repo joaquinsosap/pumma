@@ -51,8 +51,8 @@ export function TutorialIntro({ onStart }: { onStart: () => void }) {
           Sixty seconds, then it&apos;s yours.
         </h2>
         <p className="m-0 mt-2 text-[13.5px] leading-relaxed text-muted">
-          Six things you need to know: tagging, tasks, the bar up top, how you
-          move around, and the shortcuts. You drive — no checklist of buttons.
+          Tags, tasks, the bar at the top, getting around, shortcuts. Six of
+          them, and you press the keys.
         </p>
 
         <div className="mt-6 grid grid-cols-2 gap-2.5">

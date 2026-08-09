@@ -66,11 +66,14 @@ export function TaskTimer({
             compact ? "h-6 w-6" : "h-7 w-7",
             running
               ? "border-primary bg-primary/20 text-primary shadow-[1px_1px_0_var(--primary)]"
-              : "border-border bg-surface text-muted hover:border-faint hover:bg-surface2"
+              : "border-border bg-surface text-muted hover:border-faint hover:bg-surface2",
           )}
         >
           {running ? (
-            <Square className={cn(compact ? "h-2.5 w-2.5" : "h-3 w-3")} fill="currentColor" />
+            <Square
+              className={cn(compact ? "h-2.5 w-2.5" : "h-3 w-3")}
+              fill="currentColor"
+            />
           ) : (
             <Play className={cn(compact ? "h-2.5 w-2.5" : "h-3 w-3")} />
           )}
@@ -89,7 +92,7 @@ export function TaskTimer({
               ? "border-primary/40 bg-primary/10 font-semibold text-primary"
               : elapsed > 0
                 ? "border-border text-faint"
-                : "border-border text-faint2 max-sm:hidden"
+                : "border-border text-faint2 max-sm:hidden",
           )}
         >
           {running

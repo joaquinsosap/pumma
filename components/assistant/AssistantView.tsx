@@ -44,7 +44,8 @@ export function AssistantView({
   lifeSpanYears,
   aiReady = true,
 }: Props) {
-  const { status, outcome, error, intent, run, flipMode, clear } = useAssistant();
+  const { status, outcome, error, intent, run, flipMode, clear } =
+    useAssistant();
 
   return (
     <>
@@ -62,7 +63,11 @@ export function AssistantView({
         ) : status === "pending" ? (
           <Thinking intent={intent} />
         ) : status === "error" ? (
-          <ErrorState error={error} intent={intent} onRetry={() => intent && run(intent)} />
+          <ErrorState
+            error={error}
+            intent={intent}
+            onRetry={() => intent && run(intent)}
+          />
         ) : status === "ready" && outcome?.kind === "changeset" ? (
           <ChangesetCanvas
             key={intent ?? "changeset"}
@@ -133,14 +138,19 @@ function EmptyState({ onSubmit }: { onSubmit: (text: string) => void }) {
           Ask about your data, or describe what to build.
         </p>
         <p className="m-0 mt-2 text-[13.5px] leading-relaxed text-muted">
-          Use the bar above. I read what&apos;s already in PUMMA; when you ask for
-          structure I propose the shape — the words inside it stay yours.
+          Use the bar above. I read what&apos;s already in PUMMA; when you ask
+          for structure I propose the shape. The words inside it stay yours.
         </p>
       </div>
 
       <div className="mx-auto mt-8 grid w-full max-w-[720px] grid-cols-1 gap-6 sm:grid-cols-2">
         <ExampleColumn label="Ask" examples={ASK_EXAMPLES} onPick={onSubmit} />
-        <ExampleColumn label="Build" examples={BUILD_EXAMPLES} onPick={onSubmit} accent />
+        <ExampleColumn
+          label="Build"
+          examples={BUILD_EXAMPLES}
+          onPick={onSubmit}
+          accent
+        />
       </div>
     </div>
   );
@@ -170,7 +180,7 @@ function ExampleColumn({
             onClick={() => onPick(e)}
             className={cn(
               "rounded-full border bg-surface px-3 py-1.5 text-left text-[12.5px] text-muted hover:text-ink",
-              accent ? "border-primary" : "border-border hover:border-faint2"
+              accent ? "border-primary" : "border-border hover:border-faint2",
             )}
           >
             {e}
@@ -198,7 +208,7 @@ function Thinking({ intent }: { intent: string | null }) {
   useEffect(() => {
     const t = setInterval(
       () => setPhase((n) => Math.min(n + 1, THINK_PHASES.length - 1)),
-      3200
+      3200,
     );
     return () => clearInterval(t);
   }, []);
@@ -206,7 +216,10 @@ function Thinking({ intent }: { intent: string | null }) {
   return (
     <div className="flex flex-1 flex-col gap-6 px-4 pt-8">
       <div className="flex items-start gap-4">
-        <span className="ask-spinner h-11 w-11 shrink-0 rounded-full" aria-hidden />
+        <span
+          className="ask-spinner h-11 w-11 shrink-0 rounded-full"
+          aria-hidden
+        />
         <div className="min-w-0">
           {intent && (
             <p className="m-0 text-[15px] font-semibold leading-snug text-ink">
@@ -221,7 +234,7 @@ function Thinking({ intent }: { intent: string | null }) {
                   "flex items-center gap-2 font-mono text-[11px] uppercase tracking-wider transition-all duration-500",
                   i < phase && "text-faint",
                   i === phase && "text-ink",
-                  i > phase && "h-0 overflow-hidden opacity-0"
+                  i > phase && "h-0 overflow-hidden opacity-0",
                 )}
               >
                 {i < phase ? (
@@ -238,7 +251,10 @@ function Thinking({ intent }: { intent: string | null }) {
       </div>
 
       {/* Ghost dashboard: the answer will land as cards like these. */}
-      <div className="grid max-w-3xl grid-cols-1 gap-3 md:grid-cols-3" aria-hidden>
+      <div
+        className="grid max-w-3xl grid-cols-1 gap-3 md:grid-cols-3"
+        aria-hidden
+      >
         <GhostCard delay={0}>
           <span className="ask-shimmer block h-8 w-20 rounded-md" />
           <span className="ask-shimmer mt-2 block h-2.5 w-24 rounded" />
@@ -261,7 +277,7 @@ function Thinking({ intent }: { intent: string | null }) {
       </div>
 
       <p className="m-0 font-mono text-[10px] text-faint">
-        usually 3–15s — feel free to keep working, I&apos;ll be here
+        usually 3 to 15s, so feel free to keep working. I&apos;ll be here
       </p>
     </div>
   );
@@ -280,7 +296,7 @@ function GhostCard({
     <div
       className={cn(
         "ask-card-in rounded-[12px] border border-border bg-surface p-3.5",
-        className
+        className,
       )}
       style={{ animationDelay: `${delay}ms` }}
     >
@@ -292,8 +308,20 @@ function GhostCard({
 
 function Tick() {
   return (
-    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--habits)" strokeWidth="2" aria-hidden>
-      <path d="M3 8.5 6.5 12 13 4.5" strokeLinecap="round" strokeLinejoin="round" />
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="var(--habits)"
+      strokeWidth="2"
+      aria-hidden
+    >
+      <path
+        d="M3 8.5 6.5 12 13 4.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -350,7 +378,7 @@ function ApiKeyNeeded() {
         The assistant has no key to call.
       </div>
       <p className="mt-1.5 max-w-md text-[13px] leading-relaxed text-muted">
-        Pick an AI provider and paste your own key — everything else in the app
+        Pick an AI provider and paste your own key. Everything else in the app
         works without one; the assistant is the only part that doesn&apos;t.
       </p>
       <Link

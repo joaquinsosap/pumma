@@ -10,7 +10,7 @@ export async function getSettings(userId: string): Promise<Settings | null> {
 
 /** Created once at signup (auth bootstrap). Idempotent per user. */
 export async function insertSettings(
-  doc: Omit<SettingsDoc, "_id"> & { _id?: string }
+  doc: Omit<SettingsDoc, "_id"> & { _id?: string },
 ): Promise<Settings> {
   const store = getStore();
   const existing = store.settings.find((s) => s.userId === doc.userId);
@@ -22,7 +22,7 @@ export async function insertSettings(
 
 export async function updateSettings(
   userId: string,
-  patch: Partial<SettingsDoc>
+  patch: Partial<SettingsDoc>,
 ): Promise<Settings | null> {
   const store = getStore();
   const idx = store.settings.findIndex((s) => s.userId === userId);

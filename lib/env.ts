@@ -39,7 +39,7 @@ const envSchema = z
         code: "custom",
         message:
           "DATA_ENCRYPTION_KEY is required when DATA_SOURCE=mongodb " +
-          "(generate: openssl rand -base64 32). Back it up before first use — " +
+          "(generate: openssl rand -base64 32). Back it up before first use, " +
           "losing it means losing every user's content.",
         input: ctx.value,
         path: ["DATA_ENCRYPTION_KEY"],
@@ -79,7 +79,7 @@ export function validateEnv(): void {
   }
   if (!parsed.data.ANTHROPIC_API_KEY) {
     console.warn(
-      "[env] ANTHROPIC_API_KEY is not set — AI features (Plan/Ask) will be disabled."
+      "[env] ANTHROPIC_API_KEY is not set, so AI features (Plan/Ask) will be disabled.",
     );
   }
 }

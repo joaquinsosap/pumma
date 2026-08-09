@@ -53,14 +53,14 @@ export function PlanGraph({ plan, existing }: Props) {
   const nodeRefs = useRef<Map<string, HTMLElement>>(new Map());
   const [lines, setLines] = useState<Line[]>([]);
   const [collapsed, setCollapsed] = useState<Set<string>>(() =>
-    initialCollapsed(plan)
+    initialCollapsed(plan),
   );
 
   useEffect(() => setCollapsed(initialCollapsed(plan)), [plan]);
 
   const projectKeys = useMemo(
     () => allProjectKeys(plan, existing),
-    [plan, existing]
+    [plan, existing],
   );
 
   const toggle = (key: string) =>
@@ -82,7 +82,7 @@ export function PlanGraph({ plan, existing }: Props) {
         return next;
       });
     },
-    [projectKeys]
+    [projectKeys],
   );
 
   const setNode = useCallback(
@@ -90,13 +90,13 @@ export function PlanGraph({ plan, existing }: Props) {
       if (el) nodeRefs.current.set(key, el);
       else nodeRefs.current.delete(key);
     },
-    []
+    [],
   );
 
   // --- Nodes (refId for new, real id for existing) ---
   const existingGoalTitle = new Map(existing.goals.map((g) => [g.id, g.title]));
   const existingProjectTitle = new Map(
-    existing.projects.map((p) => [p.id, p.title])
+    existing.projects.map((p) => [p.id, p.title]),
   );
 
   const goalNodes = new Map<string, { title: string; existing: boolean }>();
@@ -109,7 +109,10 @@ export function PlanGraph({ plan, existing }: Props) {
 
   const noteGoal = (ref?: string | null) => {
     if (ref && !goalNodes.has(ref) && existingGoalTitle.has(ref))
-      goalNodes.set(ref, { title: existingGoalTitle.get(ref)!, existing: true });
+      goalNodes.set(ref, {
+        title: existingGoalTitle.get(ref)!,
+        existing: true,
+      });
   };
   const noteProject = (ref?: string | null) => {
     if (ref && !projectNodes.has(ref) && existingProjectTitle.has(ref))
@@ -232,7 +235,10 @@ export function PlanGraph({ plan, existing }: Props) {
   }
 
   const hasGraph =
-    goalNodes.size + projectNodes.size + plan.habits.length + plan.tasks.length >
+    goalNodes.size +
+      projectNodes.size +
+      plan.habits.length +
+      plan.tasks.length >
     0;
 
   return (
@@ -300,7 +306,9 @@ export function PlanGraph({ plan, existing }: Props) {
                       title={p.title}
                       meta={p.lifeArea}
                       accent="primary"
-                      childCount={tasksByContainer.get(`project:${p.refId}`)?.length ?? 0}
+                      childCount={
+                        tasksByContainer.get(`project:${p.refId}`)?.length ?? 0
+                      }
                       collapsed={collapsed.has(`project:${p.refId}`)}
                       taskToggle
                       onToggle={
@@ -311,7 +319,7 @@ export function PlanGraph({ plan, existing }: Props) {
                       bestPractices={p.bestPractices ?? undefined}
                       description={p.description ?? undefined}
                     />
-                  ) : null
+                  ) : null,
                 )}
                 {[...projectNodes]
                   .filter(([, n]) => n.existing)
@@ -322,7 +330,9 @@ export function PlanGraph({ plan, existing }: Props) {
                       title={n.title}
                       accent="primary"
                       existing
-                      childCount={tasksByContainer.get(`project:${key}`)?.length ?? 0}
+                      childCount={
+                        tasksByContainer.get(`project:${key}`)?.length ?? 0
+                      }
                       collapsed={collapsed.has(`project:${key}`)}
                       taskToggle
                       onToggle={
@@ -341,13 +351,16 @@ export function PlanGraph({ plan, existing }: Props) {
                       meta={h.frequency}
                       accent="habits"
                     />
-                  ) : null
+                  ) : null,
                 )}
               </Column>
 
               <Column label="Tasks" dot="var(--tasks)">
                 {taskGroups.map((group) => (
-                  <div key={group.key} className="flex flex-col gap-4 max-lg:gap-2.5">
+                  <div
+                    key={group.key}
+                    className="flex flex-col gap-4 max-lg:gap-2.5"
+                  >
                     {/* Phone loses the connector arrows — say the linkage instead. */}
                     {group.key !== "none" && (
                       <div className="font-mono text-[9px] uppercase tracking-wide text-faint lg:hidden">
@@ -468,8 +481,10 @@ function ContainerCard({
       ref={nodeRef}
       className={cn(
         "rounded-[11px] border bg-surface p-3.5 shadow-sm transition-colors",
-        existing ? "border-dashed border-faint2/70 opacity-80" : "border-border",
-        taskToggle && expanded && "border-primary/50 bg-primary/[0.05]"
+        existing
+          ? "border-dashed border-faint2/70 opacity-80"
+          : "border-border",
+        taskToggle && expanded && "border-primary/50 bg-primary/[0.05]",
       )}
     >
       <div className="flex items-start gap-2">
@@ -489,7 +504,9 @@ function ContainerCard({
         )}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <div className="text-[13px] font-semibold leading-snug">{title}</div>
+            <div className="text-[13px] font-semibold leading-snug">
+              {title}
+            </div>
             {existing && (
               <span className="shrink-0 rounded bg-surface2 px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-wide text-faint">
                 existing
@@ -500,7 +517,7 @@ function ContainerCard({
             <div
               className={cn(
                 "mt-1 font-mono text-[10px] lowercase",
-                ACCENT[accent] ?? "text-muted"
+                ACCENT[accent] ?? "text-muted",
               )}
             >
               {meta}
@@ -534,7 +551,7 @@ function ContainerCard({
                 "mt-2.5 flex w-full items-center justify-between gap-2 rounded-lg border px-2.5 py-2 text-left transition-colors",
                 expanded
                   ? "border-primary/40 bg-primary/10 hover:bg-primary/[0.14]"
-                  : "border-border bg-surface2 hover:border-faint2 hover:bg-hover"
+                  : "border-border bg-surface2 hover:border-faint2 hover:bg-hover",
               )}
               aria-expanded={expanded}
               aria-label={
@@ -576,10 +593,18 @@ function SimpleNode({
   accent: string;
 }) {
   return (
-    <div ref={nodeRef} className="rounded-[11px] border border-border bg-surface p-3.5 shadow-sm">
+    <div
+      ref={nodeRef}
+      className="rounded-[11px] border border-border bg-surface p-3.5 shadow-sm"
+    >
       <div className="text-[13px] font-semibold leading-snug">{title}</div>
       {meta && (
-        <div className={cn("mt-1 font-mono text-[10px] lowercase", ACCENT[accent] ?? "text-muted")}>
+        <div
+          className={cn(
+            "mt-1 font-mono text-[10px] lowercase",
+            ACCENT[accent] ?? "text-muted",
+          )}
+        >
           {meta}
         </div>
       )}
@@ -596,7 +621,10 @@ function TaskCard({
 }) {
   const subtasks = task.subtasks ?? [];
   return (
-    <div ref={nodeRef} className="rounded-[11px] border border-border bg-surface p-3.5 shadow-sm">
+    <div
+      ref={nodeRef}
+      className="rounded-[11px] border border-border bg-surface p-3.5 shadow-sm"
+    >
       <div className="text-[13px] font-semibold leading-snug">{task.title}</div>
       <div className="mt-1 font-mono text-[10px] lowercase text-tasks">
         {task.priority}

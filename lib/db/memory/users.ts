@@ -19,7 +19,7 @@ export async function insertUser(doc: UserDoc): Promise<User> {
 
 export async function updateUser(
   userId: string,
-  patch: Partial<Pick<UserDoc, "name" | "email">>
+  patch: Partial<Pick<UserDoc, "name" | "email">>,
 ): Promise<User | null> {
   const store = getStore();
   const idx = store.users.findIndex((u) => u._id === userId);

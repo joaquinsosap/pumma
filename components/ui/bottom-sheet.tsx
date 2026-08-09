@@ -25,7 +25,11 @@ export function BottomSheet({
   const [snap, setSnap] = useState<"peek" | "full">(initialSnap);
   // While the handle is being dragged, the sheet height tracks the finger.
   const [dragHeight, setDragHeight] = useState<number | null>(null);
-  const drag = useRef<{ startY: number; startHeight: number; last: number } | null>(null);
+  const drag = useRef<{
+    startY: number;
+    startHeight: number;
+    last: number;
+  } | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
 
   const peekPx = () => window.innerHeight * 0.55;
@@ -92,7 +96,10 @@ export function BottomSheet({
     if (!drag.current) return;
     const next = Math.min(
       fullPx(),
-      Math.max(90, drag.current.startHeight - (e.clientY - drag.current.startY))
+      Math.max(
+        90,
+        drag.current.startHeight - (e.clientY - drag.current.startY),
+      ),
     );
     drag.current.last = next;
     setDragHeight(next);
@@ -125,7 +132,7 @@ export function BottomSheet({
         onFocusCapture={onFocusCapture}
         className={cn(
           "pumma-floating animate-pumma-sheet-up absolute inset-x-0 bottom-0 flex flex-col overflow-hidden rounded-t-2xl border border-b-0 border-border bg-background shadow-[0_-4px_24px_rgba(0,0,0,0.18)]",
-          dragHeight === null && "transition-[height] duration-200"
+          dragHeight === null && "transition-[height] duration-200",
         )}
         style={{
           height:
@@ -155,7 +162,7 @@ export function BottomSheet({
             "min-h-0 flex-1 overscroll-contain",
             // At peek the sheet itself is the gesture surface — content only
             // scrolls once the sheet is fully grown.
-            snap === "full" ? "overflow-y-auto" : "overflow-hidden"
+            snap === "full" ? "overflow-y-auto" : "overflow-hidden",
           )}
         >
           {children}

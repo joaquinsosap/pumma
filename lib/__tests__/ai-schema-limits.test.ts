@@ -43,7 +43,12 @@ describe("the assistant schema as a tool input_schema", () => {
         kind: "changeset",
         summary: "Set up and clean up",
         ops: [
-          { op: "create", entity: "project", refId: "p1", fields: { title: "Kitchen" } },
+          {
+            op: "create",
+            entity: "project",
+            refId: "p1",
+            fields: { title: "Kitchen" },
+          },
           { op: "delete", entity: "habit", id: "abc", label: "Old habit" },
         ],
       },
@@ -56,7 +61,16 @@ describe("the assistant schema as a tool input_schema", () => {
       response: {
         kind: "answer",
         answer: "You have 7 open tasks.",
-        widgets: [{ type: "stat", title: "Open", span: "1", value: "7", label: "", hint: "" }],
+        widgets: [
+          {
+            type: "stat",
+            title: "Open",
+            span: "1",
+            value: "7",
+            label: "",
+            hint: "",
+          },
+        ],
       },
     });
     expect(parsed.success).toBe(true);

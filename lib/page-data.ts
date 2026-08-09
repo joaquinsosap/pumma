@@ -5,9 +5,7 @@ type PageSearchParams = {
   life?: string;
 };
 
-export async function loadPageData(
-  searchParams: Promise<PageSearchParams>
-) {
+export async function loadPageData(searchParams: Promise<PageSearchParams>) {
   const { life } = await searchParams;
   const lifeView = await resolveLifeView(life);
   return loadAppData({ lifeView });

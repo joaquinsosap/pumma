@@ -153,7 +153,9 @@ describe("delete cascades unlink every referencer", () => {
     const { habit } = await buildLinkedGraph();
     await deleteHabit(userId, habit.id);
     expect(danglers()).toEqual([]);
-    expect(getStore().habitEntries.some((e) => e.habitId === habit.id)).toBe(false);
+    expect(getStore().habitEntries.some((e) => e.habitId === habit.id)).toBe(
+      false,
+    );
   });
 
   it("deleteTag detaches from tasks and notes", async () => {
@@ -167,7 +169,10 @@ describe("delete cascades unlink every referencer", () => {
 });
 
 describe("deletion is safe in any order", () => {
-  type Step = [name: string, run: (g: Awaited<ReturnType<typeof buildLinkedGraph>>) => Promise<unknown>];
+  type Step = [
+    name: string,
+    run: (g: Awaited<ReturnType<typeof buildLinkedGraph>>) => Promise<unknown>,
+  ];
   const steps: Step[] = [
     ["goal", (g) => deleteGoal(userId, g.goal.id)],
     ["project", (g) => deleteProject(userId, g.project.id)],
@@ -179,10 +184,9 @@ describe("deletion is safe in any order", () => {
   function permutations<T>(items: T[]): T[][] {
     if (items.length <= 1) return [items];
     return items.flatMap((item, i) =>
-      permutations([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [
-        item,
-        ...rest,
-      ])
+      permutations([...items.slice(0, i), ...items.slice(i + 1)]).map(
+        (rest) => [item, ...rest],
+      ),
     );
   }
 
@@ -195,7 +199,7 @@ describe("deletion is safe in any order", () => {
         const dead = danglers();
         expect(
           dead,
-          `order [${order.map(([n]) => n).join(" → ")}] after deleting ${name}`
+          `order [${order.map(([n]) => n).join(" → ")}] after deleting ${name}`,
         ).toEqual([]);
       }
     }

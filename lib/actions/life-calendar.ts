@@ -17,7 +17,7 @@ const upsertSchema = z.object({
 });
 
 export async function saveLifeDay(
-  input: z.infer<typeof upsertSchema>
+  input: z.infer<typeof upsertSchema>,
 ): Promise<ActionResult> {
   const parsed = upsertSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -40,7 +40,7 @@ const weekUpsertSchema = z.object({
 });
 
 export async function saveLifeWeek(
-  input: z.infer<typeof weekUpsertSchema>
+  input: z.infer<typeof weekUpsertSchema>,
 ): Promise<ActionResult> {
   const parsed = weekUpsertSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -51,7 +51,7 @@ export async function saveLifeWeek(
   if (settings?.birthDate) {
     const grid = buildLifeWeeks(
       settings.birthDate,
-      settings.lifeSpanYears ?? LIFE_SPAN_MAX
+      settings.lifeSpanYears ?? LIFE_SPAN_MAX,
     );
     weekStart = resolveWeekSlotStart(weekStart, grid);
     const slot = grid.find((w) => w.weekStart === weekStart);

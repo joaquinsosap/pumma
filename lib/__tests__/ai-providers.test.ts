@@ -28,7 +28,7 @@ describe("the provider registry", () => {
       // Ollama is the one local entry; everything else must be https.
       expect(
         url.protocol === "https:" || url.hostname === "localhost",
-        `${def.id} → ${def.baseUrl}`
+        `${def.id} → ${def.baseUrl}`,
       ).toBe(true);
     }
   });
@@ -68,24 +68,26 @@ describe("resolveModel", () => {
   it("falls back to the instance default, then the provider's", () => {
     expect(resolveModel("openai", null, "env-model")).toBe("env-model");
     expect(resolveModel("openai", null, undefined)).toBe(
-      PROVIDERS.openai.defaultModel
+      PROVIDERS.openai.defaultModel,
     );
   });
 
   it("treats whitespace as unset", () => {
-    expect(resolveModel("openai", "   ", null)).toBe(PROVIDERS.openai.defaultModel);
+    expect(resolveModel("openai", "   ", null)).toBe(
+      PROVIDERS.openai.defaultModel,
+    );
   });
 });
 
 describe("providerBaseUrl", () => {
   it("lets the operator move Ollama, and nobody move the rest", () => {
-    expect(providerBaseUrl("ollama", { OLLAMA_BASE_URL: "http://box:11434/v1" })).toBe(
-      "http://box:11434/v1"
-    );
+    expect(
+      providerBaseUrl("ollama", { OLLAMA_BASE_URL: "http://box:11434/v1" }),
+    ).toBe("http://box:11434/v1");
     expect(providerBaseUrl("ollama", {})).toBe(PROVIDERS.ollama.baseUrl);
-    expect(providerBaseUrl("openrouter", { OLLAMA_BASE_URL: "http://evil" })).toBe(
-      PROVIDERS.openrouter.baseUrl
-    );
+    expect(
+      providerBaseUrl("openrouter", { OLLAMA_BASE_URL: "http://evil" }),
+    ).toBe(PROVIDERS.openrouter.baseUrl);
   });
 
   it("has nothing to say about the native SDKs", () => {

@@ -4,10 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Sparkles } from "@/components/icons";
 import { toast } from "sonner";
-import {
-  cleanUnusedTagsAction,
-  restoreTagsAction,
-} from "@/lib/actions/tags";
+import { cleanUnusedTagsAction, restoreTagsAction } from "@/lib/actions/tags";
 import { cn } from "@/lib/utils";
 
 /**
@@ -50,7 +47,7 @@ export function CleanTagsButton({ className }: { className?: string }) {
                 },
               }
             : undefined,
-        }
+        },
       );
       router.refresh();
     } finally {
@@ -65,7 +62,7 @@ export function CleanTagsButton({ className }: { className?: string }) {
       disabled={pending}
       className={cn(
         "flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[13px] font-semibold text-ink transition-colors hover:border-faint hover:bg-hover disabled:opacity-50",
-        className
+        className,
       )}
     >
       <Sparkles className="h-3.5 w-3.5" strokeWidth={2.2} />

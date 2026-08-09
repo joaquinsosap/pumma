@@ -24,9 +24,9 @@ const ROW_LINK =
 const SERIES_COLORS = [
   "oklch(0.58 0.14 245)", // projects blue
   "oklch(0.58 0.17 300)", // goals purple
-  "oklch(0.6 0.13 155)",  // habits green
-  "oklch(0.7 0.12 70)",   // notes amber
-  "oklch(0.64 0.18 25)",  // tasks red
+  "oklch(0.6 0.13 155)", // habits green
+  "oklch(0.7 0.12 70)", // notes amber
+  "oklch(0.64 0.18 25)", // tasks red
   "oklch(0.55 0.16 274)", // primary indigo
 ];
 
@@ -44,13 +44,18 @@ export function AskDashboard({
   return (
     <div>
       {!hideAnswer && (
-        <p className="mb-4 text-[14px] leading-relaxed text-ink">{result.answer}</p>
+        <p className="mb-4 text-[14px] leading-relaxed text-ink">
+          {result.answer}
+        </p>
       )}
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
         {widgets.map((w, i) => (
           <div
             key={i}
-            className={cn("ask-card-in", SPAN[Number(w.span)] ?? "md:col-span-1")}
+            className={cn(
+              "ask-card-in",
+              SPAN[Number(w.span)] ?? "md:col-span-1",
+            )}
             style={{ animationDelay: `${i * 90}ms` }}
           >
             <WidgetCard widget={w} index={i} />
@@ -58,7 +63,8 @@ export function AskDashboard({
         ))}
       </div>
       <div className="mt-4 font-mono text-[10px] text-faint">
-        analyzed {result.dataMode === "full" ? "your full data" : "your recent data"}
+        analyzed{" "}
+        {result.dataMode === "full" ? "your full data" : "your recent data"}
       </div>
     </div>
   );
@@ -105,7 +111,9 @@ function FocusRow({
     <>
       <span className="min-w-0 flex-1 truncate text-[13px]">{label}</span>
       {sublabel ? (
-        <span className="shrink-0 font-mono text-[10px] text-faint">{sublabel}</span>
+        <span className="shrink-0 font-mono text-[10px] text-faint">
+          {sublabel}
+        </span>
       ) : null}
     </>
   );
@@ -119,7 +127,12 @@ function FocusRow({
   }
 
   return (
-    <div className={cn("flex w-full items-center gap-2 px-1 py-1.5 -mx-1 text-ink", className)}>
+    <div
+      className={cn(
+        "flex w-full items-center gap-2 px-1 py-1.5 -mx-1 text-ink",
+        className,
+      )}
+    >
       {content}
     </div>
   );
@@ -132,7 +145,7 @@ function FocusRow({
 function useCountUp(value: string): string {
   const match = value.match(/-?\d+(?:\.\d+)?/);
   const [display, setDisplay] = useState(() =>
-    match ? value.replace(match[0], "0") : value
+    match ? value.replace(match[0], "0") : value,
   );
   useEffect(() => {
     const m = value.match(/-?\d+(?:\.\d+)?/);
@@ -157,7 +170,13 @@ function useCountUp(value: string): string {
   return display;
 }
 
-function StatCard({ widget, index }: { widget: Extract<Widget, { type: "stat" }>; index: number }) {
+function StatCard({
+  widget,
+  index,
+}: {
+  widget: Extract<Widget, { type: "stat" }>;
+  index: number;
+}) {
   const display = useCountUp(widget.value);
   const color = seriesColor(index);
   return (
@@ -173,7 +192,9 @@ function StatCard({ widget, index }: { widget: Extract<Widget, { type: "stat" }>
           <div className="mt-1.5 text-[12px] text-muted">{widget.label}</div>
         )}
         {widget.hint && (
-          <div className="mt-0.5 font-mono text-[10px] text-faint">{widget.hint}</div>
+          <div className="mt-0.5 font-mono text-[10px] text-faint">
+            {widget.hint}
+          </div>
         )}
       </div>
     </Card>
@@ -193,7 +214,12 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
             {widget.series.map((s, i) => {
               const color = seriesColor(i);
               return (
-                <FocusRow key={i} href={s.href} label={s.label} className="gap-2">
+                <FocusRow
+                  key={i}
+                  href={s.href}
+                  label={s.label}
+                  className="gap-2"
+                >
                   <div className="w-24 shrink-0 truncate text-[11.5px] text-muted">
                     {s.label}
                   </div>
@@ -209,7 +235,9 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
                   </div>
                   <div className="w-12 shrink-0 text-right font-mono text-[11px] text-ink">
                     {s.value}
-                    {widget.unit ? <span className="text-faint">{widget.unit}</span> : null}
+                    {widget.unit ? (
+                      <span className="text-faint">{widget.unit}</span>
+                    ) : null}
                   </div>
                 </FocusRow>
               );
@@ -229,7 +257,11 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
                 className="ask-fade-in"
                 style={{ ["--ask-delay" as string]: `${i * 0.07}s` }}
               >
-                <FocusRow href={item.href} label={item.label} sublabel={item.sublabel} />
+                <FocusRow
+                  href={item.href}
+                  label={item.label}
+                  sublabel={item.sublabel}
+                />
               </li>
             ))}
           </ul>
@@ -268,7 +300,10 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
                     style={{ ["--ask-delay" as string]: `${ri * 0.06}s` }}
                   >
                     {row.map((cell, ci) => (
-                      <td key={ci} className="border-b border-border2 px-2 py-1 text-ink">
+                      <td
+                        key={ci}
+                        className="border-b border-border2 px-2 py-1 text-ink"
+                      >
                         {cell}
                       </td>
                     ))}
@@ -283,7 +318,7 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
     case "pie": {
       const total = Math.max(
         1,
-        widget.slices.reduce((sum, s) => sum + s.value, 0)
+        widget.slices.reduce((sum, s) => sum + s.value, 0),
       );
       // stroke-dasharray donut: 15.9 radius → circumference 100, so dash
       // lengths are simply percentages. Slices sweep open in turn (.ask-arc).
@@ -297,8 +332,21 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
       return (
         <Card title={widget.title}>
           <div className="flex flex-wrap items-center gap-4">
-            <svg width="108" height="108" viewBox="0 0 42 42" role="img" aria-label={widget.title}>
-              <circle cx="21" cy="21" r="15.9" fill="none" stroke="var(--border)" strokeWidth="5.5" />
+            <svg
+              width="108"
+              height="108"
+              viewBox="0 0 42 42"
+              role="img"
+              aria-label={widget.title}
+            >
+              <circle
+                cx="21"
+                cy="21"
+                r="15.9"
+                fill="none"
+                stroke="var(--border)"
+                strokeWidth="5.5"
+              />
               {arcs.map((a, i) => (
                 <circle
                   key={i}
@@ -332,7 +380,12 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
             </svg>
             <div className="flex min-w-[140px] flex-1 flex-col gap-1.5">
               {arcs.map((a, i) => (
-                <FocusRow key={i} href={a.slice.href} label={a.slice.label} className="gap-2">
+                <FocusRow
+                  key={i}
+                  href={a.slice.href}
+                  label={a.slice.label}
+                  className="gap-2"
+                >
                   <i
                     className="h-2 w-2 shrink-0 rounded-[2px]"
                     style={{ background: a.color }}
@@ -367,7 +420,8 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
       const color = seriesColor(index);
       const gradId = `ask-line-${index}`;
       const xy = points.map((p, i) => {
-        const x = points.length === 1 ? w / 2 : 4 + (i * (w - 8)) / (points.length - 1);
+        const x =
+          points.length === 1 ? w / 2 : 4 + (i * (w - 8)) / (points.length - 1);
         const y = 10 + (1 - (p.value - min) / range) * (h - 30);
         return [x, y] as const;
       });
@@ -393,7 +447,14 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
                 <stop offset="100%" stopColor={color} stopOpacity="0" />
               </linearGradient>
             </defs>
-            <line x1="0" y1={h - 10} x2={w} y2={h - 10} stroke="var(--border)" strokeWidth="1" />
+            <line
+              x1="0"
+              y1={h - 10}
+              x2={w}
+              y2={h - 10}
+              stroke="var(--border)"
+              strokeWidth="1"
+            />
             <polygon
               points={area}
               fill={`url(#${gradId})`}
@@ -430,7 +491,9 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
             <span>{points.at(-1)!.label}</span>
           </div>
           {widget.unit && (
-            <div className="mt-1 font-mono text-[10px] text-faint">{widget.unit}</div>
+            <div className="mt-1 font-mono text-[10px] text-faint">
+              {widget.unit}
+            </div>
           )}
         </Card>
       );
@@ -444,11 +507,18 @@ function WidgetCard({ widget, index }: { widget: Widget; index: number }) {
               const pct = Math.min(100, Math.max(0, row.percent));
               const color = seriesColor(i);
               return (
-                <FocusRow key={i} href={row.href} label={row.label} className="block">
+                <FocusRow
+                  key={i}
+                  href={row.href}
+                  label={row.label}
+                  className="block"
+                >
                   <div className="w-full">
                     <div className="mb-1.5 flex justify-between text-[12px]">
                       <span className="truncate text-ink">{row.label}</span>
-                      <span className="font-mono text-muted">{Math.round(row.percent)}%</span>
+                      <span className="font-mono text-muted">
+                        {Math.round(row.percent)}%
+                      </span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-border">
                       <span
@@ -516,7 +586,10 @@ function MonthCalendar({
       </div>
       <div className="grid grid-cols-7 gap-1">
         {DOW.map((d, i) => (
-          <div key={`h${i}`} className="text-center font-mono text-[8px] text-faint">
+          <div
+            key={`h${i}`}
+            className="text-center font-mono text-[8px] text-faint"
+          >
             {d}
           </div>
         ))}
@@ -529,13 +602,14 @@ function MonthCalendar({
               title={c.mark?.label ?? undefined}
               className={cn(
                 "flex aspect-square items-center justify-center rounded-[4px] text-[10px]",
-                c.mark ? "ask-pop-in text-white" : "bg-surface2 text-faint"
+                c.mark ? "ask-pop-in text-white" : "bg-surface2 text-faint",
               )}
               style={
                 c.mark
                   ? {
                       background: `color-mix(in oklch, var(--habits) ${Math.round(
-                        Math.max(0.15, Math.min(1, c.mark.intensity ?? 1)) * 100
+                        Math.max(0.15, Math.min(1, c.mark.intensity ?? 1)) *
+                          100,
                       )}%, var(--surface2))`,
                       ["--ask-delay" as string]: `${marked[c.day - 1] * 0.04}s`,
                     }
@@ -544,7 +618,7 @@ function MonthCalendar({
             >
               {c.day}
             </div>
-          )
+          ),
         )}
       </div>
     </div>

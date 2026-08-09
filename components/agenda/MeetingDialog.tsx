@@ -173,7 +173,9 @@ export function MeetingDialog({
         toast.error(res.error ?? "Could not remove the meeting");
         return;
       }
-      toast.success(scope === "series" ? "Meeting deleted" : "Occurrence removed");
+      toast.success(
+        scope === "series" ? "Meeting deleted" : "Occurrence removed",
+      );
       onOpenChange(false);
     });
   };
@@ -248,10 +250,12 @@ export function MeetingDialog({
                     "rounded-lg border-2 px-2.5 py-1 font-mono text-[11px] font-semibold transition-all active:scale-95",
                     duration === d
                       ? "border-primary bg-primary/12 text-primary"
-                      : "border-border bg-surface text-muted hover:border-faint"
+                      : "border-border bg-surface text-muted hover:border-faint",
                   )}
                 >
-                  {d >= 60 ? `${d / 60}h${d % 60 ? ` ${d % 60}m` : ""}` : `${d}m`}
+                  {d >= 60
+                    ? `${d / 60}h${d % 60 ? ` ${d % 60}m` : ""}`
+                    : `${d}m`}
                 </button>
               ))}
             </div>
@@ -274,7 +278,7 @@ export function MeetingDialog({
                     "rounded-lg border-2 py-1.5 text-[11px] font-semibold transition-all active:scale-95",
                     freq === f.key
                       ? "border-primary bg-primary/12 text-primary"
-                      : "border-border bg-surface text-muted hover:border-faint"
+                      : "border-border bg-surface text-muted hover:border-faint",
                   )}
                 >
                   {f.label}
@@ -327,7 +331,7 @@ export function MeetingDialog({
                               setByWeekday((prev) =>
                                 prev.includes(d.v)
                                   ? prev.filter((x) => x !== d.v)
-                                  : [...prev, d.v]
+                                  : [...prev, d.v],
                               )
                             }
                             disabled={pending}
@@ -336,7 +340,7 @@ export function MeetingDialog({
                               "h-8 flex-1 rounded-lg border-2 text-[11px] font-bold transition-all active:scale-95",
                               on
                                 ? "border-primary bg-primary/12 text-primary"
-                                : "border-border bg-surface text-muted hover:border-faint"
+                                : "border-border bg-surface text-muted hover:border-faint",
                             )}
                           >
                             {d.l}
@@ -371,7 +375,7 @@ export function MeetingDialog({
                           "rounded-lg border-2 py-1.5 text-[11px] font-semibold transition-all active:scale-95",
                           endMode === key
                             ? "border-primary bg-primary/12 text-primary"
-                            : "border-border bg-surface text-muted hover:border-faint"
+                            : "border-border bg-surface text-muted hover:border-faint",
                         )}
                       >
                         {label}
@@ -403,7 +407,9 @@ export function MeetingDialog({
                         aria-label="Number of occurrences"
                         className="w-20 rounded-lg border border-border bg-background px-2 py-1 text-center font-mono text-[12px] text-ink outline-none focus:border-faint"
                       />
-                      <span className="text-[12px] text-muted">occurrences</span>
+                      <span className="text-[12px] text-muted">
+                        occurrences
+                      </span>
                     </div>
                   )}
                 </div>
@@ -437,7 +443,9 @@ export function MeetingDialog({
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
-                onClick={() => remove(meeting?.recurrence ? "occurrence" : "series")}
+                onClick={() =>
+                  remove(meeting?.recurrence ? "occurrence" : "series")
+                }
                 disabled={pending}
                 title={
                   meeting?.recurrence

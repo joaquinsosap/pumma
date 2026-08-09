@@ -53,7 +53,9 @@ export function SettingsNumberField({
             if (next !== value) onSave(next);
           }}
         />
-        <span className="shrink-0 font-mono text-[11px] text-faint">{suffix}</span>
+        <span className="shrink-0 font-mono text-[11px] text-faint">
+          {suffix}
+        </span>
       </div>
       {hint ? <p className="mt-1 text-[11px] text-faint">{hint}</p> : null}
     </label>

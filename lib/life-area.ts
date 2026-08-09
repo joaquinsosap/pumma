@@ -19,11 +19,13 @@ export const parseLifeArea = parseLifeView;
 
 export function filterByLifeView<T extends { lifeArea: LifeArea | "both" }>(
   items: T[],
-  view: LifeView
+  view: LifeView,
 ): T[] {
   if (view === "both") return items;
   // An item tagged lifeArea "both" (tasks/notes only) shows in every view.
-  return items.filter((item) => item.lifeArea === view || item.lifeArea === "both");
+  return items.filter(
+    (item) => item.lifeArea === view || item.lifeArea === "both",
+  );
 }
 
 /** @deprecated use filterByLifeView */

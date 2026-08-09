@@ -1,5 +1,9 @@
 import { getDb } from "@/lib/mongodb";
-import { decryptAllFor, decryptFor, encryptFor } from "@/lib/db/mongo/encrypted";
+import {
+  decryptAllFor,
+  decryptFor,
+  encryptFor,
+} from "@/lib/db/mongo/encrypted";
 import { newId } from "@/lib/store/memory";
 import { toDto, type Project, projectSchema } from "@/lib/schemas";
 import type { ProjectDoc, TaskDoc } from "@/lib/schemas";
@@ -19,7 +23,7 @@ export async function listProjects(userId: string): Promise<Project[]> {
 
 export async function getProject(
   userId: string,
-  id: string
+  id: string,
 ): Promise<Project | null> {
   const c = await col();
   const doc = await c.findOne({ _id: id, userId });
@@ -28,7 +32,7 @@ export async function getProject(
 }
 
 export async function insertProject(
-  doc: Omit<ProjectDoc, "_id"> & { _id?: string }
+  doc: Omit<ProjectDoc, "_id"> & { _id?: string },
 ): Promise<Project> {
   const c = await col();
   const full = { ...doc, _id: doc._id ?? newId() } as ProjectDoc;
@@ -39,13 +43,13 @@ export async function insertProject(
 export async function updateProject(
   userId: string,
   id: string,
-  patch: Partial<ProjectDoc>
+  patch: Partial<ProjectDoc>,
 ): Promise<Project | null> {
   const c = await col();
   const doc = await c.findOneAndUpdate(
     { _id: id, userId },
     { $set: await encryptFor("projects", userId, patch) },
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   if (!doc) return null;
   return toDto(projectSchema.parse(await decryptFor("projects", userId, doc)));
@@ -54,7 +58,7 @@ export async function updateProject(
 export async function deleteProject(
   userId: string,
   id: string,
-  opts: { deleteTasks?: boolean } = {}
+  opts: { deleteTasks?: boolean } = {},
 ): Promise<boolean> {
   const c = await col();
   const db = await getDb();

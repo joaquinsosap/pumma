@@ -44,7 +44,7 @@ export type CreatedProject = {
 };
 
 export async function createProjectAction(
-  input: z.infer<typeof createProjectSchema>
+  input: z.infer<typeof createProjectSchema>,
 ): Promise<ActionResult<CreatedProject>> {
   const parsed = createProjectSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -58,7 +58,7 @@ export async function createProjectAction(
   const projectTagIds = setLifeTags(
     [],
     parsed.data.lifeArea ?? "personal",
-    allTags
+    allTags,
   );
   const project = await insertProject({
     userId,
@@ -90,8 +90,8 @@ export async function createProjectAction(
       project,
       match.id,
       allTags.map((t) =>
-        t.id === match.id ? { ...t, projectId: project.id } : t
-      )
+        t.id === match.id ? { ...t, projectId: project.id } : t,
+      ),
     );
     adopted = { tagName: match.name, filed };
   } else {
@@ -99,9 +99,9 @@ export async function createProjectAction(
       userId,
       uniqueTagName(
         slug,
-        allTags.map((t) => t.name)
+        allTags.map((t) => t.name),
       ),
-      { projectId: project.id, isProjectPrimary: true, color: project.color }
+      { projectId: project.id, isProjectPrimary: true, color: project.color },
     );
   }
 
@@ -123,7 +123,7 @@ const projectTagSchema = z.object({
  * not a project.
  */
 export async function attachTagToProjectAction(
-  input: z.infer<typeof projectTagSchema>
+  input: z.infer<typeof projectTagSchema>,
 ): Promise<ActionResult<{ filed: number }>> {
   const parsed = projectTagSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -136,10 +136,15 @@ export async function attachTagToProjectAction(
   const tag = tags.find((t) => t.id === parsed.data.tagId);
   if (!tag) return { ok: false, error: "Tag not found" };
   if (isLifeTag(tag.name)) {
-    return { ok: false, error: `"${tag.name}" is a life tag, not a project tag` };
+    return {
+      ok: false,
+      error: `"${tag.name}" is a life tag, not a project tag`,
+    };
   }
   if (tag.projectId && tag.projectId !== project.id) {
-    const owner = (await listProjects(userId)).find((p) => p.id === tag.projectId);
+    const owner = (await listProjects(userId)).find(
+      (p) => p.id === tag.projectId,
+    );
     return {
       ok: false,
       error: `"${tag.name}" already belongs to ${owner?.title ?? "another project"}`,
@@ -151,7 +156,7 @@ export async function attachTagToProjectAction(
     userId,
     project,
     tag.id,
-    tags.map((t) => (t.id === tag.id ? { ...t, projectId: project.id } : t))
+    tags.map((t) => (t.id === tag.id ? { ...t, projectId: project.id } : t)),
   );
 
   revalidatePath("/", "layout");
@@ -160,7 +165,7 @@ export async function attachTagToProjectAction(
 
 /** Release a tag back to being an ordinary label. The flagship can't go. */
 export async function detachTagFromProjectAction(
-  tagId: string
+  tagId: string,
 ): Promise<ActionResult> {
   const userId = await requireUserId();
   const tag = (await listTags(userId)).find((t) => t.id === tagId);
@@ -168,7 +173,7 @@ export async function detachTagFromProjectAction(
   if (tag.isProjectPrimary) {
     return {
       ok: false,
-      error: "That's the project's own tag — rename it instead",
+      error: "That's the project's own tag, so rename it instead",
     };
   }
 
@@ -186,7 +191,7 @@ const updateProjectDetailSchema = z.object({
 });
 
 export async function updateProjectDetail(
-  input: z.infer<typeof updateProjectDetailSchema>
+  input: z.infer<typeof updateProjectDetailSchema>,
 ): Promise<ActionResult<Project>> {
   const parsed = updateProjectDetailSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -203,7 +208,12 @@ export async function updateProjectDetail(
   // Switching sides rewrites the life tags — lifeArea is only ever their echo —
   // and carries the project's tasks across with it.
   if (lifeArea && lifeArea !== existing.lifeArea) {
-    await setProjectLifeArea(userId, existing, lifeArea, await listTags(userId));
+    await setProjectLifeArea(
+      userId,
+      existing,
+      lifeArea,
+      await listTags(userId),
+    );
   }
 
   const updated = await updateProject(userId, id, patch);
@@ -216,7 +226,7 @@ export async function updateProjectDetail(
 
 export async function deleteProjectAction(
   id: string,
-  opts: { deleteTasks?: boolean } = {}
+  opts: { deleteTasks?: boolean } = {},
 ): Promise<ActionResult> {
   const parsed = z
     .object({ id: z.string(), deleteTasks: z.boolean().optional() })
@@ -236,7 +246,9 @@ export async function deleteProjectAction(
   // The project's own tags go with it — a flagship pointing at nothing would
   // be undeletable dead weight. Any other tag that had joined the project is
   // released back to being ordinary, since the user chose to create it.
-  const projectTags = (await listTags(userId)).filter((t) => t.projectId === id);
+  const projectTags = (await listTags(userId)).filter(
+    (t) => t.projectId === id,
+  );
   for (const tag of projectTags) {
     if (tag.isProjectPrimary) {
       await deleteTag(userId, tag.id);

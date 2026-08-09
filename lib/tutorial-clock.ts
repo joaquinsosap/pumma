@@ -21,7 +21,7 @@ export function startTutorialClock(
    * and it costs everything on a host that reports a visible page as hidden.
    * Either way the resync below means returning to a tab never lurches.
    */
-  pauseWhenHidden = true
+  pauseWhenHidden = true,
 ): () => void {
   let last = performance.now();
   let raf = 0;

@@ -19,16 +19,22 @@ const responseUnion = z.discriminatedUnion("kind", [
  * right response to "this op is useless" is to remove it, not to throw away
  * the whole changeset around it.
  */
-export const assistantResponseSchema = z
-  .preprocess((raw) => {
+export const assistantResponseSchema = z.preprocess(
+  (raw) => {
     // Seen in the wild: the model nests the wrapper twice. Cheaper to accept
     // than to fail a whole generation over a redundant layer.
     const r = raw as { response?: { response?: unknown } } | null;
-    if (r?.response && typeof r.response === "object" && "response" in r.response) {
+    if (
+      r?.response &&
+      typeof r.response === "object" &&
+      "response" in r.response
+    ) {
       return { response: r.response.response };
     }
     return raw;
-  }, z.object({ response: responseUnion }));
+  },
+  z.object({ response: responseUnion }),
+);
 
 export type AssistantResponse = z.infer<typeof responseUnion>;
 

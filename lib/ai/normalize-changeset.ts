@@ -48,7 +48,7 @@ function same(a: unknown, b: unknown): boolean {
  */
 export function normalizeOps(
   ops: ChangeOp[],
-  current: Map<string, CurrentFields>
+  current: Map<string, CurrentFields>,
 ): ChangeOp[] {
   const out: ChangeOp[] = [];
 

@@ -35,7 +35,7 @@ export const metadata: Metadata = {
   // Without this, Next resolves Open Graph and canonical URLs against
   // localhost and every share card points at a machine nobody else can reach.
   metadataBase: new URL(SITE_URL),
-  title: "P.U.M.M.A — Procrastination Ultimate Megasor Monster Annihilator",
+  title: "P.U.M.M.A · Procrastination Ultimate Megasor Monster Annihilator",
   description: "Personal life-management dashboard",
   appleWebApp: { capable: true, title: "PUMMA", statusBarStyle: "default" },
 };

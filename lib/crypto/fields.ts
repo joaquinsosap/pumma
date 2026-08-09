@@ -9,7 +9,12 @@
 // No "server-only" import here on purpose: the migration script and the unit
 // tests both run outside Next's module graph. The key never reaches this
 // module from anywhere but the server anyway.
-import { createCipheriv, createDecipheriv, createHmac, randomBytes } from "crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+  randomBytes,
+} from "crypto";
 
 const PREFIX = "v1:";
 const IV_BYTES = 12;
@@ -30,9 +35,7 @@ export function encryptField(plaintext: string, dek: Buffer): string {
   const iv = randomBytes(IV_BYTES);
   const c = createCipheriv("aes-256-gcm", dek, iv);
   const ct = Buffer.concat([c.update(plaintext, "utf8"), c.final()]);
-  return (
-    PREFIX + Buffer.concat([iv, c.getAuthTag(), ct]).toString("base64")
-  );
+  return PREFIX + Buffer.concat([iv, c.getAuthTag(), ct]).toString("base64");
 }
 
 /**

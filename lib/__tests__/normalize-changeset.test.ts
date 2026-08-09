@@ -43,7 +43,7 @@ describe("echoed fields", () => {
           tagNames: ["personal"],
         }),
       ],
-      current
+      current,
     );
     expect(ops).toHaveLength(0);
   });
@@ -57,7 +57,7 @@ describe("echoed fields", () => {
           projectId: "bbbbbbbbbbbbbbbbbbbbbbbb",
         }),
       ],
-      current
+      current,
     );
     expect(ops).toHaveLength(1);
     const op = ops[0] as Extract<ChangeOp, { op: "update" }>;
@@ -88,10 +88,15 @@ describe("everything else passes through", () => {
   it("leaves creates and deletes alone", () => {
     const ops = normalizeOps(
       [
-        { op: "create", entity: "project", refId: "p1", fields: { title: "New" } },
+        {
+          op: "create",
+          entity: "project",
+          refId: "p1",
+          fields: { title: "New" },
+        },
         { op: "delete", entity: "habit", id: "zzz", label: "Old" },
       ] as ChangeOp[],
-      current
+      current,
     );
     expect(ops).toHaveLength(2);
   });
@@ -108,7 +113,7 @@ describe("everything else passes through", () => {
           before: {},
         } as ChangeOp,
       ],
-      current
+      current,
     );
     expect(ops).toHaveLength(1);
   });

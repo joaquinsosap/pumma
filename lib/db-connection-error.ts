@@ -12,7 +12,9 @@ export class DbConnectionError extends Error {
 
 function looksLikeDbConnection(text: string): boolean {
   return (
-    /Mongo(ServerSelection|Network|Timeout|Authentication|Parse)Error/i.test(text) ||
+    /Mongo(ServerSelection|Network|Timeout|Authentication|Parse)Error/i.test(
+      text,
+    ) ||
     /MONGODB_URI/i.test(text) ||
     /ECONNREFUSED|ENOTFOUND|ETIMEDOUT/i.test(text) ||
     /SSL routines|tlsv1 alert|certificate/i.test(text) ||
@@ -26,7 +28,10 @@ export function isDbConnectionError(error: unknown): boolean {
   if (typeof error === "string") return looksLikeDbConnection(error);
   if (!(error instanceof Error)) return false;
   if (error.name === "DbConnectionError") return true;
-  if (looksLikeDbConnection(error.name) || looksLikeDbConnection(error.message)) {
+  if (
+    looksLikeDbConnection(error.name) ||
+    looksLikeDbConnection(error.message)
+  ) {
     return true;
   }
   if (error.cause) return isDbConnectionError(error.cause);
@@ -49,14 +54,14 @@ export function asDbConnectionError(error: unknown): DbConnectionError {
   ) {
     return new DbConnectionError(
       "Database is not configured. Set MONGODB_URI in your environment.",
-      detail
+      detail,
     );
   }
 
   if (isDbConnectionError(error)) {
     return new DbConnectionError(
       "Could not connect to the database. Check that MongoDB is running and your connection settings are correct.",
-      detail
+      detail,
     );
   }
 

@@ -72,7 +72,9 @@ describe("refusing to open what it shouldn't", () => {
   });
 
   it("throws on a truncated payload", () => {
-    expect(() => decryptField("v1:" + Buffer.from("short").toString("base64"), KEY)).toThrow();
+    expect(() =>
+      decryptField("v1:" + Buffer.from("short").toString("base64"), KEY),
+    ).toThrow();
   });
 
   it("would rather error than show an empty account", () => {

@@ -64,7 +64,7 @@ export function createSeedData(userId: string): SeedData {
       userId,
       title: "Website redesign",
       description:
-        "Refresh marketing site — new typography, case studies, and a faster contact flow.",
+        "Refresh marketing site: new typography, case studies, and a faster contact flow.",
       color: "oklch(0.58 0.14 245)",
       progress: 80,
       label: "16/20",
@@ -77,7 +77,8 @@ export function createSeedData(userId: string): SeedData {
       _id: oid(),
       userId,
       title: "Learn Spanish",
-      description: "Reach B1 by end of year. Focus on conversation + Anki daily.",
+      description:
+        "Reach B1 by end of year. Focus on conversation + Anki daily.",
       color: "oklch(0.58 0.17 300)",
       progress: 45,
       label: "B1 · u9",
@@ -132,7 +133,7 @@ export function createSeedData(userId: string): SeedData {
 
   /** Everything carries the life tag its area implies — same rule as the app. */
   const withLife = <T extends { lifeArea: string; tagIds: string[] }>(
-    rows: T[]
+    rows: T[],
   ): T[] =>
     rows.map((row) => {
       const wanted =
@@ -216,7 +217,7 @@ export function createSeedData(userId: string): SeedData {
     {
       _id: oid(),
       userId,
-      title: "Finish ch. 4 — Atomic Habits",
+      title: "Finish ch. 4 of Atomic Habits",
       tagIds: [T("idea")],
       priority: "low",
       status: "todo",

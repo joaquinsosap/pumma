@@ -23,13 +23,13 @@ export async function insertUser(doc: UserDoc): Promise<User> {
 
 export async function updateUser(
   userId: string,
-  patch: Partial<Pick<UserDoc, "name" | "email">>
+  patch: Partial<Pick<UserDoc, "name" | "email">>,
 ): Promise<User | null> {
   const c = await col();
   const doc = await c.findOneAndUpdate(
     { _id: userId },
     { $set: patch },
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   return doc ? toDto(userSchema.parse(doc)) : null;
 }

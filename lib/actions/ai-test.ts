@@ -40,13 +40,16 @@ export async function testAiConnectionAction(): Promise<
       userId,
       schema: pingSchema,
       system: {
-        cacheable: "You are a connection test. Reply with the object you are asked for.",
+        cacheable:
+          "You are a connection test. Reply with the object you are asked for.",
         volatile: "",
       },
       prompt: 'Return {"ok": true, "word": "pong"}.',
       maxTokens: 200,
-      tooLongMessage: "The model answered, but ran out of room. It should still work.",
-      refusalMessage: "The model declined a harmless test — try a different model.",
+      tooLongMessage:
+        "The model answered, but ran out of room. It should still work.",
+      refusalMessage:
+        "The model declined a harmless test. Try a different model.",
       invalidMessage:
         "Connected, but the model couldn't follow a simple schema. Plan and Ask need a stronger model.",
     });

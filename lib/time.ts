@@ -5,7 +5,7 @@ export type TaskTimeFields = {
 
 export function taskElapsedSec(
   task: TaskTimeFields,
-  now: number = Date.now()
+  now: number = Date.now(),
 ): number {
   let total = task.timeSpentSec ?? 0;
   if (task.timerStartedAt) {

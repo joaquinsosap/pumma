@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AuthForm } from "@/components/auth/AuthForm";
 import { billingEnabled } from "@/lib/billing/access";
 
-export const metadata: Metadata = { title: "Create account — P.U.M.M.A" };
+export const metadata: Metadata = { title: "Create account · P.U.M.M.A" };
 
 export default async function RegisterPage({
   searchParams,

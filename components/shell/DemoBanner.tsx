@@ -24,8 +24,8 @@ export function DemoBanner({
       )}
       title={
         hoursLeft
-          ? `Demo account — sample data, resets in ~${hoursLeft}h`
-          : "Demo account — sample data, temporary"
+          ? `Demo account · sample data, resets in ~${hoursLeft}h`
+          : "Demo account · sample data, temporary"
       }
     >
       <span className="font-mono text-[9px] font-bold uppercase tracking-widest text-primary">

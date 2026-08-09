@@ -3,7 +3,12 @@
 // BETTER_AUTH_SECRET, so the ciphertext at rest is useless without the running
 // server's secret. Server-only — the key must never reach the client bundle.
 import "server-only";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "crypto";
 
 const IV_BYTES = 12; // GCM standard nonce length
 const TAG_BYTES = 16;
@@ -19,7 +24,7 @@ function key(): Buffer {
   if (!secret) {
     if (process.env.DATA_SOURCE === "mongodb") {
       throw new Error(
-        "BETTER_AUTH_SECRET must be set when DATA_SOURCE=mongodb (secret-at-rest key)"
+        "BETTER_AUTH_SECRET must be set when DATA_SOURCE=mongodb (secret-at-rest key)",
       );
     }
     return createHash("sha256").update("pumma-dev-insecure-secret").digest();
@@ -46,7 +51,9 @@ export function decryptSecret(blob: string): string | null {
     const ct = buf.subarray(IV_BYTES + TAG_BYTES);
     const decipher = createDecipheriv("aes-256-gcm", key(), iv);
     decipher.setAuthTag(tag);
-    return Buffer.concat([decipher.update(ct), decipher.final()]).toString("utf8");
+    return Buffer.concat([decipher.update(ct), decipher.final()]).toString(
+      "utf8",
+    );
   } catch {
     return null;
   }

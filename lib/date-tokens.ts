@@ -14,13 +14,24 @@
 export type DateOrder = "dmy" | "mdy";
 
 export const WEEKDAYS: Record<string, number> = {
-  sun: 0, sunday: 0,
-  mon: 1, monday: 1,
-  tue: 2, tues: 2, tuesday: 2,
-  wed: 3, weds: 3, wednesday: 3,
-  thu: 4, thur: 4, thurs: 4, thursday: 4,
-  fri: 5, friday: 5,
-  sat: 6, saturday: 6,
+  sun: 0,
+  sunday: 0,
+  mon: 1,
+  monday: 1,
+  tue: 2,
+  tues: 2,
+  tuesday: 2,
+  wed: 3,
+  weds: 3,
+  wednesday: 3,
+  thu: 4,
+  thur: 4,
+  thurs: 4,
+  thursday: 4,
+  fri: 5,
+  friday: 5,
+  sat: 6,
+  saturday: 6,
 };
 
 /** The relative words, in the order the completion menu should offer them. */
@@ -36,7 +47,13 @@ export const RELATIVE_DAYS = ["today", "tomorrow", "yesterday"] as const;
  */
 export const DATE_COMPLETIONS: string[] = [
   ...RELATIVE_DAYS,
-  "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
 ];
 
 /**
@@ -46,7 +63,17 @@ export const DATE_COMPLETIONS: string[] = [
  */
 export const DATE_WORDS: string[] = [
   ...DATE_COMPLETIONS,
-  "mon", "tue", "tues", "wed", "weds", "thu", "thur", "thurs", "fri", "sat", "sun",
+  "mon",
+  "tue",
+  "tues",
+  "wed",
+  "weds",
+  "thu",
+  "thur",
+  "thurs",
+  "fri",
+  "sat",
+  "sun",
 ];
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -64,7 +91,7 @@ const TITLE = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 function parseNumeric(
   word: string,
   ref: Date,
-  order: DateOrder
+  order: DateOrder,
 ): { date: string; label: string } | null {
   const m = word.match(/^(\d{1,2})[/.-](\d{1,2})(?:[/.-](\d{2}|\d{4}))?$/);
   if (!m) return null;
@@ -114,7 +141,7 @@ function parseNumeric(
 export function resolveDateToken(
   word: string,
   ref: Date,
-  order: DateOrder = "dmy"
+  order: DateOrder = "dmy",
 ): { date: string; label: string } | null {
   const w = word.trim().toLowerCase();
   if (!w) return null;
@@ -136,7 +163,7 @@ export function resolveDateToken(
     const delta = (target - base.getDay() + 7) % 7 || 7;
     base.setDate(base.getDate() + delta);
     const full = Object.keys(WEEKDAYS).find(
-      (k) => WEEKDAYS[k] === target && k.length > 3
+      (k) => WEEKDAYS[k] === target && k.length > 3,
     )!;
     return { date: isoOf(base), label: TITLE(full) };
   }

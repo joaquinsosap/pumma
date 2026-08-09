@@ -26,12 +26,7 @@ type Props = {
   now: number;
 };
 
-export function TaskTimeEditDialog({
-  task,
-  open,
-  onOpenChange,
-  now,
-}: Props) {
+export function TaskTimeEditDialog({ task, open, onOpenChange, now }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const elapsed = taskElapsedSec(task, now);

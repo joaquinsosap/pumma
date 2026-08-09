@@ -52,7 +52,7 @@ export function TaskFilterMenu({
             "flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[12px] font-semibold transition-all",
             active
               ? "border-ink bg-ink text-background shadow-[1px_1px_0_var(--shadow)]"
-              : "border-border bg-surface2 text-muted hover:bg-hover hover:text-ink"
+              : "border-border bg-surface2 text-muted hover:bg-hover hover:text-ink",
           )}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" strokeWidth={2.2} />
@@ -115,7 +115,7 @@ export function TaskFilterMenu({
                   priority: toggleFilterValue(
                     filters.priority,
                     p,
-                    TASK_PRIORITIES
+                    TASK_PRIORITIES,
                   ),
                 })
               }
@@ -138,7 +138,7 @@ export function TaskFilterMenu({
                     tagIds: toggleFilterValue(
                       filters.tagIds,
                       tag.id,
-                      tags.map((t) => t.id)
+                      tags.map((t) => t.id),
                     ),
                   })
                 }
@@ -175,7 +175,8 @@ export function TaskFilterChips({
       label: STATUS_LABELS[s],
       dot: STATUS_DOTS[s],
       capitalize: false,
-      remove: () => onChange({ ...filters, status: filters.status.filter((v) => v !== s) }),
+      remove: () =>
+        onChange({ ...filters, status: filters.status.filter((v) => v !== s) }),
     })),
     ...filters.priority.map((p) => ({
       key: `priority:${p}`,
@@ -183,7 +184,10 @@ export function TaskFilterChips({
       dot: PRIORITY_DOTS[p],
       capitalize: false,
       remove: () =>
-        onChange({ ...filters, priority: filters.priority.filter((v) => v !== p) }),
+        onChange({
+          ...filters,
+          priority: filters.priority.filter((v) => v !== p),
+        }),
     })),
     ...filters.tagIds.map((id) => ({
       key: `tag:${id}`,
@@ -191,7 +195,10 @@ export function TaskFilterChips({
       dot: tagById.get(id)?.color ?? "var(--faint2)",
       capitalize: true,
       remove: () =>
-        onChange({ ...filters, tagIds: filters.tagIds.filter((v) => v !== id) }),
+        onChange({
+          ...filters,
+          tagIds: filters.tagIds.filter((v) => v !== id),
+        }),
     })),
   ];
 
@@ -267,13 +274,13 @@ function Row({
       onClick={onToggle}
       className={cn(
         "flex w-full items-center gap-2 rounded-lg px-1.5 py-1.5 text-left text-[12.5px] transition-colors hover:bg-hover",
-        checked ? "font-semibold text-ink" : "text-muted"
+        checked ? "font-semibold text-ink" : "text-muted",
       )}
     >
       <span
         className={cn(
           "flex h-[15px] w-[15px] shrink-0 items-center justify-center rounded-[4px] border transition-colors",
-          checked ? "border-ink bg-ink text-background" : "border-border"
+          checked ? "border-ink bg-ink text-background" : "border-border",
         )}
       >
         {checked && <Check className="h-2.5 w-2.5" strokeWidth={3.5} />}

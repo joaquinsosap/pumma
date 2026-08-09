@@ -15,7 +15,9 @@ const base = {
   timezone: TZ,
 };
 
-const task = (over: Partial<Parameters<typeof buildAggregates>[0]["tasks"][0]> = {}) => ({
+const task = (
+  over: Partial<Parameters<typeof buildAggregates>[0]["tasks"][0]> = {},
+) => ({
   status: "todo" as const,
   priority: "med" as const,
   due: null,
@@ -92,7 +94,7 @@ describe("time tracked", () => {
       projects: [{ id: "p1", title: "Kitchen", progress: 0 }],
       tasks: [
         task({ projectId: "p1", timeSpentSec: 5400 }), // 1.5h
-        task({ timeSpentSec: 1800 }),                  // 0.5h, unfiled
+        task({ timeSpentSec: 1800 }), // 0.5h, unfiled
       ],
     });
     expect(agg.time.totalHours).toBe(2);

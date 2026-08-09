@@ -10,7 +10,10 @@ import {
 const ORDER = ["a", "b", "c", "d", "e"];
 const LONG = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11"];
 
-const state = (ids: string[], anchor: string | null = null): SelectionState => ({
+const state = (
+  ids: string[],
+  anchor: string | null = null,
+): SelectionState => ({
   ids,
   anchor,
 });
@@ -62,7 +65,17 @@ describe("range", () => {
     expect(back.ids).toEqual(["1", "2", "3", "4", "5", "6"]);
     const forward = reduceSelection(back, LONG, "11", "range");
     expect(forward.ids).toEqual([
-      "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11",
+      "1",
+      "2",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
     ]);
   });
 
@@ -78,7 +91,15 @@ describe("range", () => {
     // and keeps the top, rather than collapsing back to 3…6.
     const wide = state(LONG, "6");
     expect(reduceSelection(wide, LONG, "3", "range").ids).toEqual([
-      "3", "4", "5", "6", "7", "8", "9", "10", "11",
+      "3",
+      "4",
+      "5",
+      "6",
+      "7",
+      "8",
+      "9",
+      "10",
+      "11",
     ]);
   });
 
@@ -121,9 +142,9 @@ describe("range", () => {
 
 describe("a plain click", () => {
   it("clears the selection — the caller opens the task instead", () => {
-    expect(reduceSelection(state(["a", "b"], "a"), ORDER, "c", "open").ids).toEqual(
-      []
-    );
+    expect(
+      reduceSelection(state(["a", "b"], "a"), ORDER, "c", "open").ids,
+    ).toEqual([]);
   });
 
   it("still leaves an anchor, so the next shift-click ranges from it", () => {

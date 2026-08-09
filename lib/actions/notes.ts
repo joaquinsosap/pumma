@@ -6,22 +6,14 @@ import type { ActionResult } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
 import { userToday } from "@/lib/timezone-server";
 import { entityId, noteBody, title } from "@/lib/validation";
-import {
-  insertNote,
-  updateNote,
-  deleteNote,
-  getNote,
-} from "@/lib/db/notes";
+import { insertNote, updateNote, deleteNote, getNote } from "@/lib/db/notes";
 import { insertTask } from "@/lib/db/tasks";
 import { listTags, ensureLifeTags } from "@/lib/db/tags";
-import {
-  deriveLifeAreaFromTags,
-  withLifeTags,
-} from "@/lib/life-area-sync";
+import { deriveLifeAreaFromTags, withLifeTags } from "@/lib/life-area-sync";
 import type { LifeView } from "@/lib/types";
 
 export async function createNote(
-  view: LifeView = "personal"
+  view: LifeView = "personal",
 ): Promise<ActionResult<{ id: string }>> {
   const userId = await requireUserId();
   const { today: td } = await userToday();
@@ -50,7 +42,7 @@ const updateNoteSchema = z.discriminatedUnion("field", [
 export async function updateNoteAction(
   id: string,
   field: "title" | "body",
-  value: string
+  value: string,
 ): Promise<ActionResult> {
   const parsed = updateNoteSchema.safeParse({ id, field, value });
   if (!parsed.success) return { ok: false, error: "Invalid input" };

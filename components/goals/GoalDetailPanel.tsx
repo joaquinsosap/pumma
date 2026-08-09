@@ -4,7 +4,14 @@ import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, X } from "@/components/icons";
 import { toast } from "sonner";
-import type { Goal, Habit, HabitEntry, Project, Tag, Task } from "@/lib/schemas";
+import type {
+  Goal,
+  Habit,
+  HabitEntry,
+  Project,
+  Tag,
+  Task,
+} from "@/lib/schemas";
 import {
   updateGoalDetailAction,
   setGoalProgress,
@@ -12,7 +19,12 @@ import {
 } from "@/lib/actions/goals";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { ScrollHint } from "@/components/ui/scroll-hint";
-import { attachHabitToGoal, detachHabitFromGoal, linkProjectToGoal, updateHabitGoalTargetAction } from "@/lib/actions/links";
+import {
+  attachHabitToGoal,
+  detachHabitFromGoal,
+  linkProjectToGoal,
+  updateHabitGoalTargetAction,
+} from "@/lib/actions/links";
 import {
   DEFAULT_HABIT_GOAL_STREAK,
   goalHasLinks,
@@ -58,8 +70,14 @@ export function GoalDetailPanel({
   const bodyRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
   const [title, setTitle] = useSyncedDraft(goal.title, goal.id);
-  const [metricLabel, setMetricLabel] = useSyncedDraft(goal.metricLabel, goal.id);
-  const [targetDate, setTargetDate] = useSyncedDraft(goal.targetDate ?? "", goal.id);
+  const [metricLabel, setMetricLabel] = useSyncedDraft(
+    goal.metricLabel,
+    goal.id,
+  );
+  const [targetDate, setTargetDate] = useSyncedDraft(
+    goal.targetDate ?? "",
+    goal.id,
+  );
 
   const autoProgress = goalHasLinks(goal.id, projects, habits);
   const breakdown = goalProgressBreakdown(
@@ -67,16 +85,17 @@ export function GoalDetailPanel({
     projects,
     habits,
     habitEntries,
-    tasks
+    tasks,
   );
 
   const linkedHabits = breakdown.habitParts;
   const linkedProjects = breakdown.projectParts;
-  const availableProjects = projects.filter(
-    (p) => !p.goalId || p.goalId === goal.id
-  ).filter((p) => p.goalId !== goal.id);
-  const availableHabits = habits
-    .filter((h) => !h.archived && !h.goalIds.includes(goal.id));
+  const availableProjects = projects
+    .filter((p) => !p.goalId || p.goalId === goal.id)
+    .filter((p) => p.goalId !== goal.id);
+  const availableHabits = habits.filter(
+    (h) => !h.archived && !h.goalIds.includes(goal.id),
+  );
 
   const persist = useCallback(
     (patch: {
@@ -89,7 +108,7 @@ export function GoalDetailPanel({
         router.refresh();
       });
     },
-    [goal.id, router]
+    [goal.id, router],
   );
 
   // Manual progress: the bar used to render the server value and fire one
@@ -189,7 +208,9 @@ export function GoalDetailPanel({
           <p className="m-0 font-mono text-[10px] uppercase tracking-widest text-faint">
             {goal.category}
           </p>
-          <p className="m-0 truncate text-sm font-bold text-ink">Goal details</p>
+          <p className="m-0 truncate text-sm font-bold text-ink">
+            Goal details
+          </p>
         </div>
         <button
           type="button"
@@ -306,7 +327,9 @@ export function GoalDetailPanel({
               >
                 +
               </button>
-              <span className="font-mono text-[10px] text-faint">Manual progress</span>
+              <span className="font-mono text-[10px] text-faint">
+                Manual progress
+              </span>
             </div>
           )}
         </section>
@@ -316,7 +339,8 @@ export function GoalDetailPanel({
             Habits
           </h4>
           <p className="mb-3 text-[12px] leading-relaxed text-faint">
-            Each habit contributes based on current streak vs your target streak.
+            Each habit contributes based on current streak vs your target
+            streak.
           </p>
           <div className="mb-3 flex flex-col gap-2">
             {linkedHabits.length ? (
@@ -353,11 +377,18 @@ export function GoalDetailPanel({
           <GoalMultiLinkField
             label="Add habit"
             items={[]}
-            available={availableHabits.map((h) => ({ id: h.id, title: h.name }))}
+            available={availableHabits.map((h) => ({
+              id: h.id,
+              title: h.name,
+            }))}
             dotShape="circle"
             onAttach={(habitId) =>
               startTransition(async () => {
-                const res = await attachHabitToGoal(habitId, goal.id, DEFAULT_HABIT_GOAL_STREAK);
+                const res = await attachHabitToGoal(
+                  habitId,
+                  goal.id,
+                  DEFAULT_HABIT_GOAL_STREAK,
+                );
                 if (!res.ok) toast.error(res.error ?? "Could not link habit");
                 router.refresh();
               })
@@ -408,10 +439,15 @@ export function GoalDetailPanel({
                   <div className="h-1.5 overflow-hidden rounded-full bg-border2">
                     <div
                       className="h-full"
-                      style={{ width: `${progress}%`, background: project.color }}
+                      style={{
+                        width: `${progress}%`,
+                        background: project.color,
+                      }}
                     />
                   </div>
-                  <p className="mt-1.5 font-mono text-[10px] text-faint">{label} tasks done</p>
+                  <p className="mt-1.5 font-mono text-[10px] text-faint">
+                    {label} tasks done
+                  </p>
                 </div>
               ))
             ) : (
@@ -423,7 +459,10 @@ export function GoalDetailPanel({
           <GoalMultiLinkField
             label="Add project"
             items={[]}
-            available={availableProjects.map((p) => ({ id: p.id, title: p.title }))}
+            available={availableProjects.map((p) => ({
+              id: p.id,
+              title: p.title,
+            }))}
             onAttach={(projectId) =>
               startTransition(async () => {
                 const res = await linkProjectToGoal(projectId, goal.id);
@@ -475,7 +514,7 @@ function HabitGoalLinkRow({
   const [targetInput, setTargetInput] = useState(String(target));
   const frequency = normalizeHabitFrequency(habit.frequency.type);
   const entries = new Set(
-    habitEntries.filter((e) => e.habitId === habit.id).map((e) => e.date)
+    habitEntries.filter((e) => e.habitId === habit.id).map((e) => e.date),
   );
 
   useEffect(() => {
@@ -486,11 +525,15 @@ function HabitGoalLinkRow({
     <div className="rounded-lg border border-border bg-background/40 px-3 py-2.5">
       <div className="mb-2 flex items-center gap-2">
         <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-habits" />
-        <span className="min-w-0 flex-1 truncate text-sm font-semibold">{habit.name}</span>
+        <span className="min-w-0 flex-1 truncate text-sm font-semibold">
+          {habit.name}
+        </span>
         <span className="shrink-0 rounded px-1.5 py-px font-mono text-[9px] font-semibold uppercase tracking-wide text-habits/90 bg-habits/10">
           {habitFrequencyLabel(frequency)}
         </span>
-        <span className="font-mono text-[11px] font-semibold text-habits">{progress}%</span>
+        <span className="font-mono text-[11px] font-semibold text-habits">
+          {progress}%
+        </span>
         <button
           type="button"
           onClick={onRemove}

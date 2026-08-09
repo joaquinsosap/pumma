@@ -28,30 +28,42 @@ export async function POST(req: Request) {
   const origin = req.headers.get("origin");
   const host = req.headers.get("host");
   if (origin && host && new URL(origin).host !== host) {
-    return NextResponse.json({ ok: false, error: "Bad origin." }, { status: 403 });
+    return NextResponse.json(
+      { ok: false, error: "Bad origin." },
+      { status: 403 },
+    );
   }
 
   const userId = await getSessionUserId();
   if (!userId) {
-    return NextResponse.json({ ok: false, error: "Please sign in." }, { status: 401 });
+    return NextResponse.json(
+      { ok: false, error: "Please sign in." },
+      { status: 401 },
+    );
   }
   if ((await getAccessLevel(userId)) === "none") {
     return NextResponse.json(
       { ok: false, error: "Your subscription has lapsed." },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
     return NextResponse.json(
-      { ok: false, error: "Say what you want to know or build (3–2000 characters)." },
-      { status: 400 }
+      {
+        ok: false,
+        error: "Say what you want to know or build (3 to 2000 characters).",
+      },
+      { status: 400 },
     );
   }
 
   if (!(await reserveAiCall(userId))) {
-    return NextResponse.json({ ok: false, error: AI_QUOTA_MESSAGE }, { status: 429 });
+    return NextResponse.json(
+      { ok: false, error: AI_QUOTA_MESSAGE },
+      { status: 429 },
+    );
   }
 
   try {
@@ -61,9 +73,10 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         ok: false,
-        error: err instanceof Error ? err.message : "The assistant call failed.",
+        error:
+          err instanceof Error ? err.message : "The assistant call failed.",
       },
-      { status: 502 }
+      { status: 502 },
     );
   }
 }

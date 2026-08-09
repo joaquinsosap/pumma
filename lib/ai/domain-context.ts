@@ -34,7 +34,10 @@ Leave a \`*Ref\` null when there's nothing sensible to link to.
 - Write a one-sentence \`summary\` describing what the plan sets up.`;
 
 /** Compact id+title listing of the user's current goals/projects, appended as context. */
-export function formatExistingEntities(goals: Goal[], projects: Project[]): string {
+export function formatExistingEntities(
+  goals: Goal[],
+  projects: Project[],
+): string {
   if (!goals.length && !projects.length) {
     return "# Existing entities\n\n(The user has no existing goals or projects yet — create new ones as needed.)";
   }
@@ -42,7 +45,7 @@ export function formatExistingEntities(goals: Goal[], projects: Project[]): stri
     ? goals
         .map(
           (g) =>
-            `- ${g.id} — "${g.title}" (category: ${g.category}, lifeArea: ${g.lifeArea})`
+            `- ${g.id} — "${g.title}" (category: ${g.category}, lifeArea: ${g.lifeArea})`,
         )
         .join("\n")
     : "(none)";
@@ -50,7 +53,7 @@ export function formatExistingEntities(goals: Goal[], projects: Project[]): stri
     ? projects
         .map(
           (p) =>
-            `- ${p.id} — "${p.title}"${p.goalId ? ` (goal: ${p.goalId})` : ""} (lifeArea: ${p.lifeArea})`
+            `- ${p.id} — "${p.title}"${p.goalId ? ` (goal: ${p.goalId})` : ""} (lifeArea: ${p.lifeArea})`,
         )
         .join("\n")
     : "(none)";

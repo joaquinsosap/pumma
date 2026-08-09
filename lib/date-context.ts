@@ -1,7 +1,4 @@
-import {
-  buildLifeWeeks,
-  clampLifeSpanYears,
-} from "@/lib/life-calendar";
+import { buildLifeWeeks, clampLifeSpanYears } from "@/lib/life-calendar";
 import { LIFE_SPAN_DEFAULT } from "@/lib/life-constants";
 import {
   dateLabel,
@@ -25,7 +22,7 @@ export function lifeWeekProgress(
   birthDate: string,
   spanYears: number = LIFE_SPAN_DEFAULT,
   today: string = iso(),
-  timeZone?: string
+  timeZone?: string,
 ): { lived: number; total: number } {
   const span = clampLifeSpanYears(spanYears);
   const weeks = buildLifeWeeks(birthDate, span);
@@ -35,8 +32,7 @@ export function lifeWeekProgress(
 
   const slot = weeks.find((w) => w.days.includes(todayStr));
   const lived =
-    slot?.weekIndex ??
-    weeks.filter((w) => w.weekEnd < todayStr).length;
+    slot?.weekIndex ?? weeks.filter((w) => w.weekEnd < todayStr).length;
   return { lived, total };
 }
 
@@ -47,7 +43,7 @@ function formatCount(n: number): string {
 /** Rich date line for the top bar, e.g. SUNDAY, JUNE 28 · DAY 28/30 · … */
 export function formatTopbarDateLine(
   d: Date = new Date(),
-  ctx: TopbarDateContext = {}
+  ctx: TopbarDateContext = {},
 ): string {
   const tz = normalizeTimezone(ctx.timeZone);
   const parts: string[] = [dateLabel(d, tz)];
@@ -70,9 +66,11 @@ export function formatTopbarDateLine(
   const week = isoWeekNumber(d, tz);
   const weeksInYear = isoWeeksInYear(
     Number(
-      new Intl.DateTimeFormat("en-US", { timeZone: tz, year: "numeric" })
-        .format(d)
-    )
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: tz,
+        year: "numeric",
+      }).format(d),
+    ),
   );
   parts.push(`WEEK ${week}/${weeksInYear}`);
 
@@ -81,7 +79,7 @@ export function formatTopbarDateLine(
       ctx.birthDate,
       ctx.lifeSpanYears ?? LIFE_SPAN_DEFAULT,
       iso(d, tz),
-      tz
+      tz,
     );
     parts.push(`LIFE WEEK ${formatCount(lived)}/${formatCount(total)}`);
   }
@@ -104,7 +102,7 @@ export function quarterOf(d: Date = new Date(), timeZone?: string): number {
     new Intl.DateTimeFormat("en-US", {
       timeZone: normalizeTimezone(timeZone),
       month: "numeric",
-    }).format(d)
+    }).format(d),
   );
   return Math.floor((monthNum - 1) / 3) + 1;
 }

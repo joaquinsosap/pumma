@@ -5,7 +5,7 @@ import type { GoalCategory } from "@/lib/types";
 
 function sortGoals(docs: GoalDoc[]): GoalDoc[] {
   return [...docs].sort(
-    (a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt)
+    (a, b) => a.order - b.order || a.createdAt.localeCompare(b.createdAt),
   );
 }
 
@@ -18,12 +18,12 @@ export function nextGoalOrder(goals: Goal[], category: GoalCategory): number {
 export async function listGoals(userId: string): Promise<Goal[]> {
   const store = getStore();
   return sortGoals(store.goals.filter((g) => g.userId === userId)).map((g) =>
-    toDto(goalSchema.parse(g))
+    toDto(goalSchema.parse(g)),
   );
 }
 
 export async function insertGoal(
-  doc: Omit<GoalDoc, "_id"> & { _id?: string }
+  doc: Omit<GoalDoc, "_id"> & { _id?: string },
 ): Promise<Goal> {
   const store = getStore();
   const full = { ...doc, _id: doc._id ?? newId() };
@@ -34,7 +34,7 @@ export async function insertGoal(
 export async function updateGoal(
   userId: string,
   id: string,
-  patch: Partial<GoalDoc>
+  patch: Partial<GoalDoc>,
 ): Promise<Goal | null> {
   const store = getStore();
   const idx = store.goals.findIndex((g) => g._id === id && g.userId === userId);
@@ -64,13 +64,13 @@ export async function deleteGoal(userId: string, id: string): Promise<boolean> {
 
 export async function updateGoalsLayout(
   userId: string,
-  layout: { category: GoalCategory; ids: string[] }[]
+  layout: { category: GoalCategory; ids: string[] }[],
 ): Promise<void> {
   const store = getStore();
   for (const { category, ids } of layout) {
     ids.forEach((id, order) => {
       const idx = store.goals.findIndex(
-        (g) => g._id === id && g.userId === userId
+        (g) => g._id === id && g.userId === userId,
       );
       if (idx >= 0) {
         store.goals[idx] = { ...store.goals[idx], category, order };

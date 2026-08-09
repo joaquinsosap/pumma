@@ -217,19 +217,19 @@ export function FlounderCard({
   return (
     <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/50 px-4 backdrop-blur-sm">
       <div className="tutorial-in w-full max-w-[400px] rounded-[20px] border-2 border-ink bg-surface p-6 shadow-[0_1px_2px_var(--shadow),0_24px_60px_-12px_var(--shadow)]">
-        <span className="text-[28px]">🕯️</span>
-        <h2 className="m-0 mt-2 text-[19px] font-extrabold leading-tight tracking-tight text-ink">
-          Not the brightest candle in the drawer.
-        </h2>
         {/* Borrowed from the loudest man alive, because a four-beat tutorial
-            defeating you is exactly the sort of small suffering he means. */}
-        <blockquote className="m-0 mt-3 border-l-2 border-ink/20 pl-3">
+            defeating you is exactly the sort of small suffering he means. It
+            opens the card on its own now: the gag that used to sit above it
+            was the tour calling you slow, which is a fine joke right up until
+            it lands on someone who is genuinely stuck, which is the only time
+            this card is ever shown. */}
+        <blockquote className="m-0 border-l-2 border-ink/20 pl-3">
           <p className="m-0 text-[12.5px] font-semibold italic leading-relaxed text-ink">
             &ldquo;When you think that you are done, you&rsquo;re only 40% in to
             what your body&rsquo;s capable of doing.&rdquo;
           </p>
           <p className="m-0 mt-0.5 font-mono text-[10px] text-faint">
-            — David Goggins, about something harder than this
+            David Goggins, about something harder than this
           </p>
         </blockquote>
 

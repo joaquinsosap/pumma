@@ -45,19 +45,19 @@ export const LifeWeekCell = memo(function LifeWeekCell({
                 state === "past" && "bg-lived",
                 state === "future" && "bg-ahead",
                 state === "current" &&
-                  "bg-lived ring-1 ring-inset ring-primary"
+                  "bg-lived ring-1 ring-inset ring-primary",
               )
             : cn(
                 state === "past" && "bg-lived",
                 state === "future" && "border border-border2 bg-transparent",
                 state === "current" &&
-                  "bg-primary/[0.18] outline outline-[1.5px] outline-primary -outline-offset-1"
+                  "bg-primary/[0.18] outline outline-[1.5px] outline-primary -outline-offset-1",
               )),
         mc &&
           state === "current" &&
           (fullView
             ? "ring-1 ring-inset ring-primary"
-            : "outline outline-[1.5px] outline-primary -outline-offset-1")
+            : "outline outline-[1.5px] outline-primary -outline-offset-1"),
       )}
       style={mc ? { background: mc } : undefined}
     >
@@ -74,7 +74,7 @@ export const LifeWeekCell = memo(function LifeWeekCell({
                   : "bg-faint"
                 : state === "past"
                   ? "bg-ink/50"
-                  : "bg-muted"
+                  : "bg-muted",
           )}
         />
       )}
@@ -93,7 +93,7 @@ export const LifeWeekEmpty = memo(function LifeWeekEmpty({
         "min-w-0 flex-1",
         fullView
           ? "h-full min-h-[2px] rounded-[1px] bg-ahead"
-          : "h-2.5 rounded-[2px] border border-border2 bg-transparent sm:h-3.5"
+          : "h-2.5 rounded-[2px] border border-border2 bg-transparent sm:h-3.5",
       )}
       aria-hidden
     />

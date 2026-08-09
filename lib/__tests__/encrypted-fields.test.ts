@@ -18,7 +18,7 @@ const DEK = randomBytes(32);
 const walk = (
   doc: Record<string, unknown>,
   collection: EncryptedCollection,
-  fn: (v: string) => string
+  fn: (v: string) => string,
 ) => mapContent(doc, specFor(collection), fn);
 
 const enc = (d: Record<string, unknown>, c: EncryptedCollection) =>
@@ -130,7 +130,9 @@ describe("every collection in the spec", () => {
 
       const at = enc(sample, name) as Record<string, unknown>;
       for (const field of specFor(name).fields) {
-        expect(isCiphertext(at[field] as string), `${name}.${field}`).toBe(true);
+        expect(isCiphertext(at[field] as string), `${name}.${field}`).toBe(
+          true,
+        );
       }
     }
   });

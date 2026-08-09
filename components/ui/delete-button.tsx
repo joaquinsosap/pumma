@@ -65,7 +65,7 @@ export function DeleteButton({
         BOX[size],
         revealOnHover &&
           "opacity-0 group-hover:opacity-100 focus-visible:opacity-100 max-lg:opacity-100",
-        className
+        className,
       )}
     >
       <Trash2 className={ICON[size]} />

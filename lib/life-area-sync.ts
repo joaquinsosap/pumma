@@ -24,7 +24,7 @@ export const LIFE_TAG_COLORS: Record<
  */
 export function isLifeTag(name: string): boolean {
   return (SPECIAL_LIFE_TAGS as readonly string[]).includes(
-    name.trim().toLowerCase()
+    name.trim().toLowerCase(),
   );
 }
 
@@ -49,11 +49,11 @@ export function lifeTagNamesForView(view: LifeView): string[] {
  */
 export function deriveLifeAreaFromTags(
   tagIds: string[],
-  tags: { id: string; name: string }[]
+  tags: { id: string; name: string }[],
 ): EntityLifeArea {
   const nameById = new Map(tags.map((t) => [t.id, t.name.toLowerCase()]));
   const names = new Set(
-    tagIds.map((id) => nameById.get(id)).filter((n): n is string => Boolean(n))
+    tagIds.map((id) => nameById.get(id)).filter((n): n is string => Boolean(n)),
   );
   const hasWork = names.has("work");
   const hasPersonal = names.has("personal");
@@ -69,7 +69,7 @@ export function deriveLifeAreaFromTags(
  */
 export function deriveStrictLifeAreaFromTags(
   tagIds: string[],
-  tags: { id: string; name: string }[]
+  tags: { id: string; name: string }[],
 ): LifeArea {
   return deriveLifeAreaFromTags(tagIds, tags) === "work" ? "work" : "personal";
 }
@@ -82,7 +82,7 @@ export function deriveStrictLifeAreaFromTags(
 export function withLifeTags(
   tagIds: string[],
   view: LifeView,
-  tags: { id: string; name: string }[]
+  tags: { id: string; name: string }[],
 ): string[] {
   const nameById = new Map(tags.map((t) => [t.id, t.name.toLowerCase()]));
   const present = new Set(tagIds.map((id) => nameById.get(id)));
@@ -100,7 +100,7 @@ export function withLifeTags(
 /** Whether a tag list carries at least one life tag. */
 export function hasLifeTag(
   tagIds: string[],
-  tags: { id: string; name: string }[]
+  tags: { id: string; name: string }[],
 ): boolean {
   const nameById = new Map(tags.map((t) => [t.id, t.name.toLowerCase()]));
   return tagIds.some((id) => {
@@ -120,7 +120,7 @@ export function hasLifeTag(
 export function setLifeTags(
   tagIds: string[],
   view: LifeView,
-  tags: { id: string; name: string }[]
+  tags: { id: string; name: string }[],
 ): string[] {
   const nameById = new Map(tags.map((t) => [t.id, t.name.toLowerCase()]));
   const idsByName = new Map(tags.map((t) => [t.name.toLowerCase(), t.id]));
@@ -141,7 +141,7 @@ export function setLifeTags(
 export function withProjectLifeTags(
   tagIds: string[],
   projectLifeArea: EntityLifeArea | null | undefined,
-  tags: { id: string; name: string }[]
+  tags: { id: string; name: string }[],
 ): string[] {
   if (!projectLifeArea) return tagIds;
   return setLifeTags(tagIds, projectLifeArea, tags);

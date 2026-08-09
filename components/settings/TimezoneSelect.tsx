@@ -1,10 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import {
-  buildTimezoneOptions,
-  getDefaultTimezone,
-} from "@/lib/timezone";
+import { buildTimezoneOptions, getDefaultTimezone } from "@/lib/timezone";
 
 type Props = {
   value: string;
@@ -29,7 +26,8 @@ export function TimezoneSelect({ value, onChange }: Props) {
         ))}
       </select>
       <p className="text-[12px] text-faint">
-        Today, due dates, habits, calendar, and the top bar all use this timezone.
+        Today, due dates, habits, calendar, and the top bar all use this
+        timezone.
       </p>
     </div>
   );

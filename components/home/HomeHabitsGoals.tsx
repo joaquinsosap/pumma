@@ -165,25 +165,31 @@ export function HomeHabitsGoals({
                       const ds = iso(d);
                       const on = set.has(ds);
                       const isToday = ds === td;
-                      // A day this habit does not run on is not a miss. An
-                      // empty box that looks identical either way is the
-                      // whole reason a Mon–Fri habit felt like it was
-                      // failing every weekend.
+                      // A day this habit does not run on keeps its slot and
+                      // shows nothing at all: no fill, no outline, not even
+                      // an empty box. An empty box is a miss, and a habit
+                      // that runs Mon to Fri was reading as two misses every
+                      // single weekend. The slot stays so the week keeps its
+                      // shape and Wednesday is always the third mark along.
                       const applies = habitAppliesOn(h.frequency, ds);
+                      if (!applies) {
+                        return (
+                          <span
+                            key={ds}
+                            className={habitWeekCellClass}
+                            style={{ background: "transparent" }}
+                          />
+                        );
+                      }
                       return (
                         <span
                           key={ds}
                           className={habitWeekCellClass}
                           style={{
-                            opacity: applies ? 1 : 0.3,
                             background: on
                               ? "oklch(0.6 0.13 155)"
                               : "transparent",
-                            border: on
-                              ? "none"
-                              : applies
-                                ? "1.5px solid var(--border)"
-                                : "1.5px dashed var(--border2)",
+                            border: on ? "none" : "1.5px solid var(--border)",
                             borderRadius: "3px",
                             outline: isToday
                               ? on
@@ -286,7 +292,7 @@ export function HomeHabitsGoals({
           <div className="mt-0.5 text-[12.5px] text-white/60">
             {topStreak > 0
               ? "Skip today and you're back to zero. Don't."
-              : "Start one today — momentum compounds."}
+              : "Start one today. Momentum compounds."}
           </div>
         </div>
       </Link>

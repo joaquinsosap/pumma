@@ -8,7 +8,11 @@ import {
   RESERVED_DATE,
 } from "@/lib/omni-reserved";
 import { iso, defaultNoteTitle, fakeLocalFromTz } from "@/lib/date";
-import { isDateToken, resolveDateToken, type DateOrder } from "@/lib/date-tokens";
+import {
+  isDateToken,
+  resolveDateToken,
+  type DateOrder,
+} from "@/lib/date-tokens";
 import { getDefaultTimezone } from "@/lib/timezone";
 
 /** Preview color for #tags that do not exist yet (created on save). */
@@ -62,7 +66,7 @@ export function parseOmni(
   tags: Tag[],
   referenceDate?: Date,
   options?: ParseOptions,
-  timeZone?: string
+  timeZone?: string,
 ): ParseResult {
   const tz = timeZone ?? getDefaultTimezone();
   const ref = referenceDate ?? fakeLocalFromTz(new Date(), tz);
@@ -116,7 +120,10 @@ export function parseOmni(
       pills.push({ name, color: NEW_TAG_PREVIEW_COLOR, isNew: true });
     }
   }
-  title = title.replace(new RegExp(OMNI_TOKEN_RE.source, "gi"), "").replace(/\s+/g, " ").trim();
+  title = title
+    .replace(new RegExp(OMNI_TOKEN_RE.source, "gi"), "")
+    .replace(/\s+/g, " ")
+    .trim();
 
   let priority: "low" | "med" | "high" = priorityToken ?? "med";
   // TODO: the "!high" form predates "#high" and is kept only so existing
@@ -233,7 +240,7 @@ export function parseNoteCapture(
   text: string,
   tags: Tag[],
   referenceDate?: Date,
-  timeZone?: string
+  timeZone?: string,
 ): NoteParseResult {
   const p = parseOmni(text, tags, referenceDate, { forNote: true }, timeZone);
   const cleaned = p.title.trim();
@@ -253,7 +260,11 @@ export function parseNoteCapture(
   }
 
   return {
-    title: defaultNoteTitle(referenceDate ?? fakeLocalFromTz(new Date(), timeZone ?? getDefaultTimezone()), timeZone),
+    title: defaultNoteTitle(
+      referenceDate ??
+        fakeLocalFromTz(new Date(), timeZone ?? getDefaultTimezone()),
+      timeZone,
+    ),
     body: cleaned,
     tagIds: p.tagIds,
     newTagNames: p.newTagNames,
@@ -263,7 +274,7 @@ export function parseNoteCapture(
 export function defaultDue(
   parsedDue: string | null,
   defaultDueToday: boolean,
-  today: string = iso()
+  today: string = iso(),
 ): string | null {
   if (parsedDue) return parsedDue;
   if (defaultDueToday) return today;
@@ -300,7 +311,7 @@ export type OmniInputToken =
 export function tokenizeOmniInput(
   text: string,
   tags: Tag[],
-  options?: { showTags?: boolean; showPriority?: boolean }
+  options?: { showTags?: boolean; showPriority?: boolean },
 ): OmniInputToken[] {
   const showTags = options?.showTags !== false;
   const showPriority = options?.showPriority !== false;
@@ -420,7 +431,7 @@ export function descriptionColonIndex(text: string): number | null {
  */
 function dimDescriptionAfterColon(
   segments: OmniInputToken[],
-  text: string
+  text: string,
 ): OmniInputToken[] {
   const colon = descriptionColonIndex(text);
   if (colon === null) return segments;

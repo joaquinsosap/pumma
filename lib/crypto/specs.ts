@@ -59,7 +59,7 @@ export function specFor(collection: EncryptedCollection): Spec {
 export function mapContent(
   doc: Record<string, unknown>,
   spec: Spec,
-  fn: (value: string) => string
+  fn: (value: string) => string,
 ): Record<string, unknown> {
   const out: Record<string, unknown> = { ...doc };
 

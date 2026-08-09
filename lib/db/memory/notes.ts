@@ -9,14 +9,17 @@ export async function listNotes(userId: string): Promise<Note[]> {
     .map((n) => toDto(noteSchema.parse(n)));
 }
 
-export async function getNote(userId: string, id: string): Promise<Note | null> {
+export async function getNote(
+  userId: string,
+  id: string,
+): Promise<Note | null> {
   const store = getStore();
   const doc = store.notes.find((n) => n._id === id && n.userId === userId);
   return doc ? toDto(noteSchema.parse(doc)) : null;
 }
 
 export async function insertNote(
-  doc: Omit<NoteDoc, "_id"> & { _id?: string }
+  doc: Omit<NoteDoc, "_id"> & { _id?: string },
 ): Promise<Note> {
   const store = getStore();
   const full = { ...doc, _id: doc._id ?? newId() };
@@ -27,7 +30,7 @@ export async function insertNote(
 export async function updateNote(
   userId: string,
   id: string,
-  patch: Partial<NoteDoc>
+  patch: Partial<NoteDoc>,
 ): Promise<Note | null> {
   const store = getStore();
   const idx = store.notes.findIndex((n) => n._id === id && n.userId === userId);
@@ -39,6 +42,8 @@ export async function updateNote(
 export async function deleteNote(userId: string, id: string): Promise<boolean> {
   const store = getStore();
   const before = store.notes.length;
-  store.notes = store.notes.filter((n) => !(n._id === id && n.userId === userId));
+  store.notes = store.notes.filter(
+    (n) => !(n._id === id && n.userId === userId),
+  );
   return store.notes.length < before;
 }

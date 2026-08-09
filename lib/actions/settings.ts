@@ -45,8 +45,14 @@ const settingsPatchSchema = z
     habitVisibleMonths: z.number().int().min(1).max(24).optional(),
     timezone: z.string().max(64).optional(),
     lifeAutoSwitch: z.boolean().optional(),
-    workStart: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
-    workEnd: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).optional(),
+    workStart: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+      .optional(),
+    workEnd: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+      .optional(),
     workDays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     lifeAutoOverrideMins: z.number().int().min(5).max(720).optional(),
     tagAutoClean: z.boolean().optional(),
@@ -134,7 +140,8 @@ export async function addTagAction(name: string): Promise<ActionResult<Tag>> {
  *  revoked key; only a real call can tell you that. */
 export async function setAiApiKeyAction(rawKey: string): Promise<ActionResult> {
   const key = String(rawKey ?? "").trim();
-  if (key.length > 400) return { ok: false, error: "That key is implausibly long" };
+  if (key.length > 400)
+    return { ok: false, error: "That key is implausibly long" };
 
   const userId = await requireUserId();
   const settings = await getSettings(userId);
@@ -162,7 +169,9 @@ export async function setAiApiKeyAction(rawKey: string): Promise<ActionResult> {
 /** Switch provider. The stored key goes with it — a key never works across
  *  providers, and leaving it would fail on the next call with a confusing
  *  message instead of an obvious empty field. */
-export async function setAiProviderAction(provider: string): Promise<ActionResult> {
+export async function setAiProviderAction(
+  provider: string,
+): Promise<ActionResult> {
   if (!isProviderId(provider)) return { ok: false, error: "Unknown provider" };
   const userId = await requireUserId();
   await updateSettings(userId, {
@@ -186,7 +195,10 @@ const modelSchema = z
 export async function setAiModelAction(model: string): Promise<ActionResult> {
   const parsed = modelSchema.safeParse(model);
   if (!parsed.success) {
-    return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid model" };
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid model",
+    };
   }
   const userId = await requireUserId();
   await updateSettings(userId, { aiModel: parsed.data || null });
@@ -206,7 +218,9 @@ export async function clearAiApiKeyAction(): Promise<ActionResult> {
 
 const userNameSchema = z.string().trim().min(1).max(64);
 
-export async function updateUserNameAction(name: string): Promise<ActionResult> {
+export async function updateUserNameAction(
+  name: string,
+): Promise<ActionResult> {
   const parsed = userNameSchema.safeParse(name);
   if (!parsed.success) return { ok: false, error: "Invalid name" };
 

@@ -63,7 +63,15 @@ export function HabitHeatStrip({
   const timeZone = useTimezone();
   const td = today ?? iso(new Date(), timeZone);
   const frequency = normalizeHabitFrequency(habit.frequency.type);
-  const cells = habitHeatCells(frequency, visibility, entries, weekStart, td, timeZone);
+  const cells = habitHeatCells(
+    frequency,
+    visibility,
+    entries,
+    weekStart,
+    td,
+    timeZone,
+    habit.frequency,
+  );
 
   // Only slightly bigger than the original bare squares — just enough for a
   // number to sit legibly inside.
@@ -91,7 +99,7 @@ export function HabitHeatStrip({
       className={cn(
         "flex flex-wrap items-end",
         frequency === "daily" ? "gap-x-1 gap-y-1.5" : "gap-1.5",
-        className
+        className,
       )}
     >
       {cells.map((cell, index) => {
@@ -101,18 +109,26 @@ export function HabitHeatStrip({
           frequency !== "monthly" &&
           (index === 0 || !prev || monthShort(prev.id) !== monthShort(cell.id));
 
+        // A day the schedule skips keeps its slot and gives up everything
+        // else: no fill, no border, no number, nothing to press. The run has
+        // to stay a calendar — take the box out and every date after it
+        // shifts, and the week you are looking for is no longer where your
+        // eye expects it.
         const box = cn(
           size,
           "flex w-full items-center justify-center rounded-[4px]",
           onToggleCell &&
-            "cursor-pointer hover:outline hover:outline-2 hover:outline-faint2 hover:outline-offset-1"
+            cell.applies &&
+            "cursor-pointer hover:outline hover:outline-2 hover:outline-faint2 hover:outline-offset-1",
         );
-        const style = {
-          background: cell.done ? DONE_BG : "var(--border2)",
-          border: cell.done ? "none" : "1px solid var(--border)",
-          outline: cell.isCurrent ? "2px solid var(--faint2)" : undefined,
-          outlineOffset: cell.isCurrent ? "1px" : undefined,
-        };
+        const style: React.CSSProperties = cell.applies
+          ? {
+              background: cell.done ? DONE_BG : "var(--border2)",
+              border: cell.done ? "none" : "1px solid var(--border)",
+              outline: cell.isCurrent ? "2px solid var(--faint2)" : undefined,
+              outlineOffset: cell.isCurrent ? "1px" : undefined,
+            }
+          : { background: "transparent", border: "none" };
         const content = (
           <span
             className={cn(
@@ -124,14 +140,15 @@ export function HabitHeatStrip({
                 : compact
                   ? "text-[8.5px]"
                   : "text-[9.5px]",
-              cell.done ? "font-bold text-white" : "text-faint"
+              cell.done ? "font-bold text-white" : "text-faint",
             )}
           >
-            {labelFor(cell)}
+            {cell.applies ? labelFor(cell) : ""}
           </span>
         );
-        const title =
-          frequency === "daily"
+        const title = !cell.applies
+          ? `${cell.id} · not a day this habit runs on`
+          : frequency === "daily"
             ? `${cell.id}${cell.isCurrent ? " · today" : ""}`
             : cell.label;
 
@@ -142,20 +159,24 @@ export function HabitHeatStrip({
               "flex shrink-0 flex-col gap-0.5",
               // A little air where the month turns over, so the run reads in
               // month-sized chunks.
-              showMonth && index > 0 && (frequency === "daily" ? "ml-2" : "ml-2.5")
+              showMonth &&
+                index > 0 &&
+                (frequency === "daily" ? "ml-2" : "ml-2.5"),
             )}
           >
             {frequency !== "monthly" && (
               <span
                 className={cn(
                   "font-mono uppercase tracking-wide text-faint2",
-                  compact ? "text-[7px] leading-[10px]" : "text-[8px] leading-3"
+                  compact
+                    ? "text-[7px] leading-[10px]"
+                    : "text-[8px] leading-3",
                 )}
               >
                 {showMonth ? monthShort(cell.id) : ""}
               </span>
             )}
-            {onToggleCell ? (
+            {onToggleCell && cell.applies ? (
               <button
                 type="button"
                 title={title}
@@ -179,7 +200,7 @@ export function HabitHeatStrip({
                   compact ? "text-[6.5px]" : "text-[7.5px]",
                   // Weekends sit back a shade so the week's shape is readable
                   // at a glance without adding another visual element.
-                  isWeekend(cell.id) ? "text-faint2/60" : "text-faint2"
+                  isWeekend(cell.id) ? "text-faint2/60" : "text-faint2",
                 )}
               >
                 {weekdayLetter(cell.id)}

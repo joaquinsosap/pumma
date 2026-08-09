@@ -68,12 +68,12 @@ export function LifeCalendarView({
 
   const lifeDayMap = useMemo(
     () => new Map(lifeDays.map((d) => [d.date, d])),
-    [lifeDays]
+    [lifeDays],
   );
 
   const lifeStats = useMemo(
     () => (birthDate ? computeLifeStats(birthDate, span, today) : null),
-    [birthDate, span, today]
+    [birthDate, span, today],
   );
 
   const grid = useMemo(
@@ -81,12 +81,12 @@ export function LifeCalendarView({
       birthDate && lifeStats
         ? buildLifeWeekGrid(birthDate, span, lifeStats.ageYears)
         : { weeks: [], rows: [], viewStartAge: 0 },
-    [birthDate, span, lifeStats]
+    [birthDate, span, lifeStats],
   );
 
   const lifeWeekMap = useMemo(
     () => buildLifeWeekMap(lifeWeeks, grid.weeks),
-    [lifeWeeks, grid.weeks]
+    [lifeWeeks, grid.weeks],
   );
 
   useEffect(() => {
@@ -94,11 +94,16 @@ export function LifeCalendarView({
   }, [birthDate, span]);
 
   useEffect(() => {
-    if (fullView || didInitialScrollRef.current || !gridScrollRef.current || !lifeStats)
+    if (
+      fullView ||
+      didInitialScrollRef.current ||
+      !gridScrollRef.current ||
+      !lifeStats
+    )
       return;
     const scrollAge = lifeViewStartAge(lifeStats.ageYears);
     const target = gridScrollRef.current.querySelector(
-      `[data-life-age="${scrollAge}"]`
+      `[data-life-age="${scrollAge}"]`,
     );
     if (!target) return;
     target.scrollIntoView({ block: "start" });
@@ -152,7 +157,7 @@ export function LifeCalendarView({
               Set your birth date to begin
             </p>
             <p className="mx-auto mt-2 max-w-sm text-[13px] text-faint">
-              Your life calendar maps up to {span} years — one square per week.
+              Your life calendar maps up to {span} years, one square per week.
             </p>
             <Link
               href="/settings"
@@ -265,7 +270,10 @@ export function LifeCalendarView({
                 )}
                 <label className="ml-auto flex cursor-pointer items-center gap-2 text-faint">
                   <span className="select-none">Full view</span>
-                  <Switch checked={fullView} onCheckedChange={setFullViewPersisted} />
+                  <Switch
+                    checked={fullView}
+                    onCheckedChange={setFullViewPersisted}
+                  />
                 </label>
               </div>
 
@@ -280,7 +288,12 @@ export function LifeCalendarView({
                   <span className={fullView ? "text-[9px]" : undefined}>
                     ← {LIFE_GRID_COLS} WEEKS PER ROW →
                   </span>
-                  <span className={cn("max-sm:pr-0", fullView ? "pr-[32px]" : "pr-[42px]")}>
+                  <span
+                    className={cn(
+                      "max-sm:pr-0",
+                      fullView ? "pr-[32px]" : "pr-[42px]",
+                    )}
+                  >
                     AGE {span}
                   </span>
                 </div>
@@ -290,13 +303,15 @@ export function LifeCalendarView({
                     "min-h-0 flex-1",
                     fullView
                       ? "flex flex-col overflow-hidden"
-                      : "overflow-y-auto overflow-x-hidden"
+                      : "overflow-y-auto overflow-x-hidden",
                   )}
                 >
                   <div
                     className={cn(
                       "flex flex-col",
-                      fullView ? "h-full flex-1 gap-px" : "gap-[3px] max-sm:gap-[2px]"
+                      fullView
+                        ? "h-full flex-1 gap-px"
+                        : "gap-[3px] max-sm:gap-[2px]",
                     )}
                   >
                     {grid.rows.map((row) => (
@@ -305,8 +320,10 @@ export function LifeCalendarView({
                         data-life-age={row.age}
                         className={cn(
                           "flex min-h-0 items-center",
-                          fullView ? "flex-1 gap-px" : "gap-[3px] max-sm:gap-[2px]",
-                          !fullView && row.decadeGap && "mt-1.5"
+                          fullView
+                            ? "flex-1 gap-px"
+                            : "gap-[3px] max-sm:gap-[2px]",
+                          !fullView && row.decadeGap && "mt-1.5",
                         )}
                       >
                         <span
@@ -320,11 +337,12 @@ export function LifeCalendarView({
                               : row.ageEmphasis
                                 ? "font-bold text-faint"
                                 : "text-faint",
-                            fullView && !row.ageEmphasis && "text-faint2"
+                            fullView && !row.ageEmphasis && "text-faint2",
                           )}
                         >
                           {fullView
-                            ? row.age % 10 === 0 || row.age === lifeStats.ageYears
+                            ? row.age % 10 === 0 ||
+                              row.age === lifeStats.ageYears
                               ? row.age
                               : ""
                             : row.showAgeLabel
@@ -334,7 +352,9 @@ export function LifeCalendarView({
                         <div
                           className={cn(
                             "flex min-h-0 min-w-0 flex-1",
-                            fullView ? "h-full gap-px" : "gap-[3px] max-sm:gap-[2px]"
+                            fullView
+                              ? "h-full gap-px"
+                              : "gap-[3px] max-sm:gap-[2px]",
                           )}
                         >
                           {row.cells.map((week, col) => {
@@ -365,12 +385,15 @@ export function LifeCalendarView({
                         <span
                           className={cn(
                             "shrink-0 pl-1 font-mono tabular-nums text-faint2 max-sm:hidden",
-                            fullView ? "w-[32px] text-[7px]" : "w-[42px] text-[9px]",
-                            row.yearEmphasis && "font-bold text-faint"
+                            fullView
+                              ? "w-[32px] text-[7px]"
+                              : "w-[42px] text-[9px]",
+                            row.yearEmphasis && "font-bold text-faint",
                           )}
                         >
                           {fullView
-                            ? row.age % 10 === 0 || row.age === lifeStats.ageYears
+                            ? row.age % 10 === 0 ||
+                              row.age === lifeStats.ageYears
                               ? row.yearLabel
                               : ""
                             : row.yearLabel}
@@ -392,7 +415,7 @@ export function LifeCalendarView({
         birthDate={birthDate}
         lifeWeek={
           selectedWeek
-            ? lifeWeekMap.get(selectedWeek.weekStart) ?? null
+            ? (lifeWeekMap.get(selectedWeek.weekStart) ?? null)
             : null
         }
         today={today}
@@ -426,7 +449,9 @@ function StatLine({
     <span className={className}>
       {n.toLocaleString()}
       {suffix && (
-        <span className="text-[13px] font-medium text-faint max-lg:text-[11px]">{suffix}</span>
+        <span className="text-[13px] font-medium text-faint max-lg:text-[11px]">
+          {suffix}
+        </span>
       )}
     </span>
   );

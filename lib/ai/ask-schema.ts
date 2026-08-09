@@ -52,14 +52,14 @@ const barWidget = z.object({
     .boolean()
     .nullish()
     .describe(
-      "True if this exact series would also read well as a donut (parts of a whole). The app may then render it as one for variety."
+      "True if this exact series would also read well as a donut (parts of a whole). The app may then render it as one for variety.",
     ),
   series: z.array(
     z.object({
       label: z.string(),
       value: z.number(),
       ...focusFields,
-    })
+    }),
   ),
 });
 
@@ -72,7 +72,7 @@ const listWidget = z.object({
       label: z.string(),
       sublabel: z.string(),
       ...focusFields,
-    })
+    }),
   ),
 });
 
@@ -86,7 +86,7 @@ const calendarWidget = z.object({
       date: z.string(), // "YYYY-MM-DD"
       intensity: z.number(), // 0..1 shading; 0 = default
       label: z.string(),
-    })
+    }),
   ),
 });
 
@@ -109,7 +109,7 @@ const pieWidget = z.object({
       label: z.string(),
       value: z.number(),
       ...focusFields,
-    })
+    }),
   ),
   unit: z.string(),
   centerLabel: z.string(),
@@ -118,7 +118,7 @@ const pieWidget = z.object({
     .boolean()
     .nullish()
     .describe(
-      "True if these slices would also read well as a ranked bar chart. The app may then render it as one for variety."
+      "True if these slices would also read well as a ranked bar chart. The app may then render it as one for variety.",
     ),
 });
 
@@ -140,7 +140,7 @@ const progressWidget = z.object({
       // 0..100
       percent: z.number(),
       ...focusFields,
-    })
+    }),
   ),
 });
 

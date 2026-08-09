@@ -34,7 +34,7 @@ const deleteAccountSchema = z.object({
 });
 
 export async function deleteAccountAction(
-  input: z.infer<typeof deleteAccountSchema>
+  input: z.infer<typeof deleteAccountSchema>,
 ): Promise<ActionResult<{ deleted: true }>> {
   const parsed = deleteAccountSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -60,7 +60,7 @@ export async function deleteAccountAction(
     return {
       ok: false,
       error:
-        "Cancel your subscription first — we can't cancel it for you, and deleting now would leave you being charged for an account that no longer exists.",
+        "Cancel your subscription first, because we can't cancel it for you, and deleting now would leave you being charged for an account that no longer exists.",
     };
   }
 

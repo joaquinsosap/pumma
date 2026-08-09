@@ -423,7 +423,12 @@ export function HabitsView({
                       </div>
                       <div className="text-center">
                         <div className="text-lg font-extrabold">
-                          {habitBestStreak(frequency, set, weekStart)}
+                          {habitBestStreak(
+                            frequency,
+                            set,
+                            weekStart,
+                            h.frequency,
+                          )}
                         </div>
                         <div className="font-mono text-[9px] text-faint">
                           BEST

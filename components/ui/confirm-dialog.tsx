@@ -84,7 +84,7 @@ export function ConfirmDialog({
               "rounded-lg px-3.5 py-2 text-[12.5px] font-bold transition-colors disabled:opacity-50",
               destructive
                 ? "border border-tasks/30 bg-tasks text-white hover:border-tasks/50 hover:bg-tasks/90"
-                : "border border-ink bg-ink text-background hover:bg-ink/90"
+                : "border border-ink bg-ink text-background hover:bg-ink/90",
             )}
           >
             {confirmLabel}

@@ -32,7 +32,9 @@ export const opFieldsSchema = z.object({
   description: z
     .string()
     .nullish()
-    .describe("Longer text for a project or task; for a note this is its body."),
+    .describe(
+      "Longer text for a project or task; for a note this is its body.",
+    ),
   lifeArea: z
     .enum(["personal", "work"])
     .nullish()
@@ -54,13 +56,13 @@ export const opFieldsSchema = z.object({
     .string()
     .nullish()
     .describe(
-      "For a task: the project it belongs to. Set this to move a task into a project. Accepts a real project id from the snapshot, or the refId of a project created in this same changeset."
+      "For a task: the project it belongs to. Set this to move a task into a project. Accepts a real project id from the snapshot, or the refId of a project created in this same changeset.",
     ),
   goalId: z
     .string()
     .nullish()
     .describe(
-      "For a project: the goal it belongs to. Accepts a real goal id, or the refId of a goal created in this same changeset."
+      "For a project: the goal it belongs to. Accepts a real goal id, or the refId of a goal created in this same changeset.",
     ),
   goalIds: z
     .array(z.string())
@@ -74,7 +76,7 @@ export const opFieldsSchema = z.object({
     .boolean()
     .nullish()
     .describe(
-      "For a habit: true to archive it (stop tracking without deleting its history), false to bring it back. Archiving is the gentle alternative to deleting."
+      "For a habit: true to archive it (stop tracking without deleting its history), false to bring it back. Archiving is the gentle alternative to deleting.",
     ),
 });
 

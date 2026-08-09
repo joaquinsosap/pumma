@@ -1,8 +1,5 @@
 import { getStore, newId } from "@/lib/store/memory";
-import {
-  SPECIAL_LIFE_TAGS,
-  LIFE_TAG_COLORS,
-} from "@/lib/life-area-sync";
+import { SPECIAL_LIFE_TAGS, LIFE_TAG_COLORS } from "@/lib/life-area-sync";
 import { toDto, type Tag, tagSchema } from "@/lib/schemas";
 import type { TagDoc } from "@/lib/schemas";
 import { TAG_PALETTE } from "@/lib/types";
@@ -18,7 +15,7 @@ export async function listTags(userId: string): Promise<Tag[]> {
 
 export async function getTagByName(
   userId: string,
-  name: string
+  name: string,
 ): Promise<Tag | null> {
   const store = getStore();
   const doc = store.tags.find((t) => t.userId === userId && t.name === name);
@@ -28,10 +25,15 @@ export async function getTagByName(
 export async function insertTag(
   userId: string,
   name: string,
-  opts?: { projectId?: string | null; isProjectPrimary?: boolean; color?: string }
+  opts?: {
+    projectId?: string | null;
+    isProjectPrimary?: boolean;
+    color?: string;
+  },
 ): Promise<Tag | null> {
   const store = getStore();
-  if (store.tags.some((t) => t.userId === userId && t.name === name)) return null;
+  if (store.tags.some((t) => t.userId === userId && t.name === name))
+    return null;
   const mine = store.tags.filter((t) => t.userId === userId);
   const tag: TagDoc = {
     _id: newId(),
@@ -73,7 +75,7 @@ export async function ensureLifeTags(userId: string): Promise<void> {
 export async function updateTag(
   userId: string,
   id: string,
-  patch: { name?: string; color?: string }
+  patch: { name?: string; color?: string },
 ): Promise<Tag | null> {
   const store = getStore();
   const idx = store.tags.findIndex((t) => t._id === id && t.userId === userId);
@@ -81,7 +83,7 @@ export async function updateTag(
   if (
     patch.name &&
     store.tags.some(
-      (t) => t.userId === userId && t.name === patch.name && t._id !== id
+      (t) => t.userId === userId && t.name === patch.name && t._id !== id,
     )
   ) {
     return null;
@@ -93,12 +95,13 @@ export async function updateTag(
 /** Re-insert whole tag docs — used to undo a cleanup, so ids/colors survive. */
 export async function restoreTags(
   userId: string,
-  docs: TagDoc[]
+  docs: TagDoc[],
 ): Promise<number> {
   const store = getStore();
   let restored = 0;
   for (const doc of docs) {
-    if (store.tags.some((t) => t._id === doc._id && t.userId === userId)) continue;
+    if (store.tags.some((t) => t._id === doc._id && t.userId === userId))
+      continue;
     store.tags.push({ ...doc, userId });
     restored += 1;
   }
@@ -125,7 +128,7 @@ export async function deleteTag(userId: string, id: string): Promise<boolean> {
 
 export async function ensureTags(
   userId: string,
-  names: string[]
+  names: string[],
 ): Promise<string[]> {
   const ids: string[] = [];
   for (const name of names) {
@@ -140,7 +143,7 @@ export async function ensureTags(
 
 export async function detachTagFromProject(
   userId: string,
-  id: string
+  id: string,
 ): Promise<void> {
   const store = getStore();
   const tag = store.tags.find((t) => t._id === id && t.userId === userId);
@@ -153,7 +156,7 @@ export async function setTagProject(
   userId: string,
   id: string,
   projectId: string,
-  opts: { primary?: boolean } = {}
+  opts: { primary?: boolean } = {},
 ): Promise<void> {
   const store = getStore();
   const tag = store.tags.find((t) => t._id === id && t.userId === userId);

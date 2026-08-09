@@ -110,7 +110,7 @@ describe("completeOmniToken", () => {
 
   it("wraps around when rotating past the end", () => {
     expect(completeOmniToken("x #website-", 11, tags, 3)?.completion).toBe(
-      "website-app"
+      "website-app",
     );
   });
 
@@ -123,10 +123,10 @@ describe("completeOmniToken", () => {
 
   it("completes priorities and spaces them out", () => {
     expect(completeOmniToken("pay rent !hi", 12, tags)?.text).toBe(
-      "pay rent !high "
+      "pay rent !high ",
     );
     expect(completeOmniToken("pay rent !m", 11, tags)?.text).toBe(
-      "pay rent !mid "
+      "pay rent !mid ",
     );
   });
 
@@ -167,7 +167,7 @@ describe("rotation over the originally typed prefix", () => {
     const pool = ["health", "home-office-setup"];
     expect(completeOmniToken("x #h", 4, pool)?.completion).toBe("health");
     expect(completeOmniToken("x #health", 9, pool, 1, "h")?.completion).toBe(
-      "home-office-setup"
+      "home-office-setup",
     );
   });
 });

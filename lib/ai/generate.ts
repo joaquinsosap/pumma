@@ -54,8 +54,11 @@ export type GenerateStructuredOptions<T> = {
  * user's money on a model that can't do it.
  */
 export async function generateStructured<T>(
-  opts: GenerateStructuredOptions<T>
-): Promise<{ object: T; usage: { inputTokens: number; outputTokens: number } }> {
+  opts: GenerateStructuredOptions<T>,
+): Promise<{
+  object: T;
+  usage: { inputTokens: number; outputTokens: number };
+}> {
   const creds = await resolveAiCredentials(opts.userId);
   if (!creds) throw new Error(NO_API_KEY_MESSAGE);
 
@@ -101,7 +104,7 @@ export async function generateStructured<T>(
           "Your previous reply was rejected. Fix exactly this and reply again:",
           validationDetail(error),
           "Return JSON matching the schema — no prose, no markdown fence.",
-        ].join("\n\n")
+        ].join("\n\n"),
       );
     } catch (retryError) {
       debugDump("retry failed too", retryError);
@@ -118,7 +121,8 @@ export async function generateStructured<T>(
   await recordAiUsage(opts.userId, usage);
 
   if (result.finishReason === "length") throw new Error(opts.tooLongMessage);
-  if (result.finishReason === "content-filter") throw new Error(opts.refusalMessage);
+  if (result.finishReason === "content-filter")
+    throw new Error(opts.refusalMessage);
   if (!result.object) throw new Error(opts.invalidMessage);
 
   return { object: result.object, usage };
@@ -127,7 +131,7 @@ export async function generateStructured<T>(
 function systemMessages(
   creds: AiCredentials,
   system: StructuredMessages,
-  extra?: string
+  extra?: string,
 ): SystemModelMessage[] {
   const def = providerDef(creds.provider);
   const messages: SystemModelMessage[] = [
@@ -179,7 +183,7 @@ function buildModel(creds: AiCredentials): LanguageModel {
 function describeFailure<T>(
   error: unknown,
   creds: AiCredentials,
-  opts: GenerateStructuredOptions<T>
+  opts: GenerateStructuredOptions<T>,
 ): Error {
   const label = providerDef(creds.provider).label;
   if (NoObjectGeneratedError.isInstance(error)) {
@@ -189,12 +193,12 @@ function describeFailure<T>(
   const status = statusOf(error);
   if (status === 401 || status === 403) {
     return new Error(
-      `${label} rejected your API key. Check it in Settings → Assistant.`
+      `${label} rejected your API key. Check it in Settings → Assistant.`,
     );
   }
   if (status === 404) {
     return new Error(
-      `${label} doesn't know the model "${creds.model}". Pick another in Settings → Assistant.`
+      `${label} doesn't know the model "${creds.model}". Pick another in Settings → Assistant.`,
     );
   }
   if (status === 429) {
@@ -209,8 +213,8 @@ function describeFailure<T>(
   if (isConnectionError(error)) {
     return new Error(
       `Could not reach ${label}${
-        creds.provider === "ollama" ? " — is it running?" : "."
-      }`
+        creds.provider === "ollama" ? ", is it running?" : "."
+      }`,
     );
   }
   return error instanceof Error ? error : new Error(String(error));
@@ -246,7 +250,8 @@ function debugDump(stage: string, error: unknown): void {
  * bury the complaint it needs to act on.
  */
 function validationDetail(error: unknown): string {
-  if (!NoObjectGeneratedError.isInstance(error)) return "The reply did not match the schema.";
+  if (!NoObjectGeneratedError.isInstance(error))
+    return "The reply did not match the schema.";
   const cause = String(error.cause ?? "");
   // Zod's message lives after "Error message:" in the SDK's wrapper.
   const zod = cause.split("Error message:")[1] ?? cause;

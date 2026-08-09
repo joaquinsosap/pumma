@@ -8,7 +8,7 @@ export type TasksTab = "today" | "upcoming" | "all";
  *  link means a specific slice (e.g. Home's "Today's tasks" widget). */
 export function tasksListHref(
   lifeView: LifeView,
-  tab: TasksTab = "all"
+  tab: TasksTab = "all",
 ): string {
   return hrefWithLife(`/tasks?tab=${tab}`, lifeView);
 }
@@ -16,10 +16,16 @@ export function tasksListHref(
 export function taskDetailHref(
   task: Task,
   lifeView: LifeView,
-  today = iso()
+  today = iso(),
 ): string {
   const d = (task.due ?? "").slice(0, 10);
   const tab: TasksTab =
-    d && d < today ? "today" : d === today ? "today" : d > today ? "upcoming" : "all";
+    d && d < today
+      ? "today"
+      : d === today
+        ? "today"
+        : d > today
+          ? "upcoming"
+          : "all";
   return hrefWithLife(`/tasks?tab=${tab}&task=${task.id}`, lifeView);
 }

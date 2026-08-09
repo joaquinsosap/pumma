@@ -42,7 +42,7 @@ export const BEATS: Beat[] = [
     kind: "do",
     step: "Capture",
     caption: "Don't click anything. Just type.",
-    sub: "Give it a day and a #tag — try: pay rent friday #finance",
+    sub: "Give it a day and a #tag. Try: pay rent friday #finance",
     done: "That's the whole capture flow.",
   },
   {
@@ -50,7 +50,7 @@ export const BEATS: Beat[] = [
     kind: "do",
     step: "Switch",
     caption: "Tab changes what you're making.",
-    sub: "Press Tab until the bar says goal — then hold it there.",
+    sub: "Press Tab until the bar says goal, then hold it there.",
     done: "One bar for tasks, habits, goals, notes and the assistant.",
   },
   {
@@ -58,7 +58,7 @@ export const BEATS: Beat[] = [
     kind: "do",
     step: "File it",
     caption: "A tag isn't a label. It's where the thing lives.",
-    sub: "Right-click the task — long-press on a phone — and send it somewhere.",
+    sub: "Right-click the task, or long-press on a phone, and send it somewhere.",
     done: "It moved, and took that place's side of life with it.",
   },
   {

@@ -11,7 +11,7 @@ export async function listProjects(userId: string): Promise<Project[]> {
 
 export async function getProject(
   userId: string,
-  id: string
+  id: string,
 ): Promise<Project | null> {
   const store = getStore();
   const doc = store.projects.find((p) => p._id === id && p.userId === userId);
@@ -19,7 +19,7 @@ export async function getProject(
 }
 
 export async function insertProject(
-  doc: Omit<ProjectDoc, "_id"> & { _id?: string }
+  doc: Omit<ProjectDoc, "_id"> & { _id?: string },
 ): Promise<Project> {
   const store = getStore();
   const full = { ...doc, _id: doc._id ?? newId() };
@@ -30,10 +30,12 @@ export async function insertProject(
 export async function updateProject(
   userId: string,
   id: string,
-  patch: Partial<ProjectDoc>
+  patch: Partial<ProjectDoc>,
 ): Promise<Project | null> {
   const store = getStore();
-  const idx = store.projects.findIndex((p) => p._id === id && p.userId === userId);
+  const idx = store.projects.findIndex(
+    (p) => p._id === id && p.userId === userId,
+  );
   if (idx < 0) return null;
   store.projects[idx] = { ...store.projects[idx], ...patch };
   return toDto(projectSchema.parse(store.projects[idx]));
@@ -42,18 +44,21 @@ export async function updateProject(
 export async function deleteProject(
   userId: string,
   id: string,
-  opts: { deleteTasks?: boolean } = {}
+  opts: { deleteTasks?: boolean } = {},
 ): Promise<boolean> {
   const store = getStore();
-  const idx = store.projects.findIndex((p) => p._id === id && p.userId === userId);
+  const idx = store.projects.findIndex(
+    (p) => p._id === id && p.userId === userId,
+  );
   if (idx < 0) return false;
   if (opts.deleteTasks) {
     store.tasks = store.tasks.filter(
-      (t) => !(t.userId === userId && t.projectId === id)
+      (t) => !(t.userId === userId && t.projectId === id),
     );
   } else {
     for (const task of store.tasks) {
-      if (task.userId === userId && task.projectId === id) task.projectId = null;
+      if (task.userId === userId && task.projectId === id)
+        task.projectId = null;
     }
   }
   store.projects.splice(idx, 1);

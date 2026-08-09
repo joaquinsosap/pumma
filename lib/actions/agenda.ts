@@ -18,9 +18,7 @@ const MEETING_COLORS = {
   personal: "oklch(0.58 0.17 300)",
 } as const;
 
-const timeField = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time");
+const timeField = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time");
 
 const recurrenceInput = z
   .object({
@@ -59,7 +57,7 @@ function subLine(durationMins: number, notes: string): string {
 }
 
 export async function addMeetingAction(
-  input: MeetingInput
+  input: MeetingInput,
 ): Promise<ActionResult<AgendaItem>> {
   const parsed = meetingSchema.safeParse(input);
   if (!parsed.success) {
@@ -68,8 +66,15 @@ export async function addMeetingAction(
       error: parsed.error.issues[0]?.message ?? "Invalid input",
     };
   }
-  const { title: t, date, time, durationMins, lifeArea, notes, recurrence } =
-    parsed.data;
+  const {
+    title: t,
+    date,
+    time,
+    durationMins,
+    lifeArea,
+    notes,
+    recurrence,
+  } = parsed.data;
   const userId = await requireUserId();
   const item = await insertAgendaItem({
     userId,
@@ -92,7 +97,7 @@ export async function addMeetingAction(
 const updateSchema = meetingSchema.partial().extend({ id: entityId }).strict();
 
 export async function updateMeetingAction(
-  input: z.input<typeof updateSchema>
+  input: z.input<typeof updateSchema>,
 ): Promise<ActionResult<AgendaItem>> {
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) {
@@ -140,7 +145,7 @@ const deleteSchema = z
  * records an exception rather than destroying the series).
  */
 export async function deleteMeetingAction(
-  input: z.input<typeof deleteSchema>
+  input: z.input<typeof deleteSchema>,
 ): Promise<ActionResult> {
   const parsed = deleteSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -171,7 +176,9 @@ export async function deleteMeetingAction(
 }
 
 /** Legacy single-row delete (also removes leftover demo "routine" rows). */
-export async function deleteAgendaItemAction(id: string): Promise<ActionResult> {
+export async function deleteAgendaItemAction(
+  id: string,
+): Promise<ActionResult> {
   const parsed = entityId.safeParse(id);
   if (!parsed.success) return { ok: false, error: "Invalid id" };
   const userId = await requireUserId();

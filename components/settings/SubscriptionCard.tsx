@@ -47,7 +47,9 @@ export function SubscriptionCard() {
   useEffect(() => {
     let alive = true;
     fetch("/api/billing/summary", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+      .then((r) =>
+        r.ok ? r.json() : Promise.reject(new Error(String(r.status))),
+      )
       .then((data) => alive && setSummary(data))
       .catch(() => alive && setFailed(true));
     return () => {
@@ -58,7 +60,7 @@ export function SubscriptionCard() {
   if (failed) {
     return (
       <p className="text-[12px] text-faint">
-        Billing details are unavailable right now — try again in a minute.
+        Billing details are unavailable right now. Try again in a minute.
       </p>
     );
   }
@@ -71,7 +73,10 @@ export function SubscriptionCard() {
     return (
       <p className="text-sm text-muted">
         No active subscription on this account.{" "}
-        <a href="/billing" className="font-semibold text-ink underline underline-offset-2">
+        <a
+          href="/billing"
+          className="font-semibold text-ink underline underline-offset-2"
+        >
           Subscribe
         </a>
       </p>
@@ -79,10 +84,9 @@ export function SubscriptionCard() {
   }
 
   const paid = summary.lastPayment;
-  const card =
-    paid?.cardVisual
-      ? `${paid.cardType ? paid.cardType.toUpperCase() + " " : ""}${paid.cardVisual}`
-      : null;
+  const card = paid?.cardVisual
+    ? `${paid.cardType ? paid.cardType.toUpperCase() + " " : ""}${paid.cardVisual}`
+    : null;
 
   return (
     <div className="flex flex-col gap-3">
@@ -90,15 +94,13 @@ export function SubscriptionCard() {
         <span
           className={cn(
             "rounded-md border px-2 py-0.5 font-mono text-[11px] font-semibold lowercase",
-            STATUS_STYLES[summary.status ?? ""] ?? "border-border text-muted"
+            STATUS_STYLES[summary.status ?? ""] ?? "border-border text-muted",
           )}
         >
           {summary.status ?? "unknown"}
         </span>
         {summary.recurrence && (
-          <span className="text-sm text-ink">
-            Billed {summary.recurrence}
-          </span>
+          <span className="text-sm text-ink">Billed {summary.recurrence}</span>
         )}
         {fmtDate(summary.since) && (
           <span className="text-[12px] text-faint">
@@ -143,8 +145,9 @@ export function SubscriptionCard() {
             Manage billing →
           </a>
           <p className="mt-1.5 text-[12px] text-faint">
-            Opens your payment provider&apos;s manage page — update your card,
-            switch plans, or cancel there. Changes sync back automatically.
+            Opens your payment provider&apos;s manage page, where you can update
+            your card, switch plans, or cancel there. Changes sync back
+            automatically.
           </p>
         </div>
       )}

@@ -23,7 +23,7 @@ export type AssistOutcome =
 export async function assist(
   userId: string,
   text: string,
-  mode: AssistantMode = "auto"
+  mode: AssistantMode = "auto",
 ): Promise<AssistOutcome> {
   const { json, dataMode, data } = await buildUserSnapshot(userId);
 
@@ -43,7 +43,8 @@ export async function assist(
     tooLongMessage:
       "The result was too large to generate. Try a shorter or more focused request.",
     refusalMessage: "The model declined this request.",
-    invalidMessage: "The model did not return a usable result. Please try again.",
+    invalidMessage:
+      "The model did not return a usable result. Please try again.",
   });
 
   const response = object.response;
@@ -76,7 +77,7 @@ export async function repromptSubtree(
     instruction: string;
     subtree: Changeset["ops"];
     context: string[];
-  }
+  },
 ): Promise<Changeset["ops"]> {
   const { changesetSchema } = await import("@/lib/ai/changeset-schema");
   const subtreeSchema = changesetSchema.pick({ ops: true });
@@ -105,7 +106,8 @@ export async function repromptSubtree(
     maxTokens: 8000,
     tooLongMessage: "The rewrite was too large. Try a smaller instruction.",
     refusalMessage: "The model declined this rewrite.",
-    invalidMessage: "The model did not return a usable rewrite. Please try again.",
+    invalidMessage:
+      "The model did not return a usable rewrite. Please try again.",
   });
 
   return object.ops;
@@ -115,7 +117,9 @@ export async function repromptSubtree(
  * Every entity's present values, keyed by id, in the op vocabulary — what a
  * proposed update is measured against.
  */
-async function currentFields(userId: string): Promise<Map<string, CurrentFields>> {
+async function currentFields(
+  userId: string,
+): Promise<Map<string, CurrentFields>> {
   const [tasks, projects, goals, habits, notes, tags] = await Promise.all([
     listTasks(userId),
     listProjects(userId),

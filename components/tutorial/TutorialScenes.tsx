@@ -329,12 +329,12 @@ function PressHint({ label, type }: { label: string; type?: boolean }) {
 const STEP_COPY: Record<CaptureStep, { ask: string; why: string }> = {
   title: {
     ask: "Type a task. Anything.",
-    why: "no field focused — it just goes in",
+    why: "no field focused, it just goes in",
   },
   dayHash: { ask: "Type ‘#’", why: "dates start the same way tags do" },
   dayWord: {
     ask: "Type a day",
-    why: "mon, fri, tomorrow, 25/12 — whatever you'd say out loud",
+    why: "mon, fri, tomorrow, 25/12, whatever you'd say out loud",
   },
   tagHash: { ask: "Type ‘#’ again", why: "that's how a tag starts" },
   tagWord: {
@@ -739,7 +739,7 @@ export function SceneType({
       <div className="mt-3 flex min-h-[68px] flex-col items-center justify-center gap-1.5">
         <p className="m-0 text-center font-mono text-[10.5px] text-faint">
           {shake
-            ? "not that one — read the step"
+            ? "not that one. read the step"
             : // Switching with the step, and absent when the step has no
               // single key to name — an empty field asks for itself.
               now.key && <PressHint label={now.key.key} type={now.key.type} />}
@@ -805,7 +805,7 @@ const TYPES = [
   {
     label: "habit",
     color: HABIT_GREEN,
-    quip: "habit — the things you repeat. keep going.",
+    quip: "habit. the things you repeat. keep going.",
   },
   {
     label: "goal",
@@ -815,7 +815,7 @@ const TYPES = [
   {
     label: "note",
     color: "var(--ink)",
-    quip: "note. one too far — shift+Tab back.",
+    quip: "note. one too far. shift+Tab back.",
   },
   {
     label: "assistant",
@@ -924,7 +924,7 @@ export function SceneTab({
           {presses === 0
             ? "press Tab"
             : onTarget
-              ? "hold it — don't press again"
+              ? "hold it. don't press again"
               : "again"}
           {presses > 0 && (
             <span className="ml-2 tabular-nums text-faint2">×{presses}</span>
@@ -972,7 +972,7 @@ export function SceneTab({
             onTarget ? "font-bold text-habits" : "text-faint",
           )}
         >
-          {done ? "★ goal — locked in" : current.quip}
+          {done ? "★ goal, locked in" : current.quip}
         </p>
       </div>
 
@@ -1924,8 +1924,8 @@ export function SceneBulk({
               ? "high. the one on the right."
               : "shift. hold shift, then click."
             : phase === "raise"
-              ? "all four are yours now — send them to high"
-              : "first one's yours — shift-click any row below it"}
+              ? "all four are yours now. send them to high"
+              : "first one's yours. shift-click any row below it"}
       </p>
     </Frame>
   );

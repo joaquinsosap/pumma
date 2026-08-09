@@ -23,7 +23,8 @@ export function DataSection({
   const [pending, startTransition] = useTransition();
 
   // Memory mode has no email on file; the action accepts this phrase instead.
-  const expected = (userEmail ?? "").trim().toLowerCase() || "delete my account";
+  const expected =
+    (userEmail ?? "").trim().toLowerCase() || "delete my account";
   const matches = typed.trim().toLowerCase() === expected;
 
   const handleDelete = () => {
@@ -64,7 +65,7 @@ export function DataSection({
           Delete this account
         </p>
         <p className="mt-1 text-[12px] leading-relaxed text-faint">
-          Removes the account and everything in it — permanently, with no way
+          Removes the account and everything in it, permanently, with no way
           back and no copy kept. Download your data first if you want it.
         </p>
 
@@ -76,8 +77,8 @@ export function DataSection({
             <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
               Your subscription is {deletionBlock.status}. We can&apos;t cancel
               it for you, so deleting now would leave you paying for an account
-              that no longer exists. Cancel it with the payment provider — the
-              Subscription card above links there — and this unlocks once they
+              that no longer exists. Cancel it with the payment provider. The
+              Subscription card above links there, and this unlocks once they
               tell us billing has stopped.
             </p>
           </div>
@@ -92,7 +93,10 @@ export function DataSection({
         ) : (
           <div className="mt-3 rounded-lg border border-tasks/40 bg-tasks/[0.04] p-3">
             <label className="block text-[12px] text-muted">
-              Type <span className="font-mono font-semibold text-ink">{expected}</span>{" "}
+              Type{" "}
+              <span className="font-mono font-semibold text-ink">
+                {expected}
+              </span>{" "}
               to confirm.
             </label>
             <input
@@ -103,7 +107,7 @@ export function DataSection({
               aria-label="Type your email to confirm deletion"
               className={cn(
                 "mt-2 w-full rounded-lg border bg-surface px-2.5 py-2 text-[12.5px] text-ink outline-none transition-colors",
-                matches ? "border-tasks" : "border-border focus:border-faint"
+                matches ? "border-tasks" : "border-border focus:border-faint",
               )}
             />
             <div className="mt-2.5 flex items-center gap-2">

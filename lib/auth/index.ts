@@ -54,7 +54,11 @@ function buildAuth() {
         create: {
           after: async (user) => {
             // First-login bootstrap: app user doc, settings, default tag.
-            await bootstrapNewUser({ id: user.id, name: user.name, email: user.email });
+            await bootstrapNewUser({
+              id: user.id,
+              name: user.name,
+              email: user.email,
+            });
           },
         },
       },

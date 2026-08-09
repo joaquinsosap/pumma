@@ -90,13 +90,16 @@ function ProjectRailCard({
         active ? "" : "border-border bg-surface",
         // A task is hovering over this card — say so loudly, since the card
         // otherwise looks identical to the one you're dragging away from.
-        isOver && "scale-[1.02] border-dashed shadow-[2px_2px_0_var(--shadow)]"
+        isOver && "scale-[1.02] border-dashed shadow-[2px_2px_0_var(--shadow)]",
       )}
       style={
         active || isOver
           ? {
               borderColor: p.color,
-              background: p.color.replace(")", isOver ? " / 0.16)" : " / 0.06)"),
+              background: p.color.replace(
+                ")",
+                isOver ? " / 0.16)" : " / 0.06)",
+              ),
             }
           : undefined
       }

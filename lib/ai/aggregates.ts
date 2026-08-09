@@ -27,7 +27,12 @@ type HabitRow = {
 type EntryRow = { habitId: string; date: string };
 
 type ProjectRow = { id: string; title: string; progress: number };
-type GoalRow = { id: string; title: string; progress: number; targetDate: string | null };
+type GoalRow = {
+  id: string;
+  title: string;
+  progress: number;
+  targetDate: string | null;
+};
 type TagRow = { id: string; name: string };
 
 export type SnapshotAggregates = ReturnType<typeof buildAggregates>;
@@ -51,7 +56,8 @@ export function buildAggregates(input: {
   today: string;
   timezone: string;
 }) {
-  const { tasks, habits, entries, projects, goals, tags, today, timezone } = input;
+  const { tasks, habits, entries, projects, goals, tags, today, timezone } =
+    input;
 
   const open = tasks.filter((t) => t.status !== "done");
   const done = tasks.filter((t) => t.status === "done");
@@ -97,15 +103,20 @@ export function buildAggregates(input: {
   // the chart a day out of step with the numbers beside it whenever the two
   // disagree — which they do for every user whose evening is the server's
   // tomorrow.
-  const completionsByWeek: { weekEnd: string; created: number; completed: number }[] = [];
+  const completionsByWeek: {
+    weekEnd: string;
+    created: number;
+    completed: number;
+  }[] = [];
   for (let w = WEEKS - 1; w >= 0; w--) {
     const end = addDaysToIsoDate(today, -7 * w, timezone);
     const start = addDaysToIsoDate(today, -7 * (w + 1) + 1, timezone);
     completionsByWeek.push({
       weekEnd: end,
-      created: tasks.filter((t) => t.createdAt >= start && t.createdAt <= end).length,
+      created: tasks.filter((t) => t.createdAt >= start && t.createdAt <= end)
+        .length,
       completed: done.filter(
-        (t) => (t.completedAt ?? "") >= start && (t.completedAt ?? "") <= end
+        (t) => (t.completedAt ?? "") >= start && (t.completedAt ?? "") <= end,
       ).length,
     });
   }
@@ -117,7 +128,7 @@ export function buildAggregates(input: {
     if (!t.timeSpentSec) continue;
     timeTotalSec += t.timeSpentSec;
     const key = t.projectId
-      ? projectTitle.get(t.projectId) ?? "unknown"
+      ? (projectTitle.get(t.projectId) ?? "unknown")
       : "unfiled";
     timeByProject[key] = (timeByProject[key] ?? 0) + t.timeSpentSec;
   }
@@ -178,7 +189,7 @@ export function buildAggregates(input: {
     time: {
       totalHours: round1(timeTotalSec / 3600),
       byProjectHours: Object.fromEntries(
-        Object.entries(timeByProject).map(([k, v]) => [k, round1(v / 3600)])
+        Object.entries(timeByProject).map(([k, v]) => [k, round1(v / 3600)]),
       ),
     },
     habits: habitStats,

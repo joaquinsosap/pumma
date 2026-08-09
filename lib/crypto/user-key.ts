@@ -64,7 +64,7 @@ export async function getUserDek(db: Db, userId: string): Promise<Buffer> {
   const users = db.collection<UserKeyDoc>("users");
   const existing = await users.findOne(
     { _id: userId as never },
-    { projection: { dekWrapped: 1, dekKeyId: 1 } }
+    { projection: { dekWrapped: 1, dekKeyId: 1 } },
   );
 
   if (existing?.dekWrapped) {
@@ -79,7 +79,7 @@ export async function getUserDek(db: Db, userId: string): Promise<Buffer> {
 
   const res = await users.updateOne(
     { _id: userId as never, dekWrapped: { $exists: false } },
-    { $set: { dekWrapped: wrapped, dekKeyId: provider.keyId } }
+    { $set: { dekWrapped: wrapped, dekKeyId: provider.keyId } },
   );
 
   if (res.matchedCount === 0) {
@@ -88,12 +88,12 @@ export async function getUserDek(db: Db, userId: string): Promise<Buffer> {
     // papered over with a key that nothing will ever be able to find again.
     const now = await users.findOne(
       { _id: userId as never },
-      { projection: { dekWrapped: 1 } }
+      { projection: { dekWrapped: 1 } },
     );
     if (!now?.dekWrapped) {
       throw new Error(
         `Cannot derive a data key: no user document for ${userId}. ` +
-          "The user row must exist before any of their content is written."
+          "The user row must exist before any of their content is written.",
       );
     }
     const winner = await masterKey().unwrap(now.dekWrapped);

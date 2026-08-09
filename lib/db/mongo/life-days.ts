@@ -17,7 +17,7 @@ export async function listLifeDays(userId: string): Promise<LifeDay[]> {
 
 export async function getLifeDay(
   userId: string,
-  date: string
+  date: string,
 ): Promise<LifeDay | null> {
   const c = await col();
   const doc = await c.findOne({ userId, date: date.slice(0, 10) });
@@ -25,7 +25,7 @@ export async function getLifeDay(
 }
 
 export async function upsertLifeDay(
-  doc: Omit<LifeDayDoc, "_id" | "updatedAt"> & { _id?: string }
+  doc: Omit<LifeDayDoc, "_id" | "updatedAt"> & { _id?: string },
 ): Promise<LifeDay> {
   const c = await col();
   const date = doc.date.slice(0, 10);

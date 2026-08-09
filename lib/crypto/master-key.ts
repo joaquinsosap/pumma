@@ -24,7 +24,12 @@
 // server-only — nothing on a client path can reach a key from here. The key
 // itself is read from a non-NEXT_PUBLIC_ variable, so it is undefined in a
 // browser regardless.
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "crypto";
 
 const IV_BYTES = 12; // GCM standard nonce
 const TAG_BYTES = 16;
@@ -42,14 +47,14 @@ function envKey(): Buffer {
     throw new Error(
       "DATA_ENCRYPTION_KEY is not set. Generate one with:\n" +
         "  openssl rand -base64 32\n" +
-        "Losing it means losing every user's content — back it up before use."
+        "Losing it means losing every user's content, so back it up before use.",
     );
   }
   const key = Buffer.from(raw, "base64");
   if (key.length !== 32) {
     throw new Error(
       `DATA_ENCRYPTION_KEY must decode to exactly 32 bytes, got ${key.length}. ` +
-        "Generate one with: openssl rand -base64 32"
+        "Generate one with: openssl rand -base64 32",
     );
   }
   return key;
@@ -110,11 +115,11 @@ export function masterKey(): MasterKeyProvider {
       // this file — everything would keep working and the promise would be
       // quietly false. See ENCRYPTION-PLAN.local.md §4.
       throw new Error(
-        "DATA_ENCRYPTION_PROVIDER=kms is not implemented yet. Use `env`."
+        "DATA_ENCRYPTION_PROVIDER=kms is not implemented yet. Use `env`.",
       );
     default:
       throw new Error(
-        `Unknown DATA_ENCRYPTION_PROVIDER "${kind}". Expected "env" or "kms".`
+        `Unknown DATA_ENCRYPTION_PROVIDER "${kind}". Expected "env" or "kms".`,
       );
   }
 }

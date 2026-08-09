@@ -16,10 +16,7 @@ import {
   topStreak,
 } from "@/lib/metrics";
 import { iso } from "@/lib/date";
-import {
-  habitStreak,
-  normalizeHabitFrequency,
-} from "@/lib/habit-visibility";
+import { habitStreak, normalizeHabitFrequency } from "@/lib/habit-visibility";
 import { resolveTimezoneFromSettings } from "@/lib/timezone-server";
 import { computeGoalProgress } from "@/lib/goal-sync";
 import {
@@ -55,53 +52,55 @@ type CoreCollections = {
  * (incl. habit entries + agenda) is fetched here so the page itself does no extra
  * round-trip after the layout — important over high-latency links / VPNs.
  */
-const fetchCoreCollections = cache(async (userId: string): Promise<CoreCollections> => {
-  if (process.env.DATA_SOURCE === "mongodb") {
-    const { warmMongoConnection } = await import("@/lib/mongodb");
-    await warmMongoConnection();
-  }
+const fetchCoreCollections = cache(
+  async (userId: string): Promise<CoreCollections> => {
+    if (process.env.DATA_SOURCE === "mongodb") {
+      const { warmMongoConnection } = await import("@/lib/mongodb");
+      await warmMongoConnection();
+    }
 
-  const [
-    allTasks,
-    allHabits,
-    allHabitEntries,
-    allGoals,
-    allProjects,
-    tags,
-    allNotes,
-    allAgenda,
-    user,
-    settings,
-  ] = await Promise.all([
-    listTasks(userId),
-    listHabits(userId),
-    listHabitEntries(userId),
-    listGoals(userId),
-    listProjects(userId),
-    listTags(userId),
-    listNotes(userId),
-    listAgenda(userId),
-    getUser(userId),
-    getSettings(userId),
-  ]);
-  return {
-    allTasks,
-    allHabits,
-    allHabitEntries,
-    allGoals,
-    allProjects,
-    tags,
-    allNotes,
-    allAgenda,
-    user,
-    settings,
-  };
-});
+    const [
+      allTasks,
+      allHabits,
+      allHabitEntries,
+      allGoals,
+      allProjects,
+      tags,
+      allNotes,
+      allAgenda,
+      user,
+      settings,
+    ] = await Promise.all([
+      listTasks(userId),
+      listHabits(userId),
+      listHabitEntries(userId),
+      listGoals(userId),
+      listProjects(userId),
+      listTags(userId),
+      listNotes(userId),
+      listAgenda(userId),
+      getUser(userId),
+      getSettings(userId),
+    ]);
+    return {
+      allTasks,
+      allHabits,
+      allHabitEntries,
+      allGoals,
+      allProjects,
+      tags,
+      allNotes,
+      allAgenda,
+      user,
+      settings,
+    };
+  },
+);
 
 function shellFromCore(
   core: CoreCollections,
   lifeView: LifeView,
-  timezone: string
+  timezone: string,
 ) {
   const tasks = filterByLifeView(core.allTasks, lifeView);
   const habits = filterByLifeView(core.allHabits, lifeView);
@@ -165,7 +164,7 @@ const loadAppDataForView = cache(async (lifeView: LifeView) => {
         core.allProjects,
         core.allHabits,
         allHabitEntries,
-        core.allTasks
+        core.allTasks,
       ) ?? g.progress,
   }));
 
@@ -179,9 +178,9 @@ const loadAppDataForView = cache(async (lifeView: LifeView) => {
       (t) =>
         t.status !== "done" &&
         (t.due ?? "") !== "" &&
-        (t.due ?? "").slice(0, 10) < td
+        (t.due ?? "").slice(0, 10) < td,
     ),
-    lifeView
+    lifeView,
   );
 
   return {
@@ -201,8 +200,9 @@ const loadAppDataForView = cache(async (lifeView: LifeView) => {
           normalizeHabitFrequency(h.frequency.type),
           set,
           core.settings?.weekStart ?? "mon",
-          td
-        )
+          td,
+          h.frequency,
+        ),
       ),
     },
   };

@@ -19,7 +19,7 @@ describe("stepping the type at the caret", () => {
   it("goes backwards for shift-Tab", () => {
     const text = "Ship it #task";
     expect(cycleTypeAtCaret(text, text.length, T, -1)?.text).toBe(
-      "Ship it #note"
+      "Ship it #note",
     );
   });
 

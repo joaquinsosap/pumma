@@ -557,7 +557,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
             ) : (
               <p className="rounded-2xl border border-dashed border-border bg-surface2/50 px-4 py-5 text-center text-[13.5px] leading-relaxed text-faint">
                 Ask a question about your own data, or describe a change to make
-                — the assistant works out which you meant. Changes arrive as a
+                and the assistant works out which you meant. Changes arrive as a
                 draft you review before anything is saved.
               </p>
             )}

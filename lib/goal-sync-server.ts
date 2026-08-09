@@ -11,7 +11,7 @@ import { computeGoalProgress } from "@/lib/goal-sync";
 
 export async function syncGoalProgress(
   userId: string,
-  goalId: string
+  goalId: string,
 ): Promise<void> {
   const [projects, habits, habitEntries, tasks] = await Promise.all([
     listProjects(userId),
@@ -24,7 +24,7 @@ export async function syncGoalProgress(
     projects,
     habits,
     habitEntries,
-    tasks
+    tasks,
   );
   if (progress === null) return;
   await updateGoal(userId, goalId, { progress });
@@ -32,7 +32,7 @@ export async function syncGoalProgress(
 
 export async function syncGoalsForProject(
   userId: string,
-  projectId: string
+  projectId: string,
 ): Promise<void> {
   const projects = await listProjects(userId);
   const project = projects.find((p) => p.id === projectId);
@@ -41,7 +41,7 @@ export async function syncGoalsForProject(
 
 export async function syncGoalsForHabit(
   userId: string,
-  habitId: string
+  habitId: string,
 ): Promise<void> {
   const habits = await listHabits(userId);
   const habit = habits.find((h) => h.id === habitId);

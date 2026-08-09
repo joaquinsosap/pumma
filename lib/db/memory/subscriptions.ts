@@ -8,23 +8,24 @@ const subs = new Map<string, SubscriptionDoc>(); // by userId
 const seenEvents = new Set<string>();
 
 export async function getSubscriptionByUserId(
-  userId: string
+  userId: string,
 ): Promise<Subscription | null> {
   const doc = subs.get(userId);
   return doc ? toDto(subscriptionSchema.parse(doc)) : null;
 }
 
 export async function getSubscriptionBySubscriptionId(
-  subscriptionId: string
+  subscriptionId: string,
 ): Promise<Subscription | null> {
   for (const doc of subs.values()) {
-    if (doc.subscriptionId === subscriptionId) return toDto(subscriptionSchema.parse(doc));
+    if (doc.subscriptionId === subscriptionId)
+      return toDto(subscriptionSchema.parse(doc));
   }
   return null;
 }
 
 export async function upsertSubscription(
-  doc: Omit<SubscriptionDoc, "_id">
+  doc: Omit<SubscriptionDoc, "_id">,
 ): Promise<Subscription> {
   const existing = subs.get(doc.userId);
   const full = { ...doc, _id: existing?._id ?? newId() };

@@ -34,7 +34,12 @@ function task(over: Partial<Task> & { id: string }): Task {
 
 const items = [
   task({ id: "a", status: "todo", priority: "high", tagIds: ["work"] }),
-  task({ id: "b", status: "doing", priority: "med", tagIds: ["work", "health"] }),
+  task({
+    id: "b",
+    status: "doing",
+    priority: "med",
+    tagIds: ["work", "health"],
+  }),
   task({ id: "c", status: "done", priority: "low", tagIds: ["health"] }),
   task({ id: "d", status: "done", priority: "high" }),
 ];
@@ -53,13 +58,15 @@ describe("applyTaskFilters", () => {
 
   it("filters by status", () => {
     expect(
-      ids(applyTaskFilters(items, { ...NO_FILTERS, status: ["done"] }))
+      ids(applyTaskFilters(items, { ...NO_FILTERS, status: ["done"] })),
     ).toEqual(["c", "d"]);
   });
 
   it("ORs within a facet — 'not done' is todo + doing", () => {
     expect(
-      ids(applyTaskFilters(items, { ...NO_FILTERS, status: ["todo", "doing"] }))
+      ids(
+        applyTaskFilters(items, { ...NO_FILTERS, status: ["todo", "doing"] }),
+      ),
     ).toEqual(["a", "b"]);
   });
 
@@ -70,23 +77,25 @@ describe("applyTaskFilters", () => {
           ...NO_FILTERS,
           status: ["done"],
           priority: ["high"],
-        })
-      )
+        }),
+      ),
     ).toEqual(["d"]);
   });
 
   it("matches tasks having ANY of the selected tags", () => {
     expect(
-      ids(applyTaskFilters(items, { ...NO_FILTERS, tagIds: ["health"] }))
+      ids(applyTaskFilters(items, { ...NO_FILTERS, tagIds: ["health"] })),
     ).toEqual(["b", "c"]);
     expect(
-      ids(applyTaskFilters(items, { ...NO_FILTERS, tagIds: ["work", "health"] }))
+      ids(
+        applyTaskFilters(items, { ...NO_FILTERS, tagIds: ["work", "health"] }),
+      ),
     ).toEqual(["a", "b", "c"]);
   });
 
   it("treats every value selected the same as none selected", () => {
     expect(
-      ids(applyTaskFilters(items, { ...NO_FILTERS, status: TASK_STATUSES }))
+      ids(applyTaskFilters(items, { ...NO_FILTERS, status: TASK_STATUSES })),
     ).toEqual(ids(items));
   });
 
@@ -96,7 +105,7 @@ describe("applyTaskFilters", () => {
         ...NO_FILTERS,
         status: ["todo"],
         priority: ["low"],
-      })
+      }),
     ).toEqual([]);
   });
 });
@@ -110,7 +119,7 @@ describe("countActiveFilters", () => {
         status: ["todo", "doing"],
         priority: ["high"],
         tagIds: [],
-      })
+      }),
     ).toBe(3);
   });
 });

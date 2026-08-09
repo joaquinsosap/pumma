@@ -24,7 +24,10 @@ import { Button } from "@/components/ui/button";
 import { useState, useEffect, type ReactNode } from "react";
 import type { OmniType } from "@/lib/types";
 import { LIFE_SPAN_DEFAULT, LIFE_SPAN_MAX } from "@/lib/date";
-import { DEFAULT_HABIT_VISIBILITY, HABIT_VISIBILITY_DEFAULTS } from "@/lib/habit-visibility";
+import {
+  DEFAULT_HABIT_VISIBILITY,
+  HABIT_VISIBILITY_DEFAULTS,
+} from "@/lib/habit-visibility";
 import { SettingsNumberField } from "@/components/settings/SettingsNumberField";
 import { TimezoneSelect } from "@/components/settings/TimezoneSelect";
 import { SubscriptionCard } from "@/components/settings/SubscriptionCard";
@@ -62,7 +65,9 @@ function SettingRow({
       <div className="min-w-0 flex-1">
         <div className="text-sm text-ink">{label}</div>
         {description ? (
-          <p className="mt-0.5 max-w-xl text-[12px] leading-snug text-faint">{description}</p>
+          <p className="mt-0.5 max-w-xl text-[12px] leading-snug text-faint">
+            {description}
+          </p>
         ) : null}
       </div>
       <div className="shrink-0">{children}</div>
@@ -85,7 +90,7 @@ function SettingsSection({
     <section
       className={cn(
         "rounded-[13px] border border-border bg-surface p-5",
-        className
+        className,
       )}
     >
       <h3 className="text-sm font-bold">{title}</h3>
@@ -162,7 +167,9 @@ export function SettingsView({
           <SettingsSection title="Profile" className="lg:col-span-2">
             <div className="grid gap-6 lg:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">Display name</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Display name
+                </span>
                 <Input
                   value={name}
                   onChange={(e) => setName(e.target.value)}
@@ -185,7 +192,8 @@ export function SettingsView({
                       {userEmail ?? userName}
                     </p>
                     <p className="mt-1 text-[12px] leading-relaxed text-faint">
-                      Signed in. Ending your session returns you to the login screen.
+                      Signed in. Ending your session returns you to the login
+                      screen.
                     </p>
                     <SignOutButton variant="button" className="mt-3 w-full" />
                   </>
@@ -193,7 +201,8 @@ export function SettingsView({
                   <>
                     <p className="mt-2 text-sm text-ink">{userName}</p>
                     <p className="mt-1 text-[12px] leading-relaxed text-faint">
-                      Local demo profile — name updates apply across the app immediately.
+                      Local demo profile. Name updates apply across the app
+                      immediately.
                     </p>
                   </>
                 )}
@@ -215,7 +224,7 @@ export function SettingsView({
 
           <SettingsSection
             title="Tour"
-            description="The sixty seconds you watched on your first day. Worth another look after a while away — it covers the things that aren't buttons."
+            description="The sixty seconds you watched on your first day. Worth another look after a while away, since it covers the things that aren't buttons."
             className="lg:col-span-2"
           >
             <ReplayTutorialButton />
@@ -224,7 +233,7 @@ export function SettingsView({
           {showSubscription && (
             <SettingsSection
               title="Subscription"
-              description="Your hosted PUMMA plan — payments are handled by the billing provider; this app never sees your card."
+              description="Your hosted PUMMA plan. Payments are handled by the billing provider, and this app never sees your card."
               className="lg:col-span-2"
             >
               <SubscriptionCard />
@@ -250,7 +259,9 @@ export function SettingsView({
             >
               <Switch
                 checked={settings?.weekStart === "sun"}
-                onCheckedChange={(v) => update({ weekStart: v ? "sun" : "mon" })}
+                onCheckedChange={(v) =>
+                  update({ weekStart: v ? "sun" : "mon" })
+                }
               />
             </SettingRow>
             <SettingRow
@@ -263,13 +274,16 @@ export function SettingsView({
             >
               <Switch
                 checked={settings?.dateOrder === "mdy"}
-                onCheckedChange={(v) => update({ dateOrder: v ? "mdy" : "dmy" })}
+                onCheckedChange={(v) =>
+                  update({ dateOrder: v ? "mdy" : "dmy" })
+                }
               />
             </SettingRow>
             <div className="border-t border-border/60 py-3">
               <label className="mb-1.5 block text-sm text-ink">Timezone</label>
               <p className="mb-2 text-[12px] text-faint">
-                Used for today, due dates, habits, calendar, and greetings across the app.
+                Used for today, due dates, habits, calendar, and greetings
+                across the app.
               </p>
               <TimezoneSelect
                 value={settings?.timezone ?? "UTC"}
@@ -286,7 +300,9 @@ export function SettingsView({
               />
             </SettingRow>
             <div className="border-t border-border/60 pt-3">
-              <label className="mb-1.5 block text-sm text-ink">Default capture type</label>
+              <label className="mb-1.5 block text-sm text-ink">
+                Default capture type
+              </label>
               <p className="mb-2 text-[12px] text-faint">
                 What the omnibar creates when you don&apos;t pick a type.
               </p>
@@ -320,7 +336,9 @@ export function SettingsView({
             </SettingRow>
             <div className="mt-3 grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">Birth date</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Birth date
+                </span>
                 <DueQuickPick
                   mode="birth"
                   value={settings?.birthDate ?? null}
@@ -343,7 +361,10 @@ export function SettingsView({
                     update({
                       lifeSpanYears: Math.min(
                         LIFE_SPAN_MAX,
-                        Math.max(1, Number(e.target.value) || LIFE_SPAN_DEFAULT)
+                        Math.max(
+                          1,
+                          Number(e.target.value) || LIFE_SPAN_DEFAULT,
+                        ),
                       ),
                     })
                   }
@@ -367,7 +388,9 @@ export function SettingsView({
             </SettingRow>
             <div className="grid gap-4 border-t border-border/60 pt-3 sm:grid-cols-2">
               <label className="block">
-                <span className="mb-1 block text-sm text-muted">Work starts</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Work starts
+                </span>
                 <input
                   type="time"
                   value={settings?.workStart ?? "09:00"}
@@ -404,7 +427,9 @@ export function SettingsView({
                 value={settings?.lifeAutoOverrideMins ?? 60}
                 suffix="min"
                 hint="Then the schedule takes back over"
-                onSave={(lifeAutoOverrideMins) => update({ lifeAutoOverrideMins })}
+                onSave={(lifeAutoOverrideMins) =>
+                  update({ lifeAutoOverrideMins })
+                }
               />
             </div>
           </SettingsSection>
@@ -415,30 +440,47 @@ export function SettingsView({
           >
             <div className="grid gap-4 sm:grid-cols-3">
               <div>
-                <span className="mb-1 block text-sm text-muted">Daily habits</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Daily habits
+                </span>
                 <SettingsNumberField
-                  value={settings?.habitVisibleDays ?? DEFAULT_HABIT_VISIBILITY.dailyDays}
+                  value={
+                    settings?.habitVisibleDays ??
+                    DEFAULT_HABIT_VISIBILITY.dailyDays
+                  }
                   suffix="days"
                   hint={`Default ${HABIT_VISIBILITY_DEFAULTS.dailyDays.default} days`}
                   onSave={(habitVisibleDays) => update({ habitVisibleDays })}
                 />
               </div>
               <div>
-                <span className="mb-1 block text-sm text-muted">Weekly habits</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Weekly habits
+                </span>
                 <SettingsNumberField
-                  value={settings?.habitVisibleWeeks ?? DEFAULT_HABIT_VISIBILITY.weeklyWeeks}
+                  value={
+                    settings?.habitVisibleWeeks ??
+                    DEFAULT_HABIT_VISIBILITY.weeklyWeeks
+                  }
                   suffix="weeks"
                   hint={`Default ${HABIT_VISIBILITY_DEFAULTS.weeklyWeeks.default} weeks (2 months)`}
                   onSave={(habitVisibleWeeks) => update({ habitVisibleWeeks })}
                 />
               </div>
               <div>
-                <span className="mb-1 block text-sm text-muted">Monthly habits</span>
+                <span className="mb-1 block text-sm text-muted">
+                  Monthly habits
+                </span>
                 <SettingsNumberField
-                  value={settings?.habitVisibleMonths ?? DEFAULT_HABIT_VISIBILITY.monthlyMonths}
+                  value={
+                    settings?.habitVisibleMonths ??
+                    DEFAULT_HABIT_VISIBILITY.monthlyMonths
+                  }
                   suffix="months"
                   hint={`Default ${HABIT_VISIBILITY_DEFAULTS.monthlyMonths.default} months`}
-                  onSave={(habitVisibleMonths) => update({ habitVisibleMonths })}
+                  onSave={(habitVisibleMonths) =>
+                    update({ habitVisibleMonths })
+                  }
                 />
               </div>
             </div>
@@ -454,7 +496,8 @@ export function SettingsView({
 
           <SettingsSection title="Tags" className="lg:col-span-2">
             <p className="mb-3 text-[12px] text-faint">
-              Click the dot to change a tag&apos;s color, click the name to rename.
+              Click the dot to change a tag&apos;s color, click the name to
+              rename.
             </p>
             <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {tags.map((t) => (
@@ -518,7 +561,7 @@ export function SettingsView({
                         update({
                           tagAutoCleanDays: Math.min(
                             365,
-                            Math.max(1, Number(e.target.value) || 30)
+                            Math.max(1, Number(e.target.value) || 30),
                           ),
                         })
                       }
@@ -529,7 +572,7 @@ export function SettingsView({
               )}
               <div className="border-t border-border/60 pt-3">
                 <p className="mb-2 text-[12px] leading-relaxed text-faint">
-                  Or clean once, right now — you can undo it straight after.
+                  Or clean once, right now. You can undo it straight after.
                 </p>
                 <CleanTagsButton />
               </div>
@@ -579,7 +622,7 @@ function WorkDaysPicker({
               "h-8 w-8 rounded-lg border font-mono text-[11px] font-bold transition-colors",
               active
                 ? "border-ink bg-ink text-background"
-                : "border-border bg-surface2 text-faint hover:border-faint hover:text-ink"
+                : "border-border bg-surface2 text-faint hover:border-faint hover:text-ink",
             )}
           >
             {label}

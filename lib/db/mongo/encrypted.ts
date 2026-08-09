@@ -25,7 +25,6 @@ import {
 export { SPECS, specFor, type EncryptedCollection };
 export type { Spec } from "@/lib/crypto/specs";
 
-
 async function dekFor(userId: string): Promise<Buffer> {
   const db = await getDb();
   return getUserDek(db, userId);
@@ -41,11 +40,11 @@ async function dekFor(userId: string): Promise<Buffer> {
 export async function encryptFor<T extends object>(
   collection: EncryptedCollection,
   userId: string,
-  doc: T
+  doc: T,
 ): Promise<T> {
   const dek = await dekFor(userId);
   return mapContent(doc as Record<string, unknown>, SPECS[collection], (v) =>
-    isCiphertext(v) ? v : encryptField(v, dek)
+    isCiphertext(v) ? v : encryptField(v, dek),
   ) as T;
 }
 
@@ -59,11 +58,11 @@ export async function encryptFor<T extends object>(
 export async function decryptFor<T extends object>(
   collection: EncryptedCollection,
   userId: string,
-  doc: T
+  doc: T,
 ): Promise<T> {
   const dek = await dekFor(userId);
   return mapContent(doc as Record<string, unknown>, SPECS[collection], (v) =>
-    decryptField(v, dek)
+    decryptField(v, dek),
   ) as T;
 }
 
@@ -75,7 +74,7 @@ export async function decryptFor<T extends object>(
  */
 export async function blindIndexFor(
   userId: string,
-  value: string
+  value: string,
 ): Promise<string> {
   return blindIndex(value, await dekFor(userId));
 }
@@ -89,7 +88,7 @@ export async function blindIndexFor(
 export async function decryptAllFor<T extends object>(
   collection: EncryptedCollection,
   userId: string,
-  docs: T[]
+  docs: T[],
 ): Promise<T[]> {
   if (!docs.length) return docs;
   const dek = await dekFor(userId);
@@ -97,7 +96,7 @@ export async function decryptAllFor<T extends object>(
   return docs.map(
     (doc) =>
       mapContent(doc as Record<string, unknown>, spec, (v) =>
-        decryptField(v, dek)
-      ) as T
+        decryptField(v, dek),
+      ) as T,
   );
 }

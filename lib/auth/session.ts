@@ -27,16 +27,18 @@ export const getSessionUser = cache(
   async (): Promise<{ id: string; email: string | null } | null> => {
     if (!AUTH_ACTIVE()) return { id: demoUserId(), email: null };
     const { getAuth } = await import("@/lib/auth");
-    const session = await getAuth().api.getSession({ headers: await headers() });
+    const session = await getAuth().api.getSession({
+      headers: await headers(),
+    });
     return session
       ? { id: session.user.id, email: session.user.email ?? null }
       : null;
-  }
+  },
 );
 
 /** Access level, deduped per request (layout + page + actions share one read). */
 const cachedAccessLevel = cache(
-  async (userId: string): Promise<AccessLevel> => getAccessLevel(userId)
+  async (userId: string): Promise<AccessLevel> => getAccessLevel(userId),
 );
 
 /**

@@ -14,7 +14,7 @@ import { iso } from "@/lib/date";
 /** Pick timezone from cookie or settings — no I/O. */
 export function pickTimezone(
   settings: Settings | null | undefined,
-  cookieValue?: string | null
+  cookieValue?: string | null,
 ): string {
   if (cookieValue && isValidTimezone(cookieValue)) return cookieValue;
   if (settings?.timezone && isValidTimezone(settings.timezone)) {
@@ -35,7 +35,7 @@ export async function readTimezoneCookie(): Promise<string | undefined> {
  * Never hits the DB — avoids a duplicate getSettings per request.
  */
 export async function resolveTimezoneFromSettings(
-  settings: Settings | null | undefined
+  settings: Settings | null | undefined,
 ): Promise<string> {
   const fromCookie = await readTimezoneCookie();
   return pickTimezone(settings, fromCookie);
@@ -65,7 +65,10 @@ export async function persistTimezoneCookie(timeZone: string): Promise<void> {
   });
 }
 
-export async function userToday(): Promise<{ timeZone: string; today: string }> {
+export async function userToday(): Promise<{
+  timeZone: string;
+  today: string;
+}> {
   const timeZone = await resolveTimezoneWithSettings();
   return { timeZone, today: iso(new Date(), timeZone) };
 }

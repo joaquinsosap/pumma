@@ -307,7 +307,7 @@ export function KanbanBoard({
       {items[col.key].length === 0 ? (
         <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border2 px-4 py-8 text-center text-[11px] leading-relaxed text-faint">
           {col.key === "todo"
-            ? "Nothing to do — capture a task with +"
+            ? "Nothing to do. Capture a task with +"
             : col.key === "doing"
               ? "Long-press a card and drag it here"
               : "Finished tasks land here"}
@@ -374,7 +374,7 @@ export function KanbanBoard({
               {items[col.key].length === 0 ? (
                 <div className="flex flex-1 items-center justify-center rounded-lg border border-dashed border-border2 px-4 py-8 text-center text-[11px] leading-relaxed text-faint">
                   {col.key === "todo"
-                    ? "Nothing to do — capture a task with +"
+                    ? "Nothing to do. Capture a task with +"
                     : col.key === "doing"
                       ? "Long-press a card and drag it here"
                       : "Finished tasks land here"}

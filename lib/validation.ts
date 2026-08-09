@@ -28,19 +28,24 @@ export const tagName = z
   });
 
 /** "YYYY-MM-DD" (optionally with a time suffix, e.g. task due "2026-06-28T14:00"). */
-export const isoDate = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
+export const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
 export const isoDateTime = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}(:\d{2})?)?$/, "Invalid date");
 
 /** Prompt/question text for the AI actions. */
-export const aiInput = z.string().trim().min(3, "Too short").max(2_000, "Too long");
+export const aiInput = z
+  .string()
+  .trim()
+  .min(3, "Too short")
+  .max(2_000, "Too long");
 
 /** CSS color as used by the app's palettes (oklch(...), #hex, or var(--token)). */
 export const cssColor = z
   .string()
   .trim()
   .max(64)
-  .regex(/^(oklch\([^)]*\)|#[0-9a-fA-F]{3,8}|var\(--[\w-]+\))$/, "Invalid color");
+  .regex(
+    /^(oklch\([^)]*\)|#[0-9a-fA-F]{3,8}|var\(--[\w-]+\))$/,
+    "Invalid color",
+  );

@@ -1,5 +1,9 @@
 import { getDb } from "@/lib/mongodb";
-import { decryptAllFor, decryptFor, encryptFor } from "@/lib/db/mongo/encrypted";
+import {
+  decryptAllFor,
+  decryptFor,
+  encryptFor,
+} from "@/lib/db/mongo/encrypted";
 import { newId } from "@/lib/store/memory";
 import { toDto, type Task, taskSchema } from "@/lib/schemas";
 import type { Subtask, TaskDoc } from "@/lib/schemas";
@@ -13,12 +17,18 @@ export async function listTasks(userId: string): Promise<Task[]> {
   const c = await col();
   // createdAt desc approximates the memory store's unshift (newest first);
   // order asc keeps same-day seed tasks stable. UI re-sorts where it matters.
-  const docs = await c.find({ userId }).sort({ createdAt: -1, order: 1 }).toArray();
+  const docs = await c
+    .find({ userId })
+    .sort({ createdAt: -1, order: 1 })
+    .toArray();
   const plain = await decryptAllFor("tasks", userId, docs);
   return plain.map((t) => toDto(taskSchema.parse(t)));
 }
 
-export async function getTask(userId: string, id: string): Promise<Task | null> {
+export async function getTask(
+  userId: string,
+  id: string,
+): Promise<Task | null> {
   const c = await col();
   const doc = await c.findOne({ _id: id, userId });
   if (!doc) return null;
@@ -27,7 +37,7 @@ export async function getTask(userId: string, id: string): Promise<Task | null> 
 
 export async function getTasksByDue(
   userId: string,
-  date: string
+  date: string,
 ): Promise<Task[]> {
   const tasks = await listTasks(userId);
   return tasks.filter((t) => (t.due ?? "").slice(0, 10) === date);
@@ -35,20 +45,20 @@ export async function getTasksByDue(
 
 export async function getCarryoverTasks(
   userId: string,
-  today: string
+  today: string,
 ): Promise<Task[]> {
   const tasks = await listTasks(userId);
   return tasks.filter(
     (t) =>
       t.status !== "done" &&
       (t.due ?? "").slice(0, 10) < today &&
-      (t.due ?? "") !== ""
+      (t.due ?? "") !== "",
   );
 }
 
 export async function getTasksByProject(
   userId: string,
-  projectId: string
+  projectId: string,
 ): Promise<Task[]> {
   const tasks = await listTasks(userId);
   return tasks.filter((t) => t.projectId === projectId);
@@ -64,7 +74,7 @@ export async function insertTask(
     timerStartedAt?: string | null;
     description?: string;
     subtasks?: Subtask[];
-  }
+  },
 ): Promise<Task> {
   const c = await col();
   const full: TaskDoc = {
@@ -84,19 +94,21 @@ export async function insertTask(
 export async function updateTask(
   userId: string,
   id: string,
-  patch: Partial<TaskDoc>
+  patch: Partial<TaskDoc>,
 ): Promise<Task | null> {
   const c = await col();
   const doc = await c.findOneAndUpdate(
     { _id: id, userId },
     { $set: await encryptFor("tasks", userId, patch) },
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   if (!doc) return null;
   return toDto(taskSchema.parse(await decryptFor("tasks", userId, doc)));
 }
 
-export async function getRunningTimerTask(userId: string): Promise<Task | null> {
+export async function getRunningTimerTask(
+  userId: string,
+): Promise<Task | null> {
   const tasks = await listTasks(userId);
   return tasks.find((t) => t.timerStartedAt) ?? null;
 }
@@ -104,14 +116,14 @@ export async function getRunningTimerTask(userId: string): Promise<Task | null> 
 async function accumulateRunningTime(task: Task): Promise<number> {
   if (!task.timerStartedAt) return task.timeSpentSec;
   const elapsed = Math.floor(
-    (Date.now() - new Date(task.timerStartedAt).getTime()) / 1000
+    (Date.now() - new Date(task.timerStartedAt).getTime()) / 1000,
   );
   return task.timeSpentSec + Math.max(0, elapsed);
 }
 
 export async function stopRunningTimers(
   userId: string,
-  exceptId?: string
+  exceptId?: string,
 ): Promise<void> {
   const tasks = await listTasks(userId);
   for (const task of tasks) {

@@ -71,6 +71,21 @@ export type HabitHeatCell = {
   /** Inclusive bounds of what this box stands for (a day, week, or month). */
   periodStart: string;
   periodEnd: string;
+  /**
+   * False when the habit's schedule skips this box: a Saturday on a habit
+   * that runs Mon to Fri.
+   *
+   * The box still exists and still holds its place in the run, because a
+   * calendar with holes punched in it is no longer a calendar. It just has
+   * nothing to say and nothing to press.
+   *
+   * Note it says nothing about whether the box is *recorded*. An entry logged
+   * on a Saturday before the habit was narrowed to weekdays stays in the
+   * database untouched; it is only hidden from view and left out of the
+   * counts, so that widening the schedule again brings the whole history back
+   * exactly as it was.
+   */
+  applies: boolean;
 };
 
 export function normalizeHabitFrequency(type: string): HabitFrequencyType {
@@ -148,6 +163,8 @@ export function habitHeatCells(
   weekStart: WeekStart,
   today: string = iso(),
   timeZone?: string,
+  /** The habit's own schedule, for marking the days it skips. */
+  schedule?: HabitSchedule,
 ): HabitHeatCell[] {
   const todayDate = new Date(today + "T00:00");
 
@@ -174,6 +191,7 @@ export function habitHeatCells(
         toggleDate: isCurrent ? today : end,
         periodStart: start,
         periodEnd: end,
+        applies: true,
       });
     }
     return cells;
@@ -193,12 +211,13 @@ export function habitHeatCells(
       const isCurrent = i === 0;
       cells.push({
         id: startIso,
-        label: `${startIso.slice(5)} – ${endIso.slice(5)}`,
+        label: `${startIso.slice(5)} to ${endIso.slice(5)}`,
         done: hasEntryInRange(entries, startIso, endIso),
         isCurrent,
         toggleDate: isCurrent ? today : endIso,
         periodStart: startIso,
         periodEnd: endIso,
+        applies: true,
       });
     }
     return cells;
@@ -208,14 +227,19 @@ export function habitHeatCells(
   const cells: HabitHeatCell[] = [];
   for (let k = dayCount - 1; k >= 0; k--) {
     const date = iso(addDays(-k, todayDate, timeZone), timeZone);
+    const applies = !schedule || habitAppliesOn(schedule, date);
     cells.push({
       id: date,
       label: date,
-      done: entries.has(date),
+      // A day the schedule skips reads as blank whatever the record says.
+      // The record itself is untouched: narrow a habit to weekdays and its
+      // Saturdays go quiet, widen it again and they are all still there.
+      done: applies && entries.has(date),
       isCurrent: k === 0,
       toggleDate: date,
       periodStart: date,
       periodEnd: date,
+      applies,
     });
   }
   return cells;
@@ -340,39 +364,71 @@ export function habitStreak(
   const done = donePeriodKeys(frequency, entries, weekStart);
   const applies = (key: string) => !schedule || habitAppliesOn(schedule, key);
   let cur = habitPeriodKey(frequency, today, weekStart);
-  // Walk back over days off before deciding the run has ended: a Mon–Fri
-  // habit must not lose its streak every Saturday for not being done on a
-  // day it was never meant to be done.
+  // Walk back over days off before deciding the run has ended. A habit that
+  // runs Mon to Fri must not lose its streak every Saturday for missing a day
+  // it was never meant to be done on.
   let guard = 0;
-  while (!done.has(cur) && !applies(cur) && guard++ < 14) {
+  while (!applies(cur) && guard++ < 14) {
     cur = stepHabitPeriod(frequency, cur, -1);
   }
+  // Today not being done yet is not a break; yesterday not being done is.
   if (!done.has(cur)) cur = stepHabitPeriod(frequency, cur, -1);
   let count = 0;
   guard = 0;
   while (guard++ < 3650) {
-    if (done.has(cur)) {
-      count += 1;
-    } else if (applies(cur)) {
-      break;
+    // A day off counts for nothing in either direction. It cannot break the
+    // run, and it cannot extend it either, however the day is recorded: a
+    // Saturday ticked before the habit was narrowed to weekdays is history
+    // the schedule no longer looks at.
+    if (!applies(cur)) {
+      cur = stepHabitPeriod(frequency, cur, -1);
+      continue;
     }
+    if (!done.has(cur)) break;
+    count += 1;
     cur = stepHabitPeriod(frequency, cur, -1);
   }
   return count;
 }
 
-/** Longest run of consecutive completed periods, in the habit's own units. */
+/**
+ * Longest run of consecutive completed periods, in the habit's own units.
+ *
+ * With a schedule, "consecutive" means consecutive among the days the habit
+ * actually runs on: Friday and the following Monday are back to back for a
+ * weekday habit, and the Saturday between them is not a gap because it was
+ * never a day. Days off are also dropped from the record the run is measured
+ * against, so an old Saturday tick neither extends a run nor starts one.
+ */
 export function habitBestStreak(
   frequency: HabitFrequencyType,
   entries: Set<string>,
   weekStart: WeekStart = "mon",
+  schedule?: HabitSchedule,
 ): number {
-  const keys = [...donePeriodKeys(frequency, entries, weekStart)].sort();
+  const applies = (key: string) => !schedule || habitAppliesOn(schedule, key);
+  const keys = [...donePeriodKeys(frequency, entries, weekStart)]
+    .filter(applies)
+    .sort();
+
+  /** Is `b` the next period this habit runs on after `a`? */
+  const adjacent = (a: string, b: string): boolean => {
+    let cur = stepHabitPeriod(frequency, a, 1);
+    // Seven hops clears the longest run of days off a week can hold; the
+    // guard is what stops a malformed key walking forever.
+    for (let guard = 0; guard < 8; guard++) {
+      if (cur === b) return true;
+      if (cur > b || applies(cur)) return false;
+      cur = stepHabitPeriod(frequency, cur, 1);
+    }
+    return false;
+  };
+
   let best = 0;
   let run = 0;
   let prev: string | null = null;
   for (const key of keys) {
-    run = prev && stepHabitPeriod(frequency, prev, 1) === key ? run + 1 : 1;
+    run = prev && adjacent(prev, key) ? run + 1 : 1;
     best = Math.max(best, run);
     prev = key;
   }

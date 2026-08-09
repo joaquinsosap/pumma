@@ -36,7 +36,7 @@ export function parseAgendaDurationMins(sub: string): number | null {
 
 export function eventEndMins(
   item: AgendaItem,
-  nextStartMins: number | null
+  nextStartMins: number | null,
 ): number {
   const start = parseTimeToMinutes(item.time);
   const parsed =
@@ -51,7 +51,7 @@ export function eventEndMins(
 
 export function buildAgendaBlocks(items: AgendaItem[]): AgendaBlock[] {
   const sorted = [...items].sort(
-    (a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time)
+    (a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time),
   );
   const blocks: AgendaBlock[] = [];
 
@@ -59,9 +59,7 @@ export function buildAgendaBlocks(items: AgendaItem[]): AgendaBlock[] {
     const item = sorted[i];
     const startMins = parseTimeToMinutes(item.time);
     const nextStart =
-      i < sorted.length - 1
-        ? parseTimeToMinutes(sorted[i + 1].time)
-        : null;
+      i < sorted.length - 1 ? parseTimeToMinutes(sorted[i + 1].time) : null;
     const endMins = eventEndMins(item, nextStart);
 
     if (i > 0) {
@@ -87,11 +85,13 @@ export function buildAgendaBlocks(items: AgendaItem[]): AgendaBlock[] {
 
 export function findNowPlacement(
   blocks: AgendaBlock[],
-  nowMins: number = parseTimeToMinutes(formatTimeHM())
+  nowMins: number = parseTimeToMinutes(formatTimeHM()),
 ): NowPlacement {
   if (!blocks.length) return { kind: "before" };
 
-  const first = blocks.find((b) => b.type === "event") as AgendaEventBlock | undefined;
+  const first = blocks.find((b) => b.type === "event") as
+    | AgendaEventBlock
+    | undefined;
   if (!first) return { kind: "before" };
 
   const lastEvent = [...blocks]
@@ -139,10 +139,10 @@ export function formatDeadTimeLabel(
   endMins: number,
   active: boolean,
   remainingMins: number,
-  nextTime: string
+  nextTime: string,
 ): string {
   if (active) {
     return `${formatRemainingMinutes(remainingMins)} until ${nextTime}`;
   }
-  return `${formatMinutesAsTime(startMins)} – ${formatMinutesAsTime(endMins)}`;
+  return `${formatMinutesAsTime(startMins)} to ${formatMinutesAsTime(endMins)}`;
 }

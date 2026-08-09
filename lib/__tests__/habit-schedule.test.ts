@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   habitAppliesOn,
+  habitBestStreak,
+  habitHeatCells,
   habitScheduleLabel,
   habitStreak,
 } from "@/lib/habit-visibility";
@@ -80,5 +82,79 @@ describe("habitStreak with a weekday schedule", () => {
 
   it("counts the run when asked on a working day", () => {
     expect(habitStreak("daily", kept, "mon", "2026-08-14", weekdays)).toBe(5);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A schedule is a lens over the record, never an edit to it.
+//
+// Narrowing a habit to weekdays must not touch what was logged: the Saturdays
+// stay in the database and simply stop being looked at. These check the
+// "stop being looked at" half — that a day off contributes nothing in either
+// direction, whatever it holds.
+
+describe("days off are ignored, not deleted", () => {
+  it("a Saturday tick does not extend a weekday streak", () => {
+    // Fri 14th done, Sat 15th also ticked, Sun 16th nothing. Asked on Sunday.
+    const entries = new Set(["2026-08-14", "2026-08-15"]);
+    expect(habitStreak("daily", entries, "mon", "2026-08-16", weekdays)).toBe(
+      1,
+    );
+    // The same record, read as an every-day habit, counts both.
+    expect(habitStreak("daily", entries, "mon", "2026-08-16", everyDay)).toBe(
+      2,
+    );
+  });
+
+  it("a missed Saturday does not break a weekday streak", () => {
+    const entries = new Set(["2026-08-13", "2026-08-14", "2026-08-17"]);
+    // Thu, Fri, then Mon: three in a row for a weekday habit.
+    expect(habitStreak("daily", entries, "mon", "2026-08-17", weekdays)).toBe(
+      3,
+    );
+    // Read as every day, the weekend is two holes and the run is just Monday.
+    expect(habitStreak("daily", entries, "mon", "2026-08-17", everyDay)).toBe(
+      1,
+    );
+  });
+
+  it("counts a best run across a weekend for a weekday habit", () => {
+    const entries = new Set([
+      "2026-08-13", // Thu
+      "2026-08-14", // Fri
+      "2026-08-17", // Mon
+      "2026-08-18", // Tue
+    ]);
+    expect(habitBestStreak("daily", entries, "mon", weekdays)).toBe(4);
+    expect(habitBestStreak("daily", entries, "mon", everyDay)).toBe(2);
+  });
+
+  it("leaves a lone weekend tick out of the best run entirely", () => {
+    const entries = new Set(["2026-08-15", "2026-08-16"]); // Sat + Sun only
+    expect(habitBestStreak("daily", entries, "mon", weekdays)).toBe(0);
+    expect(habitBestStreak("daily", entries, "mon", everyDay)).toBe(2);
+  });
+
+  it("hides a day off in the strip without dropping its box", () => {
+    const entries = new Set(["2026-08-14", "2026-08-15"]);
+    const cells = habitHeatCells(
+      "daily",
+      { dailyDays: 7, weeklyWeeks: 12, monthlyMonths: 12 },
+      entries,
+      "mon",
+      "2026-08-16",
+      "UTC",
+      weekdays,
+    );
+    // Seven boxes for seven days, whatever the schedule says.
+    expect(cells).toHaveLength(7);
+    const sat = cells.find((c) => c.id === "2026-08-15")!;
+    const fri = cells.find((c) => c.id === "2026-08-14")!;
+    expect(sat.applies).toBe(false);
+    // Recorded, but not shown as done — the entry is still in `entries`.
+    expect(sat.done).toBe(false);
+    expect(entries.has("2026-08-15")).toBe(true);
+    expect(fri.applies).toBe(true);
+    expect(fri.done).toBe(true);
   });
 });

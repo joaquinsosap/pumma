@@ -2,7 +2,10 @@ import type { AskAnswer } from "@/lib/ai/ask-schema";
 import { resolveFocusHref } from "@/lib/ask-links";
 import type { SnapshotData } from "@/lib/ai/user-snapshot";
 
-export function enrichAskAnswer(answer: AskAnswer, data: SnapshotData): AskAnswer {
+export function enrichAskAnswer(
+  answer: AskAnswer,
+  data: SnapshotData,
+): AskAnswer {
   return {
     ...answer,
     widgets: answer.widgets.map((widget) => {

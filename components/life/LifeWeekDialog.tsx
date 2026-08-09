@@ -108,7 +108,9 @@ export function LifeWeekDialog({
           <div
             className={cn(
               "flex h-10 w-10 shrink-0 items-center justify-center rounded-[11px] font-mono text-[13px] font-semibold",
-              moodC ? "text-white" : "border border-border bg-surface2 text-muted"
+              moodC
+                ? "text-white"
+                : "border border-border bg-surface2 text-muted",
             )}
             style={moodC ? { background: moodC } : undefined}
           >
@@ -141,7 +143,7 @@ export function LifeWeekDialog({
                   "flex-1 cursor-pointer rounded-[10px] border px-1 py-2 text-center transition-colors",
                   on
                     ? "border-[1.5px] font-semibold text-ink"
-                    : "border-border bg-surface2 text-muted"
+                    : "border-border bg-surface2 text-muted",
                 )}
                 style={
                   on
@@ -156,7 +158,9 @@ export function LifeWeekDialog({
                   className="mx-auto mb-1.5 h-4 w-4 rounded-[5px]"
                   style={{ background: m.color }}
                 />
-                <div className="font-mono text-[10px] capitalize">{m.label}</div>
+                <div className="font-mono text-[10px] capitalize">
+                  {m.label}
+                </div>
               </button>
             );
           })}

@@ -29,7 +29,11 @@ export function AuthForm({
     try {
       const res =
         mode === "register"
-          ? await signUp.email({ name: name.trim() || email.split("@")[0], email, password })
+          ? await signUp.email({
+              name: name.trim() || email.split("@")[0],
+              email,
+              password,
+            })
           : await signIn.email({ email, password });
       if (res.error) {
         setError(res.error.message ?? "Something went wrong. Try again.");
@@ -106,7 +110,9 @@ export function AuthForm({
               minLength={10}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              autoComplete={
+                mode === "login" ? "current-password" : "new-password"
+              }
               className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:border-faint"
             />
             {mode === "register" && (
@@ -127,7 +133,7 @@ export function AuthForm({
             disabled={pending}
             className={cn(
               "w-full cursor-pointer rounded-lg border-none bg-ink px-4 py-2 text-[13px] font-bold text-background",
-              "disabled:cursor-not-allowed disabled:opacity-60"
+              "disabled:cursor-not-allowed disabled:opacity-60",
             )}
           >
             {pending
@@ -144,14 +150,20 @@ export function AuthForm({
           {mode === "login" ? (
             <>
               No account?{" "}
-              <Link href="/register" className="font-semibold text-ink underline underline-offset-2">
+              <Link
+                href="/register"
+                className="font-semibold text-ink underline underline-offset-2"
+              >
                 Create one
               </Link>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <Link href="/login" className="font-semibold text-ink underline underline-offset-2">
+              <Link
+                href="/login"
+                className="font-semibold text-ink underline underline-offset-2"
+              >
                 Sign in
               </Link>
             </>

@@ -1,5 +1,9 @@
 import { getDb } from "@/lib/mongodb";
-import { decryptAllFor, decryptFor, encryptFor } from "@/lib/db/mongo/encrypted";
+import {
+  decryptAllFor,
+  decryptFor,
+  encryptFor,
+} from "@/lib/db/mongo/encrypted";
 import { newId } from "@/lib/store/memory";
 import { toDto, type LifeWeek, lifeWeekSchema } from "@/lib/schemas";
 import type { LifeWeekDoc } from "@/lib/schemas";
@@ -19,16 +23,18 @@ export async function listLifeWeeks(userId: string): Promise<LifeWeek[]> {
 
 export async function getLifeWeek(
   userId: string,
-  weekStart: string
+  weekStart: string,
 ): Promise<LifeWeek | null> {
   const c = await col();
   const doc = await c.findOne({ userId, weekStart: weekStart.slice(0, 10) });
   if (!doc) return null;
-  return toDto(lifeWeekSchema.parse(await decryptFor("lifeWeeks", userId, doc)));
+  return toDto(
+    lifeWeekSchema.parse(await decryptFor("lifeWeeks", userId, doc)),
+  );
 }
 
 export async function upsertLifeWeek(
-  doc: Omit<LifeWeekDoc, "_id" | "updatedAt"> & { _id?: string }
+  doc: Omit<LifeWeekDoc, "_id" | "updatedAt"> & { _id?: string },
 ): Promise<LifeWeek> {
   const c = await col();
   const weekStart = doc.weekStart.slice(0, 10);
@@ -45,14 +51,14 @@ export async function upsertLifeWeek(
   await c.replaceOne(
     { _id: full._id, userId: doc.userId },
     await encryptFor("lifeWeeks", doc.userId, full),
-    { upsert: true }
+    { upsert: true },
   );
   return toDto(lifeWeekSchema.parse(full));
 }
 
 export async function removeLifeWeeksByDates(
   userId: string,
-  dates: string[]
+  dates: string[],
 ): Promise<void> {
   if (!dates.length) return;
   const c = await col();

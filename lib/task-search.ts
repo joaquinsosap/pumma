@@ -29,26 +29,26 @@ export function searchTerms(query: string): string[] {
 export function searchTasks(
   tasks: Task[],
   query: string,
-  ctx: { tags: Tag[]; projects: Project[] }
+  ctx: { tags: Tag[]; projects: Project[] },
 ): Task[] {
   const terms = searchTerms(query);
   if (!terms.length) return tasks;
 
-  const tagNames = new Map(ctx.tags.map((t) => [t.id, normalizeSearch(t.name)]));
+  const tagNames = new Map(
+    ctx.tags.map((t) => [t.id, normalizeSearch(t.name)]),
+  );
   const projectTitles = new Map(
-    ctx.projects.map((p) => [p.id, normalizeSearch(p.title)])
+    ctx.projects.map((p) => [p.id, normalizeSearch(p.title)]),
   );
 
   return tasks.filter((task) => {
-    const tagText = task.tagIds
-      .map((id) => tagNames.get(id) ?? "")
-      .join(" ");
+    const tagText = task.tagIds.map((id) => tagNames.get(id) ?? "").join(" ");
     const haystack = [
       tagText,
       normalizeSearch(task.title),
       normalizeSearch(task.description),
       task.subtasks.map((s) => normalizeSearch(s.title)).join(" "),
-      task.projectId ? projectTitles.get(task.projectId) ?? "" : "",
+      task.projectId ? (projectTitles.get(task.projectId) ?? "") : "",
     ].join(" ");
 
     return terms.every((term) => {

@@ -10,7 +10,7 @@ export async function listAgenda(userId: string): Promise<AgendaItem[]> {
 }
 
 export async function insertAgendaItem(
-  doc: Omit<AgendaItemDoc, "_id"> & { _id?: string }
+  doc: Omit<AgendaItemDoc, "_id"> & { _id?: string },
 ): Promise<AgendaItem> {
   const store = getStore();
   const full = agendaItemSchema.parse({ ...doc, _id: doc._id ?? newId() });
@@ -20,7 +20,7 @@ export async function insertAgendaItem(
 
 export async function getAgendaItem(
   userId: string,
-  id: string
+  id: string,
 ): Promise<AgendaItem | null> {
   const store = getStore();
   const doc = store.agenda.find((a) => a._id === id && a.userId === userId);
@@ -30,11 +30,11 @@ export async function getAgendaItem(
 export async function updateAgendaItem(
   userId: string,
   id: string,
-  patch: Partial<Omit<AgendaItemDoc, "_id" | "userId">>
+  patch: Partial<Omit<AgendaItemDoc, "_id" | "userId">>,
 ): Promise<AgendaItem | null> {
   const store = getStore();
   const idx = store.agenda.findIndex(
-    (a) => a._id === id && a.userId === userId
+    (a) => a._id === id && a.userId === userId,
   );
   if (idx < 0) return null;
   const next = agendaItemSchema.parse({ ...store.agenda[idx], ...patch });
@@ -44,11 +44,11 @@ export async function updateAgendaItem(
 
 export async function deleteAgendaItem(
   userId: string,
-  id: string
+  id: string,
 ): Promise<boolean> {
   const store = getStore();
   const idx = store.agenda.findIndex(
-    (a) => a._id === id && a.userId === userId
+    (a) => a._id === id && a.userId === userId,
   );
   if (idx < 0) return false;
   store.agenda.splice(idx, 1);

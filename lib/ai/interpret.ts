@@ -4,12 +4,21 @@
 import "server-only";
 import { listGoals } from "@/lib/db/goals";
 import { listProjects } from "@/lib/db/projects";
-import { DOMAIN_CONTEXT, formatExistingEntities } from "@/lib/ai/domain-context";
+import {
+  DOMAIN_CONTEXT,
+  formatExistingEntities,
+} from "@/lib/ai/domain-context";
 import { planSchema, type PlanResult } from "@/lib/ai/plan-schema";
 import { generateStructured } from "@/lib/ai/generate";
 
-export async function interpret(userId: string, intent: string): Promise<PlanResult> {
-  const [goals, projects] = await Promise.all([listGoals(userId), listProjects(userId)]);
+export async function interpret(
+  userId: string,
+  intent: string,
+): Promise<PlanResult> {
+  const [goals, projects] = await Promise.all([
+    listGoals(userId),
+    listProjects(userId),
+  ]);
   const existing = formatExistingEntities(goals, projects);
 
   const { object } = await generateStructured({

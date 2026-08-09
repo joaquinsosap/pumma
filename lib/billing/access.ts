@@ -27,7 +27,8 @@ export async function getAccessLevel(userId: string): Promise<AccessLevel> {
     return "owner";
   }
   if (user?.isDemo) {
-    const live = user.demoExpiresAt && user.demoExpiresAt > new Date().toISOString();
+    const live =
+      user.demoExpiresAt && user.demoExpiresAt > new Date().toISOString();
     return live ? "demo" : "none";
   }
   const sub = await getSubscriptionByUserId(userId);

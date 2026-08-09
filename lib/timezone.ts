@@ -150,9 +150,10 @@ export type TzParts = {
 export function tzParts(date: Date, timeZone: string): TzParts {
   const f = partsFormatter(timeZone);
   const map = Object.fromEntries(
-    f.formatToParts(date)
+    f
+      .formatToParts(date)
       .filter((p) => p.type !== "literal")
-      .map((p) => [p.type, p.value])
+      .map((p) => [p.type, p.value]),
   );
   const weekdayMap: Record<string, number> = {
     Sun: 0,
@@ -213,7 +214,7 @@ export function noonUtcForIsoDate(isoDate: string, timeZone: string): Date {
 export function addDaysToIsoDate(
   isoDate: string,
   days: number,
-  timeZone: string
+  timeZone: string,
 ): string {
   const noon = noonUtcForIsoDate(isoDate, timeZone);
   noon.setUTCDate(noon.getUTCDate() + days);

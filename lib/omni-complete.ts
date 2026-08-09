@@ -23,7 +23,7 @@ export type OmniCompletion = {
  */
 export function tokenAtCaret(
   text: string,
-  caret: number
+  caret: number,
 ): { prefix: "#" | "!"; word: string; start: number } | null {
   const before = text.slice(0, caret);
   const match = before.match(/([#!])([a-z0-9-]*)$/i);
@@ -84,7 +84,7 @@ export function cycleTypeAtCaret(
   text: string,
   caret: number,
   typeWords: string[],
-  step = 1
+  step = 1,
 ): OmniCompletion | null {
   if (!typeWords.length) return null;
   const n = typeWords.length;
@@ -150,7 +150,7 @@ export function completeOmniToken(
   caret: number,
   tagNames: string[],
   rotate?: number,
-  baseWord?: string
+  baseWord?: string,
 ): OmniCompletion | null {
   const token = tokenAtCaret(text, caret);
   if (!token || !token.word) return null;

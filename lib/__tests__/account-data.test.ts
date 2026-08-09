@@ -73,7 +73,10 @@ describe("account deletion", () => {
     await deleteAllUserData(userId);
 
     const left = await exportUserData(userId);
-    const total = Object.values(left).reduce((sum, rows) => sum + rows.length, 0);
+    const total = Object.values(left).reduce(
+      (sum, rows) => sum + rows.length,
+      0,
+    );
     expect(total).toBe(0);
     expect(store.users.some((u) => u._id === userId)).toBe(false);
   });

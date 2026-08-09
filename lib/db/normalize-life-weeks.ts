@@ -8,15 +8,13 @@ import {
 } from "@/lib/db/life-weeks";
 
 /** Rewrite legacy weekStart keys (e.g. week end) to birth-aligned grid slots. */
-export async function normalizeLifeWeekKeys(
-  userId: string
-): Promise<void> {
+export async function normalizeLifeWeekKeys(userId: string): Promise<void> {
   const settings = await getSettings(userId);
   if (!settings?.birthDate) return;
 
   const grid = buildLifeWeeks(
     settings.birthDate,
-    settings.lifeSpanYears ?? LIFE_SPAN_MAX
+    settings.lifeSpanYears ?? LIFE_SPAN_MAX,
   );
   const weeks = await listLifeWeeks(userId);
 

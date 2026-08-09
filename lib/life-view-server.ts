@@ -1,9 +1,13 @@
 import { cookies } from "next/headers";
-import { LIFE_AREA_COOKIE, parseLifeView, type LifeView } from "@/lib/life-area";
+import {
+  LIFE_AREA_COOKIE,
+  parseLifeView,
+  type LifeView,
+} from "@/lib/life-area";
 
 /** Resolve life view from URL param, falling back to the persisted cookie. */
 export async function resolveLifeView(
-  urlLife?: string | null
+  urlLife?: string | null,
 ): Promise<LifeView> {
   if (urlLife != null && urlLife !== "") {
     return parseLifeView(urlLife);

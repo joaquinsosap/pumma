@@ -78,7 +78,7 @@ export const DATE_PICK_PRESETS: Record<DatePickMode, DatePickConfig> = {
 export function resolveDatePickConfig(
   mode: DatePickMode,
   overrides: Partial<DatePickConfig> = {},
-  timeZone?: string
+  timeZone?: string,
 ): DatePickConfig {
   const preset = { ...DATE_PICK_PRESETS[mode], ...overrides };
   if (timeZone && mode !== "birth" && overrides.fallbackValue === undefined) {
@@ -87,7 +87,10 @@ export function resolveDatePickConfig(
   return preset;
 }
 
-export function monthYearFromIso(isoDate: string): { year: number; month: number } {
+export function monthYearFromIso(isoDate: string): {
+  year: number;
+  month: number;
+} {
   const d = new Date(isoDate.slice(0, 10) + "T00:00");
   return { year: d.getFullYear(), month: d.getMonth() };
 }
@@ -96,7 +99,7 @@ export function isoFromParts(
   year: number,
   month: number,
   day: number,
-  timeZone?: string
+  timeZone?: string,
 ): string {
   const d = new Date(year, month, day);
   return iso(d, timeZone);

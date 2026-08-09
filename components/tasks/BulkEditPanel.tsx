@@ -4,7 +4,11 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Minus, Trash2, X } from "@/components/icons";
 import type { Project, Tag, Task } from "@/lib/schemas";
-import { bulkDeleteTasks, bulkUpdateTasks, undoDeleteTasks } from "@/lib/actions/tasks";
+import {
+  bulkDeleteTasks,
+  bulkUpdateTasks,
+  undoDeleteTasks,
+} from "@/lib/actions/tasks";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { tagBg } from "@/lib/parse";
 import { isLifeTag } from "@/lib/life-area-sync";
@@ -51,7 +55,13 @@ type Props = {
  * which is never what anybody means. Everything here is a single value the
  * whole batch can share, plus tags, which merge instead of replacing.
  */
-export function BulkEditPanel({ tasks, tags, projects, onClear, onDeleted }: Props) {
+export function BulkEditPanel({
+  tasks,
+  tags,
+  projects,
+  onClear,
+  onDeleted,
+}: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -90,7 +100,7 @@ export function BulkEditPanel({ tasks, tags, projects, onClear, onDeleted }: Pro
 
   const listedTags = useMemo(
     () => tags.filter((t) => !t.projectId && !isLifeTag(t.name)),
-    [tags]
+    [tags],
   );
   const lifeTags = useMemo(() => tags.filter((t) => isLifeTag(t.name)), [tags]);
 
@@ -184,7 +194,7 @@ export function BulkEditPanel({ tasks, tags, projects, onClear, onDeleted }: Pro
                   "rounded-md border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide transition-colors disabled:opacity-50",
                   sharedStatus === value
                     ? "border-ink bg-ink text-background"
-                    : "border-border bg-surface2 text-faint hover:border-faint hover:text-ink"
+                    : "border-border bg-surface2 text-faint hover:border-faint hover:text-ink",
                 )}
               >
                 {label}
@@ -207,7 +217,7 @@ export function BulkEditPanel({ tasks, tags, projects, onClear, onDeleted }: Pro
                     "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wide transition-all disabled:opacity-50",
                     active
                       ? "border-2 text-ink shadow-[1px_1px_0_var(--shadow)]"
-                      : "border-border bg-surface2 text-faint hover:border-faint"
+                      : "border-border bg-surface2 text-faint hover:border-faint",
                   )}
                   style={
                     active
@@ -246,20 +256,20 @@ export function BulkEditPanel({ tasks, tags, projects, onClear, onDeleted }: Pro
 
         <Section label="Project">
           <select
-            value={mixedProject ? MIXED : sharedProject ?? ""}
+            value={mixedProject ? MIXED : (sharedProject ?? "")}
             disabled={pending}
             onChange={(e) => {
               if (e.target.value === MIXED) return;
               const next = e.target.value || null;
               const title = next
-                ? projects.find((p) => p.id === next)?.title ?? "project"
+                ? (projects.find((p) => p.id === next)?.title ?? "project")
                 : "no project";
               apply({ projectId: next }, `moved to ${title}`);
             }}
             className="w-full truncate rounded-lg border border-border bg-surface px-2.5 py-2 text-[12.5px] text-ink outline-none focus:border-faint disabled:opacity-50"
             aria-label="Move selected tasks to a project"
           >
-            {mixedProject && <option value={MIXED}>— mixed —</option>}
+            {mixedProject && <option value={MIXED}>(mixed)</option>}
             <option value="">No project</option>
             {projects.map((p) => (
               <option key={p.id} value={p.id}>
@@ -300,7 +310,7 @@ export function BulkEditPanel({ tasks, tags, projects, onClear, onDeleted }: Pro
             </div>
           ) : (
             <p className="m-0 font-mono text-[10px] text-faint2">
-              No tags yet — add one from the sidebar.
+              No tags yet. Add one from the sidebar.
             </p>
           )}
           <p className="m-0 mt-2 font-mono text-[10px] leading-relaxed text-faint2">
@@ -384,12 +394,16 @@ function TagToggle({
         "flex items-center gap-1.5 rounded-lg border px-2 py-1 font-mono text-[11px] transition-all disabled:opacity-50",
         state === "none"
           ? "border-border bg-surface text-muted hover:border-faint2"
-          : "border-2 font-semibold"
+          : "border-2 font-semibold",
       )}
       style={
         state === "none"
           ? undefined
-          : { borderColor: tag.color, background: tagBg(tag.color), color: tag.color }
+          : {
+              borderColor: tag.color,
+              background: tagBg(tag.color),
+              color: tag.color,
+            }
       }
     >
       <span
@@ -399,9 +413,15 @@ function TagToggle({
           background: state === "all" ? tag.color : "transparent",
         }}
       >
-        {state === "all" && <Check className="h-2 w-2 text-white" strokeWidth={4} />}
+        {state === "all" && (
+          <Check className="h-2 w-2 text-white" strokeWidth={4} />
+        )}
         {state === "some" && (
-          <Minus className="h-2 w-2" strokeWidth={4} style={{ color: tag.color }} />
+          <Minus
+            className="h-2 w-2"
+            strokeWidth={4}
+            style={{ color: tag.color }}
+          />
         )}
       </span>
       {tag.name}

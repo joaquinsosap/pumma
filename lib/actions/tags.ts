@@ -25,18 +25,10 @@ import { getProject, listProjects, updateProject } from "@/lib/db/projects";
 import { listHabits, updateHabit } from "@/lib/db/habits";
 import { listGoals, nextGoalOrder, updateGoal } from "@/lib/db/goals";
 import { setProjectLifeArea } from "@/lib/project-life-server";
-import {
-  projectIdFromTags,
-  withSingleProjectTag,
-} from "@/lib/project-tags";
+import { projectIdFromTags, withSingleProjectTag } from "@/lib/project-tags";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 
-export type TaggableEntity =
-  | "task"
-  | "note"
-  | "habit"
-  | "goal"
-  | "project";
+export type TaggableEntity = "task" | "note" | "habit" | "goal" | "project";
 
 const toggleSchema = z.object({
   entity: z.enum(["task", "note", "habit", "goal", "project"]),
@@ -47,7 +39,7 @@ const toggleSchema = z.object({
 export async function toggleEntityTag(
   entity: TaggableEntity,
   targetId: string,
-  tagId: string
+  tagId: string,
 ): Promise<ActionResult<{ applied: boolean }>> {
   const parsed = toggleSchema.safeParse({ entity, entityId: targetId, tagId });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -74,7 +66,7 @@ export async function toggleEntityTag(
     if (!applied && isLifeTag(tagRecord.name) && !hasLifeTag(tagIds, tags)) {
       return {
         ok: false,
-        error: `Pick ${tagRecord.name === "work" ? "personal" : "work"} first — everything belongs to one side or both`,
+        error: `Pick ${tagRecord.name === "work" ? "personal" : "work"} first, everything belongs to one side or both`,
       };
     }
 
@@ -114,17 +106,20 @@ export async function toggleEntityTag(
   // strip the last life tag, and let lifeArea follow from what's left.
   type Flip =
     | { ok: false; error: string }
-    | { ok: true; applied: boolean; tagIds: string[]; lifeArea: EntityLifeArea };
+    | {
+        ok: true;
+        applied: boolean;
+        tagIds: string[];
+        lifeArea: EntityLifeArea;
+      };
 
   const flip = (current: string[]): Flip => {
     const applied = !current.includes(tag);
-    const next = applied
-      ? [...current, tag]
-      : current.filter((x) => x !== tag);
+    const next = applied ? [...current, tag] : current.filter((x) => x !== tag);
     if (!applied && isLifeTag(tagRecord.name) && !hasLifeTag(next, tags)) {
       return {
         ok: false,
-        error: `Pick ${tagRecord.name === "work" ? "personal" : "work"} first — everything belongs to one side or both`,
+        error: `Pick ${tagRecord.name === "work" ? "personal" : "work"} first, everything belongs to one side or both`,
       };
     }
     return {
@@ -197,7 +192,7 @@ export async function toggleEntityTag(
   if (!applied && isLifeTag(tagRecord.name) && !hasLifeTag(tagIds, tags)) {
     return {
       ok: false,
-      error: `Pick ${tagRecord.name === "work" ? "personal" : "work"} first — everything belongs to one side or both`,
+      error: `Pick ${tagRecord.name === "work" ? "personal" : "work"} first, everything belongs to one side or both`,
     };
   }
   const lifeArea = deriveLifeAreaFromTags(tagIds, tags);
@@ -226,7 +221,8 @@ export async function updateTagAction(input: {
   });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   const { id, ...patch } = parsed.data;
-  if (!Object.keys(patch).length) return { ok: false, error: "Nothing to update" };
+  if (!Object.keys(patch).length)
+    return { ok: false, error: "Nothing to update" };
 
   const userId = await requireUserId();
   if (patch.name !== undefined) {
@@ -235,12 +231,15 @@ export async function updateTagAction(input: {
     // The derivation matches life tags by name, so a rename would silently
     // orphan every item carrying it. Recolouring is fine.
     if (existing && isLifeTag(existing.name)) {
-      return { ok: false, error: `"${existing.name}" is a life tag and can't be renamed` };
+      return {
+        ok: false,
+        error: `"${existing.name}" is a life tag and can't be renamed`,
+      };
     }
     // One namespace for ordinary and project tags alike, so "#ai" is never
     // ambiguous about where it files things.
     const clash = all.find(
-      (t) => t.id !== id && t.name.toLowerCase() === patch.name!.toLowerCase()
+      (t) => t.id !== id && t.name.toLowerCase() === patch.name!.toLowerCase(),
     );
     if (clash) {
       return {
@@ -253,7 +252,10 @@ export async function updateTagAction(input: {
   }
   const updated = await updateTag(userId, id, patch);
   if (!updated) {
-    return { ok: false, error: patch.name ? "Name already in use" : "Not found" };
+    return {
+      ok: false,
+      error: patch.name ? "Name already in use" : "Not found",
+    };
   }
   revalidatePath("/", "layout");
   return { ok: true, data: updated };
@@ -287,7 +289,7 @@ export type ProjectTagRename =
  * only happens with `confirmMerge` after the caller has said how many.
  */
 export async function renameProjectTagAction(
-  input: z.infer<typeof renameProjectTagSchema>
+  input: z.infer<typeof renameProjectTagSchema>,
 ): Promise<ActionResult<ProjectTagRename>> {
   const parsed = renameProjectTagSchema.safeParse({
     ...input,
@@ -331,7 +333,7 @@ export async function renameProjectTagAction(
   const holders = tasks.filter((t) => t.tagIds.includes(clash.id));
   const toFile = holders.filter((t) => !t.projectId);
   const elsewhere = holders.filter(
-    (t) => t.projectId && t.projectId !== project.id
+    (t) => t.projectId && t.projectId !== project.id,
   );
 
   if (!confirmMerge) {
@@ -352,7 +354,11 @@ export async function renameProjectTagAction(
 
   for (const task of holders) {
     if (!task.projectId) {
-      const tagIds = withProjectLifeTags(swap(task.tagIds), project.lifeArea, tags);
+      const tagIds = withProjectLifeTags(
+        swap(task.tagIds),
+        project.lifeArea,
+        tags,
+      );
       await updateTask(userId, task.id, {
         projectId: project.id,
         tagIds,
@@ -412,12 +418,15 @@ export async function deleteTagAction(id: string): Promise<ActionResult> {
   // personal/work aren't labels, they're the life area itself — removing one
   // would leave everything carrying it with nowhere to belong.
   if (isLifeTag(tag.name)) {
-    return { ok: false, error: `"${tag.name}" is a life tag and can't be deleted` };
+    return {
+      ok: false,
+      error: `"${tag.name}" is a life tag and can't be deleted`,
+    };
   }
   if (tag.isProjectPrimary) {
     return {
       ok: false,
-      error: "That's the project's own tag — rename it, or delete the project",
+      error: "That's the project's own tag, so rename it or delete the project",
     };
   }
   if (tag.isDefault) {
@@ -430,7 +439,6 @@ export async function deleteTagAction(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-
 /** A tag is unused when nothing references it. Default tags are never swept. */
 async function findUnusedTags(userId: string) {
   const [tags, tasks, notes] = await Promise.all([
@@ -442,7 +450,7 @@ async function findUnusedTags(userId: string) {
   for (const t of tasks) for (const id of t.tagIds) used.add(id);
   for (const n of notes) for (const id of n.tagIds) used.add(id);
   return tags.filter(
-    (t) => !t.isDefault && !isLifeTag(t.name) && !used.has(t.id)
+    (t) => !t.isDefault && !isLifeTag(t.name) && !used.has(t.id),
   );
 }
 
@@ -487,7 +495,7 @@ export async function cleanUnusedTagsAction(): Promise<
 
 /** Undo a cleanup — restores the exact tags (same ids, colors, order). */
 export async function restoreTagsAction(
-  snapshot: unknown
+  snapshot: unknown,
 ): Promise<ActionResult<{ restored: number }>> {
   const userId = await requireUserId();
   if (!Array.isArray(snapshot)) return { ok: false, error: "Invalid snapshot" };
@@ -518,7 +526,8 @@ export async function maybeAutoCleanTagsAction(): Promise<
     return { ok: true, data: { removed: 0 } };
   }
 
-  const cutoffMs = now - (settings.tagAutoCleanDays ?? 30) * 24 * 60 * 60 * 1000;
+  const cutoffMs =
+    now - (settings.tagAutoCleanDays ?? 30) * 24 * 60 * 60 * 1000;
   const unused = (await findUnusedTags(userId)).filter((t) => {
     const created = Date.parse(t.createdAt);
     return Number.isFinite(created) ? created < cutoffMs : false;

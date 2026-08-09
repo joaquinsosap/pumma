@@ -24,7 +24,12 @@ type Props = {
  * the personal/work split reads, so which one is on has to be visible without
  * opening anything. Ordinary labels sit behind a "+".
  */
-export function EntityTagRow({ entity, entityId, tags, selectedTagIds }: Props) {
+export function EntityTagRow({
+  entity,
+  entityId,
+  tags,
+  selectedTagIds,
+}: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState(selectedTagIds);
@@ -32,7 +37,7 @@ export function EntityTagRow({ entity, entityId, tags, selectedTagIds }: Props) 
 
   const on = new Set(selected);
   const lifeTags = SPECIAL_LIFE_TAGS.map((name) =>
-    tags.find((t) => t.name.toLowerCase() === name)
+    tags.find((t) => t.name.toLowerCase() === name),
   ).filter((t): t is Tag => Boolean(t));
   const labels = tags.filter((t) => !isLifeTag(t.name) && !t.projectId);
   const chosenLabels = labels.filter((t) => on.has(t.id));
@@ -48,7 +53,7 @@ export function EntityTagRow({ entity, entityId, tags, selectedTagIds }: Props) 
         setSelected((prev) =>
           res.data!.applied
             ? [...prev, tagId]
-            : prev.filter((id) => id !== tagId)
+            : prev.filter((id) => id !== tagId),
         );
       }
       // A life tag can move a goal to the other column and drag a project's
@@ -67,7 +72,7 @@ export function EntityTagRow({ entity, entityId, tags, selectedTagIds }: Props) 
         "flex items-center gap-1.5 rounded-lg border px-2 py-1 font-mono text-[11px] transition-all disabled:opacity-60",
         active
           ? "border-2 font-bold shadow-[1px_1px_0_var(--shadow)]"
-          : "border-border bg-surface2/60 font-medium text-muted hover:border-faint hover:bg-surface2"
+          : "border-border bg-surface2/60 font-medium text-muted hover:border-faint hover:bg-surface2",
       )}
       style={
         active
@@ -100,7 +105,7 @@ export function EntityTagRow({ entity, entityId, tags, selectedTagIds }: Props) 
             aria-expanded={picking}
             className={cn(
               "flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 font-mono text-[11px] text-muted transition-colors hover:border-faint hover:text-ink disabled:opacity-40",
-              picking && "border-faint text-ink"
+              picking && "border-faint text-ink",
             )}
           >
             <Plus className="h-3 w-3" />

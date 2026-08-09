@@ -1,5 +1,9 @@
 import { getDb } from "@/lib/mongodb";
-import { decryptAllFor, decryptFor, encryptFor } from "@/lib/db/mongo/encrypted";
+import {
+  decryptAllFor,
+  decryptFor,
+  encryptFor,
+} from "@/lib/db/mongo/encrypted";
 import { newId } from "@/lib/store/memory";
 import { toDto, type AgendaItem, agendaItemSchema } from "@/lib/schemas";
 import type { AgendaItemDoc } from "@/lib/schemas";
@@ -17,7 +21,7 @@ export async function listAgenda(userId: string): Promise<AgendaItem[]> {
 }
 
 export async function insertAgendaItem(
-  doc: Omit<AgendaItemDoc, "_id"> & { _id?: string }
+  doc: Omit<AgendaItemDoc, "_id"> & { _id?: string },
 ): Promise<AgendaItem> {
   const c = await col();
   const full = agendaItemSchema.parse({ ...doc, _id: doc._id ?? newId() });
@@ -27,7 +31,7 @@ export async function insertAgendaItem(
 
 export async function getAgendaItem(
   userId: string,
-  id: string
+  id: string,
 ): Promise<AgendaItem | null> {
   const c = await col();
   const doc = await c.findOne({ _id: id, userId });
@@ -38,13 +42,13 @@ export async function getAgendaItem(
 export async function updateAgendaItem(
   userId: string,
   id: string,
-  patch: Partial<Omit<AgendaItemDoc, "_id" | "userId">>
+  patch: Partial<Omit<AgendaItemDoc, "_id" | "userId">>,
 ): Promise<AgendaItem | null> {
   const c = await col();
   const doc = await c.findOneAndUpdate(
     { _id: id, userId },
     { $set: await encryptFor("agenda", userId, patch) },
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   if (!doc) return null;
   return toDto(agendaItemSchema.parse(await decryptFor("agenda", userId, doc)));
@@ -52,7 +56,7 @@ export async function updateAgendaItem(
 
 export async function deleteAgendaItem(
   userId: string,
-  id: string
+  id: string,
 ): Promise<boolean> {
   const c = await col();
   const res = await c.deleteOne({ _id: id, userId });

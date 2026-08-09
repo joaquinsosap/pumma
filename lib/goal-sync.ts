@@ -9,10 +9,10 @@ export const DEFAULT_HABIT_GOAL_STREAK = 30;
 
 export function habitEntryDates(
   habitId: string,
-  habitEntries: HabitEntry[]
+  habitEntries: HabitEntry[],
 ): Set<string> {
   return new Set(
-    habitEntries.filter((e) => e.habitId === habitId).map((e) => e.date)
+    habitEntries.filter((e) => e.habitId === habitId).map((e) => e.date),
   );
 }
 
@@ -20,7 +20,7 @@ export function habitStreakProgress(
   habitId: string,
   habitEntries: HabitEntry[],
   targetStreak: number,
-  today: string = iso()
+  today: string = iso(),
 ): { streak: number; target: number; progress: number } {
   const target = Math.max(1, targetStreak || DEFAULT_HABIT_GOAL_STREAK);
   const streak = streakOf(habitEntryDates(habitId, habitEntries), today);
@@ -33,11 +33,11 @@ export function computeGoalProgress(
   projects: Project[],
   habits: Habit[],
   habitEntries: HabitEntry[],
-  tasks: Task[]
+  tasks: Task[],
 ): number | null {
   const linkedProjects = projects.filter((p) => p.goalId === goalId);
   const linkedHabits = habits.filter(
-    (h) => h.goalIds.includes(goalId) && !h.archived
+    (h) => h.goalIds.includes(goalId) && !h.archived,
   );
 
   if (!linkedProjects.length && !linkedHabits.length) return null;
@@ -47,7 +47,7 @@ export function computeGoalProgress(
   if (linkedProjects.length) {
     const sum = linkedProjects.reduce(
       (acc, p) => acc + projectProgress(p.id, tasks).progress,
-      0
+      0,
     );
     parts.push(sum / linkedProjects.length);
   }
@@ -68,7 +68,7 @@ export function goalProgressBreakdown(
   projects: Project[],
   habits: Habit[],
   habitEntries: HabitEntry[],
-  tasks: Task[]
+  tasks: Task[],
 ) {
   const linkedProjects = linkedProjectsForGoal(goalId, projects);
   const linkedHabits = linkedHabitsForGoal(goalId, habits);
@@ -81,7 +81,7 @@ export function goalProgressBreakdown(
     ...habitStreakProgress(
       habit.id,
       habitEntries,
-      habit.goalTargetStreak ?? DEFAULT_HABIT_GOAL_STREAK
+      habit.goalTargetStreak ?? DEFAULT_HABIT_GOAL_STREAK,
     ),
   }));
   const overall = computeGoalProgress(
@@ -89,7 +89,7 @@ export function goalProgressBreakdown(
     projects,
     habits,
     habitEntries,
-    tasks
+    tasks,
   );
 
   return { projectParts, habitParts, overall };
@@ -98,7 +98,7 @@ export function goalProgressBreakdown(
 export function goalHasLinks(
   goalId: string,
   projects: Project[],
-  habits: Habit[]
+  habits: Habit[],
 ): boolean {
   return (
     projects.some((p) => p.goalId === goalId) ||

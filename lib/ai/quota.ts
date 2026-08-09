@@ -40,7 +40,7 @@ export async function reserveAiCall(userId: string): Promise<boolean> {
       $inc: { count: 1 },
       $setOnInsert: { userId, day, inputTokens: 0, outputTokens: 0 },
     },
-    { upsert: true, returnDocument: "after" }
+    { upsert: true, returnDocument: "after" },
   );
   return (doc?.count ?? 1) <= limit;
 }
@@ -48,7 +48,7 @@ export async function reserveAiCall(userId: string): Promise<boolean> {
 /** Record model token usage for the day (spend telemetry / future dashboards). */
 export async function recordAiUsage(
   userId: string,
-  usage: Usage
+  usage: Usage,
 ): Promise<void> {
   if (process.env.DATA_SOURCE !== "mongodb") return;
   const { getDb } = await import("@/lib/mongodb");
@@ -61,7 +61,7 @@ export async function recordAiUsage(
         outputTokens: usage.outputTokens,
       },
     },
-    { upsert: true }
+    { upsert: true },
   );
 }
 

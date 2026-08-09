@@ -18,9 +18,25 @@ import {
   type CreateOp,
   type UpdateOp,
 } from "@/lib/ai/changeset-schema";
-import { listGoals, insertGoal, updateGoal, deleteGoal, nextGoalOrder } from "@/lib/db/goals";
-import { listProjects, insertProject, updateProject, deleteProject } from "@/lib/db/projects";
-import { listHabits, insertHabit, updateHabit, deleteHabit } from "@/lib/db/habits";
+import {
+  listGoals,
+  insertGoal,
+  updateGoal,
+  deleteGoal,
+  nextGoalOrder,
+} from "@/lib/db/goals";
+import {
+  listProjects,
+  insertProject,
+  updateProject,
+  deleteProject,
+} from "@/lib/db/projects";
+import {
+  listHabits,
+  insertHabit,
+  updateHabit,
+  deleteHabit,
+} from "@/lib/db/habits";
 import { listTasks, insertTask, updateTask, deleteTask } from "@/lib/db/tasks";
 import { listNotes, insertNote, updateNote, deleteNote } from "@/lib/db/notes";
 import { ensureTags, insertTag, listTags } from "@/lib/db/tags";
@@ -30,7 +46,11 @@ import {
   goalCategoryForLifeArea,
   setLifeTags,
 } from "@/lib/life-area-sync";
-import { projectTagSlug, uniqueTagName, withSingleProjectTag } from "@/lib/project-tags";
+import {
+  projectTagSlug,
+  uniqueTagName,
+  withSingleProjectTag,
+} from "@/lib/project-tags";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 
 const HABIT_COLOR = "oklch(0.6 0.13 155)";
@@ -50,7 +70,10 @@ export async function repromptNodeAction(input: {
 }): Promise<ActionResult<Changeset["ops"]>> {
   const instruction = aiInput.safeParse(input.instruction);
   if (!instruction.success) {
-    return { ok: false, error: "Say what should change (3–2000 characters)." };
+    return {
+      ok: false,
+      error: "Say what should change (3 to 2000 characters).",
+    };
   }
   const userId = await requireUserId();
   if (!(await reserveAiCall(userId))) {
@@ -93,9 +116,7 @@ export type DeleteRadius = {
   also: string[];
 };
 
-export async function previewChangesetAction(
-  raw: Changeset
-): Promise<
+export async function previewChangesetAction(raw: Changeset): Promise<
   ActionResult<{
     problems: OpProblem[];
     deletes: DeleteRadius[];
@@ -118,7 +139,7 @@ export async function previewChangesetAction(
     if (!existing[op.entity].has(op.id)) {
       problems.push({
         index,
-        message: `"${op.label}" no longer exists — it changed since this draft was made.`,
+        message: `"${op.label}" no longer exists, because it changed since this draft was made.`,
       });
       return;
     }
@@ -127,7 +148,7 @@ export async function previewChangesetAction(
       // dangerous kind: it looks like the work moved when it didn't.
       problems.push({
         index,
-        message: `"${op.label}" has no changes — this operation would do nothing.`,
+        message: `"${op.label}" has no changes, so this operation would do nothing.`,
       });
       return;
     }
@@ -142,7 +163,10 @@ export async function previewChangesetAction(
 
   // Any id the draft mentions — as an op target or a parentRef — gets a name.
   const [goals, projects, habits, notes] = await Promise.all([
-    listGoals(userId), listProjects(userId), listHabits(userId), listNotes(userId),
+    listGoals(userId),
+    listProjects(userId),
+    listHabits(userId),
+    listNotes(userId),
   ]);
   const names: Record<string, string> = {};
   for (const g of goals) names[g.id] = g.title;
@@ -159,7 +183,11 @@ export async function previewChangesetAction(
 
 export type UndoPayloadV2 = {
   created: { entity: ChangeEntity; id: string }[];
-  updated: { entity: ChangeEntity; id: string; before: Record<string, unknown> }[];
+  updated: {
+    entity: ChangeEntity;
+    id: string;
+    before: Record<string, unknown>;
+  }[];
 };
 
 export type ApplyChangesetResult = {
@@ -171,7 +199,7 @@ export type ApplyChangesetResult = {
 };
 
 export async function applyChangesetAction(
-  raw: Changeset
+  raw: Changeset,
 ): Promise<ActionResult<ApplyChangesetResult>> {
   const parsed = changesetSchema.safeParse(raw);
   if (!parsed.success) return { ok: false, error: "Invalid changeset." };
@@ -189,23 +217,34 @@ export async function applyChangesetAction(
 
   // A *Ref is a refId minted in this changeset, or a real id that must exist.
   const resolve = (entity: ChangeEntity, ref?: string | null): string | null =>
-    ref ? idByRef.get(ref) ?? (existing[entity].has(ref) ? ref : null) : null;
+    ref ? (idByRef.get(ref) ?? (existing[entity].has(ref) ? ref : null)) : null;
 
   // Creates parent-first, then updates, then deletes last — a merge's delete
   // must not run before the updates that empty the container.
   const order = { create: 0, update: 1, delete: 2 } as const;
   const entityOrder: Record<ChangeEntity, number> = {
-    goal: 0, project: 1, habit: 2, task: 3, note: 4,
+    goal: 0,
+    project: 1,
+    habit: 2,
+    task: 3,
+    note: 4,
   };
   const ops = [...parsed.data.ops].sort(
-    (a, b) => order[a.op] - order[b.op] || entityOrder[a.entity] - entityOrder[b.entity]
+    (a, b) =>
+      order[a.op] - order[b.op] ||
+      entityOrder[a.entity] - entityOrder[b.entity],
   );
 
   let applied = 0;
   try {
     for (const op of ops) {
       if (op.op === "create") {
-        const id = await applyCreate(userId, op, { td, tags, resolve, touchedProjects });
+        const id = await applyCreate(userId, op, {
+          td,
+          tags,
+          resolve,
+          touchedProjects,
+        });
         if (id) {
           idByRef.set(op.refId, id.id);
           created.push({ entity: op.entity, id: id.id, title: id.title });
@@ -226,7 +265,11 @@ export async function applyChangesetAction(
           skipped.push({ label: op.label, reason: "had no changes" });
           continue;
         }
-        const before = await applyUpdate(userId, op, { tags, resolve, touchedProjects });
+        const before = await applyUpdate(userId, op, {
+          tags,
+          resolve,
+          touchedProjects,
+        });
         if (before) {
           undo.updated.push({ entity: op.entity, id: op.id, before });
           applied++;
@@ -258,7 +301,7 @@ export async function applyChangesetAction(
 // Undo: remove what was created, restore what was changed. Session-scoped.
 
 export async function undoChangesetAction(
-  undo: UndoPayloadV2
+  undo: UndoPayloadV2,
 ): Promise<ActionResult<{ reverted: number }>> {
   const userId = await requireUserId();
   let reverted = 0;
@@ -267,15 +310,26 @@ export async function undoChangesetAction(
   // before parents — creations were parent-first, so reversing suffices).
   for (const u of [...undo.updated].reverse()) {
     const fn = {
-      goal: updateGoal, project: updateProject, habit: updateHabit,
-      task: updateTask, note: updateNote,
-    }[u.entity] as (uid: string, id: string, patch: Record<string, unknown>) => Promise<unknown>;
+      goal: updateGoal,
+      project: updateProject,
+      habit: updateHabit,
+      task: updateTask,
+      note: updateNote,
+    }[u.entity] as (
+      uid: string,
+      id: string,
+      patch: Record<string, unknown>,
+    ) => Promise<unknown>;
     if (await fn(userId, u.id, u.before)) reverted++;
   }
   for (const c of [...undo.created].reverse()) {
     const ok = await {
-      goal: deleteGoal, project: (uid: string, id: string) => deleteProject(uid, id, { deleteTasks: false }),
-      habit: deleteHabit, task: deleteTask, note: deleteNote,
+      goal: deleteGoal,
+      project: (uid: string, id: string) =>
+        deleteProject(uid, id, { deleteTasks: false }),
+      habit: deleteHabit,
+      task: deleteTask,
+      note: deleteNote,
     }[c.entity](userId, c.id);
     if (ok) reverted++;
   }
@@ -300,7 +354,7 @@ const val = (v: string | null | undefined): string | null => (v ? v : null);
 async function applyCreate(
   userId: string,
   op: CreateOp,
-  ctx: Ctx
+  ctx: Ctx,
 ): Promise<{ id: string; title: string } | null> {
   const { td, tags, resolve } = ctx;
   const f = op.fields;
@@ -343,8 +397,11 @@ async function applyCreate(
       // Same rule as creating by hand: every project gets a flagship tag.
       await insertTag(
         userId,
-        uniqueTagName(projectTagSlug(p.title), tags.map((t) => t.name)),
-        { projectId: p.id, isProjectPrimary: true, color: p.color }
+        uniqueTagName(
+          projectTagSlug(p.title),
+          tags.map((t) => t.name),
+        ),
+        { projectId: p.id, isProjectPrimary: true, color: p.color },
       );
       ctx.touchedProjects.add(p.id);
       return { id: p.id, title: p.title };
@@ -378,8 +435,11 @@ async function applyCreate(
       let tagIds = setLifeTags(named, area, fresh);
       if (projectId) {
         tagIds = withSingleProjectTag(tagIds, projectId, fresh);
-        const flagship = fresh.find((t) => t.projectId === projectId && t.isProjectPrimary);
-        if (flagship && !tagIds.includes(flagship.id)) tagIds = [...tagIds, flagship.id];
+        const flagship = fresh.find(
+          (t) => t.projectId === projectId && t.isProjectPrimary,
+        );
+        if (flagship && !tagIds.includes(flagship.id))
+          tagIds = [...tagIds, flagship.id];
         ctx.touchedProjects.add(projectId);
       }
       const t = await insertTask({
@@ -424,17 +484,24 @@ async function applyCreate(
 async function applyUpdate(
   userId: string,
   op: UpdateOp,
-  ctx: Omit<Ctx, "td">
+  ctx: Omit<Ctx, "td">,
 ): Promise<Record<string, unknown> | null> {
   const { tags, resolve } = ctx;
   const f = op.fields;
   const patch: Record<string, unknown> = {};
   const before: Record<string, unknown> = {};
 
-  const applyLife = (currentTagIds: string[], current: { lifeArea: string; tagIds: string[] }) => {
+  const applyLife = (
+    currentTagIds: string[],
+    current: { lifeArea: string; tagIds: string[] },
+  ) => {
     const area = val(f.lifeArea);
     if (!area) return;
-    const tagIds = setLifeTags(currentTagIds, area as "personal" | "work", tags);
+    const tagIds = setLifeTags(
+      currentTagIds,
+      area as "personal" | "work",
+      tags,
+    );
     patch.tagIds = tagIds;
     patch.lifeArea = deriveLifeAreaFromTags(tagIds, tags);
     if (before.tagIds === undefined) before.tagIds = current.tagIds;
@@ -445,11 +512,19 @@ async function applyUpdate(
     case "goal": {
       const current = (await listGoals(userId)).find((g) => g.id === op.id);
       if (!current) return null;
-      if (val(f.title)) { patch.title = f.title; before.title = current.title; }
-      if (val(f.date)) { patch.targetDate = f.date; before.targetDate = current.targetDate; }
+      if (val(f.title)) {
+        patch.title = f.title;
+        before.title = current.title;
+      }
+      if (val(f.date)) {
+        patch.targetDate = f.date;
+        before.targetDate = current.targetDate;
+      }
       applyLife(current.tagIds, current);
       if (patch.lifeArea) {
-        patch.category = goalCategoryForLifeArea(patch.lifeArea as "personal" | "work" | "both");
+        patch.category = goalCategoryForLifeArea(
+          patch.lifeArea as "personal" | "work" | "both",
+        );
         before.category = current.category;
       }
       return (await updateGoal(userId, op.id, patch)) ? before : null;
@@ -457,8 +532,14 @@ async function applyUpdate(
     case "project": {
       const current = (await listProjects(userId)).find((p) => p.id === op.id);
       if (!current) return null;
-      if (val(f.title)) { patch.title = f.title; before.title = current.title; }
-      if (val(f.description)) { patch.description = f.description; before.description = current.description; }
+      if (val(f.title)) {
+        patch.title = f.title;
+        before.title = current.title;
+      }
+      if (val(f.description)) {
+        patch.description = f.description;
+        before.description = current.description;
+      }
       if (val(f.goalId)) {
         patch.goalId = resolve("goal", f.goalId);
         before.goalId = current.goalId;
@@ -470,13 +551,18 @@ async function applyUpdate(
     case "habit": {
       const current = (await listHabits(userId)).find((h) => h.id === op.id);
       if (!current) return null;
-      if (val(f.title)) { patch.name = f.title; before.name = current.name; }
+      if (val(f.title)) {
+        patch.name = f.title;
+        before.name = current.name;
+      }
       if (val(f.frequency)) {
         patch.frequency = { type: f.frequency, target: 1 };
         before.frequency = current.frequency;
       }
       if (f.goalIds?.length) {
-        patch.goalIds = f.goalIds.map((r) => resolve("goal", r)).filter(Boolean);
+        patch.goalIds = f.goalIds
+          .map((r) => resolve("goal", r))
+          .filter(Boolean);
         before.goalIds = current.goalIds;
       }
       if (f.archived !== undefined) {
@@ -489,17 +575,30 @@ async function applyUpdate(
     case "task": {
       const current = (await listTasks(userId)).find((t) => t.id === op.id);
       if (!current) return null;
-      if (val(f.title)) { patch.title = f.title; before.title = current.title; }
-      if (val(f.description)) { patch.description = f.description; before.description = current.description; }
-      if (val(f.priority)) { patch.priority = f.priority; before.priority = current.priority; }
-      if (val(f.date)) { patch.due = f.date; before.due = current.due; }
+      if (val(f.title)) {
+        patch.title = f.title;
+        before.title = current.title;
+      }
+      if (val(f.description)) {
+        patch.description = f.description;
+        before.description = current.description;
+      }
+      if (val(f.priority)) {
+        patch.priority = f.priority;
+        before.priority = current.priority;
+      }
+      if (val(f.date)) {
+        patch.due = f.date;
+        before.due = current.due;
+      }
       if (val(f.projectId)) {
         const projectId = resolve("project", f.projectId);
         let tagIds = withSingleProjectTag(current.tagIds, projectId, tags);
         const flagship = projectId
           ? tags.find((t) => t.projectId === projectId && t.isProjectPrimary)
           : null;
-        if (flagship && !tagIds.includes(flagship.id)) tagIds = [...tagIds, flagship.id];
+        if (flagship && !tagIds.includes(flagship.id))
+          tagIds = [...tagIds, flagship.id];
         patch.projectId = projectId;
         patch.tagIds = tagIds;
         before.projectId = current.projectId;
@@ -513,8 +612,14 @@ async function applyUpdate(
     case "note": {
       const current = (await listNotes(userId)).find((n) => n.id === op.id);
       if (!current) return null;
-      if (val(f.title)) { patch.title = f.title; before.title = current.title; }
-      if (val(f.description)) { patch.body = f.description; before.body = current.body; }
+      if (val(f.title)) {
+        patch.title = f.title;
+        before.title = current.title;
+      }
+      if (val(f.description)) {
+        patch.body = f.description;
+        before.body = current.body;
+      }
       applyLife(current.tagIds, current);
       return (await updateNote(userId, op.id, patch)) ? before : null;
     }
@@ -525,7 +630,7 @@ async function applyDelete(
   userId: string,
   entity: ChangeEntity,
   id: string,
-  touchedProjects: Set<string>
+  touchedProjects: Set<string>,
 ): Promise<void> {
   switch (entity) {
     case "goal":
@@ -550,10 +655,15 @@ async function applyDelete(
   }
 }
 
-async function liveIds(userId: string): Promise<Record<ChangeEntity, Set<string>>> {
+async function liveIds(
+  userId: string,
+): Promise<Record<ChangeEntity, Set<string>>> {
   const [goals, projects, habits, tasks, notes] = await Promise.all([
-    listGoals(userId), listProjects(userId), listHabits(userId),
-    listTasks(userId), listNotes(userId),
+    listGoals(userId),
+    listProjects(userId),
+    listHabits(userId),
+    listTasks(userId),
+    listNotes(userId),
   ]);
   return {
     goal: new Set(goals.map((g) => g.id)),

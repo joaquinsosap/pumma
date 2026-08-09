@@ -18,7 +18,15 @@ const DAY_MS = 86_400_000;
 /** Safety valve so a malformed rule can never spin forever. */
 const MAX_STEPS = 3_000;
 
-const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const WEEKDAY_LABELS = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+] as const;
 
 function pad(n: number): string {
   return String(n).padStart(2, "0");
@@ -59,7 +67,7 @@ export type MeetingOccurrence = {
 export function occurrenceDates(
   item: Pick<AgendaItem, "date" | "recurrence" | "exceptions">,
   rangeStart: string,
-  rangeEnd: string
+  rangeEnd: string,
 ): string[] {
   const start = item.date;
   if (!start) return [];
@@ -129,7 +137,7 @@ export function occurrenceDates(
 export function expandMeetings(
   items: AgendaItem[],
   rangeStart: string,
-  rangeEnd: string
+  rangeEnd: string,
 ): MeetingOccurrence[] {
   const out: MeetingOccurrence[] = [];
   for (const item of items) {
@@ -141,7 +149,7 @@ export function expandMeetings(
   out.sort(
     (a, b) =>
       a.date.localeCompare(b.date) ||
-      parseTimeToMinutes(a.item.time) - parseTimeToMinutes(b.item.time)
+      parseTimeToMinutes(a.item.time) - parseTimeToMinutes(b.item.time),
   );
   return out;
 }
@@ -149,7 +157,7 @@ export function expandMeetings(
 /** Occurrences on a single day (the common case for Agenda / a calendar cell). */
 export function meetingsOnDay(
   items: AgendaItem[],
-  day: string
+  day: string,
 ): MeetingOccurrence[] {
   return expandMeetings(items, day, day);
 }
@@ -157,7 +165,7 @@ export function meetingsOnDay(
 /** "Every 2 weeks on Mon, Wed · until 2026-09-01" — for buttons and summaries. */
 export function describeRecurrence(
   rec: Recurrence | null,
-  startDate?: string
+  startDate?: string,
 ): string {
   if (!rec) return "Does not repeat";
   const n = Math.max(1, rec.interval || 1);
@@ -198,5 +206,5 @@ export function meetingTimeRange(time: string, mins: number): string {
   const start = parseTimeToMinutes(time);
   const end = start + mins;
   const fmt = (t: number) => `${pad(Math.floor(t / 60) % 24)}:${pad(t % 60)}`;
-  return `${fmt(start)} – ${fmt(end)}`;
+  return `${fmt(start)} to ${fmt(end)}`;
 }

@@ -42,7 +42,7 @@ export async function GET() {
     // liability.
     note: "Your stored AI API key is deliberately excluded.",
     data: Object.fromEntries(
-      Object.entries(data).map(([name, rows]) => [name, redact(rows)])
+      Object.entries(data).map(([name, rows]) => [name, redact(rows)]),
     ),
   };
 

@@ -83,7 +83,7 @@ export function LifeDayDialog({
                   key={t.id}
                   className={cn(
                     "list-none text-[13px]",
-                    t.status === "done" && "text-faint line-through"
+                    t.status === "done" && "text-faint line-through",
                   )}
                 >
                   {t.title}
@@ -99,9 +99,7 @@ export function LifeDayDialog({
           </span>
           <select
             value={mood}
-            onChange={(e) =>
-              setMood(e.target.value as LifeMood | "")
-            }
+            onChange={(e) => setMood(e.target.value as LifeMood | "")}
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
           >
             <option value="">—</option>

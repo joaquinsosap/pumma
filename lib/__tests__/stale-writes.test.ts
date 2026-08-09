@@ -74,7 +74,7 @@ describe("stale writes cannot recreate dangling references", () => {
     const res = await attachHabitToGoal(habit._id, goal.id);
     expect(res).toEqual({ ok: false, error: "Goal not found" });
     expect(
-      getStore().habits.find((h) => h._id === habit._id)?.goalIds
+      getStore().habits.find((h) => h._id === habit._id)?.goalIds,
     ).not.toContain(goal.id);
   });
 
@@ -82,7 +82,10 @@ describe("stale writes cannot recreate dangling references", () => {
     const project = await makeProject();
     await deleteProject(userId, project.id);
 
-    const res = await addTask({ text: "orphan capture", projectId: project.id });
+    const res = await addTask({
+      text: "orphan capture",
+      projectId: project.id,
+    });
     expect(res.ok).toBe(true);
     if (res.ok) expect(res.data?.projectId).toBeNull();
   });
@@ -105,7 +108,7 @@ describe("stale writes cannot recreate dangling references", () => {
     const res = await toggleEntityTag("task", task._id, tag.id);
     expect(res.ok).toBe(false);
     expect(
-      getStore().tasks.find((t) => t._id === task._id)?.tagIds
+      getStore().tasks.find((t) => t._id === task._id)?.tagIds,
     ).not.toContain(tag.id);
   });
 });

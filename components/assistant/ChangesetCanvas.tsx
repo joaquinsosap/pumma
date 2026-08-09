@@ -13,7 +13,17 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Plus, Check, TriangleAlert, MoreHorizontal, Trash2, Pencil, Sparkles, EyeOff, Eye } from "@/components/icons";
+import {
+  Plus,
+  Check,
+  TriangleAlert,
+  MoreHorizontal,
+  Trash2,
+  Pencil,
+  Sparkles,
+  EyeOff,
+  Eye,
+} from "@/components/icons";
 import { toast } from "sonner";
 import {
   DndContext,
@@ -69,7 +79,9 @@ function opTitle(op: ChangeOp): string {
 /** The ref/id this op files under, if any — what nests it in the tree. */
 function parentOf(op: ChangeOp): string | null {
   if (op.op === "delete") return null;
-  return op.fields.projectId || op.fields.goalId || op.fields.goalIds?.[0] || null;
+  return (
+    op.fields.projectId || op.fields.goalId || op.fields.goalIds?.[0] || null
+  );
 }
 
 function setTitle(op: ChangeOp, title: string): ChangeOp {
@@ -113,7 +125,7 @@ export function ChangesetCanvas({
 }: Props) {
   const router = useRouter();
   const [draft, setDraft] = useState<DraftOp[]>(() =>
-    changeset.ops.map((op) => ({ key: mintKey(), op }))
+    changeset.ops.map((op) => ({ key: mintKey(), op })),
   );
   // A changeset with nothing in it is a real outcome ("archive the habits I do
   // less than weekly" when none qualify) — say so rather than showing an empty
@@ -137,16 +149,21 @@ export function ChangesetCanvas({
     if (previewedFor.current === signature) return;
     previewedFor.current = signature;
     const ops = draft.map((d) => d.op);
-    void previewChangesetAction({ summary: changeset.summary, ops }).then((res) => {
-      if (!res.ok || !res.data) return;
-      setProblems(
-        new Map(
-          res.data.problems.map((p: OpProblem) => [keyAt(p.index)!, p.message])
-        )
-      );
-      setDeletes(res.data.deletes);
-      setNames(res.data.names);
-    });
+    void previewChangesetAction({ summary: changeset.summary, ops }).then(
+      (res) => {
+        if (!res.ok || !res.data) return;
+        setProblems(
+          new Map(
+            res.data.problems.map((p: OpProblem) => [
+              keyAt(p.index)!,
+              p.message,
+            ]),
+          ),
+        );
+        setDeletes(res.data.deletes);
+        setNames(res.data.names);
+      },
+    );
   }, [draft, changeset.summary, keyAt]);
 
   const included = draft.filter((d) => !excluded.has(d.key));
@@ -204,10 +221,11 @@ export function ChangesetCanvas({
     // Deletes excluded → no confirmation needed on the re-entry.
     setPhase({ name: "editing" });
     startTransition(async () => {
-      const ops = included
-        .filter((d) => d.op.op !== "delete")
-        .map((d) => d.op);
-      const res = await applyChangesetAction({ summary: changeset.summary, ops });
+      const ops = included.filter((d) => d.op.op !== "delete").map((d) => d.op);
+      const res = await applyChangesetAction({
+        summary: changeset.summary,
+        ops,
+      });
       if (!res.ok || !res.data) {
         toast.error((!res.ok && res.error) || "Apply failed");
         return;
@@ -232,7 +250,9 @@ export function ChangesetCanvas({
   // --- drag to re-associate -------------------------------------------------
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 280, tolerance: 8 } })
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 280, tolerance: 8 },
+    }),
   );
 
   const onDragEnd = (e: DragEndEvent) => {
@@ -320,7 +340,7 @@ export function ChangesetCanvas({
   }
 
   const deleteRadius = new Map(
-    deletes.map((del) => [keyAt(del.index), del.also] as const)
+    deletes.map((del) => [keyAt(del.index), del.also] as const),
   );
 
   return (
@@ -332,7 +352,8 @@ export function ChangesetCanvas({
             <div className="mb-2 flex items-center gap-2">
               <span className="block h-2 w-2 bg-primary" />
               <span className="font-mono text-[10px] uppercase tracking-widest text-faint2">
-                Changeset draft · {included.length} operation{included.length === 1 ? "" : "s"}
+                Changeset draft · {included.length} operation
+                {included.length === 1 ? "" : "s"}
               </span>
             </div>
             <p className="m-0 max-w-[52ch] text-[17px] font-semibold leading-snug tracking-tight text-ink">
@@ -351,12 +372,18 @@ export function ChangesetCanvas({
               I meant to ask a question
             </button>
             {quotaLabel && (
-              <span className="font-mono text-[10px] text-faint">{quotaLabel}</span>
+              <span className="font-mono text-[10px] text-faint">
+                {quotaLabel}
+              </span>
             )}
           </div>
         </div>
 
-        <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragEnd={onDragEnd}>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={pointerWithin}
+          onDragEnd={onDragEnd}
+        >
           <div className="min-h-0 flex-1 overflow-auto rounded-[13px] border border-border bg-surface p-4">
             {roots.map((d) => (
               <NodeTree
@@ -386,7 +413,10 @@ export function ChangesetCanvas({
                 onPatchSubtree={(keys, ops) =>
                   setDraft((ds) => {
                     const keep = ds.filter((dd) => !keys.includes(dd.key));
-                    return [...keep, ...ops.map((op) => ({ key: mintKey(), op }))];
+                    return [
+                      ...keep,
+                      ...ops.map((op) => ({ key: mintKey(), op })),
+                    ];
                   })
                 }
               />
@@ -408,7 +438,9 @@ export function ChangesetCanvas({
           </span>
           <p className="m-0 mt-2 font-mono text-[12px] leading-relaxed text-ink">
             {counts.create} created · {counts.update} changed ·{" "}
-            <span className={counts.delete ? "font-semibold text-tasks" : undefined}>
+            <span
+              className={counts.delete ? "font-semibold text-tasks" : undefined}
+            >
               {counts.delete} deleted
             </span>
           </p>
@@ -422,7 +454,8 @@ export function ChangesetCanvas({
         {includedProblems.length > 0 && (
           <div className="rounded-[11px] border border-tasks bg-surface p-3">
             <span className="font-mono text-[10px] uppercase tracking-widest text-tasks">
-              {includedProblems.length} problem{includedProblems.length === 1 ? "" : "s"}
+              {includedProblems.length} problem
+              {includedProblems.length === 1 ? "" : "s"}
             </span>
             <p className="m-0 mt-1.5 text-[12px] leading-snug text-muted">
               Fix or drop the flagged rows before applying.
@@ -438,7 +471,9 @@ export function ChangesetCanvas({
             <div className="mt-2 flex flex-col gap-1">
               {includedDeletes.map((d) => (
                 <span key={d.key} className="text-[12.5px] text-ink">
-                  {d.op.op === "delete" ? `${d.op.entity} “${d.op.label}”` : null}
+                  {d.op.op === "delete"
+                    ? `${d.op.entity} “${d.op.label}”`
+                    : null}
                 </span>
               ))}
             </div>
@@ -451,13 +486,19 @@ export function ChangesetCanvas({
         <div className="mt-auto flex flex-col gap-2">
           <button
             type="button"
-            disabled={pending || !included.length || includedProblems.length > 0}
+            disabled={
+              pending || !included.length || includedProblems.length > 0
+            }
             onClick={() =>
-              includedDeletes.length ? setPhase({ name: "confirming" }) : apply()
+              includedDeletes.length
+                ? setPhase({ name: "confirming" })
+                : apply()
             }
             className="w-full rounded-[10px] border-[1.5px] border-ink bg-ink px-3.5 py-2.5 text-[14px] font-bold text-background disabled:opacity-50"
           >
-            {pending ? "Applying…" : `Apply ${included.length} operation${included.length === 1 ? "" : "s"}`}
+            {pending
+              ? "Applying…"
+              : `Apply ${included.length} operation${included.length === 1 ? "" : "s"}`}
           </button>
           <button
             type="button"
@@ -511,7 +552,10 @@ function NodeTree(props: {
   const isProject = node.op.entity === "project" && node.op.op !== "delete";
 
   return (
-    <div className="mb-1.5" style={{ borderLeft: `2px solid ${color}`, paddingLeft: 14 }}>
+    <div
+      className="mb-1.5"
+      style={{ borderLeft: `2px solid ${color}`, paddingLeft: 14 }}
+    >
       <NodeRow {...props} />
       {(children.length > 0 || isProject) && (
         <div className="mt-1.5 flex flex-col gap-1.5 pl-6">
@@ -523,14 +567,16 @@ function NodeTree(props: {
               type="button"
               onClick={() =>
                 props.onAddTask(
-                  node.op.op === "create" ? node.op.refId : (node.op as { id: string }).id
+                  node.op.op === "create"
+                    ? node.op.refId
+                    : (node.op as { id: string }).id,
                 )
               }
               className="flex w-full items-center gap-2.5 rounded-[9px] border border-dashed border-border bg-surface2 px-3 py-2.5 text-left hover:border-faint2"
             >
               <Plus className="h-3 w-3 shrink-0 text-faint" />
               <span className="text-[13px] text-muted">
-                Add the next step — you know the job better than I do
+                Add the next step, you know the job better than I do
               </span>
             </button>
           )}
@@ -577,10 +623,14 @@ function NodeRow({
   };
   useEffect(() => cancelLongPress, []);
 
-  const draggable = useDraggable({ id: node.key, disabled: op.op === "delete" });
+  const draggable = useDraggable({
+    id: node.key,
+    disabled: op.op === "delete",
+  });
   const droppable = useDroppable({
     id: node.key,
-    disabled: op.entity === "task" || op.entity === "note" || op.op === "delete",
+    disabled:
+      op.entity === "task" || op.entity === "note" || op.op === "delete",
   });
 
   const subtreeKeys = useMemo(() => {
@@ -648,7 +698,8 @@ function NodeRow({
           op.op === "delete" ? "border-[1.5px] border-tasks" : "border-border",
           isExcluded && "border-dashed bg-surface2 opacity-55",
           droppable.isOver && "border-[1.5px] border-habits",
-          draggable.isDragging && "rotate-[-1.2deg] opacity-40 shadow-[1px_1px_0_var(--shadow)]"
+          draggable.isDragging &&
+            "rotate-[-1.2deg] opacity-40 shadow-[1px_1px_0_var(--shadow)]",
         )}
       >
         <div className="flex items-start gap-2.5">
@@ -662,7 +713,10 @@ function NodeRow({
           />
           <div className="min-w-0 flex-1">
             <div className="mb-1 flex flex-wrap items-center gap-2">
-              <span className="block h-2 w-2" style={{ background: isExcluded ? "var(--muted)" : color }} />
+              <span
+                className="block h-2 w-2"
+                style={{ background: isExcluded ? "var(--muted)" : color }}
+              />
               <span className="font-mono text-[10px] uppercase tracking-widest text-faint2">
                 {op.entity}
               </span>
@@ -693,7 +747,8 @@ function NodeRow({
                 onPointerDown={(e) => e.stopPropagation()}
                 className={cn(
                   "block max-w-full truncate text-left text-[14px] font-semibold tracking-tight text-ink",
-                  op.op === "delete" && "cursor-default text-muted line-through decoration-tasks"
+                  op.op === "delete" &&
+                    "cursor-default text-muted line-through decoration-tasks",
                 )}
               >
                 {title}
@@ -701,29 +756,42 @@ function NodeRow({
             )}
 
             {op.op === "update" && <DiffGrid op={op} names={names} />}
-            {op.op === "delete" && (deleteRadius.get(node.key)?.length ?? 0) > 0 && (
-              <div className="mt-1.5">
-                <p className="m-0 text-[12px] text-ink">Also deletes:</p>
-                <ul className="m-0 mt-1 list-disc pl-4 text-[12px] leading-relaxed text-muted">
-                  {deleteRadius.get(node.key)!.slice(0, 5).map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
-                  {deleteRadius.get(node.key)!.length > 5 && (
-                    <li>…and {deleteRadius.get(node.key)!.length - 5} more</li>
-                  )}
-                </ul>
-              </div>
-            )}
+            {op.op === "delete" &&
+              (deleteRadius.get(node.key)?.length ?? 0) > 0 && (
+                <div className="mt-1.5">
+                  <p className="m-0 text-[12px] text-ink">Also deletes:</p>
+                  <ul className="m-0 mt-1 list-disc pl-4 text-[12px] leading-relaxed text-muted">
+                    {deleteRadius
+                      .get(node.key)!
+                      .slice(0, 5)
+                      .map((t, i) => (
+                        <li key={i}>{t}</li>
+                      ))}
+                    {deleteRadius.get(node.key)!.length > 5 && (
+                      <li>
+                        …and {deleteRadius.get(node.key)!.length - 5} more
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
             {isExcluded && (
               <p className="m-0 mt-1 font-mono text-[11px] text-faint">
-                won&apos;t be {op.op === "create" ? "created" : op.op === "update" ? "changed" : "deleted"}
+                won&apos;t be{" "}
+                {op.op === "create"
+                  ? "created"
+                  : op.op === "update"
+                    ? "changed"
+                    : "deleted"}
               </p>
             )}
             {problem && !isExcluded && (
               <div className="mt-2 flex items-start gap-2 border-t border-border pt-2">
                 <TriangleAlert className="mt-0.5 h-3.5 w-3.5 shrink-0 text-tasks" />
                 <div>
-                  <p className="m-0 text-[12.5px] leading-snug text-ink">{problem}</p>
+                  <p className="m-0 text-[12.5px] leading-snug text-ink">
+                    {problem}
+                  </p>
                   <button
                     type="button"
                     onClick={() => onDrop(node.key)}
@@ -835,7 +903,10 @@ function DiffGrid({
   return (
     <div className="mt-2 flex flex-col gap-1">
       {rows.map(([field, next]) => (
-        <div key={field} className="flex flex-wrap items-baseline gap-x-2 text-[12px]">
+        <div
+          key={field}
+          className="flex flex-wrap items-baseline gap-x-2 text-[12px]"
+        >
           <span className="font-mono text-[10px] uppercase tracking-wider text-faint2">
             {fieldLabel(field, op.entity)}
           </span>
@@ -854,7 +925,9 @@ function DiffGrid({
 
 function sameValue(a: unknown, b: unknown): boolean {
   if (Array.isArray(a) && Array.isArray(b)) {
-    return a.length === b.length && [...a].sort().join() === [...b].sort().join();
+    return (
+      a.length === b.length && [...a].sort().join() === [...b].sort().join()
+    );
   }
   return a === b;
 }
@@ -989,14 +1062,16 @@ function RepromptPopover({
       .filter((d) => !subtreeKeys.includes(d.key))
       .map((d) => `${d.op.entity}: ${opTitle(d.op)}`);
     onStart();
-    void repromptNodeAction({ intent, instruction, subtree, context }).then((res) => {
-      if (!res.ok || !res.data) {
-        toast.error((!res.ok && res.error) || "The rewrite failed");
-        onResult(null);
-        return;
-      }
-      onResult(res.data);
-    });
+    void repromptNodeAction({ intent, instruction, subtree, context }).then(
+      (res) => {
+        if (!res.ok || !res.data) {
+          toast.error((!res.ok && res.error) || "The rewrite failed");
+          onResult(null);
+          return;
+        }
+        onResult(res.data);
+      },
+    );
   };
 
   return (
@@ -1004,7 +1079,10 @@ function RepromptPopover({
       <div className="mb-2 flex items-center gap-2">
         <span className="block h-2 w-2 bg-primary" />
         <span className="font-mono text-[10px] uppercase tracking-widest text-primary">
-          This node{childCount > 0 ? ` + ${childCount} child${childCount === 1 ? "" : "ren"}` : ""}
+          This node
+          {childCount > 0
+            ? ` + ${childCount} child${childCount === 1 ? "" : "ren"}`
+            : ""}
         </span>
       </div>
       <input
@@ -1053,7 +1131,7 @@ function ConfirmDeletes({
 }) {
   const total = deletes.reduce(
     (sum, d) => sum + 1 + (radius.get(d.key)?.length ?? 0),
-    0
+    0,
   );
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-black/30 p-4">
@@ -1078,7 +1156,10 @@ function ConfirmDeletes({
                 </span>
               </span>
               {(radius.get(d.key) ?? []).slice(0, 5).map((t, i) => (
-                <span key={i} className="mt-1 flex items-center gap-2 pl-4 text-[12.5px] text-muted">
+                <span
+                  key={i}
+                  className="mt-1 flex items-center gap-2 pl-4 text-[12.5px] text-muted"
+                >
                   <i className="block h-1.5 w-1.5 shrink-0 bg-[var(--tasks)]" />
                   {t}
                 </span>
@@ -1092,7 +1173,7 @@ function ConfirmDeletes({
           ))}
         </div>
         <p className="m-0 mt-3 text-[12.5px] leading-snug text-muted">
-          The other operations are additions and edits — those can be undone.
+          The other operations are additions and edits, and those can be undone.
           Deletions cannot.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -1171,7 +1252,10 @@ function AppliedView({
               className="flex items-center gap-2.5 rounded-[10px] border border-border bg-surface px-3 py-2.5 hover:border-faint2"
               style={{ borderLeft: `2px solid ${ENTITY_COLOR[c.entity]}` }}
             >
-              <span className="block h-2 w-2 shrink-0" style={{ background: ENTITY_COLOR[c.entity] }} />
+              <span
+                className="block h-2 w-2 shrink-0"
+                style={{ background: ENTITY_COLOR[c.entity] }}
+              />
               <span className="min-w-0 flex-1 truncate text-[13.5px] font-semibold text-ink">
                 {c.title}
               </span>
@@ -1189,7 +1273,7 @@ function AppliedView({
           <ul className="m-0 mt-1.5 list-disc pl-4 text-[12.5px] text-muted">
             {result.skipped.map((s, i) => (
               <li key={i}>
-                {s.label} — {s.reason}
+                {s.label} · {s.reason}
               </li>
             ))}
           </ul>

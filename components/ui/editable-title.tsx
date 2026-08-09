@@ -113,7 +113,7 @@ export function EditableTitle({
         )}
       />
       <span id={hintId} className="sr-only">
-        Editable — type to rename, Enter to save
+        Editable. Type to rename, Enter to save
       </span>
     </div>
   );

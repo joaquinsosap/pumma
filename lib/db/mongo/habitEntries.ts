@@ -17,7 +17,7 @@ export async function listHabitEntries(userId: string): Promise<HabitEntry[]> {
 export async function toggleHabitEntry(
   userId: string,
   habitId: string,
-  date: string
+  date: string,
 ): Promise<boolean> {
   const c = await col();
   const existing = await c.findOne({ userId, habitId, date });
@@ -34,7 +34,7 @@ export async function habitEntriesInRange(
   userId: string,
   habitId: string,
   start: string,
-  end: string
+  end: string,
 ): Promise<HabitEntry[]> {
   const c = await col();
   const docs = await c
@@ -48,7 +48,7 @@ export async function clearHabitEntriesInRange(
   userId: string,
   habitId: string,
   start: string,
-  end: string
+  end: string,
 ): Promise<number> {
   const c = await col();
   const res = await c.deleteMany({
@@ -63,12 +63,12 @@ export async function clearHabitEntriesInRange(
 export async function markHabitEntry(
   userId: string,
   habitId: string,
-  date: string
+  date: string,
 ): Promise<void> {
   const c = await col();
   await c.updateOne(
     { userId, habitId, date },
     { $setOnInsert: { _id: newId(), userId, habitId, date, done: true } },
-    { upsert: true }
+    { upsert: true },
   );
 }

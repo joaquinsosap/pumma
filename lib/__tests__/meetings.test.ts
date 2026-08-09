@@ -40,12 +40,20 @@ const rec = (over: Partial<Recurrence>): Recurrence => ({
 describe("occurrenceDates", () => {
   it("returns a one-off meeting only inside the range", () => {
     const m = meeting();
-    expect(occurrenceDates(m, "2026-07-01", "2026-07-31")).toEqual(["2026-07-06"]);
+    expect(occurrenceDates(m, "2026-07-01", "2026-07-31")).toEqual([
+      "2026-07-06",
+    ]);
     expect(occurrenceDates(m, "2026-07-07", "2026-07-31")).toEqual([]);
   });
 
   it("ignores legacy dateless routine rows", () => {
-    expect(occurrenceDates({ date: null, recurrence: null, exceptions: [] }, "2026-07-01", "2026-07-31")).toEqual([]);
+    expect(
+      occurrenceDates(
+        { date: null, recurrence: null, exceptions: [] },
+        "2026-07-01",
+        "2026-07-31",
+      ),
+    ).toEqual([]);
   });
 
   it("expands a daily rule", () => {
@@ -79,7 +87,9 @@ describe("occurrenceDates", () => {
   });
 
   it("expands weekly byWeekday (Mon + Wed)", () => {
-    const m = meeting({ recurrence: rec({ freq: "weekly", byWeekday: [1, 3] }) });
+    const m = meeting({
+      recurrence: rec({ freq: "weekly", byWeekday: [1, 3] }),
+    });
     expect(occurrenceDates(m, "2026-07-06", "2026-07-16")).toEqual([
       "2026-07-06", // Mon
       "2026-07-08", // Wed
@@ -110,7 +120,10 @@ describe("occurrenceDates", () => {
   });
 
   it("expands a monthly rule on the same day-of-month", () => {
-    const m = meeting({ date: "2026-01-12", recurrence: rec({ freq: "monthly" }) });
+    const m = meeting({
+      date: "2026-01-12",
+      recurrence: rec({ freq: "monthly" }),
+    });
     expect(occurrenceDates(m, "2026-01-01", "2026-04-30")).toEqual([
       "2026-01-12",
       "2026-02-12",
@@ -120,7 +133,10 @@ describe("occurrenceDates", () => {
   });
 
   it("skips short months for a monthly rule on the 31st", () => {
-    const m = meeting({ date: "2026-01-31", recurrence: rec({ freq: "monthly" }) });
+    const m = meeting({
+      date: "2026-01-31",
+      recurrence: rec({ freq: "monthly" }),
+    });
     // February and April have no 31st — skipped, not clamped.
     expect(occurrenceDates(m, "2026-01-01", "2026-05-31")).toEqual([
       "2026-01-31",
@@ -130,7 +146,9 @@ describe("occurrenceDates", () => {
   });
 
   it("stops at an inclusive until date", () => {
-    const m = meeting({ recurrence: rec({ freq: "daily", until: "2026-07-08" }) });
+    const m = meeting({
+      recurrence: rec({ freq: "daily", until: "2026-07-08" }),
+    });
     expect(occurrenceDates(m, "2026-07-01", "2026-07-31")).toEqual([
       "2026-07-06",
       "2026-07-07",
@@ -186,7 +204,11 @@ describe("expandMeetings", () => {
     const late = meeting({ id: "a", time: "15:00", title: "Late" });
     const early = meeting({ id: "b", time: "09:00", title: "Early" });
     const routine = meeting({ id: "c", kind: "routine", date: null });
-    const out = expandMeetings([late, early, routine], "2026-07-01", "2026-07-31");
+    const out = expandMeetings(
+      [late, early, routine],
+      "2026-07-01",
+      "2026-07-31",
+    );
     expect(out.map((o) => o.item.title)).toEqual(["Early", "Late"]);
   });
 
@@ -214,26 +236,28 @@ describe("helpers", () => {
   it("describes rules readably", () => {
     expect(describeRecurrence(null)).toBe("Does not repeat");
     expect(describeRecurrence(rec({ freq: "daily" }))).toBe("Every day");
-    expect(describeRecurrence(rec({ freq: "daily", interval: 2 }))).toBe("Every 2 days");
+    expect(describeRecurrence(rec({ freq: "daily", interval: 2 }))).toBe(
+      "Every 2 days",
+    );
     expect(describeRecurrence(rec({ freq: "weekly", byWeekday: [1, 3] }))).toBe(
-      "Weekly on Mon, Wed"
+      "Weekly on Mon, Wed",
     );
     expect(
-      describeRecurrence(rec({ freq: "weekly", interval: 2, byWeekday: [2] }))
+      describeRecurrence(rec({ freq: "weekly", interval: 2, byWeekday: [2] })),
     ).toBe("Every 2 weeks on Tue");
     expect(describeRecurrence(rec({ freq: "monthly" }), "2026-01-12")).toBe(
-      "Monthly on day 12"
+      "Monthly on day 12",
     );
     expect(describeRecurrence(rec({ freq: "daily", count: 5 }))).toBe(
-      "Every day · 5×"
+      "Every day · 5×",
     );
-    expect(describeRecurrence(rec({ freq: "daily", until: "2026-09-01" }))).toBe(
-      "Every day · until 2026-09-01"
-    );
+    expect(
+      describeRecurrence(rec({ freq: "daily", until: "2026-09-01" })),
+    ).toBe("Every day · until 2026-09-01");
   });
 
   it("formats a time range across the hour", () => {
-    expect(meetingTimeRange("10:00", 30)).toBe("10:00 – 10:30");
-    expect(meetingTimeRange("10:45", 90)).toBe("10:45 – 12:15");
+    expect(meetingTimeRange("10:00", 30)).toBe("10:00 to 10:30");
+    expect(meetingTimeRange("10:45", 90)).toBe("10:45 to 12:15");
   });
 });

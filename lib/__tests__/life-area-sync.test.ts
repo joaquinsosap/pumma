@@ -42,7 +42,7 @@ describe("deriveLifeAreaFromTags", () => {
     ];
     expect(deriveLifeAreaFromTags(["t-work"], upperTags)).toBe("work");
     expect(deriveLifeAreaFromTags(["t-work", "t-personal"], upperTags)).toBe(
-      "both"
+      "both",
     );
   });
 });
@@ -79,7 +79,7 @@ describe("withLifeTags", () => {
       const out = withLifeTags(["t-other"], view, tags);
       expect(
         out.includes("t-work") || out.includes("t-personal"),
-        `view ${view} produced no life tag`
+        `view ${view} produced no life tag`,
       ).toBe(true);
     }
   });
@@ -154,14 +154,14 @@ describe("filterGoalsByLifeView", () => {
 describe("withProjectLifeTags", () => {
   it("switches the life tag rather than adding one", () => {
     // A personal task dragged into a work project is work, not both.
-    expect(withProjectLifeTags(["t-personal", "t-other"], "work", tags)).toEqual(
-      ["t-other", "t-work"]
-    );
+    expect(
+      withProjectLifeTags(["t-personal", "t-other"], "work", tags),
+    ).toEqual(["t-other", "t-work"]);
   });
 
   it("collapses both down to the project's side", () => {
     expect(
-      withProjectLifeTags(["t-personal", "t-work"], "personal", tags)
+      withProjectLifeTags(["t-personal", "t-work"], "personal", tags),
     ).toEqual(["t-personal"]);
   });
 

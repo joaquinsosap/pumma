@@ -179,7 +179,10 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
   },
 };
 
-export const PROVIDER_IDS = Object.keys(PROVIDERS) as [ProviderId, ...ProviderId[]];
+export const PROVIDER_IDS = Object.keys(PROVIDERS) as [
+  ProviderId,
+  ...ProviderId[],
+];
 
 export const DEFAULT_PROVIDER: ProviderId = "anthropic";
 
@@ -201,7 +204,7 @@ export function providerDef(id: ProviderId | null | undefined): ProviderDef {
 export function resolveModel(
   provider: ProviderId,
   userModel: string | null | undefined,
-  envModel?: string | null
+  envModel?: string | null,
 ): string {
   const chosen = userModel?.trim() || envModel?.trim();
   return chosen || PROVIDERS[provider].defaultModel;
@@ -210,7 +213,7 @@ export function resolveModel(
 /** Ollama's address is the operator's to change, never a user's. */
 export function providerBaseUrl(
   provider: ProviderId,
-  env: Record<string, string | undefined> = process.env
+  env: Record<string, string | undefined> = process.env,
 ): string | undefined {
   if (provider === "ollama") {
     return env.OLLAMA_BASE_URL || PROVIDERS.ollama.baseUrl;

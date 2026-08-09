@@ -175,8 +175,7 @@ export function ProjectDetailPanel({
             selectedTagIds={project.tagIds}
           />
           <p className="m-0 mt-1.5 text-[11px] leading-relaxed text-faint">
-            Personal or work — switching takes this project&apos;s tasks with
-            it.
+            Personal or work. Switching takes this project&apos;s tasks with it.
           </p>
         </section>
 

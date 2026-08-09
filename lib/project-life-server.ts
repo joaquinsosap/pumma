@@ -16,7 +16,7 @@ export async function setProjectLifeArea(
   userId: string,
   project: { id: string; tagIds: string[] },
   view: LifeView,
-  tags: Tag[]
+  tags: Tag[],
 ): Promise<void> {
   const projectTagIds = setLifeTags(project.tagIds, view, tags);
   await updateProject(userId, project.id, {

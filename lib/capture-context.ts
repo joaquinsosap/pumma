@@ -14,7 +14,7 @@ type ProjectRef = { id: string; title: string };
 
 function projectFromParams(
   searchParams: URLSearchParams,
-  projects: ProjectRef[]
+  projects: ProjectRef[],
 ): ProjectRef | null {
   const projectId = searchParams.get("project");
   if (!projectId) return null;
@@ -23,7 +23,7 @@ function projectFromParams(
 
 function withActiveProject(
   base: CaptureContext,
-  project: ProjectRef | null
+  project: ProjectRef | null,
 ): CaptureContext {
   if (!project) return base;
   const hintParts = [project.title, base.hint].filter(Boolean);
@@ -39,7 +39,7 @@ export function getCaptureContext(
   pathname: string,
   searchParams: URLSearchParams,
   defaultType: OmniType = "task",
-  projects: ProjectRef[] = []
+  projects: ProjectRef[] = [],
 ): CaptureContext {
   if (pathname === "/habits") {
     return {
@@ -50,9 +50,7 @@ export function getCaptureContext(
 
   if (pathname === "/goals") {
     const category =
-      searchParams.get("category") === "work"
-        ? "work"
-        : "personal";
+      searchParams.get("category") === "work" ? "work" : "personal";
     const label = category === "work" ? "Work" : "Personal";
     return {
       type: "goal",
@@ -71,8 +69,7 @@ export function getCaptureContext(
   }
 
   if (pathname === "/projects") {
-    const projectId =
-      searchParams.get("project") ?? projects[0]?.id ?? null;
+    const projectId = searchParams.get("project") ?? projects[0]?.id ?? null;
     const project = projects.find((p) => p.id === projectId);
     return {
       type: "task",

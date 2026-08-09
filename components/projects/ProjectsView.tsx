@@ -56,7 +56,10 @@ export function ProjectsView({
     const destination =
       projects.find((p) => p.id === nextProjectId)?.title ?? "project";
     startProjectMove(async () => {
-      const res = await setTaskProject({ id: taskId, projectId: nextProjectId });
+      const res = await setTaskProject({
+        id: taskId,
+        projectId: nextProjectId,
+      });
       if (!res.ok) {
         toast.error(res.error);
         return;
@@ -66,7 +69,9 @@ export function ProjectsView({
   };
 
   // Multi-select across the board's three columns, in the order they render.
-  const selection = useTaskSelection(useMemo(() => boardOrder(spTasks), [spTasks]));
+  const selection = useTaskSelection(
+    useMemo(() => boardOrder(spTasks), [spTasks]),
+  );
   const selectedTasks = useMemo(
     () =>
       selection.active
@@ -74,7 +79,7 @@ export function ProjectsView({
             .map((id) => spTasks.find((t) => t.id === id))
             .filter((t): t is Task => Boolean(t))
         : [],
-    [selection.active, selection.ids, spTasks]
+    [selection.active, selection.ids, spTasks],
   );
 
   // Phone only: the bulk sheet opens from the selection bar, not from
@@ -89,7 +94,7 @@ export function ProjectsView({
   // Phone: project details live in a bottom sheet behind the Details button.
   const [detailsOpen, setDetailsOpen] = useState(false);
   const editingTask = taskId
-    ? spTasks.find((t) => t.id === taskId) ?? null
+    ? (spTasks.find((t) => t.id === taskId) ?? null)
     : null;
 
   // Drop a stale ?task (deleted task, or project switched) so the URL stays honest.
@@ -139,7 +144,7 @@ export function ProjectsView({
                 const el = e.target as HTMLElement;
                 if (
                   el.closest(
-                    ".kanban-card, button, a, input, textarea, select, [role=\"button\"]"
+                    '.kanban-card, button, a, input, textarea, select, [role="button"]',
                   )
                 ) {
                   return;
@@ -208,7 +213,10 @@ export function ProjectsView({
                   )}
                 </div>
                 <div className="lg:hidden">
-                  <BottomSheet open={bulkSheet} onClose={() => setBulkSheet(false)}>
+                  <BottomSheet
+                    open={bulkSheet}
+                    onClose={() => setBulkSheet(false)}
+                  >
                     {bulkSheet && !isDesktop && (
                       <BulkEditPanel
                         tasks={selectedTasks}
@@ -229,41 +237,49 @@ export function ProjectsView({
                   key={editingTask.id}
                   className="hidden min-h-0 overflow-hidden animate-pumma-swap lg:block"
                 >
-                  {isDesktop && <TaskDetailPanel
-                    task={editingTask}
-                    tags={tags}
-                    projects={projects}
-                    onClose={() => void setTaskId(null)}
-                    onBack={{
-                      label: selected.title,
-                      action: () => void setTaskId(null),
-                    }}
-                  />}
-                </div>
-                <div className="lg:hidden">
-                  <BottomSheet open onClose={() => void setTaskId(null)}>
-                    {!isDesktop && <TaskDetailPanel
+                  {isDesktop && (
+                    <TaskDetailPanel
                       task={editingTask}
                       tags={tags}
                       projects={projects}
                       onClose={() => void setTaskId(null)}
-                      embedded
-                    />}
+                      onBack={{
+                        label: selected.title,
+                        action: () => void setTaskId(null),
+                      }}
+                    />
+                  )}
+                </div>
+                <div className="lg:hidden">
+                  <BottomSheet open onClose={() => void setTaskId(null)}>
+                    {!isDesktop && (
+                      <TaskDetailPanel
+                        task={editingTask}
+                        tags={tags}
+                        projects={projects}
+                        onClose={() => void setTaskId(null)}
+                        embedded
+                      />
+                    )}
                   </BottomSheet>
                 </div>
               </>
             ) : (
               <div className="hidden min-h-0 lg:block">
-                {isDesktop && <ProjectDetailPanel
-                  project={selected}
-                  goals={goals}
-                  tasks={tasks}
-                  tags={tags}
-                  onDeleted={() => {
-                    const remaining = projects.filter((p) => p.id !== selected.id);
-                    void setProjectId(remaining[0]?.id ?? null);
-                  }}
-                />}
+                {isDesktop && (
+                  <ProjectDetailPanel
+                    project={selected}
+                    goals={goals}
+                    tasks={tasks}
+                    tags={tags}
+                    onDeleted={() => {
+                      const remaining = projects.filter(
+                        (p) => p.id !== selected.id,
+                      );
+                      void setProjectId(remaining[0]?.id ?? null);
+                    }}
+                  />
+                )}
               </div>
             )}
             {detailsOpen && !isDesktop && (
@@ -278,7 +294,7 @@ export function ProjectsView({
                       onDeleted={() => {
                         setDetailsOpen(false);
                         const remaining = projects.filter(
-                          (p) => p.id !== selected.id
+                          (p) => p.id !== selected.id,
                         );
                         void setProjectId(remaining[0]?.id ?? null);
                       }}
@@ -290,7 +306,9 @@ export function ProjectsView({
           </div>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-[14px] border border-dashed border-border p-8 text-center">
-            <p className="text-sm text-faint">No projects yet — create one to get started.</p>
+            <p className="text-sm text-faint">
+              No projects yet. Create one to get started.
+            </p>
             <NewProjectCard
               lifeArea={lifeAreaForCreate(lifeView)}
               onCreated={(id) => void setProjectId(id)}

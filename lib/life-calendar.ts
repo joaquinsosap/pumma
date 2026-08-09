@@ -67,7 +67,7 @@ export function clampLifeSpanYears(years: number): number {
 
 export function buildLifeWeeks(
   birthDate: string,
-  spanYears: number = LIFE_SPAN_DEFAULT
+  spanYears: number = LIFE_SPAN_DEFAULT,
 ): LifeWeekSlot[] {
   const span = clampLifeSpanYears(spanYears);
   const birth = new Date(birthDate + "T00:00");
@@ -102,26 +102,24 @@ export function buildLifeWeeks(
 /** Map any date in a life week to the grid's canonical weekStart (birth-aligned). */
 export function resolveWeekSlotStart(
   date: string,
-  gridWeeks: LifeWeekSlot[]
+  gridWeeks: LifeWeekSlot[],
 ): string {
   const d = date.slice(0, 10);
-  const slot = gridWeeks.find(
-    (w) => w.weekStart === d || w.days.includes(d)
-  );
+  const slot = gridWeeks.find((w) => w.weekStart === d || w.days.includes(d));
   return slot?.weekStart ?? d;
 }
 
 /** Attach saved week memories to grid slots (tolerates legacy weekStart / weekEnd keys). */
 export function buildLifeWeekMap(
   lifeWeeks: LifeWeek[],
-  gridWeeks: LifeWeekSlot[]
+  gridWeeks: LifeWeekSlot[],
 ): Map<string, LifeWeek> {
   const map = new Map<string, LifeWeek>();
   const assigned = new Set<string>();
 
   for (const slot of gridWeeks) {
     const exact = lifeWeeks.find(
-      (w) => w.weekStart.slice(0, 10) === slot.weekStart && !assigned.has(w.id)
+      (w) => w.weekStart.slice(0, 10) === slot.weekStart && !assigned.has(w.id),
     );
     if (exact) {
       map.set(slot.weekStart, exact);
@@ -130,8 +128,7 @@ export function buildLifeWeekMap(
     }
     const inWeek = lifeWeeks.find(
       (w) =>
-        !assigned.has(w.id) &&
-        slot.days.includes(w.weekStart.slice(0, 10))
+        !assigned.has(w.id) && slot.days.includes(w.weekStart.slice(0, 10)),
     );
     if (inWeek) {
       map.set(slot.weekStart, inWeek);
@@ -146,7 +143,7 @@ export function buildLifeWeekMap(
 export function buildLifeWeekGrid(
   birthDate: string,
   spanYears: number = LIFE_SPAN_DEFAULT,
-  currentAge?: number
+  currentAge?: number,
 ): LifeWeekGrid {
   const span = clampLifeSpanYears(spanYears);
   const weeks = buildLifeWeeks(birthDate, span);
@@ -178,14 +175,14 @@ export function buildLifeWeekGrid(
 export function computeLifeStats(
   birthDate: string,
   spanYears: number = LIFE_SPAN_DEFAULT,
-  today: string = iso()
+  today: string = iso(),
 ): LifeStats {
   const span = clampLifeSpanYears(spanYears);
   const endDate = addYears(span, birthDate);
   const totalDays = daysBetween(birthDate, endDate);
   const livedDays = Math.min(
     Math.max(0, daysBetween(birthDate, today) + (today >= birthDate ? 1 : 0)),
-    totalDays
+    totalDays,
   );
   const leftDays = Math.max(0, totalDays - livedDays);
   const livedPct = totalDays ? Math.round((livedDays / totalDays) * 100) : 0;
@@ -228,7 +225,7 @@ export type WeekCellState = "future" | "past" | "current";
 export function weekCellState(
   weekStart: string,
   weekEnd: string,
-  today: string = iso()
+  today: string = iso(),
 ): WeekCellState {
   if (today >= weekStart && today <= weekEnd) return "current";
   if (weekEnd < today) return "past";
@@ -239,7 +236,7 @@ export type DayCellState = "future" | "past" | "today";
 
 export function dayCellState(
   date: string,
-  today: string = iso()
+  today: string = iso(),
 ): DayCellState {
   if (date === today) return "today";
   if (date < today) return "past";
@@ -257,18 +254,18 @@ export function formatWeekRange(weekStart: string, weekEnd: string): string {
       month: "short",
       year: "numeric",
     });
-    return `${s.getDate()} – ${e.getDate()} ${monthYear}`;
+    return `${s.getDate()} to ${e.getDate()} ${monthYear}`;
   }
 
   const fmt = (d: Date) =>
     d.toLocaleDateString("en-US", { day: "numeric", month: "short" });
-  return `${fmt(s)} – ${fmt(e)} ${e.getFullYear()}`;
+  return `${fmt(s)} to ${fmt(e)} ${e.getFullYear()}`;
 }
 
 export function weekStatusLabel(
   weekStart: string,
   weekEnd: string,
-  today: string = iso()
+  today: string = iso(),
 ): string {
   const state = weekCellState(weekStart, weekEnd, today);
   if (state === "current") return "this week";

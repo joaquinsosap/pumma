@@ -11,7 +11,14 @@ import {
   useMemo,
 } from "react";
 import { useRouter } from "next/navigation";
-import { Check, CheckSquare, ListChecks, Plus, Square, Trash2 } from "@/components/icons";
+import {
+  Check,
+  CheckSquare,
+  ListChecks,
+  Plus,
+  Square,
+  Trash2,
+} from "@/components/icons";
 import type { Tag, Task, Note } from "@/lib/schemas";
 import type { EntityLifeArea } from "@/lib/types";
 import { toggleEntityTag, type TaggableEntity } from "@/lib/actions/tags";
@@ -23,10 +30,7 @@ import { isLifeTag, SPECIAL_LIFE_TAGS } from "@/lib/life-area-sync";
 import { toast } from "sonner";
 import { isTutorialActive } from "@/lib/tutorial-lock";
 import { cn } from "@/lib/utils";
-import {
-  withSingleProjectTag,
-  projectIdFromTags,
-} from "@/lib/project-tags";
+import { withSingleProjectTag, projectIdFromTags } from "@/lib/project-tags";
 
 /**
  * Multi-select, offered by whoever opened the menu. On a phone this menu IS
@@ -50,7 +54,6 @@ type TagTarget = {
   y: number;
   selection?: MenuSelection;
 };
-
 
 type TagMenuContextValue = {
   open: (target: Omit<TagTarget, "x" | "y"> & { x: number; y: number }) => void;
@@ -130,7 +133,7 @@ export function TagMenuProvider({
       // The press that armed the drag may already have opened the menu.
       if (active) close();
     },
-    [close]
+    [close],
   );
 
   // A drag cannot outlive the pointer being down. dnd-kit normally tells us
@@ -162,7 +165,7 @@ export function TagMenuProvider({
       setAdding(false);
       setNewTag("");
     },
-    [tags, tasks, notes]
+    [tags, tasks, notes],
   );
 
   const toggle = async (tagId: string) => {
@@ -178,7 +181,7 @@ export function TagMenuProvider({
     nextTagIds = withSingleProjectTag(
       nextTagIds,
       projectIdFromTags(nextTagIds, tags),
-      tags
+      tags,
     );
     setTagIds(nextTagIds);
     const res = await toggleEntityTag(menu.entity, menu.id, tagId);
@@ -271,7 +274,7 @@ export function TagMenuProvider({
   // tags you toggle rather than a separate control.
   const lifeTags = menu
     ? SPECIAL_LIFE_TAGS.map((name) =>
-        menuTags.find((t) => t.name.toLowerCase() === name)
+        menuTags.find((t) => t.name.toLowerCase() === name),
       ).filter((t): t is NonNullable<typeof t> => Boolean(t))
     : [];
   const ranked = menu ? menuTags.filter((t) => !isLifeTag(t.name)) : [];
@@ -286,7 +289,7 @@ export function TagMenuProvider({
             lifeTags.length * 30 +
             (adding ? 44 : 28) +
             (menu.selection ? 66 : 0) +
-            72
+            72,
         );
         const x = Math.min(menu.x, window.innerWidth - w - 8);
         const y = Math.min(menu.y, window.innerHeight - h - 8);
@@ -296,7 +299,7 @@ export function TagMenuProvider({
 
   const tagMenuValue = useMemo(
     () => ({ open, close, setDragActive }),
-    [open, close, setDragActive]
+    [open, close, setDragActive],
   );
 
   return (
@@ -369,14 +372,16 @@ export function TagMenuProvider({
                       onClick={() => toggle(tag.id)}
                       className={cn(
                         "flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-[12px] transition-colors hover:bg-hover disabled:opacity-50",
-                        active ? "font-semibold text-ink" : "text-muted"
+                        active ? "font-semibold text-ink" : "text-muted",
                       )}
                     >
                       <span
                         className="h-2 w-2 shrink-0 rounded-full"
                         style={{ background: tag.color }}
                       />
-                      <span className="min-w-0 flex-1 truncate">{tag.name}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {tag.name}
+                      </span>
                       {active && (
                         <Check
                           className="h-3.5 w-3.5 shrink-0 text-habits"
@@ -393,7 +398,9 @@ export function TagMenuProvider({
             </div>
             <div className="max-h-[220px] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none]">
               {ranked.length === 0 && !adding && (
-                <p className="px-2 py-1.5 text-[11px] text-faint">No tags yet</p>
+                <p className="px-2 py-1.5 text-[11px] text-faint">
+                  No tags yet
+                </p>
               )}
               {ranked.map((tag) => {
                 const active = tagIds.includes(tag.id);
@@ -411,7 +418,10 @@ export function TagMenuProvider({
                     />
                     <span className="min-w-0 flex-1 truncate">{tag.name}</span>
                     {active && (
-                      <Check className="h-3.5 w-3.5 shrink-0 text-habits" strokeWidth={2.5} />
+                      <Check
+                        className="h-3.5 w-3.5 shrink-0 text-habits"
+                        strokeWidth={2.5}
+                      />
                     )}
                   </button>
                 );

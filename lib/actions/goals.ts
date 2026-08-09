@@ -1,10 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  deriveLifeAreaFromTags,
-  setLifeTags,
-} from "@/lib/life-area-sync";
+import { deriveLifeAreaFromTags, setLifeTags } from "@/lib/life-area-sync";
 import { listTags } from "@/lib/db/tags";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
@@ -27,7 +24,7 @@ const addGoalSchema = z.object({ category: goalCategory, title });
 
 export async function addGoalAction(
   category: GoalCategory,
-  rawTitle: string
+  rawTitle: string,
 ): Promise<ActionResult> {
   const parsed = addGoalSchema.safeParse({ category, title: rawTitle });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -35,11 +32,7 @@ export async function addGoalAction(
   const { today: createdAt } = await userToday();
   const existing = await listGoals(userId);
   const tags = await listTags(userId);
-  const tagIds = setLifeTags(
-    [],
-    parsed.data.category,
-    tags
-  );
+  const tagIds = setLifeTags([], parsed.data.category, tags);
   await insertGoal({
     userId,
     title: parsed.data.title,
@@ -65,7 +58,7 @@ const progressSchema = z.object({
 
 export async function setGoalProgress(
   id: string,
-  delta: number
+  delta: number,
 ): Promise<ActionResult> {
   const parsed = progressSchema.safeParse({ id, delta });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -84,7 +77,7 @@ const renameSchema = z.object({ id: entityId, title });
 
 export async function renameGoal(
   id: string,
-  rawTitle: string
+  rawTitle: string,
 ): Promise<ActionResult> {
   const parsed = renameSchema.safeParse({ id, title: rawTitle });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -112,7 +105,8 @@ export async function updateGoalDetailAction(input: {
   const parsed = detailSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   const { id, ...patch } = parsed.data;
-  if (!Object.keys(patch).length) return { ok: false, error: "Nothing to update" };
+  if (!Object.keys(patch).length)
+    return { ok: false, error: "Nothing to update" };
 
   const userId = await requireUserId();
   const updated = await updateGoal(userId, id, patch);
@@ -140,7 +134,7 @@ const layoutSchema = z.object({
 
 export async function updateGoalsLayoutAction(
   personalIds: string[],
-  workIds: string[]
+  workIds: string[],
 ): Promise<ActionResult> {
   const parsed = layoutSchema.safeParse({ personalIds, workIds });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -158,11 +152,7 @@ export async function updateGoalsLayoutAction(
     for (const id of ids) {
       const goal = goals.find((g) => g.id === id);
       if (!goal || goal.category === category) continue;
-      const tagIds = setLifeTags(
-        goal.tagIds,
-        category,
-        tags
-      );
+      const tagIds = setLifeTags(goal.tagIds, category, tags);
       await updateGoal(userId, id, {
         tagIds,
         lifeArea: deriveLifeAreaFromTags(tagIds, tags),
@@ -179,7 +169,7 @@ const moveSchema = z.object({ id: entityId, category: goalCategory });
 
 export async function moveGoalCategoryAction(
   id: string,
-  category: GoalCategory
+  category: GoalCategory,
 ): Promise<ActionResult> {
   const parsed = moveSchema.safeParse({ id, category });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -190,11 +180,7 @@ export async function moveGoalCategoryAction(
   if (goal.category === parsed.data.category) return { ok: true };
 
   const tags = await listTags(userId);
-  const tagIds = setLifeTags(
-    goal.tagIds,
-    parsed.data.category,
-    tags
-  );
+  const tagIds = setLifeTags(goal.tagIds, parsed.data.category, tags);
   await updateGoal(userId, parsed.data.id, {
     category: parsed.data.category,
     tagIds,
@@ -212,7 +198,7 @@ const reorderSchema = z.object({
 
 export async function reorderGoalAction(
   id: string,
-  direction: "up" | "down"
+  direction: "up" | "down",
 ): Promise<ActionResult> {
   const parsed = reorderSchema.safeParse({ id, direction });
   if (!parsed.success) return { ok: false, error: "Invalid input" };

@@ -20,7 +20,7 @@ export const planSchema = z.object({
       lifeArea,
       metricLabel: z.string().nullable().optional(),
       targetDate: z.string().nullable().optional(),
-    })
+    }),
   ),
   projects: z.array(
     z.object({
@@ -30,7 +30,7 @@ export const planSchema = z.object({
       lifeArea,
       goalRef: z.string().nullable().optional(),
       bestPractices: z.array(z.string()).nullable().optional(),
-    })
+    }),
   ),
   habits: z.array(
     z.object({
@@ -40,7 +40,7 @@ export const planSchema = z.object({
       lifeArea,
       goalRefs: z.array(z.string()),
       goalTargetStreak: z.number().nullable().optional(),
-    })
+    }),
   ),
   tasks: z.array(
     z.object({
@@ -54,7 +54,7 @@ export const planSchema = z.object({
       due: z.string().nullable().optional(),
       tagNames: z.array(z.string()).nullable().optional(),
       subtasks: z.array(z.string()).nullable().optional(),
-    })
+    }),
   ),
   notes: z.array(
     z.object({
@@ -63,7 +63,7 @@ export const planSchema = z.object({
       body: z.string(),
       lifeArea,
       tagNames: z.array(z.string()).nullable().optional(),
-    })
+    }),
   ),
 });
 

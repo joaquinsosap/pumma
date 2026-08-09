@@ -35,5 +35,4 @@ describe("billing access gate at the session seam", () => {
       digest: expect.stringContaining("/billing"),
     });
   });
-
 });

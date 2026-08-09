@@ -51,7 +51,9 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
   const confirm = useConfirm();
   const [pending, startTransition] = useTransition();
 
-  const current: ProviderId = isProviderId(provider) ? provider : DEFAULT_PROVIDER;
+  const current: ProviderId = isProviderId(provider)
+    ? provider
+    : DEFAULT_PROVIDER;
   const def = providerDef(current);
   const known = def.models.includes(model ?? "");
 
@@ -73,7 +75,7 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
       if (configured) {
         const ok = await confirm({
           title: `Switch to ${providerDef(next).label}?`,
-          description: `Your ${def.label} key will be removed — keys don't work across providers. You'll need to paste a ${providerDef(next).label} key.`,
+          description: `Your ${def.label} key will be removed, because keys don't work across providers. You'll need to paste a ${providerDef(next).label} key.`,
           confirmLabel: "Switch",
         });
         if (!ok) return;
@@ -124,7 +126,8 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
     startTransition(async () => {
       const ok = await confirm({
         title: "Remove API key?",
-        description: "Plan and Ask will stop working until you add a key again.",
+        description:
+          "Plan and Ask will stop working until you add a key again.",
         confirmLabel: "Remove",
         destructive: true,
       });
@@ -187,8 +190,8 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
         {def.note && <span className="text-[12px] text-faint">{def.note}</span>}
         {def.structured !== "strict" && def.structured !== "native" && (
           <span className="text-[12px] text-faint">
-            This provider can&apos;t be strictly held to a schema — smaller models
-            may fail on the planner. Ask usually still works.
+            This provider can&apos;t be strictly held to a schema, so smaller
+            models may fail on the planner. Ask usually still works.
           </span>
         )}
       </label>
@@ -249,7 +252,8 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
           </select>
         )}
         <span className="text-[12px] text-faint">
-          Model names change often — pick Custom to type one that isn&apos;t listed.
+          Model names change often, so pick Custom to type one that isn&apos;t
+          listed.
         </span>
       </label>
 
@@ -270,7 +274,11 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
               <Button variant="outline" onClick={() => setEditingKey(true)}>
                 Replace
               </Button>
-              <DeleteButton onClick={removeKey} label="Remove API key" size="md" />
+              <DeleteButton
+                onClick={removeKey}
+                label="Remove API key"
+                size="md"
+              />
             </div>
           ) : (
             <div className="flex gap-2">

@@ -1,6 +1,9 @@
 import type { Project, Tag } from "@/lib/schemas";
 import { listTasks, updateTask } from "@/lib/db/tasks";
-import { deriveLifeAreaFromTags, withProjectLifeTags } from "@/lib/life-area-sync";
+import {
+  deriveLifeAreaFromTags,
+  withProjectLifeTags,
+} from "@/lib/life-area-sync";
 import { withSingleProjectTag } from "@/lib/project-tags";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 
@@ -20,7 +23,7 @@ export async function fileTaggedTasksIntoProject(
   userId: string,
   project: Project,
   tagId: string,
-  tags: Tag[]
+  tags: Tag[],
 ): Promise<number> {
   const tasks = await listTasks(userId);
   let filed = 0;
@@ -34,7 +37,7 @@ export async function fileTaggedTasksIntoProject(
     const tagIds = withProjectLifeTags(
       withSingleProjectTag(task.tagIds, project.id, tags),
       project.lifeArea,
-      tags
+      tags,
     );
     await updateTask(userId, task.id, {
       projectId: project.id,

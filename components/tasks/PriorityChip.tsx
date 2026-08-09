@@ -71,7 +71,7 @@ export function PriorityChip({
       <span
         className={cn(
           "task-prio-text rounded-[4px] border px-1 py-[1px] font-mono text-[8.5px] font-bold leading-[13px] tracking-[0.06em] max-sm:hidden",
-          CHIP[priority]
+          CHIP[priority],
         )}
       >
         {label}
@@ -80,7 +80,7 @@ export function PriorityChip({
         aria-hidden
         className={cn(
           "task-prio-icon hidden w-4 justify-center text-center font-mono text-[15px] font-bold leading-[13px] max-sm:inline-flex",
-          GLYPH_NUDGE[priority]
+          GLYPH_NUDGE[priority],
         )}
         style={{ color: PRIORITY_COLOR[priority] }}
       >
@@ -92,7 +92,7 @@ export function PriorityChip({
   const classes = cn(
     "shrink-0 transition-colors",
     dimmed && "opacity-45",
-    className
+    className,
   );
 
   if (!onCycle) {
@@ -111,7 +111,7 @@ export function PriorityChip({
         e.preventDefault();
         onCycle();
       }}
-      title={`Priority: ${label} — click to change`}
+      title={`Priority: ${label}, click to change`}
       aria-label={`Priority ${label}`}
       className={cn(classes, "hover:brightness-95")}
     >

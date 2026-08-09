@@ -53,7 +53,7 @@ const setTimeSchema = z.object({
 });
 
 export async function setTaskTimeSpent(
-  input: z.infer<typeof setTimeSchema>
+  input: z.infer<typeof setTimeSchema>,
 ): Promise<ActionResult> {
   const parsed = setTimeSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid time" };

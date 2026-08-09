@@ -20,7 +20,7 @@ const USER_KEYS = [
 ] as const satisfies readonly (keyof MemoryStore)[];
 
 export async function exportUserData(
-  userId: string
+  userId: string,
 ): Promise<Record<string, unknown[]>> {
   const store = getStore();
   const out: Record<string, unknown[]> = {};
@@ -35,7 +35,7 @@ export async function exportUserData(
 }
 
 export async function deleteAllUserData(
-  userId: string
+  userId: string,
 ): Promise<Record<string, number>> {
   const store = getStore();
   const removed: Record<string, number> = {};

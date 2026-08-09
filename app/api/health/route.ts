@@ -21,14 +21,14 @@ export async function GET(request: Request) {
     await Promise.race([
       db.command({ ping: 1 }),
       new Promise((_, reject) =>
-        setTimeout(() => reject(new Error("db ping timeout")), 1_000)
+        setTimeout(() => reject(new Error("db ping timeout")), 1_000),
       ),
     ]);
     return NextResponse.json({ status: "ok", db: "ok" });
   } catch {
     return NextResponse.json(
       { status: "degraded", db: "unreachable" },
-      { status: 503 }
+      { status: 503 },
     );
   }
 }

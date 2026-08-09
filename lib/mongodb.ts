@@ -33,7 +33,7 @@ function connect(): Promise<MongoClient> {
   const uri = process.env.MONGODB_URI;
   if (!uri) {
     throw new DbConnectionError(
-      "Database is not configured. Set MONGODB_URI in your environment."
+      "Database is not configured. Set MONGODB_URI in your environment.",
     );
   }
   return import("mongodb")
@@ -62,7 +62,7 @@ export function warmMongoConnection(): Promise<void> {
       // Open several pooled sockets concurrently so the first real request's
       // parallel batch doesn't serialize on cold TLS handshakes.
       await Promise.all(
-        Array.from({ length: WARM_SOCKETS }, () => db.command({ ping: 1 }))
+        Array.from({ length: WARM_SOCKETS }, () => db.command({ ping: 1 })),
       );
     })().catch((err) => {
       globalForMongo.__pummaMongoWarm = undefined;
@@ -76,7 +76,7 @@ export function warmMongoConnection(): Promise<void> {
 export async function getDb(): Promise<Db> {
   if (process.env.DATA_SOURCE !== "mongodb") {
     throw new DbConnectionError(
-      "Database is not configured for this environment. Set DATA_SOURCE=mongodb to use MongoDB."
+      "Database is not configured for this environment. Set DATA_SOURCE=mongodb to use MongoDB.",
     );
   }
   if (!globalForMongo.__pummaMongoClient) {

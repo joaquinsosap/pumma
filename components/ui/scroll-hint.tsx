@@ -75,7 +75,9 @@ export function ScrollHint({
     <button
       type="button"
       onClick={advance}
-      aria-label={direction === "right" ? "Scroll right for more" : "Scroll down for more"}
+      aria-label={
+        direction === "right" ? "Scroll right for more" : "Scroll down for more"
+      }
       className={cn(
         "absolute z-10 flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg",
         "border border-border bg-surface/95 text-muted shadow-[2px_2px_0_var(--shadow)] backdrop-blur-sm",
@@ -83,7 +85,7 @@ export function ScrollHint({
         direction === "right"
           ? "right-1 top-1/2 -translate-y-1/2"
           : "bottom-2 left-1/2 -translate-x-1/2",
-        className
+        className,
       )}
     >
       {direction === "right" ? (

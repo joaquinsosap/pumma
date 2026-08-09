@@ -53,13 +53,16 @@ function lifeViewFromArea(area: EntityLifeArea): LifeView {
 export function entityFocusHref(
   kind: EntityKind,
   id: string,
-  data: SnapshotEntities
+  data: SnapshotEntities,
 ): string | null {
   switch (kind) {
     case "project": {
       const p = data.projects.find((x) => x.id === id);
       if (!p) return null;
-      return hrefWithLife(`/projects?project=${id}`, lifeViewFromArea(p.lifeArea));
+      return hrefWithLife(
+        `/projects?project=${id}`,
+        lifeViewFromArea(p.lifeArea),
+      );
     }
     case "goal": {
       const g = data.goals.find((x) => x.id === id);
@@ -82,7 +85,7 @@ export function entityFocusHref(
       return taskDetailHref(
         { id: t.id, due: t.due } as Parameters<typeof taskDetailHref>[0],
         lifeViewFromArea(t.lifeArea),
-        data.today
+        data.today,
       );
     }
   }
@@ -101,7 +104,7 @@ function norm(s: string): string {
 
 export function resolveEntityFromLabel(
   label: string,
-  data: SnapshotEntities
+  data: SnapshotEntities,
 ): { kind: EntityKind; id: string } | null {
   const key = norm(label);
   if (!key) return null;
@@ -132,7 +135,7 @@ export function resolveFocusHref(
     entityKind?: EntityKind | "none" | "" | null;
     entityId?: string | null;
   },
-  data: SnapshotEntities
+  data: SnapshotEntities,
 ): string | null {
   if (item.entityKind && item.entityKind !== "none" && item.entityId) {
     const fromEntity = entityFocusHref(item.entityKind, item.entityId, data);

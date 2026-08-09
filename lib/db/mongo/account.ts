@@ -38,7 +38,7 @@ function idCandidates(userId: string): (string | ObjectId)[] {
 }
 
 export async function exportUserData(
-  userId: string
+  userId: string,
 ): Promise<Record<string, unknown[]>> {
   const db = await getDb();
   const out: Record<string, unknown[]> = {};
@@ -62,7 +62,7 @@ export async function exportUserData(
  * at half-deleted data.
  */
 export async function deleteAllUserData(
-  userId: string
+  userId: string,
 ): Promise<Record<string, number>> {
   const db = await getDb();
   const removed: Record<string, number> = {};

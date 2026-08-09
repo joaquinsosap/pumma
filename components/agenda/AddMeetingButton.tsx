@@ -31,7 +31,7 @@ export function AddMeetingButton({
         onClick={() => setOpen(true)}
         className={cn(
           "flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 font-mono text-[11px] font-semibold text-muted transition-colors hover:border-faint2 hover:text-ink",
-          className
+          className,
         )}
       >
         <CalendarPlus className="h-3.5 w-3.5" />

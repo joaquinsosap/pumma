@@ -85,23 +85,35 @@ export type SnapshotResult = {
   data: SnapshotData;
 };
 
-export async function buildUserSnapshot(userId: string): Promise<SnapshotResult> {
+export async function buildUserSnapshot(
+  userId: string,
+): Promise<SnapshotResult> {
   // Every list*() below is scoped to `userId` (the authenticated caller, passed
   // down from askAssistant → requireUserId). The Ask assistant therefore only
   // ever sees the requesting user's own data — never another account's.
-  const [tasks, habits, entries, goals, projects, notes, tags, agenda, user, settings] =
-    await Promise.all([
-      listTasks(userId),
-      listHabits(userId),
-      listHabitEntries(userId),
-      listGoals(userId),
-      listProjects(userId),
-      listNotes(userId),
-      listTags(userId),
-      listAgenda(userId),
-      getUser(userId),
-      getSettings(userId),
-    ]);
+  const [
+    tasks,
+    habits,
+    entries,
+    goals,
+    projects,
+    notes,
+    tags,
+    agenda,
+    user,
+    settings,
+  ] = await Promise.all([
+    listTasks(userId),
+    listHabits(userId),
+    listHabitEntries(userId),
+    listGoals(userId),
+    listProjects(userId),
+    listNotes(userId),
+    listTags(userId),
+    listAgenda(userId),
+    getUser(userId),
+    getSettings(userId),
+  ]);
 
   const fromCookie = await readTimezoneCookie();
   const timezone = pickTimezone(settings, fromCookie);
@@ -121,7 +133,10 @@ export async function buildUserSnapshot(userId: string): Promise<SnapshotResult>
   });
 
   const build = (full: boolean) => {
-    const sinceEntry = iso(addDays(-ENTRY_DAYS, new Date(), timezone), timezone);
+    const sinceEntry = iso(
+      addDays(-ENTRY_DAYS, new Date(), timezone),
+      timezone,
+    );
     const sinceDone = iso(addDays(-DONE_DAYS, new Date(), timezone), timezone);
     const keptEntries = full
       ? entries
@@ -129,7 +144,7 @@ export async function buildUserSnapshot(userId: string): Promise<SnapshotResult>
     const keptTasks = full
       ? tasks
       : tasks.filter(
-          (t) => t.status !== "done" || (t.completedAt ?? "") >= sinceDone
+          (t) => t.status !== "done" || (t.completedAt ?? "") >= sinceDone,
         );
     return {
       today,
@@ -204,5 +219,9 @@ export async function buildUserSnapshot(userId: string): Promise<SnapshotResult>
     return { json: fullJson, dataMode: "full", data: fullData };
   }
   const trimmedData = build(false);
-  return { json: JSON.stringify(trimmedData), dataMode: "trimmed", data: trimmedData };
+  return {
+    json: JSON.stringify(trimmedData),
+    dataMode: "trimmed",
+    data: trimmedData,
+  };
 }

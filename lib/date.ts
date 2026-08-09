@@ -20,7 +20,10 @@ function tzOrDefault(timeZone?: string): string {
 
 // Cache display formatters per (kind, timezone) — construction is the costly part.
 const enUsFmtCache = new Map<string, Intl.DateTimeFormat>();
-function enUsFormatter(tz: string, kind: "day" | "label" | "due"): Intl.DateTimeFormat {
+function enUsFormatter(
+  tz: string,
+  kind: "day" | "label" | "due",
+): Intl.DateTimeFormat {
   const key = `${kind}|${tz}`;
   let f = enUsFmtCache.get(key);
   if (!f) {
@@ -43,7 +46,7 @@ export function iso(d: Date = new Date(), timeZone?: string): string {
 export function addDays(
   n: number,
   from: Date = new Date(),
-  timeZone?: string
+  timeZone?: string,
 ): Date {
   const tz = tzOrDefault(timeZone);
   const next = addDaysToIsoDate(isoDateInTz(from, tz), n, tz);
@@ -73,7 +76,7 @@ export function formatDayFull(isoDate: string): string {
 /** Default note title when none is given, e.g. "New note 21/06 - 14:35" */
 export function defaultNoteTitle(
   d: Date = new Date(),
-  timeZone?: string
+  timeZone?: string,
 ): string {
   const tz = tzOrDefault(timeZone);
   const p = tzParts(d, tz);
@@ -93,22 +96,21 @@ export function dowLetters(weekStart: WeekStart = "mon"): readonly string[] {
 export function weekDates(
   from: Date = new Date(),
   weekStart: WeekStart = "mon",
-  timeZone?: string
+  timeZone?: string,
 ): Date[] {
   const tz = tzOrDefault(timeZone);
   const p = tzParts(from, tz);
-  const offset =
-    weekStart === "sun" ? p.weekday : (p.weekday + 6) % 7;
+  const offset = weekStart === "sun" ? p.weekday : (p.weekday + 6) % 7;
   const startIso = addDaysToIsoDate(isoDateInTz(from, tz), -offset, tz);
   return Array.from({ length: 7 }, (_, i) =>
-    noonUtcForIsoDate(addDaysToIsoDate(startIso, i, tz), tz)
+    noonUtcForIsoDate(addDaysToIsoDate(startIso, i, tz), tz),
   );
 }
 
 export function streakOf(
   dates: Set<string>,
   today: string = iso(),
-  timeZone?: string
+  timeZone?: string,
 ): number {
   const tz = tzOrDefault(timeZone);
   let c = 0;
@@ -132,8 +134,9 @@ export function bestStreak(dates: Set<string>): number {
   for (const ds of arr) {
     if (prev) {
       const diff = Math.round(
-        (new Date(ds + "T00:00").getTime() - new Date(prev + "T00:00").getTime()) /
-          86400000
+        (new Date(ds + "T00:00").getTime() -
+          new Date(prev + "T00:00").getTime()) /
+          86400000,
       );
       cur = diff === 1 ? cur + 1 : 1;
     } else {
@@ -155,10 +158,7 @@ export function weekNumber(d: Date = new Date(), timeZone?: string): number {
 
 import { DEFAULT_USER_NAME } from "@/lib/user-display";
 
-export function greeting(
-  name = DEFAULT_USER_NAME,
-  timeZone?: string
-): string {
+export function greeting(name = DEFAULT_USER_NAME, timeZone?: string): string {
   const hour = tzParts(new Date(), tzOrDefault(timeZone)).hour;
   const part =
     hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
@@ -169,7 +169,9 @@ export function dueDatePart(due: string | null, timeZone?: string): string {
   if (!due) return "";
   if (due.includes("T")) return due.split("T")[1] ?? "";
   const tz = tzOrDefault(timeZone);
-  return enUsFormatter(tz, "due").format(noonUtcForIsoDate(due.slice(0, 10), tz));
+  return enUsFormatter(tz, "due").format(
+    noonUtcForIsoDate(due.slice(0, 10), tz),
+  );
 }
 
 export function taskDueDateInput(due: string | null): string {
@@ -179,7 +181,7 @@ export function taskDueDateInput(due: string | null): string {
 /** Preserve meeting time when only the calendar date changes. */
 export function mergeTaskDueDate(
   datePart: string,
-  existingDue: string | null
+  existingDue: string | null,
 ): string | null {
   if (!datePart) return null;
   const time = existingDue?.includes("T") ? existingDue.split("T")[1] : null;
@@ -209,15 +211,14 @@ export function daysBetween(startIso: string, endIso: string): number {
 export function ageAt(
   birthDate: string,
   onDate: string = iso(),
-  timeZone?: string
+  timeZone?: string,
 ): number {
   const tz = tzOrDefault(timeZone);
   const birth = tzParts(noonUtcForIsoDate(birthDate.slice(0, 10), tz), tz);
   const on = tzParts(noonUtcForIsoDate(onDate.slice(0, 10), tz), tz);
   let years = on.year - birth.year;
   const beforeBirthday =
-    on.month < birth.month ||
-    (on.month === birth.month && on.day < birth.day);
+    on.month < birth.month || (on.month === birth.month && on.day < birth.day);
   if (beforeBirthday) years -= 1;
   return Math.max(0, years);
 }
@@ -230,10 +231,12 @@ export function formatTimeHM(d: Date = new Date(), timeZone?: string): string {
 export function currentAgendaIndex(
   times: string[],
   nowMins: number = parseTimeToMinutes(formatTimeHM()),
-  timeZone?: string
+  timeZone?: string,
 ): number {
   if (!times.length) return -1;
-  const sorted = [...times].sort((a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b));
+  const sorted = [...times].sort(
+    (a, b) => parseTimeToMinutes(a) - parseTimeToMinutes(b),
+  );
   if (nowMins < parseTimeToMinutes(sorted[0])) return -1;
   for (let i = 0; i < sorted.length; i++) {
     const start = parseTimeToMinutes(sorted[i]);
@@ -251,7 +254,7 @@ export function isoWeekNumber(d: Date = new Date(), timeZone?: string): number {
   const p = tzParts(d, tz);
   const utc = noonUtcForIsoDate(
     `${p.year}-${String(p.month).padStart(2, "0")}-${String(p.day).padStart(2, "0")}`,
-    tz
+    tz,
   );
   const date = new Date(utc);
   date.setUTCHours(0, 0, 0, 0);
@@ -263,7 +266,7 @@ export function isoWeekNumber(d: Date = new Date(), timeZone?: string): number {
       ((date.getTime() - week1.getTime()) / 86400000 -
         3 +
         ((week1.getUTCDay() + 6) % 7)) /
-        7
+        7,
     )
   );
 }
@@ -275,14 +278,17 @@ export function isoWeeksInYear(year: number): number {
 export function daysInMonth(d: Date = new Date(), timeZone?: string): number {
   const tz = tzOrDefault(timeZone);
   const p = tzParts(d, tz);
-  const next = p.month === 12 ? { year: p.year + 1, month: 1 } : { year: p.year, month: p.month + 1 };
+  const next =
+    p.month === 12
+      ? { year: p.year + 1, month: 1 }
+      : { year: p.year, month: p.month + 1 };
   const first = noonUtcForIsoDate(
     `${next.year}-${String(next.month).padStart(2, "0")}-01`,
-    tz
+    tz,
   );
   const last = noonUtcForIsoDate(
     addDaysToIsoDate(isoDateInTz(first, tz), -1, tz),
-    tz
+    tz,
   );
   return tzParts(last, tz).day;
 }
@@ -290,7 +296,7 @@ export function daysInMonth(d: Date = new Date(), timeZone?: string): number {
 /** Mon=1 … Fri=5; weekends return null. */
 export function workweekDay(
   d: Date = new Date(),
-  timeZone?: string
+  timeZone?: string,
 ): { day: number; label: string } | null {
   const tz = tzOrDefault(timeZone);
   const dow = tzParts(d, tz).weekday;

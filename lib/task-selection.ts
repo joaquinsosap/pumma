@@ -58,7 +58,7 @@ export function reduceSelection(
   state: SelectionState,
   order: string[],
   id: string,
-  intent: SelectIntent
+  intent: SelectIntent,
 ): SelectionState {
   // A plain click drops the selection, but it still says where you are: the
   // shift-click that follows has to range from the row you just clicked, not
@@ -79,7 +79,8 @@ export function reduceSelection(
   // A range needs somewhere to measure from. Without a live anchor — first
   // click of the session, or the anchor scrolled out of the current filter —
   // this click becomes the anchor and selects only itself.
-  const anchor = state.anchor && order.includes(state.anchor) ? state.anchor : null;
+  const anchor =
+    state.anchor && order.includes(state.anchor) ? state.anchor : null;
   if (!anchor) return { ids: [id], anchor: id };
 
   const anchorAt = order.indexOf(anchor);
@@ -94,9 +95,7 @@ export function reduceSelection(
   // The far end only takes over when the click crosses the anchor, so a click
   // on the same side still shrinks the range the way you'd expect.
   let from = anchorAt;
-  const spots = state.ids
-    .map((x) => order.indexOf(x))
-    .filter((i) => i >= 0);
+  const spots = state.ids.map((x) => order.indexOf(x)).filter((i) => i >= 0);
   if (spots.length) {
     const lo = Math.min(...spots);
     const hi = Math.max(...spots);
@@ -121,7 +120,7 @@ export function reduceSelection(
  */
 export function pruneSelection(
   state: SelectionState,
-  order: string[]
+  order: string[],
 ): SelectionState {
   const live = new Set(order);
   if (state.ids.every((id) => live.has(id))) return state;

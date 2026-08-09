@@ -77,7 +77,7 @@ export function ProjectTagsField({
       ];
       if (willUnlabel) {
         parts.push(
-          `${willUnlabel} task${willUnlabel === 1 ? "" : "s"} already in other projects will stay put and lose the #${tagName} label.`
+          `${willUnlabel} task${willUnlabel === 1 ? "" : "s"} already in other projects will stay put and lose the #${tagName} label.`,
         );
       }
 
@@ -99,7 +99,7 @@ export function ProjectTagsField({
       }
       if (merged.data?.status === "renamed" && merged.data.filed) {
         toast.success(
-          `#${next} files here now — ${merged.data.filed} task${merged.data.filed === 1 ? "" : "s"} moved in`
+          `#${next} files here now, ${merged.data.filed} task${merged.data.filed === 1 ? "" : "s"} moved in`,
         );
       }
       router.refresh();
@@ -153,7 +153,7 @@ export function ProjectTagsField({
                 <button
                   type="button"
                   disabled={pending}
-                  title="Release this tag — it stops filing into this project"
+                  title="Release this tag, so it stops filing into this project"
                   aria-label={`Remove ${tag.name} from project`}
                   onClick={() => run(() => detachTagFromProjectAction(tag.id))}
                   className="opacity-60 transition-opacity hover:opacity-100"
@@ -162,7 +162,7 @@ export function ProjectTagsField({
                 </button>
               )}
             </span>
-          )
+          ),
         )}
 
         {adding ? (
@@ -187,7 +187,7 @@ export function ProjectTagsField({
                 const filed = res.data?.filed ?? 0;
                 if (filed) {
                   toast.success(
-                    `${filed} unfiled task${filed === 1 ? "" : "s"} moved into ${project.title}`
+                    `${filed} unfiled task${filed === 1 ? "" : "s"} moved into ${project.title}`,
                   );
                 }
                 router.refresh();
@@ -214,7 +214,7 @@ export function ProjectTagsField({
             }
             className={cn(
               "flex items-center gap-1 rounded-lg border border-dashed border-border px-2 py-1 font-mono text-[11px] text-muted transition-colors hover:border-faint hover:text-ink",
-              "disabled:opacity-40"
+              "disabled:opacity-40",
             )}
           >
             <Plus className="h-3 w-3" />

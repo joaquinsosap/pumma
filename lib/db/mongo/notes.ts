@@ -1,5 +1,9 @@
 import { getDb } from "@/lib/mongodb";
-import { decryptAllFor, decryptFor, encryptFor } from "@/lib/db/mongo/encrypted";
+import {
+  decryptAllFor,
+  decryptFor,
+  encryptFor,
+} from "@/lib/db/mongo/encrypted";
 import { newId } from "@/lib/store/memory";
 import { toDto, type Note, noteSchema } from "@/lib/schemas";
 import type { NoteDoc } from "@/lib/schemas";
@@ -17,7 +21,10 @@ export async function listNotes(userId: string): Promise<Note[]> {
   return plain.map((n) => toDto(noteSchema.parse(n)));
 }
 
-export async function getNote(userId: string, id: string): Promise<Note | null> {
+export async function getNote(
+  userId: string,
+  id: string,
+): Promise<Note | null> {
   const c = await col();
   const doc = await c.findOne({ _id: id, userId });
   if (!doc) return null;
@@ -25,7 +32,7 @@ export async function getNote(userId: string, id: string): Promise<Note | null> 
 }
 
 export async function insertNote(
-  doc: Omit<NoteDoc, "_id"> & { _id?: string }
+  doc: Omit<NoteDoc, "_id"> & { _id?: string },
 ): Promise<Note> {
   const c = await col();
   const full = { ...doc, _id: doc._id ?? newId() } as NoteDoc;
@@ -36,13 +43,13 @@ export async function insertNote(
 export async function updateNote(
   userId: string,
   id: string,
-  patch: Partial<NoteDoc>
+  patch: Partial<NoteDoc>,
 ): Promise<Note | null> {
   const c = await col();
   const doc = await c.findOneAndUpdate(
     { _id: id, userId },
     { $set: await encryptFor("notes", userId, patch) },
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   if (!doc) return null;
   return toDto(noteSchema.parse(await decryptFor("notes", userId, doc)));

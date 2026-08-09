@@ -16,13 +16,13 @@ export async function getSettings(userId: string): Promise<Settings | null> {
 
 /** Created once at signup (auth bootstrap). Idempotent per user. */
 export async function insertSettings(
-  doc: Omit<SettingsDoc, "_id"> & { _id?: string }
+  doc: Omit<SettingsDoc, "_id"> & { _id?: string },
 ): Promise<Settings> {
   const c = await col();
   await c.updateOne(
     { userId: doc.userId },
     { $setOnInsert: { ...doc, _id: doc._id ?? newId() } },
-    { upsert: true }
+    { upsert: true },
   );
   const saved = await c.findOne({ userId: doc.userId });
   return settingsToDto(settingsSchema.parse(saved));
@@ -30,13 +30,13 @@ export async function insertSettings(
 
 export async function updateSettings(
   userId: string,
-  patch: Partial<SettingsDoc>
+  patch: Partial<SettingsDoc>,
 ): Promise<Settings | null> {
   const c = await col();
   const doc = await c.findOneAndUpdate(
     { userId },
     { $set: patch },
-    { returnDocument: "after" }
+    { returnDocument: "after" },
   );
   return doc ? settingsToDto(settingsSchema.parse(doc)) : null;
 }

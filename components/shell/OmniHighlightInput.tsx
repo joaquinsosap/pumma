@@ -36,7 +36,7 @@ function InlineTagToken({
         textDecoration: isNew ? "underline dotted" : undefined,
         textUnderlineOffset: "2px",
       }}
-      title={isNew ? "New tag — created on save" : undefined}
+      title={isNew ? "New tag, created on save" : undefined}
     >
       {text}
     </span>

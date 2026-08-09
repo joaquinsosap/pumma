@@ -1,6 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
 import {
   DndContext,
@@ -25,7 +32,14 @@ import {
   arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Goal, Habit, HabitEntry, Project, Tag, Task } from "@/lib/schemas";
+import type {
+  Goal,
+  Habit,
+  HabitEntry,
+  Project,
+  Tag,
+  Task,
+} from "@/lib/schemas";
 import { updateGoalsLayoutAction } from "@/lib/actions/goals";
 import { goalHasLinks } from "@/lib/goal-sync";
 import { Topbar } from "@/components/shell/Topbar";
@@ -84,7 +98,7 @@ function layoutChanged(a: ItemsByCategory, b: ItemsByCategory) {
 
 function findContainer(
   id: UniqueIdentifier,
-  items: ItemsByCategory
+  items: ItemsByCategory,
 ): GoalCategory | undefined {
   if (id === "personal" || id === "work") return id;
   return CATEGORIES.find((cat) => items[cat].some((g) => g.id === id));
@@ -115,8 +129,8 @@ export function GoalsView({
   const persistPendingRef = useRef(false);
 
   const selectedGoal = useMemo(
-    () => (goalId ? goals.find((g) => g.id === goalId) ?? null : null),
-    [goals, goalId]
+    () => (goalId ? (goals.find((g) => g.id === goalId) ?? null) : null),
+    [goals, goalId],
   );
 
   useEffect(() => {
@@ -133,32 +147,31 @@ export function GoalsView({
     serverLayoutRef.current = serverLayout;
   }, [serverLayout]);
 
-  const persistLayout = useCallback(
-    (next: ItemsByCategory) => {
-      if (!layoutChanged(serverLayoutRef.current, next)) return;
-      if (persistPendingRef.current) return;
-      persistPendingRef.current = true;
+  const persistLayout = useCallback((next: ItemsByCategory) => {
+    if (!layoutChanged(serverLayoutRef.current, next)) return;
+    if (persistPendingRef.current) return;
+    persistPendingRef.current = true;
 
-      startTransition(async () => {
-        try {
-          const ids = layoutIds(next);
-          // Layout action revalidates the route; the optimistic dnd order
-          // holds until it lands — no extra refresh round-trip.
-          await updateGoalsLayoutAction(ids.personal, ids.work);
-        } finally {
-          persistPendingRef.current = false;
-        }
-      });
-    },
-    []
-  );
+    startTransition(async () => {
+      try {
+        const ids = layoutIds(next);
+        // Layout action revalidates the route; the optimistic dnd order
+        // holds until it lands — no extra refresh round-trip.
+        await updateGoalsLayoutAction(ids.personal, ids.work);
+      } finally {
+        persistPendingRef.current = false;
+      }
+    });
+  }, []);
 
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 280, tolerance: 8 } }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 280, tolerance: 8 },
+    }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    })
+    }),
   );
 
   const activeGoal = useMemo(() => {
@@ -167,7 +180,11 @@ export function GoalsView({
       const column = items[cat];
       const hit = column.find((g) => g.id === activeId);
       if (hit) {
-        return { goal: hit, index: column.findIndex((g) => g.id === activeId), cat };
+        return {
+          goal: hit,
+          index: column.findIndex((g) => g.id === activeId),
+          cat,
+        };
       }
     }
     return null;
@@ -184,7 +201,11 @@ export function GoalsView({
     setItems((prev) => {
       const activeContainer = findContainer(active.id, prev);
       const overContainer = findContainer(over.id, prev);
-      if (!activeContainer || !overContainer || activeContainer === overContainer) {
+      if (
+        !activeContainer ||
+        !overContainer ||
+        activeContainer === overContainer
+      ) {
         return prev;
       }
 
@@ -200,7 +221,7 @@ export function GoalsView({
       overItems.splice(
         overIndex >= 0 ? overIndex : overItems.length,
         0,
-        updated
+        updated,
       );
 
       const next = {
@@ -360,26 +381,28 @@ export function GoalsView({
         <div className="hidden min-h-0 overflow-hidden bg-surface2/20 lg:block">
           {selectedGoal ? (
             isDesktop && (
-            <div key={selectedGoal.id} className="animate-pumma-swap h-full">
-            <GoalDetailPanel
-              goal={selectedGoal}
-              tags={tags}
-              projects={projects}
-              habits={habits}
-              habitEntries={habitEntries}
-              tasks={tasks}
-              habitVisibility={habitVisibility}
-              weekStart={weekStart}
-              onClose={() => setGoalId(null)}
-            />
-            </div>
+              <div key={selectedGoal.id} className="animate-pumma-swap h-full">
+                <GoalDetailPanel
+                  goal={selectedGoal}
+                  tags={tags}
+                  projects={projects}
+                  habits={habits}
+                  habitEntries={habitEntries}
+                  tasks={tasks}
+                  habitVisibility={habitVisibility}
+                  weekStart={weekStart}
+                  onClose={() => setGoalId(null)}
+                />
+              </div>
             )
           ) : (
             <div className="flex h-full flex-col items-center justify-center px-8 text-center">
-              <p className="m-0 text-sm font-semibold text-ink">Select a goal</p>
+              <p className="m-0 text-sm font-semibold text-ink">
+                Select a goal
+              </p>
               <p className="mt-1.5 max-w-[240px] text-[13px] leading-relaxed text-faint">
-                Edit details, link habits with streak targets, and attach projects
-                that roll up into progress.
+                Edit details, link habits with streak targets, and attach
+                projects that roll up into progress.
               </p>
             </div>
           )}
@@ -434,9 +457,7 @@ function GoalColumnStatic({
 }) {
   const [activeCategory, setActiveCategory] = useQueryState(
     "category",
-    parseAsStringLiteral(["personal", "work"] as const).withDefault(
-      "personal"
-    )
+    parseAsStringLiteral(["personal", "work"] as const).withDefault("personal"),
   );
   const isActive = activeCategory === category;
 
@@ -444,12 +465,15 @@ function GoalColumnStatic({
     <div
       className={cn(
         "rounded-[13px] p-1 transition-colors",
-        isActive && "bg-hover/40"
+        isActive && "bg-hover/40",
       )}
       onClick={() => setActiveCategory(category)}
     >
       <div className="mb-3 flex cursor-pointer items-center gap-2 px-1">
-        <span className="h-[9px] w-[9px] rotate-45" style={{ background: color }} />
+        <span
+          className="h-[9px] w-[9px] rotate-45"
+          style={{ background: color }}
+        />
         <h3 className="m-0 text-[15px] font-bold">{title}</h3>
         <span className="font-mono text-[10px] text-faint">{goals.length}</span>
       </div>
@@ -507,9 +531,7 @@ function GoalColumn({
 }) {
   const [activeCategory, setActiveCategory] = useQueryState(
     "category",
-    parseAsStringLiteral(["personal", "work"] as const).withDefault(
-      "personal"
-    )
+    parseAsStringLiteral(["personal", "work"] as const).withDefault("personal"),
   );
   const isActive = activeCategory === category;
   const { setNodeRef, isOver } = useDroppable({ id: category });
@@ -518,12 +540,15 @@ function GoalColumn({
     <div
       className={cn(
         "rounded-[13px] p-1 transition-colors",
-        isActive && "bg-hover/40"
+        isActive && "bg-hover/40",
       )}
       onClick={() => setActiveCategory(category)}
     >
       <div className="mb-3 flex cursor-pointer items-center gap-2 px-1">
-        <span className="h-[9px] w-[9px] rotate-45" style={{ background: color }} />
+        <span
+          className="h-[9px] w-[9px] rotate-45"
+          style={{ background: color }}
+        />
         <h3 className="m-0 text-[15px] font-bold">{title}</h3>
         <span className="font-mono text-[10px] text-faint">{goals.length}</span>
       </div>
@@ -532,7 +557,7 @@ function GoalColumn({
         className={cn(
           "min-h-[120px] rounded-[11px] border border-transparent p-1 transition-colors",
           isOver && "border-primary/35 bg-primary/[0.04]",
-          isDragging && !isOver && "opacity-95"
+          isDragging && !isOver && "opacity-95",
         )}
       >
         <SortableContext
@@ -586,7 +611,10 @@ function SortableGoalCard({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: goal.id, data: { type: "goal", category: goal.category } });
+  } = useSortable({
+    id: goal.id,
+    data: { type: "goal", category: goal.category },
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -599,7 +627,7 @@ function SortableGoalCard({
       style={style}
       className={cn(
         "kanban-card cursor-grab touch-manipulation active:cursor-grabbing",
-        isDragging && "kanban-card--dragging opacity-35"
+        isDragging && "kanban-card--dragging opacity-35",
       )}
       {...attributes}
       {...listeners}
@@ -647,14 +675,18 @@ function GoalCard({
       className={cn(
         "rounded-[13px] border bg-surface p-[12px_14px]",
         selected ? "border-ink shadow-sm" : "border-border",
-        overlay ? "kanban-card--overlay rotate-[1deg] cursor-grabbing shadow-lg" : "hover:border-faint2"
+        overlay
+          ? "kanban-card--overlay rotate-[1deg] cursor-grabbing shadow-lg"
+          : "hover:border-faint2",
       )}
     >
       <div className="mb-2 flex items-start gap-2">
         <span className="mt-0.5 shrink-0 font-mono text-[11px] font-semibold tabular-nums text-faint">
           {index + 1}.
         </span>
-        <span className="min-w-0 flex-1 text-[14px] font-bold leading-snug">{goal.title}</span>
+        <span className="min-w-0 flex-1 text-[14px] font-bold leading-snug">
+          {goal.title}
+        </span>
         <span
           className="shrink-0 font-mono text-[12px] font-semibold"
           style={{ color: textColor }}
@@ -663,7 +695,10 @@ function GoalCard({
         </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-border2">
-        <div className="h-full" style={{ width: `${goal.progress}%`, background: color }} />
+        <div
+          className="h-full"
+          style={{ width: `${goal.progress}%`, background: color }}
+        />
       </div>
       <p className="mt-2 font-mono text-[9px] text-faint">
         {auto ? "Linked habits & projects" : "Manual progress"}

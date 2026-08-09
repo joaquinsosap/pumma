@@ -113,7 +113,9 @@ async function AppShell({ children }: { children: React.ReactNode }) {
                     being null means the read failed rather than that someone is
                     new, so that isn't a reason to show it either. */}
                 <TutorialOverlay
-                  seen={data.settings ? data.settings.tutorialSeenAt != null : true}
+                  seen={
+                    data.settings ? data.settings.tutorialSeenAt != null : true
+                  }
                 />
               </main>
             </AssistantProvider>

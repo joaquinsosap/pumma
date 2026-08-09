@@ -35,7 +35,7 @@ export function TagGridPicker({
   if (!tags.length) {
     return (
       <p className="m-0 text-[12px] text-faint">
-        No tags yet — add some in Settings.
+        No tags yet. Add some in Settings.
       </p>
     );
   }
@@ -55,7 +55,7 @@ export function TagGridPicker({
               active
                 ? "border-2 font-bold shadow-[1px_1px_0_var(--shadow)]"
                 : "border-border bg-surface2/60 font-medium text-muted hover:border-faint hover:bg-surface2",
-              opts?.muted && !active && "border-dashed opacity-70"
+              opts?.muted && !active && "border-dashed opacity-70",
             )}
             style={
               active
@@ -85,7 +85,7 @@ export function TagGridPicker({
   );
 
   const lifeTags = SPECIAL_LIFE_TAGS.map((name) =>
-    tags.find((t) => t.name.toLowerCase() === name)
+    tags.find((t) => t.name.toLowerCase() === name),
   ).filter((t): t is Tag => Boolean(t));
   const rest = tags.filter((t) => !isLifeTag(t.name));
 
@@ -142,7 +142,7 @@ export function TagGridPicker({
       {othersByProject.size > 0 && (
         <>
           {heading(
-            projectId ? "Move to another project" : "File under a project"
+            projectId ? "Move to another project" : "File under a project",
           )}
           {[...othersByProject.entries()].map(([id, list]) => (
             <div key={id} className="mb-1.5">

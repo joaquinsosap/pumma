@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { iso, addDays, streakOf, bestStreak, weekDates, currentAgendaIndex } from "@/lib/date";
+import {
+  iso,
+  addDays,
+  streakOf,
+  bestStreak,
+  weekDates,
+  currentAgendaIndex,
+} from "@/lib/date";
 import {
   parseOmni,
   parseNoteCapture,
@@ -57,7 +64,12 @@ describe("date", () => {
   });
 
   it("bestStreak finds longest run", () => {
-    const set = new Set(["2025-01-01", "2025-01-02", "2025-01-05", "2025-01-06"]);
+    const set = new Set([
+      "2025-01-01",
+      "2025-01-02",
+      "2025-01-05",
+      "2025-01-06",
+    ]);
     expect(bestStreak(set)).toBe(2);
   });
 
@@ -127,7 +139,13 @@ describe("parseOmni", () => {
   it("does not split a bare clock time", () => {
     // chrono lifts the time out first; either way nothing should land in the
     // description just because a colon was present.
-    const r = parseOmni("standup 9:30", tags, new Date("2026-06-21T12:00:00Z"), undefined, TZ);
+    const r = parseOmni(
+      "standup 9:30",
+      tags,
+      new Date("2026-06-21T12:00:00Z"),
+      undefined,
+      TZ,
+    );
     expect(r.description).toBe("");
   });
 
@@ -186,7 +204,11 @@ describe("parseNoteCapture", () => {
   });
 
   it("extracts tags and applies title: body", () => {
-    const r = parseNoteCapture("Standup #work: action items from today", tags, ref);
+    const r = parseNoteCapture(
+      "Standup #work: action items from today",
+      tags,
+      ref,
+    );
     expect(r.title).toBe("Standup");
     expect(r.body).toBe("action items from today");
     expect(r.tagIds).toContain("1");
@@ -217,9 +239,30 @@ describe("agenda timeline", () => {
     exceptions: [] as string[],
   };
   const items = [
-    { id: "1", time: "08:00", title: "Run", sub: "habit", lifeArea: "personal" as const, ...base },
-    { id: "2", time: "09:30", title: "Standup", sub: "30 min", lifeArea: "work" as const, ...base },
-    { id: "3", time: "11:00", title: "Deep work", sub: "90 min block", lifeArea: "work" as const, ...base },
+    {
+      id: "1",
+      time: "08:00",
+      title: "Run",
+      sub: "habit",
+      lifeArea: "personal" as const,
+      ...base,
+    },
+    {
+      id: "2",
+      time: "09:30",
+      title: "Standup",
+      sub: "30 min",
+      lifeArea: "work" as const,
+      ...base,
+    },
+    {
+      id: "3",
+      time: "11:00",
+      title: "Deep work",
+      sub: "90 min block",
+      lifeArea: "work" as const,
+      ...base,
+    },
   ];
 
   it("parses duration from sub", () => {
@@ -251,12 +294,12 @@ describe("agenda timeline", () => {
   });
 
   it("formats dead time label for active vs inactive gaps", () => {
-    expect(formatDeadTimeLabel(8 * 60 + 30, 9 * 60 + 30, false, 0, "09:30")).toBe(
-      "08:30 – 09:30"
-    );
-    expect(formatDeadTimeLabel(8 * 60 + 30, 9 * 60 + 30, true, 45, "09:30")).toBe(
-      "45m until 09:30"
-    );
+    expect(
+      formatDeadTimeLabel(8 * 60 + 30, 9 * 60 + 30, false, 0, "09:30"),
+    ).toBe("08:30 to 09:30");
+    expect(
+      formatDeadTimeLabel(8 * 60 + 30, 9 * 60 + 30, true, 45, "09:30"),
+    ).toBe("45m until 09:30");
   });
 });
 
@@ -304,9 +347,24 @@ describe("metrics", () => {
           timerStartedAt: null,
         },
       ],
-      [{ id: "h1", userId: "u", name: "x", color: "", frequency: { type: "daily", target: 1 }, order: 0, archived: false, goalIds: [], tagIds: [], lifeArea: "personal", goalTargetStreak: null, createdAt: td }],
+      [
+        {
+          id: "h1",
+          userId: "u",
+          name: "x",
+          color: "",
+          frequency: { type: "daily", target: 1 },
+          order: 0,
+          archived: false,
+          goalIds: [],
+          tagIds: [],
+          lifeArea: "personal",
+          goalTargetStreak: null,
+          createdAt: td,
+        },
+      ],
       [{ id: "e1", userId: "u", habitId: "h1", date: td, done: true }],
-      td
+      td,
     );
     expect(pct).toBe(67);
   });
@@ -322,7 +380,7 @@ describe("habitHeatCells", () => {
       visibility,
       new Set(["2026-04-15", "2026-06-10"]),
       "mon",
-      today
+      today,
     );
     expect(cells).toHaveLength(3);
     expect(cells[0]?.done).toBe(true);
@@ -337,7 +395,13 @@ describe("habitHeatCells", () => {
   });
 
   it("daily habits show one cell per day", () => {
-    const cells = habitHeatCells("daily", visibility, new Set([today]), "mon", today);
+    const cells = habitHeatCells(
+      "daily",
+      visibility,
+      new Set([today]),
+      "mon",
+      today,
+    );
     expect(cells).toHaveLength(30);
     expect(cells.at(-1)?.done).toBe(true);
   });
@@ -345,7 +409,8 @@ describe("habitHeatCells", () => {
 
 describe("quarter", () => {
   it("maps months to calendar quarters", () => {
-    const q = (m: number) => quarterOf(new Date(Date.UTC(2026, m - 1, 15)), "UTC");
+    const q = (m: number) =>
+      quarterOf(new Date(Date.UTC(2026, m - 1, 15)), "UTC");
     expect([q(1), q(2), q(3)]).toEqual([1, 1, 1]);
     expect([q(4), q(5), q(6)]).toEqual([2, 2, 2]);
     expect([q(7), q(8), q(9)]).toEqual([3, 3, 3]);
@@ -481,7 +546,16 @@ describe("omnibar reserved words", () => {
   });
 
   it("refuses reserved words as tag names", () => {
-    for (const name of ["high", "mid", "low", "task", "note", "plan", "ask", "today"]) {
+    for (const name of [
+      "high",
+      "mid",
+      "low",
+      "task",
+      "note",
+      "plan",
+      "ask",
+      "today",
+    ]) {
       expect(isReservedTagName(name), `${name} should be reserved`).toBe(true);
     }
     expect(isReservedTagName("work")).toBe(false);

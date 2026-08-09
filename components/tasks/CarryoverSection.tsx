@@ -87,10 +87,12 @@ export function CarryoverSection({
       className={cn(
         "rounded-[13px] border border-dashed border-tasks/35 bg-tasks/[0.07] p-[9px_11px]",
         variant === "page" && "p-3",
-        className
+        className,
       )}
       style={
-        variant === "page" && !flat ? { boxShadow: "2px 2px 0 var(--shadow)" } : undefined
+        variant === "page" && !flat
+          ? { boxShadow: "2px 2px 0 var(--shadow)" }
+          : undefined
       }
     >
       {collapsible ? (
@@ -100,14 +102,14 @@ export function CarryoverSection({
             onClick={() => setOpen((v) => !v)}
             className={cn(
               "flex min-w-0 flex-1 items-center gap-1 text-left transition-colors hover:text-tasks",
-              headerClass
+              headerClass,
             )}
             aria-expanded={open}
           >
             <ChevronDown
               className={cn(
                 "h-3.5 w-3.5 shrink-0 text-tasks/70 transition-transform duration-200",
-                !open && "-rotate-90"
+                !open && "-rotate-90",
               )}
             />
             <span className="min-w-0 truncate">{headerLabel}</span>
@@ -124,7 +126,10 @@ export function CarryoverSection({
       ) : href ? (
         <Link
           href={href}
-          className={cn(headerClass, "mb-1.5 block transition-colors hover:text-tasks")}
+          className={cn(
+            headerClass,
+            "mb-1.5 block transition-colors hover:text-tasks",
+          )}
         >
           {headerLabel}
         </Link>
@@ -133,7 +138,9 @@ export function CarryoverSection({
       )}
 
       {variant === "agenda" ? (
-        open ? agendaList : null
+        open ? (
+          agendaList
+        ) : null
       ) : (
         <div className="mt-2 overflow-hidden rounded-lg border border-tasks/20 bg-surface">
           <TaskList
