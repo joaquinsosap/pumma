@@ -105,22 +105,35 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
     [],
   );
 
-  const beat = BEATS[index];
-  // ⌘, shift and Tab are the point of two of these beats, and none of them
-  // exist on a touch screen: there, the bulk beat plays itself and the Tab
-  // beat becomes the type pills it maps to.
+  // The beats this device can actually do.
+  //
+  // Tab is a key, and a phone has no keys. The beat already had a touch
+  // stand-in, but the copy around it still said "press Tab until the bar says
+  // goal", and a tour that asks for something the hardware cannot do is worse
+  // than a tour that skips it. On touch it is dropped outright, and every
+  // count, checklist and index below reads from this list rather than from
+  // the full script, so they all agree about how long the tour is.
+  const beats = useMemo(
+    () => (canModifierClick ? BEATS : BEATS.filter((b) => b.id !== "tab")),
+    [canModifierClick],
+  );
+
+  const beat = beats[index] ?? beats[beats.length - 1];
+  // ⌘ and shift are the point of the bulk beat and neither exists on a touch
+  // screen, so there it plays itself instead of being asked for. (The Tab
+  // beat is not in `beats` at all on touch — see above.)
   const isMission =
     beat.kind === "do" &&
     (["bulk", "tab"].includes(beat.id) ? canModifierClick : true);
 
   const advance = useCallback(() => {
     setIndex((i) => {
-      if (i + 1 >= BEATS.length) return i;
+      if (i + 1 >= beats.length) return i;
       return i + 1;
     });
     setCleared(false);
     setP(0);
-  }, []);
+  }, [beats.length]);
 
   // Leaving is a sweep of light across the screen, not a disappearance: the
   // overlay is the size of the window, and something that size vanishing
@@ -140,10 +153,10 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
   const onDone = useCallback(() => {
     setCleared(true);
     window.setTimeout(() => {
-      if (index + 1 >= BEATS.length) finish();
+      if (index + 1 >= beats.length) finish();
       else advance();
     }, CLEARED_HOLD_MS);
-  }, [index, advance, finish]);
+  }, [index, advance, finish, beats.length]);
 
   // The clock, for watch beats only.
   //
@@ -163,7 +176,7 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
       stop();
       window.clearTimeout(stall);
       setP(1);
-      if (index + 1 >= BEATS.length) finish();
+      if (index + 1 >= beats.length) finish();
       else advance();
     };
     // A timer rather than a check inside the clock: the clock is exactly what
@@ -178,7 +191,16 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
       stop();
       window.clearTimeout(stall);
     };
-  }, [playing, finished, isMission, beat.ms, index, advance, finish]);
+  }, [
+    playing,
+    finished,
+    isMission,
+    beat.ms,
+    index,
+    advance,
+    finish,
+    beats.length,
+  ]);
 
   // Has this beat been open a while, with the keyboard getting nowhere?
   // Counted per beat and reset by progress, so a slow reader is never accused
@@ -304,8 +326,8 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
     (["bulk", "tab"].includes(b.id) ? canModifierClick : true);
   const sameKind = (b: (typeof BEATS)[number]) =>
     playsAsMission(b) === isMission;
-  const kindTotal = BEATS.filter(sameKind).length;
-  const kindIndex = BEATS.slice(0, index + 1).filter(sameKind).length;
+  const kindTotal = beats.filter(sameKind).length;
+  const kindIndex = beats.slice(0, index + 1).filter(sameKind).length;
 
   return (
     <div
@@ -353,13 +375,13 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
       {/* Desktop: down the left, out of the way. Phone: a strip along the
           bottom, where there's width to spare and no height. */}
       <TutorialChecklist
-        beats={BEATS}
+        beats={beats}
         index={index}
         className="pointer-events-none absolute left-5 top-1/2 hidden -translate-y-1/2 lg:flex"
       />
       <div className="shrink-0 px-4 pb-4 lg:hidden">
         <TutorialChecklist
-          beats={BEATS}
+          beats={beats}
           index={index}
           className="pointer-events-none mx-auto max-w-[560px] flex-row justify-between overflow-x-auto"
         />

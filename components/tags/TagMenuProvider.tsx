@@ -292,7 +292,16 @@ export function TagMenuProvider({
             72,
         );
         const x = Math.min(menu.x, window.innerWidth - w - 8);
-        const y = Math.min(menu.y, window.innerHeight - h - 8);
+        // Prefer opening at the point you pressed. When the menu will not fit
+        // below it, put it ABOVE the point rather than sliding it down the
+        // screen: pressing something near the bottom used to throw the menu
+        // to a fixed spot far from the row it belongs to, which reads as the
+        // menu having nothing to do with what you pressed.
+        const below = menu.y;
+        const y =
+          below + h + 8 <= window.innerHeight
+            ? below
+            : Math.max(8, menu.y - h - 8);
         return { left: Math.max(8, x), top: Math.max(8, y) };
       })()
     : null;
@@ -503,24 +512,82 @@ export function Taggable({
   selection?: MenuSelection;
 }) {
   const { open } = useTagMenu();
+  // A long press, spelled out, because `contextmenu` is not a gesture on a
+  // phone. Android fires it; iOS mostly does not, and what happens there
+  // instead is the text under your finger gets selected and the system
+  // offers to copy it. That is the blue smear across half a task list, with
+  // our own menu nowhere in sight.
+  const press = useRef<{ timer: number; x: number; y: number } | null>(null);
+  const longPressed = useRef(false);
+
+  const cancelPress = () => {
+    if (press.current) window.clearTimeout(press.current.timer);
+    press.current = null;
+  };
+
+  const openAt = (x: number, y: number) =>
+    open({ entity, id, tagIds, lifeArea, x, y, selection });
+
   return (
     <div
-      className={cn(className)}
+      className={cn(
+        // No selecting, and no iOS callout. These rows are things you tap,
+        // drag and press-and-hold; none of that wants a text cursor, and the
+        // selection was competing with the gesture rather than accompanying
+        // it. Inputs inside re-enable it for themselves below.
+        "select-none [-webkit-touch-callout:none] [&_input]:select-text [&_textarea]:select-text",
+        className,
+      )}
       data-task-id={entity === "task" ? id : undefined}
-      onClick={onClick}
+      onClick={(e) => {
+        // The tap that ends a long press is not a tap on the row.
+        if (longPressed.current) {
+          longPressed.current = false;
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        onClick?.(e);
+      }}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        open({
-          entity,
-          id,
-          tagIds,
-          lifeArea,
-          x: e.clientX,
-          y: e.clientY,
-          selection,
-        });
+        cancelPress();
+        // A real right-click carries a point. A long press synthesised into
+        // `contextmenu` sometimes carries 0,0, which would pin the menu to a
+        // corner — fall back to where the finger actually was.
+        const x = e.clientX || press.current?.x || 0;
+        const y = e.clientY || press.current?.y || 0;
+        openAt(x, y);
       }}
+      onTouchStart={(e) => {
+        const t = e.touches[0];
+        if (!t) return;
+        const x = t.clientX;
+        const y = t.clientY;
+        press.current = {
+          x,
+          y,
+          timer: window.setTimeout(() => {
+            longPressed.current = true;
+            press.current = null;
+            openAt(x, y);
+          }, 450),
+        };
+      }}
+      onTouchMove={(e) => {
+        const t = e.touches[0];
+        if (!t || !press.current) return;
+        // A press that travels is a scroll, not a hold.
+        if (
+          Math.abs(t.clientX - press.current.x) > 10 ||
+          Math.abs(t.clientY - press.current.y) > 10
+        ) {
+          cancelPress();
+        }
+      }}
+      onTouchEnd={cancelPress}
+      onTouchCancel={cancelPress}
     >
       {children}
     </div>
