@@ -172,12 +172,19 @@ body {
   box-shadow: 4px 4px 0 var(--shadow);
 }
 
+/* The halo, sized for THIS bar rather than the landing's miniature.
+   The demo box it was written for is a couple of hundred pixels wide, so a
+   ten-pixel bleed at 14% reads as a thick coloured aura around it. The app's
+   bar is a thousand pixels wide, and the same numbers become a hairline of
+   near-nothing: the wash was there and breathing the whole time, between six
+   and fourteen percent of an accent, which at this scale is a difference you
+   cannot see. Wider and denser, so the pulse is a pulse. */
 .omni-box::before {
   content: "";
   position: absolute;
-  inset: -10px;
-  border-radius: 22px;
-  background: color-mix(in oklch, var(--omni-accent) 14%, transparent);
+  inset: -14px;
+  border-radius: 26px;
+  background: color-mix(in oklch, var(--omni-accent) 26%, transparent);
   opacity: 0;
   z-index: -1;
   pointer-events: none;
@@ -193,7 +200,7 @@ body {
 
 .omni-box:focus-within::before {
   opacity: 1;
-  animation: omniHalo 2.6s ease-in-out infinite;
+  animation: omniHalo 2.2s ease-in-out infinite;
 }
 
 @keyframes omniScrollHintRight {
@@ -249,7 +256,7 @@ body {
 @keyframes omniHalo {
   0%,
   100% {
-    opacity: 0.42;
+    opacity: 0.3;
   }
   50% {
     opacity: 1;
@@ -564,7 +571,7 @@ html {
    Everything that actually travels stays switched off. */
 @media (prefers-reduced-motion: reduce) {
   .omni-box:focus-within::before {
-    animation: omniHalo 5s ease-in-out infinite !important;
+    animation: omniHalo 3.6s ease-in-out infinite !important;
   }
 }
 
