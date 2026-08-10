@@ -172,6 +172,106 @@ body {
   box-shadow: 4px 4px 0 var(--shadow);
 }
 
+.omni-box-motion {
+  position: absolute;
+  inset: -4px;
+  border-radius: 18px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.omni-box:focus-within .omni-box-motion {
+  opacity: 1;
+}
+
+.omni-box-trace {
+  position: absolute;
+  inset: 0;
+  border-radius: 18px;
+  padding: 4px;
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  overflow: hidden;
+  z-index: 3;
+  filter: drop-shadow(
+    0 0 6px color-mix(in oklch, var(--omni-accent) 55%, transparent)
+  );
+}
+
+.omni-box-trace::before {
+  content: "";
+  position: absolute;
+  inset: -75%;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 322deg,
+    var(--omni-accent) 338deg,
+    color-mix(in oklch, var(--omni-accent) 85%, white) 360deg
+  );
+  animation: omniTraceSpin 1.75s linear infinite;
+}
+
+.omni-box-shimmer {
+  position: absolute;
+  inset: 2px;
+  border-radius: 14px;
+  overflow: hidden;
+  z-index: 1;
+}
+
+.omni-box-shimmer::before {
+  content: "";
+  position: absolute;
+  top: -20%;
+  left: -55%;
+  width: 42%;
+  height: 140%;
+  background: linear-gradient(
+    105deg,
+    transparent 28%,
+    color-mix(in oklch, var(--omni-accent) 22%, transparent) 50%,
+    transparent 72%
+  );
+  animation: omniShimmer 2.6s ease-in-out infinite;
+  mix-blend-mode: soft-light;
+}
+
+.omni-box-scanline {
+  position: relative;
+  height: 2px;
+  margin-top: 6px;
+  border-radius: 2px;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity 220ms ease;
+}
+
+.omni-box:focus-within .omni-box-scanline {
+  opacity: 1;
+}
+
+.omni-box-scanline::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -28%;
+  width: 28%;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--omni-accent);
+  box-shadow: 0 0 10px color-mix(in oklch, var(--omni-accent) 55%, transparent);
+  animation: omniScan 1.9s ease-in-out infinite;
+}
+
 /* The halo, sized for THIS bar rather than the landing's miniature.
    The demo box it was written for is a couple of hundred pixels wide, so a
    ten-pixel bleed at 14% reads as a thick coloured aura around it. The app's
@@ -253,6 +353,30 @@ body {
    Opacity is the one property here the compositor can animate on its own. It
    cannot be clipped, it cannot stall behind layout, and on a wash this soft
    it is the part of the effect that was doing the work anyway. */
+@keyframes omniTraceSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes omniShimmer {
+  0% {
+    left: -55%;
+  }
+  100% {
+    left: 115%;
+  }
+}
+
+@keyframes omniScan {
+  0% {
+    left: -28%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
 @keyframes omniHalo {
   0%,
   100% {
@@ -563,13 +687,22 @@ html {
    focused capture bar, and with that stopped the bar reads as a screenshot of
    itself rather than as a field that is listening.
 
-   It earns the exception on amplitude. The halo sits behind the box, not in
-   it, and all that changes is how bright it is. Nothing moves, nothing
-   resizes, no text shifts, and at half speed here it reads as ambient rather
-   than active.
+   They earn it on amplitude. Nothing here changes position, resizes, or
+   moves a single character of text: it is a hue travelling a border, an
+   opacity crossing a box, and a wash brightening behind one. All three are
+   slowed to roughly half speed, so they read as ambient rather than active.
 
-   Everything that actually travels stays switched off. */
+   Everything that actually moves the page stays switched off. */
 @media (prefers-reduced-motion: reduce) {
+  .omni-box-trace::before {
+    animation: omniTraceSpin 4.2s linear infinite !important;
+  }
+  .omni-box-shimmer::before {
+    animation: omniShimmer 5.2s ease-in-out infinite !important;
+  }
+  .omni-box:focus-within .omni-box-scanline::before {
+    animation: omniScan 3.8s ease-in-out infinite !important;
+  }
   .omni-box:focus-within::before {
     animation: omniHalo 3.6s ease-in-out infinite !important;
   }
@@ -1386,6 +1519,35 @@ select:hover:not(:disabled) {
   box-shadow:
     inset 0 1px 0 var(--lip),
     0 2px 4px var(--shadow) !important;
+}
+
+/* ── The capture bar's trace ─────────────────────────────────────────────
+   The marching light around a focused capture bar is the same code here as
+   on the landing, but it does not read the same. The landing draws it on a
+   short miniature, where one bright arc is a large fraction of the
+   perimeter; the app's bar is three times as wide, so that single arc spends
+   most of its lap somewhere you are not looking.
+
+   Two arcs, opposite each other, so there is always one in motion on the
+   half of the bar you happen to be watching — and a wider sweep, because
+   arc length is what makes movement legible at this size. */
+.omni-box-trace::before {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 128deg,
+    color-mix(in oklch, var(--omni-accent) 60%, transparent) 152deg,
+    var(--omni-accent) 172deg,
+    color-mix(in oklch, var(--omni-accent) 88%, white) 180deg,
+    var(--omni-accent) 188deg,
+    color-mix(in oklch, var(--omni-accent) 60%, transparent) 208deg,
+    transparent 232deg,
+    transparent 308deg,
+    color-mix(in oklch, var(--omni-accent) 60%, transparent) 332deg,
+    var(--omni-accent) 352deg,
+    color-mix(in oklch, var(--omni-accent) 88%, white) 360deg
+  );
+  animation: omniTraceSpin 2.4s linear infinite;
 }
 
 /* ── The capture bar on focus ────────────────────────────────────────────

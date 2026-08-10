@@ -559,6 +559,15 @@ export function OmniBox({
         } as React.CSSProperties
       }
     >
+      {/* The light that travels the bar. Two layers: one running the rim,
+          one sweeping the inside. This is what "the animation" means on the
+          landing, and taking it out left a bar that only brightened and
+          dimmed in place, which is not the same thing at all. */}
+      <div className="omni-box-motion" aria-hidden>
+        <div className="omni-box-trace" />
+        <div className="omni-box-shimmer" />
+      </div>
+
       <div className="relative z-[1]">
         <div className="flex items-center gap-[11px] max-lg:flex-wrap">
           <ModeSwitch mode={mode} onChange={setMode} />
@@ -651,6 +660,8 @@ export function OmniBox({
             {mode === "assistant" ? "send" : "add"}
           </span>
         </div>
+        {/* A bar of light running under the input while it has focus. */}
+        <div className="omni-box-scanline" aria-hidden />
         {aiMode ? (
           <div className={cn(OMNI_FOOT, "items-center")}>
             <span className="shrink-0 font-mono text-[10px] text-faint2">
