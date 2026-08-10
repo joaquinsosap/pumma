@@ -374,7 +374,13 @@ function tail(text: string): string {
 function dayCanEnd(typed: string): boolean {
   if (!typed) return false;
   if (resolveDateToken(typed, new Date())) return true;
-  return candidatesFor(typed, DATE_COMPLETIONS).length === 1;
+  return dayCandidates(typed, DATE_COMPLETIONS).length === 1;
+}
+
+/** Day words this could still turn into, matched from the front only. */
+function dayCandidates(typed: string, pool: string[] = DATE_WORDS): string[] {
+  const lower = typed.toLowerCase();
+  return pool.filter((w) => w.toLowerCase().startsWith(lower));
 }
 
 /** How much of a task counts as enough before the tour asks for the next thing. */
@@ -621,10 +627,29 @@ export function SceneType({
     if (done) return;
     const current = textRef.current;
     if (next.length < current.length) {
-      // Backspace, only within the step you're on: rubbing out a finished
-      // step would leave the lesson and the text disagreeing.
+      // Backspace, but only back to the start of the word you are on.
+      //
+      // It used to be allowed on the title step and nowhere else, which meant
+      // one wrong letter after a "#" left you holding a word the step would
+      // not accept and no way to take it back. Stuck, with the tour still
+      // asking for something.
+      //
+      // The "#" itself is the floor. It belongs to a step you already
+      // cleared, and rubbing it out would leave the lesson and the text
+      // disagreeing about where you are.
       const st = stepRef.current;
-      if (st === "title") commit(next);
+      if (st === "title") {
+        commit(next);
+        return;
+      }
+      if (st === "dayWord" || st === "tagWord") {
+        const floor = current.length - tail(current).length;
+        if (next.length >= floor) {
+          commit(next);
+          setGuess("");
+          rotateRef.current = null;
+        }
+      }
       return;
     }
     if (next.length === current.length) return;
@@ -684,11 +709,15 @@ export function SceneType({
           }
           return reject();
         }
-        // Any letter that still leads somewhere. "f", "fr", "mo", "tomo" —
-        // whatever day you were going to write. The tour showed a list of
-        // days and then accepted exactly one of them, which was a lie.
+        // Any letter that still leads somewhere, judged from the FRONT of the
+        // word. `candidatesFor` falls back to substring matching when nothing
+        // starts with what you typed, which is right for finding a tag and
+        // wrong here: it accepted "a" because "s-a-turday" contains one, and
+        // then offered to complete it to "monday", drawing the ghost as
+        // "#a|onday". Something that cannot become a day is not a day being
+        // written, so it is refused at the keystroke instead.
         const next = typed + ch.toLowerCase();
-        if (!candidatesFor(next, DATE_WORDS).length) return reject();
+        if (!dayCandidates(next).length) return reject();
         commit(current + ch.toLowerCase());
         setGuess("");
         rotateRef.current = null;
