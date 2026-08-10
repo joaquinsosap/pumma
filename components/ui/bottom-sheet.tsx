@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 /**
@@ -119,7 +120,22 @@ export function BottomSheet({
 
   if (!open) return null;
 
-  return (
+  // Portalled to <body>, not rendered where it is used.
+  //
+  // A full-viewport overlay has no business living inside the page's content
+  // tree. It was mounted next to the list it belongs to, several levels deep
+  // inside the app shell, and `position: fixed` only escapes an ancestor's
+  // clip while no ancestor establishes a containing block for it. That is a
+  // property of every element above it, in every engine, and it is not
+  // something a sheet can check.
+  //
+  // The shell's frame is `overflow: clip`, and WebKit applies that clip to
+  // fixed descendants where Blink does not — so the sheet covered the screen
+  // on a desktop browser pretending to be a phone, and was cut to the size of
+  // the panel behind it on an actual one. Portalling settles it everywhere at
+  // once and stops the sheet depending on layout decisions made three
+  // components away.
+  return createPortal(
     <div className="fixed inset-0 z-[60]">
       <button
         type="button"
@@ -168,6 +184,7 @@ export function BottomSheet({
           {children}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
