@@ -194,16 +194,8 @@ body {
 .omni-box::before {
   content: "";
   position: absolute;
-  /* Wide enough to actually reach the sidebar.
-     The glow is centred on the bar, so how far it spreads is this inset plus
-     two percent of the bar's width at the top of the wave. At fourteen it
-     crossed the sidebar's edge by ten pixels, which is nothing to look at:
-     it read as a glow stopping exactly where the sidebar starts, and looked
-     clipped when it was only too small to see. At thirty it sits a little
-     over the edge at rest and well over it at full spread, which is what
-     overlapping the two of them looks like. */
-  inset: -30px;
-  border-radius: 40px;
+  inset: -14px;
+  border-radius: 26px;
   background: color-mix(in oklch, var(--omni-accent) 26%, transparent);
   opacity: 0;
   z-index: -1;
