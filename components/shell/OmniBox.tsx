@@ -559,17 +559,14 @@ export function OmniBox({
         } as React.CSSProperties
       }
     >
-      {/* The light that travels the bar. Two layers: one running the rim,
-          one sweeping the inside. This is what "the animation" means on the
-          landing, and taking it out left a bar that only brightened and
-          dimmed in place, which is not the same thing at all. */}
-      <div className="omni-box-motion" aria-hidden>
-        <div className="omni-box-trace" />
-        <div className="omni-box-shimmer" />
-      </div>
-
       <div className="relative z-[1]">
-        <div className="flex items-center gap-[11px] max-lg:flex-wrap">
+        {/* Both rows of the bar are pinned, not just the foot.
+              Capture puts a type chip in here and the assistant does not, and
+              the chip is two pixels taller than everything beside it, so the
+              bar still moved on every switch after the foot was fixed. Two
+              pixels is small enough to look like a rendering fault and big
+              enough to see. */}
+        <div className="flex min-h-[33px] items-center gap-[11px] max-lg:flex-wrap">
           <ModeSwitch mode={mode} onChange={setMode} />
           {/* No type pill in assistant mode — the switch beside it already says
             Assistant, and there is only one kind of assistant input now. */}
@@ -660,8 +657,6 @@ export function OmniBox({
             {mode === "assistant" ? "send" : "add"}
           </span>
         </div>
-        {/* A bar of light running under the input while it has focus. */}
-        <div className="omni-box-scanline" aria-hidden />
         {aiMode ? (
           <div className={cn(OMNI_FOOT, "items-center")}>
             <span className="shrink-0 font-mono text-[10px] text-faint2">

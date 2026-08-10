@@ -24,7 +24,7 @@ function ShellFallback() {
   return (
     <div className="flex h-dvh overflow-hidden bg-background text-ink">
       <aside className="hidden w-[236px] shrink-0 border-r border-border bg-surface2 lg:block" />
-      <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-3 pt-3 lg:px-6 lg:pt-5">
+      <main className="flex min-w-0 flex-1 flex-col overflow-clip [overflow-clip-margin:64px] px-3 pt-3 lg:px-6 lg:pt-5">
         <div className="mb-[18px] h-[88px] shrink-0 rounded-xl border border-border bg-surface2" />
         <div className="flex-1 rounded-xl border border-border bg-surface2" />
       </main>
@@ -82,7 +82,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex h-dvh overflow-hidden bg-background text-ink">
             <div className="hidden lg:contents">{sidebar}</div>
             <AssistantProvider>
-              <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-3 pt-3 lg:px-6 lg:pt-5">
+              <main className="flex min-w-0 flex-1 flex-col overflow-clip [overflow-clip-margin:64px] px-3 pt-3 lg:px-6 lg:pt-5">
                 <MobileShell demo={demo} />
                 <TagAutoCleanRunner enabled={s?.tagAutoClean ?? false} />
                 <div className="hidden lg:block">
