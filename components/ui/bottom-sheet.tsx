@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useIsDesktop } from "@/lib/use-media-query";
 import { cn } from "@/lib/utils";
 
 /**
@@ -23,6 +24,13 @@ export function BottomSheet({
   children: ReactNode;
   initialSnap?: "peek" | "full";
 }) {
+  // The breakpoint lives here rather than at the call sites. It used to be a
+  // `lg:hidden` wrapper around each sheet, which worked right up until the
+  // sheet started portalling to <body> and left that wrapper behind: five
+  // call sites at once began opening an empty sheet over the desktop layout.
+  // A wrapper cannot gate something that renders somewhere else, so the phone
+  // sheet decides for itself that it is a phone sheet.
+  const isDesktop = useIsDesktop();
   const [snap, setSnap] = useState<"peek" | "full">(initialSnap);
   // While the handle is being dragged, the sheet height tracks the finger.
   const [dragHeight, setDragHeight] = useState<number | null>(null);
@@ -41,13 +49,13 @@ export function BottomSheet({
   }, [open, initialSnap]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isDesktop) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [open]);
+  }, [open, isDesktop]);
 
   // Snap to full whenever an input inside the sheet gains focus (keyboard).
   const onFocusCapture = () => setSnap("full");
@@ -118,7 +126,7 @@ export function BottomSheet({
     setSnap(h > (peekPx() + fullPx()) / 2 ? "full" : "peek");
   };
 
-  if (!open) return null;
+  if (!open || isDesktop) return null;
 
   // Portalled to <body>, not rendered where it is used.
   //

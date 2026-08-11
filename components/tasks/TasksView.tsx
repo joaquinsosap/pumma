@@ -643,37 +643,30 @@ export function TasksView({
               </div>
             )}
           </div>
-          <div className="lg:hidden">
-            <BottomSheet
-              open={bulkSheet || (!selection.active && !!selectedTask)}
-              onClose={() =>
-                bulkSheet ? setBulkSheet(false) : setTaskId(null)
-              }
-            >
-              {bulkSheet && !isDesktop && (
-                <BulkEditPanel
-                  tasks={selectedTasks}
+          <BottomSheet
+            open={bulkSheet || (!selection.active && !!selectedTask)}
+            onClose={() => (bulkSheet ? setBulkSheet(false) : setTaskId(null))}
+          >
+            {bulkSheet && !isDesktop && (
+              <BulkEditPanel
+                tasks={selectedTasks}
+                tags={tags}
+                projects={projects}
+                onClear={selection.clear}
+              />
+            )}
+            {!bulkSheet && !selection.active && selectedTask && !isDesktop && (
+              <div key={selectedTask.id} className="animate-pumma-swap">
+                <TaskDetailPanel
+                  task={selectedTask}
                   tags={tags}
                   projects={projects}
-                  onClear={selection.clear}
+                  onClose={() => setTaskId(null)}
+                  embedded
                 />
-              )}
-              {!bulkSheet &&
-                !selection.active &&
-                selectedTask &&
-                !isDesktop && (
-                  <div key={selectedTask.id} className="animate-pumma-swap">
-                    <TaskDetailPanel
-                      task={selectedTask}
-                      tags={tags}
-                      projects={projects}
-                      onClose={() => setTaskId(null)}
-                      embedded
-                    />
-                  </div>
-                )}
-            </BottomSheet>
-          </div>
+              </div>
+            )}
+          </BottomSheet>
         </div>
       </div>
       {selection.active && !isDesktop && (

@@ -212,21 +212,19 @@ export function ProjectsView({
                     />
                   )}
                 </div>
-                <div className="lg:hidden">
-                  <BottomSheet
-                    open={bulkSheet}
-                    onClose={() => setBulkSheet(false)}
-                  >
-                    {bulkSheet && !isDesktop && (
-                      <BulkEditPanel
-                        tasks={selectedTasks}
-                        tags={tags}
-                        projects={projects}
-                        onClear={selection.clear}
-                      />
-                    )}
-                  </BottomSheet>
-                </div>
+                <BottomSheet
+                  open={bulkSheet}
+                  onClose={() => setBulkSheet(false)}
+                >
+                  {bulkSheet && !isDesktop && (
+                    <BulkEditPanel
+                      tasks={selectedTasks}
+                      tags={tags}
+                      projects={projects}
+                      onClear={selection.clear}
+                    />
+                  )}
+                </BottomSheet>
               </>
             ) : editingTask ? (
               // Phone: draggable bottom sheet; desktop: in-grid panel.
@@ -250,19 +248,17 @@ export function ProjectsView({
                     />
                   )}
                 </div>
-                <div className="lg:hidden">
-                  <BottomSheet open onClose={() => void setTaskId(null)}>
-                    {!isDesktop && (
-                      <TaskDetailPanel
-                        task={editingTask}
-                        tags={tags}
-                        projects={projects}
-                        onClose={() => void setTaskId(null)}
-                        embedded
-                      />
-                    )}
-                  </BottomSheet>
-                </div>
+                <BottomSheet open onClose={() => void setTaskId(null)}>
+                  {!isDesktop && (
+                    <TaskDetailPanel
+                      task={editingTask}
+                      tags={tags}
+                      projects={projects}
+                      onClose={() => void setTaskId(null)}
+                      embedded
+                    />
+                  )}
+                </BottomSheet>
               </>
             ) : (
               <div className="hidden min-h-0 lg:block">
@@ -283,25 +279,23 @@ export function ProjectsView({
               </div>
             )}
             {detailsOpen && !isDesktop && (
-              <div className="lg:hidden">
-                <BottomSheet open onClose={() => setDetailsOpen(false)}>
-                  <div className="h-full px-3 pb-4">
-                    <ProjectDetailPanel
-                      project={selected}
-                      goals={goals}
-                      tasks={tasks}
-                      tags={tags}
-                      onDeleted={() => {
-                        setDetailsOpen(false);
-                        const remaining = projects.filter(
-                          (p) => p.id !== selected.id,
-                        );
-                        void setProjectId(remaining[0]?.id ?? null);
-                      }}
-                    />
-                  </div>
-                </BottomSheet>
-              </div>
+              <BottomSheet open onClose={() => setDetailsOpen(false)}>
+                <div className="h-full px-3 pb-4">
+                  <ProjectDetailPanel
+                    project={selected}
+                    goals={goals}
+                    tasks={tasks}
+                    tags={tags}
+                    onDeleted={() => {
+                      setDetailsOpen(false);
+                      const remaining = projects.filter(
+                        (p) => p.id !== selected.id,
+                      );
+                      void setProjectId(remaining[0]?.id ?? null);
+                    }}
+                  />
+                </div>
+              </BottomSheet>
             )}
           </div>
         ) : (

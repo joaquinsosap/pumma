@@ -407,23 +407,21 @@ export function GoalsView({
             </div>
           )}
         </div>
-        <div className="lg:hidden">
-          <BottomSheet open={!!selectedGoal} onClose={() => setGoalId(null)}>
-            {selectedGoal && !isDesktop && (
-              <GoalDetailPanel
-                goal={selectedGoal}
-                tags={tags}
-                projects={projects}
-                habits={habits}
-                habitEntries={habitEntries}
-                tasks={tasks}
-                habitVisibility={habitVisibility}
-                weekStart={weekStart}
-                onClose={() => setGoalId(null)}
-              />
-            )}
-          </BottomSheet>
-        </div>
+        <BottomSheet open={!!selectedGoal} onClose={() => setGoalId(null)}>
+          {selectedGoal && !isDesktop && (
+            <GoalDetailPanel
+              goal={selectedGoal}
+              tags={tags}
+              projects={projects}
+              habits={habits}
+              habitEntries={habitEntries}
+              tasks={tasks}
+              habitVisibility={habitVisibility}
+              weekStart={weekStart}
+              onClose={() => setGoalId(null)}
+            />
+          )}
+        </BottomSheet>
       </div>
     </>
   );
