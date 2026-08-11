@@ -18,6 +18,7 @@ import { parseOmni, tagBg } from "@/lib/parse";
 import { getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
+import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import { deriveLifeAreaFromTags, withLifeTags } from "@/lib/life-area-sync";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
 import { isTutorialActive } from "@/lib/tutorial-lock";
@@ -107,6 +108,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("capture");
   const [type, setType] = useState<OmniType>(defaultType);
+  // How much of the screen the keyboard has taken, so the type bar can ride
+  // on top of it. Zero when there is no on-screen keyboard.
+  const keyboardInset = useKeyboardInset();
   const [text, setText] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [pickedDue, setPickedDue] = useState<string | null>(null);
@@ -370,8 +374,72 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
             </div>
           </div>
 
+          {/* The type row, riding on top of the keyboard.
+              Changing what you are writing is a decision you make WHILE
+              writing, and every control for it lived below the fold: the
+              keyboard covers the bottom half of the sheet, so switching from
+              task to habit meant dismissing the keyboard, scrolling, tapping,
+              and starting again.
+              There is no way to add a button to the keyboard's own accessory
+              bar from a web page — on iOS that strip belongs to Safari. So
+              this is our own bar, held exactly on top of the keyboard by
+              `visualViewport`, which is what every app that appears to have
+              one is really doing.
+              `onPointerDown` is prevented rather than handled on click: any
+              press outside the field would otherwise blur it, the keyboard
+              would start closing, and the bar would chase it down the screen
+              while the tap was still resolving. */}
+          {mode === "capture" && keyboardInset > 0 && (
+            <div
+              className="fixed inset-x-0 z-[71] flex items-center gap-1.5 overflow-x-auto border-t border-border bg-surface px-3 py-2 [scrollbar-width:none]"
+              style={{ bottom: keyboardInset }}
+              onPointerDown={(e) => e.preventDefault()}
+            >
+              <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">
+                Save as
+              </span>
+              {TYPES.map((t) => {
+                const active = type === t.type;
+                return (
+                  <button
+                    key={t.type}
+                    type="button"
+                    onClick={() => setType(t.type)}
+                    className={cn(
+                      "shrink-0 rounded-full border px-3 py-1.5 text-[13px] transition-colors",
+                      active
+                        ? "border-2 font-bold"
+                        : "border-border bg-background font-medium text-muted",
+                    )}
+                    style={
+                      active
+                        ? {
+                            borderColor: t.color,
+                            background: t.color.includes("oklch")
+                              ? t.color.replace(")", " / 0.14)")
+                              : "var(--hover)",
+                          }
+                        : undefined
+                    }
+                  >
+                    {t.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
           {/* Scrollable options — the whole vertical space works for you */}
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-4">
+          {/* Room for the keyboard AND the bar sitting on it, or the last
+              option is unreachable behind them. */}
+          <div
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-4 pt-4"
+            style={
+              keyboardInset > 0
+                ? { paddingBottom: keyboardInset + 56 }
+                : undefined
+            }
+          >
             {mode === "capture" ? (
               <>
                 <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
