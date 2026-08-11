@@ -14,7 +14,7 @@ import {
   useSensor,
   useSensors,
   type DragEndEvent,
-  type DragOverEvent,
+  type DragMoveEvent,
   type DragStartEvent,
   type UniqueIdentifier,
   pointerWithin,
@@ -25,18 +25,18 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
-  arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Task, Tag } from "@/lib/schemas";
 import { tagBg } from "@/lib/parse";
-import { moveTaskStatus } from "@/lib/actions/tasks";
+import { moveTaskOnBoard } from "@/lib/actions/tasks";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { useTagMenu } from "@/components/tags/TagMenuProvider";
 import {
   suppressRangeTextSelection,
   type SelectionController,
 } from "@/lib/use-task-selection";
+import { dropIndex } from "@/lib/kanban-drop";
 import { cn } from "@/lib/utils";
 
 export type ColumnId = "todo" | "doing" | "done";
@@ -59,37 +59,84 @@ export function boardOrder(tasks: Task[]): string[] {
   return [...by.todo, ...by.doing, ...by.done].map((t) => t.id);
 }
 
+/**
+ * A column, in the order the board should show it.
+ *
+ * By `order`, which is what dropping a card writes. Tasks that have never been
+ * arranged by hand carry their creation stamp there instead, and those stamps
+ * are negative and descending, so an untouched column still comes out newest
+ * first — the same as it has always looked. The sort is stable, so anything it
+ * cannot separate keeps the order the query returned it in.
+ */
+function column(tasks: Task[], status: Task["status"]): Task[] {
+  return tasks
+    .filter((t) => t.status === status)
+    .map((task, index) => ({ task, index }))
+    .sort((a, b) => a.task.order - b.task.order || a.index - b.index)
+    .map((entry) => entry.task);
+}
+
 function groupByStatus(tasks: Task[]): ItemsByColumn {
   return {
-    todo: tasks.filter((t) => t.status === "todo"),
-    doing: tasks.filter((t) => t.status === "doing"),
-    done: tasks.filter((t) => t.status === "done"),
+    todo: column(tasks, "todo"),
+    doing: column(tasks, "doing"),
+    done: column(tasks, "done"),
   };
 }
 
 /**
- * Columns keep closestCorners, which is what makes a card slot in sensibly
- * among its neighbours. The rail can't use it: closestCorners measures the
- * dragged card's corners, not the pointer, so a wide card sitting between two
- * project chips scores whichever chip its edge happens to reach — which reads
- * as the target being off to one side, and needing to overshoot to correct.
+ * What the drag is currently over: whatever the pointer is inside, and only
+ * proximity once it is inside nothing.
  *
- * A project chip therefore only wins while the pointer is literally inside it.
+ * The board used to score by closestCorners, which measures the dragged card's
+ * corners rather than the pointer. A card is nearly as wide as a column, so in
+ * flight it straddles two of them and the column it is merely passing over can
+ * win on corner distance. Because the board moves cards between columns during
+ * the drag, that column then took the card, put the card under the pointer,
+ * and from there kept scoring closest to itself: dragging from Done to the top
+ * of To do left the card sitting in Doing, the column in between.
+ *
+ * Letting the pointer decide is what stops it. Passing over a column is no
+ * longer the same as aiming at it, and once the pointer moves on, the column
+ * it left stops winning — the dragged card can only hold the drag while the
+ * pointer is genuinely still on top of it, which is exactly when it should.
+ *
+ * Within a column a card beats the column that contains it — otherwise every
+ * drop would be "somewhere in this column" and the position would be guesswork.
+ *
+ * It also records where the pointer is, because this is the only place dnd-kit
+ * reports it. `onDragOver` gets rects and no cursor, and the dragged card's own
+ * rect is not a substitute: re-sorting the list moves the card's layout slot,
+ * so its rect lags behind the hand by however far the list has shuffled.
  */
-const boardCollisionDetection: CollisionDetection = (args) => {
-  const railHit = pointerWithin(args).find(
-    (collision) =>
-      args.droppableContainers.find((d) => d.id === collision.id)?.data.current
-        ?.type === "project-card",
-  );
-  if (railHit) return [railHit];
-  // Never let a chip win on proximity alone once the pointer has left it.
-  return closestCorners(args).filter(
-    (collision) =>
-      args.droppableContainers.find((d) => d.id === collision.id)?.data.current
-        ?.type !== "project-card",
-  );
-};
+function makeBoardCollisionDetection(
+  pointer: React.RefObject<{ x: number; y: number } | null>,
+): CollisionDetection {
+  return (args) => {
+    if (args.pointerCoordinates) pointer.current = args.pointerCoordinates;
+
+    const typeOf = (id: UniqueIdentifier) =>
+      args.droppableContainers.find((d) => d.id === id)?.data.current?.type;
+
+    const underPointer = pointerWithin(args);
+
+    const rail = underPointer.find((c) => typeOf(c.id) === "project-card");
+    if (rail) return [rail];
+    const card = underPointer.find((c) => typeOf(c.id) === "task");
+    if (card) return [card];
+    const col = underPointer.find((c) => typeOf(c.id) === "column");
+    if (col) return [col];
+
+    // Pointer outside every drop area — past the edge of the board, or on a
+    // column's header. Nearest wins, but never a chip on proximity alone.
+    return closestCorners({
+      ...args,
+      droppableContainers: args.droppableContainers.filter(
+        (d) => d.data.current?.type !== "project-card",
+      ),
+    });
+  };
+}
 
 function findContainer(
   id: UniqueIdentifier,
@@ -129,11 +176,30 @@ export function KanbanBoard({
 }: Props) {
   const [, startTransition] = useTransition();
   const [items, setItems] = useState<ItemsByColumn>(() => groupByStatus(tasks));
+  // The same arrangement, readable synchronously. A drag fires many moves per
+  // render, and each one has to build on the one before it rather than on
+  // whatever React last painted.
+  const itemsRef = useRef(items);
+  const setBoard = (next: ItemsByColumn) => {
+    itemsRef.current = next;
+    setItems(next);
+  };
   const [activeId, setActiveId] = useState<UniqueIdentifier | null>(null);
   const [dragReady, setDragReady] = useState(false);
   // After a drag, the browser still fires a click on the dropped card — swallow
   // it so finishing a drag never pops the editor open.
   const suppressClickRef = useRef(false);
+  // The column the drag last placed the card in. See handleDragEnd.
+  const landedRef = useRef<ColumnId | null>(null);
+  // Where the cursor is, filled in by the collision detector.
+  const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  // Whether this drag actually rearranged anything, so a click-sized wobble
+  // that ends where it started doesn't write a renumbering nobody asked for.
+  const reorderedRef = useRef(false);
+  const collisionDetection = useMemo(
+    () => makeBoardCollisionDetection(pointerRef),
+    [],
+  );
   const { setDragActive } = useTagMenu();
   const tagMap = useMemo(() => new Map(tags.map((t) => [t.id, t])), [tags]);
 
@@ -152,7 +218,7 @@ export function KanbanBoard({
   }, []);
 
   useEffect(() => {
-    setItems(groupByStatus(tasks));
+    setBoard(groupByStatus(tasks));
   }, [tasks]);
 
   // Mouse drags start after a tiny move; touch needs a long-press first so
@@ -180,6 +246,8 @@ export function KanbanBoard({
     suppressClickRef.current = true;
     setDragActive(true);
     setActiveId(event.active.id);
+    landedRef.current = findContainer(event.active.id, items) ?? null;
+    reorderedRef.current = false;
   };
 
   const releaseClickSuppression = () => {
@@ -188,46 +256,66 @@ export function KanbanBoard({
     }, 150);
   };
 
-  const handleDragOver = (event: DragOverEvent) => {
+  /**
+   * The card is placed on every pointer move, and the placement is the result.
+   *
+   * This hung off `onDragOver` and was the bug. dnd-kit fires that only when
+   * the thing you are over CHANGES, so the position was decided the instant
+   * the card entered a neighbour's band, from whichever half it entered
+   * through, and sliding further up inside that same band never re-ran it: a
+   * card dragged to the very top of a column stopped one slot short, every
+   * time, and no amount of aiming fixed it. Across columns the same freeze put
+   * the card wherever it happened to cross the border.
+   *
+   * `onDragMove` fires on the move itself, so the arrangement on screen when
+   * you let go IS the answer, and the drop has nothing left to work out.
+   */
+  const handleDragMove = (event: DragMoveEvent) => {
     const { active, over } = event;
-    if (!over) return;
+    // Over its own slot: it is already exactly where the pointer is asking for.
+    if (!over || over.id === active.id) return;
 
-    const activeContainer = findContainer(active.id, items);
-    const overContainer = findContainer(over.id, items);
-    if (
-      !activeContainer ||
-      !overContainer ||
-      activeContainer === overContainer
-    ) {
-      return;
-    }
+    // Worked out from the ref, not from the `items` this handler closed over.
+    // Several moves can arrive before React re-renders, and a handler reading
+    // a render-old copy thinks the card is still in the column it left, finds
+    // nothing to move, and drops the update — leaving the card wherever the
+    // last surviving move happened to put it.
+    const prev = itemsRef.current;
+    const activeContainer = findContainer(active.id, prev);
+    const overContainer = findContainer(over.id, prev);
+    if (!activeContainer || !overContainer) return;
+    landedRef.current = overContainer;
 
-    setItems((prev) => {
-      const activeItems = [...prev[activeContainer]];
-      const overItems = [...prev[overContainer]];
-      const activeIndex = activeItems.findIndex((t) => t.id === active.id);
-      if (activeIndex < 0) return prev;
+    const from = [...prev[activeContainer]];
+    const activeIndex = from.findIndex((t) => t.id === active.id);
+    if (activeIndex < 0) return;
 
-      const [moved] = activeItems.splice(activeIndex, 1);
-      const updated = { ...moved, status: overContainer };
+    const sameColumn = activeContainer === overContainer;
+    const [moved] = from.splice(activeIndex, 1);
+    // Within one column, `from` (already minus the card) is the list being
+    // inserted back into, so the indices line up either way.
+    const to = sameColumn ? from : [...prev[overContainer]];
+    const updated = sameColumn ? moved : { ...moved, status: overContainer };
 
-      const overIndex =
-        over.id === overContainer
-          ? overItems.length
-          : overItems.findIndex((t) => t.id === over.id);
-
-      overItems.splice(
-        overIndex >= 0 ? overIndex : overItems.length,
-        0,
-        updated,
-      );
-
-      return {
-        ...prev,
-        [activeContainer]: activeItems,
-        [overContainer]: overItems,
-      };
+    const insertAt = dropIndex({
+      count: to.length,
+      overIndex:
+        over.id === overContainer ? -1 : to.findIndex((t) => t.id === over.id),
+      pointerY: pointerRef.current?.y ?? over.rect.top,
+      overTop: over.rect.top,
+      overHeight: over.rect.height,
     });
+    // Moving the pointer inside one slot is most of a drag. Do nothing when
+    // nothing has actually moved, or every mouse move re-renders the board.
+    if (sameColumn && insertAt === activeIndex) return;
+    reorderedRef.current = true;
+
+    to.splice(insertAt, 0, updated);
+    setBoard(
+      sameColumn
+        ? { ...prev, [activeContainer]: to }
+        : { ...prev, [activeContainer]: from, [overContainer]: to },
+    );
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -248,49 +336,42 @@ export function KanbanBoard({
       }
       // The card is leaving this board, so undo any column shuffling that the
       // drag did on the way over the rail.
-      setItems(groupByStatus(tasks));
+      setBoard(groupByStatus(tasks));
       return;
     }
 
-    const activeContainer = findContainer(active.id, items);
-    const overContainer = findContainer(over.id, items);
-    if (!activeContainer || !overContainer) return;
+    // Where the card ended up, recorded as the drag went rather than worked out
+    // again here. Re-deriving the position from the final `over` was the second
+    // half of the bug: it undid placements the drag had already made.
+    const nextStatus = landedRef.current;
+    if (!nextStatus) return;
 
     const taskId = String(active.id);
     const original = tasks.find((t) => t.id === taskId);
-    let nextStatus = overContainer;
+    if (!original) return;
+    const from = original.status;
+    if (from === nextStatus && !reorderedRef.current) return;
+    reorderedRef.current = false;
 
-    if (activeContainer === overContainer) {
-      const columnItems = items[activeContainer];
-      const oldIndex = columnItems.findIndex((t) => t.id === active.id);
-      const newIndex = columnItems.findIndex((t) => t.id === over.id);
-      if (oldIndex !== newIndex && newIndex >= 0) {
-        setItems((prev) => ({
-          ...prev,
-          [activeContainer]: arrayMove(
-            prev[activeContainer],
-            oldIndex,
-            newIndex,
-          ),
-        }));
-      }
-      nextStatus = activeContainer;
-    }
-
-    if (original && original.status !== nextStatus) {
-      startTransition(async () => {
-        // moveTaskStatus revalidates the route; the optimistic column state
-        // above holds until it lands — no extra refresh round-trip.
-        await moveTaskStatus(taskId, nextStatus);
+    // Send the arrangement the drag ended on. Both columns go when the card
+    // crossed between them: the one it left has a hole where it used to be.
+    const current = itemsRef.current;
+    startTransition(async () => {
+      await moveTaskOnBoard({
+        id: taskId,
+        status: nextStatus,
+        columnIds: current[nextStatus].map((t) => t.id),
+        fromColumnIds:
+          from === nextStatus ? undefined : current[from].map((t) => t.id),
       });
-    }
+    });
   };
 
   const handleDragCancel = () => {
     setActiveId(null);
     setDragActive(false);
     releaseClickSuppression();
-    setItems(groupByStatus(tasks));
+    setBoard(groupByStatus(tasks));
   };
 
   const columnBody = (col: (typeof COLS)[number]) => (
@@ -341,9 +422,9 @@ export function KanbanBoard({
   return (
     <DndContext
       sensors={sensors}
-      collisionDetection={boardCollisionDetection}
+      collisionDetection={collisionDetection}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -443,7 +524,6 @@ function KanbanColumn({
 
   return (
     <div
-      ref={setNodeRef}
       className={cn(
         "kanban-column flex min-h-0 flex-col rounded-xl border p-3 transition-all duration-200 ease-out max-lg:w-[76vw] md:max-lg:w-[44vw] max-lg:max-w-[360px] max-lg:shrink-0 max-lg:snap-center",
         isOver
@@ -463,7 +543,15 @@ function KanbanColumn({
         <span className="text-[12.5px] font-bold">{label}</span>
         <span className="font-mono text-[10px] text-faint">{count}</span>
       </div>
-      <div className="glow-room flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      {/* The drop area is the cards, not the whole column. With the header
+          inside it, the column itself was what the pointer was over when you
+          aimed at the top of the list, and "over the column" means "put it
+          last" — so the top of a column was the one place you could not drop
+          something. Starting at the first card, aiming high hits that card. */}
+      <div
+        ref={setNodeRef}
+        className="glow-room flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
+      >
         {children}
       </div>
     </div>

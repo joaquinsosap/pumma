@@ -395,6 +395,68 @@ export async function moveTaskStatus(
   return { ok: true };
 }
 
+/**
+ * Move a card on the board: its column, and where it sits in that column.
+ *
+ * The position needs writing down or it isn't real. The board used to reorder
+ * a column in local state only, so the arrangement survived exactly until the
+ * next render from the server and then snapped back to whatever order the
+ * query returned — a card dragged to the top of a column reappeared in the
+ * middle, which looks identical to the drop having gone wrong.
+ *
+ * Both affected columns are renumbered from 0, rather than trying to squeeze
+ * the moved card between two neighbours. `order` starts life as a creation
+ * stamp, so the values in a column are far apart and arbitrary; renumbering
+ * the ones the user just arranged makes the stored order mean what the board
+ * shows, for those columns, from then on.
+ */
+export async function moveTaskOnBoard(input: {
+  id: string;
+  status: "todo" | "doing" | "done";
+  /** The target column's task ids, in the order they now appear. */
+  columnIds: string[];
+  /** The column the card came from, if it changed. */
+  fromColumnIds?: string[];
+}): Promise<ActionResult> {
+  const parsed = z
+    .object({
+      id: z.string().min(1).max(100),
+      status: z.enum(["todo", "doing", "done"]),
+      columnIds: z.array(z.string().min(1).max(100)).max(500),
+      fromColumnIds: z.array(z.string().min(1).max(100)).max(500).optional(),
+    })
+    .safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const { id, status, columnIds, fromColumnIds } = parsed.data;
+
+  const userId = await requireUserId();
+  const { getTask } = await import("@/lib/db/tasks");
+  const task = await getTask(userId, id);
+  if (!task) return { ok: false, error: "Not found" };
+
+  if (task.status !== status) {
+    const { today: td } = await userToday();
+    await updateTask(userId, id, {
+      status,
+      completedAt: status === "done" ? td : null,
+    });
+  }
+
+  // Renumber. Ids the client sent that no longer exist are skipped rather than
+  // refused: a stale card in the list shouldn't cost the user the whole move.
+  for (const ids of [columnIds, fromColumnIds ?? []]) {
+    for (const [index, taskId] of ids.entries()) {
+      const existing = await getTask(userId, taskId);
+      if (!existing || existing.order === index) continue;
+      await updateTask(userId, taskId, { order: index });
+    }
+  }
+
+  if (task.projectId) await syncGoalsForProject(userId, task.projectId);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function undoCreate(
   entity: string,
   id: string,
