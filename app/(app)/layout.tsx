@@ -1,6 +1,7 @@
 import { TagMenuProvider } from "@/components/tags/TagMenuProvider";
 import { SidebarWithTag } from "@/components/shell/SidebarWithTag";
 import { OmniBox } from "@/components/shell/OmniBox";
+import { SpaceShortcuts } from "@/components/shell/SpaceShortcuts";
 import { TimeZoneProvider } from "@/components/shell/TimeZoneProvider";
 import { TimezoneSync } from "@/components/shell/TimezoneSync";
 import { AssistantProvider } from "@/components/assistant/AssistantProvider";
@@ -71,6 +72,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
       authEnabled={isAuthEnabled()}
       lifeAuto={lifeAuto}
       demo={demo}
+      spaceShortcuts={s?.spaceShortcuts ?? true}
     />
   );
 
@@ -83,6 +85,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
             <div className="hidden lg:contents">{sidebar}</div>
             <AssistantProvider>
               <main className="flex min-w-0 flex-1 flex-col overflow-hidden px-3 pt-3 lg:px-6 lg:pt-5">
+                <SpaceShortcuts enabled={s?.spaceShortcuts ?? true} />
                 <MobileShell demo={demo} />
                 <TagAutoCleanRunner enabled={s?.tagAutoClean ?? false} />
                 <div className="hidden lg:block">

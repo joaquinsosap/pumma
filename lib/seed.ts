@@ -613,6 +613,7 @@ export function createSeedData(userId: string): SeedData {
     workEnd: "18:00",
     workDays: [1, 2, 3, 4, 5],
     lifeAutoOverrideMins: 60,
+    spaceShortcuts: true,
     tagAutoClean: false,
     tagAutoCleanDays: 30,
     tagsCleanedAt: null,

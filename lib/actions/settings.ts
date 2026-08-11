@@ -55,6 +55,7 @@ const settingsPatchSchema = z
       .optional(),
     workDays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     lifeAutoOverrideMins: z.number().int().min(5).max(720).optional(),
+    spaceShortcuts: z.boolean().optional(),
     tagAutoClean: z.boolean().optional(),
     tagAutoCleanDays: z.number().int().min(1).max(365).optional(),
     dateOrder: z.enum(["dmy", "mdy"]).optional(),
@@ -77,6 +78,7 @@ export async function updateSettingsAction(patch: {
   workEnd?: string;
   workDays?: number[];
   lifeAutoOverrideMins?: number;
+  spaceShortcuts?: boolean;
   tagAutoClean?: boolean;
   tagAutoCleanDays?: number;
   dateOrder?: "dmy" | "mdy";

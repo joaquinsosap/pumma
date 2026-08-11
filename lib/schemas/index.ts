@@ -67,6 +67,8 @@ export const settingsSchema = z.object({
   lifeAutoOverrideMins: z.number().int().default(60),
   // Tag housekeeping. Off by default — deleting things silently should always
   // be opt-in. A tag counts as unused when nothing references it.
+  /** Number keys jump between spaces. See `lib/space-shortcuts.ts`. */
+  spaceShortcuts: z.boolean().default(true),
   tagAutoClean: z.boolean().default(false),
   tagAutoCleanDays: z.number().int().min(1).max(365).default(30),
   /** Throttle marker for the auto-sweep (runs at most once a day). */

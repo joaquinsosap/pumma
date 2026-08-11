@@ -29,6 +29,7 @@ import { PummaMark } from "@/components/shell/PummaMark";
 import { AboutPummaButton } from "@/components/shell/AboutPummaButton";
 import { DemoBanner } from "@/components/shell/DemoBanner";
 import type { Tag, Task, Note } from "@/lib/schemas";
+import { SPACE_SHORTCUTS } from "@/lib/space-shortcuts";
 
 const nav = [
   {
@@ -113,6 +114,8 @@ type Props = {
   authEnabled: boolean;
   lifeAuto: LifeAutoConfig;
   demo?: { expiresAt: string | null } | null;
+  /** Show the number-key hint on hover. Off when the shortcut is disabled. */
+  spaceShortcuts?: boolean;
 };
 
 export function Sidebar({
@@ -124,6 +127,7 @@ export function Sidebar({
   authEnabled,
   lifeAuto,
   demo,
+  spaceShortcuts = true,
 }: Props) {
   const pathname = usePathname();
   const [life] = useLifeView();
@@ -158,6 +162,9 @@ export function Sidebar({
                 : pathname.startsWith(item.href);
             const Icon = item.icon;
             const count = item.countKey ? counts[item.countKey] : null;
+            const shortcut = SPACE_SHORTCUTS.find(
+              (sc) => sc.href === item.href,
+            )?.key;
             return (
               <Link
                 key={item.href}
@@ -175,18 +182,29 @@ export function Sidebar({
                   strokeWidth={2}
                 />
                 {item.label}
-                {count !== null && (
-                  <span
-                    className={cn(
-                      "ml-auto font-mono text-[11px] font-semibold",
-                      item.countKey === "openTasks"
-                        ? "text-tasks"
-                        : "text-faint2",
-                    )}
-                  >
-                    {count}
-                  </span>
-                )}
+                <span className="ml-auto flex items-center gap-2">
+                  {/* The key that gets you here, on hover only. A shortcut
+                      nobody can find is a shortcut nobody uses, but nine
+                      permanent digits down the sidebar is clutter you would
+                      read every day to learn once. */}
+                  {spaceShortcuts && shortcut && (
+                    <kbd className="hidden font-mono text-[10px] text-faint2 group-hover:inline">
+                      {shortcut}
+                    </kbd>
+                  )}
+                  {count !== null && (
+                    <span
+                      className={cn(
+                        "font-mono text-[11px] font-semibold",
+                        item.countKey === "openTasks"
+                          ? "text-tasks"
+                          : "text-faint2",
+                      )}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </span>
               </Link>
             );
           })}

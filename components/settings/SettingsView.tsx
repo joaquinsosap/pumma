@@ -533,7 +533,17 @@ export function SettingsView({
             </div>
 
             <div className="mt-5 border-t border-border/60 pt-4">
-              <p className="mb-3 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
+              <SettingRow
+                label="Number keys jump between spaces"
+                description="1 Home, 2 Tasks, 3 Notes, and on down the sidebar. While this is on, a capture cannot start with a digit, the key goes to the sidebar instead. Everything after the first character still goes to the bar."
+              >
+                <Switch
+                  checked={settings?.spaceShortcuts ?? true}
+                  onCheckedChange={(v) => update({ spaceShortcuts: v })}
+                />
+              </SettingRow>
+
+              <p className="mb-3 mt-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
                 Housekeeping
               </p>
               <SettingRow
