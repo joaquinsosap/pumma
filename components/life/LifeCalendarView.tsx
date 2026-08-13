@@ -227,7 +227,7 @@ export function LifeCalendarView({
                     <LegendSwatch className="bg-lived" label="lived" />
                     <LegendSwatch className="bg-ahead" label="ahead" />
                     <LegendSwatch
-                      className="bg-lived ring-1 ring-inset ring-primary"
+                      className="bg-[var(--life-now)]"
                       label="this week"
                     />
                     <span className="h-3 w-px bg-border" />
@@ -251,7 +251,7 @@ export function LifeCalendarView({
                       label="ahead"
                     />
                     <LegendSwatch
-                      className="bg-primary/[0.18] outline outline-[1.5px] outline-primary -outline-offset-1"
+                      className="bg-[var(--life-now)]"
                       label="this week"
                     />
                     <span className="h-3 w-px bg-border" />

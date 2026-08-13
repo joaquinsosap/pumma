@@ -46,20 +46,29 @@ export const LifeWeekCell = memo(function LifeWeekCell({
         // and half the other, and the join between them read as a change of
         // material rather than a point in a life. Now it is one form in two
         // weights, which is what it is.
+        // The week you are in, found by colour AND by shape.
+        //
+        // It used to be a 1.5px accent outline drawn inside a lived-coloured
+        // square, and in this theme the accent and the lived colour are the
+        // same blue — so the one cell anybody actually looks for was the one
+        // cell that could not be seen. Now it takes a warm fill that nothing
+        // else in the grid uses, and a ring that sits in the gap between
+        // squares, breaking the rhythm of the mesh. Four and a half thousand
+        // identical squares hide a recoloured one surprisingly well; they
+        // cannot hide one that is the wrong size.
+        state === "current" && "life-now relative z-10",
         !mc &&
-          cn(
-            state === "past" && "bg-lived",
-            state === "future" && "bg-ahead",
-            state === "current" &&
-              (fullView
-                ? "bg-lived ring-1 ring-inset ring-primary"
-                : "bg-lived outline outline-[1.5px] outline-primary -outline-offset-1"),
-          ),
-        mc &&
-          state === "current" &&
-          (fullView
-            ? "ring-1 ring-inset ring-primary"
-            : "outline outline-[1.5px] outline-primary -outline-offset-1"),
+          cn(state === "past" && "bg-lived", state === "future" && "bg-ahead"),
+        state === "current" &&
+          !mc &&
+          "bg-[var(--life-now)] ring-[var(--life-now)] ring-offset-background",
+        // A week you have given a mood keeps that mood: the ring alone says
+        // "now" without overwriting something you chose to record.
+        state === "current" &&
+          mc &&
+          "ring-[var(--life-now)] ring-offset-background",
+        state === "current" &&
+          (fullView ? "ring-1 ring-offset-1" : "ring-2 ring-offset-2"),
       )}
       style={mc ? { background: mc } : undefined}
     >
