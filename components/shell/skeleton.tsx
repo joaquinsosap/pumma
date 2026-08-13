@@ -97,27 +97,32 @@ export function SkeletonPage({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 animate-pulse flex-col">
-      <div className="mb-3 flex shrink-0 flex-col gap-2 sm:mb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-0">
-        <div className="min-w-0">
-          <Bar className="mb-2 h-2.5 w-64 max-w-full sm:w-80" />
-          <div className="flex h-8 items-center sm:h-9">
-            <Bar className={cn("h-6 sm:h-7", greeting ? "w-56" : title)} />
+    // Two layers on purpose: the outer one holds the skeleton back for a beat
+    // (see .skeleton-hold), the inner one does the pulsing. One element cannot
+    // run both animations without one overwriting the other.
+    <div className="skeleton-hold flex min-h-0 flex-1 flex-col">
+      <div className="flex min-h-0 flex-1 animate-pulse flex-col">
+        <div className="mb-3 flex shrink-0 flex-col gap-2 sm:mb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-0">
+          <div className="min-w-0">
+            <Bar className="mb-2 h-2.5 w-64 max-w-full sm:w-80" />
+            <div className="flex h-8 items-center sm:h-9">
+              <Bar className={cn("h-6 sm:h-7", greeting ? "w-56" : title)} />
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex items-center gap-1">
+                {i > 0 && <span className="h-7 w-px bg-border" />}
+                <div className="px-2.5 py-1 text-right sm:px-4">
+                  <Bar className="mb-1.5 ml-auto h-5 w-12" />
+                  <Bar className="ml-auto h-2 w-14" />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-        <div className="flex items-center gap-1">
-          {[0, 1, 2].map((i) => (
-            <div key={i} className="flex items-center gap-1">
-              {i > 0 && <span className="h-7 w-px bg-border" />}
-              <div className="px-2.5 py-1 text-right sm:px-4">
-                <Bar className="mb-1.5 ml-auto h-5 w-12" />
-                <Bar className="ml-auto h-2 w-14" />
-              </div>
-            </div>
-          ))}
-        </div>
+        {children}
       </div>
-      {children}
     </div>
   );
 }

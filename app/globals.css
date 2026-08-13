@@ -568,6 +568,33 @@ html {
   animation-delay: var(--ask-delay, 0s);
 }
 
+/* The skeleton waits a beat before showing itself.
+
+   Most section switches finish in about a third of a second, which was long
+   enough to paint a full placeholder layout and then throw it away. That reads
+   as a flicker between two things you never got to look at, and it is worse
+   than either of them alone: a skeleton is meant to say "this is coming", and
+   one that leaves before you can register it only says "something happened".
+
+   So it starts invisible. Beat the hold and the old page goes straight to the
+   new one with nothing in between. Miss it, and the wait was long enough to be
+   worth admitting to, and the skeleton fades in as though that was the plan.
+
+   `both` matters: the fill keeps opacity at 0 through the delay, rather than
+   showing the skeleton and then fading it in from full. */
+@keyframes skeletonHold {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.skeleton-hold {
+  animation: skeletonHold 130ms ease-out 190ms both;
+}
+
 /* Someone who asked for less motion should land on the finished frame, not
    watch it arrive — and this app animates a lot: cards bloom in, rows fly
    between projects, charts draw themselves. Collapsing every duration to
