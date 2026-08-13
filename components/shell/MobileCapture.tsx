@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   CalendarDays,
@@ -19,6 +19,12 @@ import { getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
 import { useKeyboardInset } from "@/lib/use-keyboard-inset";
+import {
+  activeToken,
+  applyCompletion,
+  suggestCompletions,
+  type OmniSuggestion,
+} from "@/lib/omni-suggest";
 import { deriveLifeAreaFromTags, withLifeTags } from "@/lib/life-area-sync";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
 import { isTutorialActive } from "@/lib/tutorial-lock";
@@ -98,6 +104,11 @@ type Props = {
  * server logic as the desktop OmniBox (parseOmni syntax still works).
  */
 export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
+  const fieldRef = useRef<HTMLTextAreaElement | null>(null);
+  // Where the caret is, tracked separately because a suggestion has to know
+  // which "#" it is finishing — the one being typed, not the last one in the
+  // string. Typing in the middle of a capture is normal.
+  const [caret, setCaret] = useState(0);
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -170,6 +181,29 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
   }, [open]);
 
   const isTask = type === "task";
+  // What the "#" under the caret could become. Empty whenever the caret is
+  // not inside one, which is what puts the type chips back on screen.
+  const completions = useMemo(
+    () => suggestCompletions(text, caret, tags),
+    [text, caret, tags],
+  );
+  const activeFragment = activeToken(text, caret)?.fragment ?? "";
+
+  const complete = (choice: OmniSuggestion) => {
+    const next = applyCompletion(text, caret, choice);
+    setText(next.text);
+    setCaret(next.caret);
+    // Put the caret back where the completion left it. The field never lost
+    // focus — the bar prevents that on pointerdown — but its selection is
+    // still sitting where the old text ended, so React writing a longer value
+    // would otherwise drop the caret at the end of the whole capture.
+    requestAnimationFrame(() => {
+      const el = fieldRef.current;
+      if (!el) return;
+      el.setSelectionRange(next.caret, next.caret);
+    });
+  };
+
   const parsed = parseOmni(text, tags, undefined, undefined, timeZone);
 
   // Preview exactly what will be stored: the view's life tags get attached on
@@ -319,8 +353,15 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
           <div className="shrink-0 px-4 pt-1">
             <textarea
               autoFocus
+              ref={fieldRef}
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                setCaret(e.target.selectionStart ?? e.target.value.length);
+              }}
+              onSelect={(e) =>
+                setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)
+              }
               onKeyDown={(e) => {
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
@@ -391,41 +432,79 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
               while the tap was still resolving. */}
           {mode === "capture" && keyboardInset > 0 && (
             <div
-              className="fixed inset-x-0 z-[71] flex items-center gap-1.5 overflow-x-auto border-t border-border bg-surface px-3 py-2 [scrollbar-width:none]"
+              className="fixed inset-x-0 z-[71] px-3 pb-2"
               style={{ bottom: keyboardInset }}
               onPointerDown={(e) => e.preventDefault()}
             >
-              <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">
-                Save as
-              </span>
-              {TYPES.map((t) => {
-                const active = type === t.type;
-                return (
-                  <button
-                    key={t.type}
-                    type="button"
-                    onClick={() => setType(t.type)}
-                    className={cn(
-                      "shrink-0 rounded-full border px-3 py-1.5 text-[13px] transition-colors",
-                      active
-                        ? "border-2 font-bold"
-                        : "border-border bg-background font-medium text-muted",
-                    )}
-                    style={
-                      active
-                        ? {
-                            borderColor: t.color,
-                            background: t.color.includes("oklch")
-                              ? t.color.replace(")", " / 0.14)")
-                              : "var(--hover)",
+              {/* Floating and shadowed rather than a bar welded to the
+                  keyboard. Sitting flush, it read as part of the keyboard on a
+                  white background and disappeared entirely on a white one; a
+                  raised pill with its own shadow reads as the app's, on any
+                  backdrop, and the gap underneath is what makes the shadow
+                  visible at all. */}
+              <div className="pumma-floating flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-border bg-surface px-2.5 py-2 shadow-[0_6px_20px_rgba(0,0,0,0.18)] [scrollbar-width:none]">
+                {completions.length > 0 ? (
+                  <>
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">
+                      {activeFragment ? `#${activeFragment}` : "#"}
+                    </span>
+                    {completions.map((s) => (
+                      <button
+                        key={`${s.kind}:${s.word}`}
+                        type="button"
+                        onClick={() => complete(s)}
+                        className={cn(
+                          "shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                          s.kind === "new"
+                            ? "border-dashed border-faint2 text-muted"
+                            : "border-border bg-background text-ink",
+                        )}
+                        style={
+                          s.color
+                            ? { color: s.color, background: tagBg(s.color) }
+                            : undefined
+                        }
+                      >
+                        {s.kind === "new" ? `+ #${s.word}` : `#${s.word}`}
+                      </button>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">
+                      Save as
+                    </span>
+                    {TYPES.map((t) => {
+                      const active = type === t.type;
+                      return (
+                        <button
+                          key={t.type}
+                          type="button"
+                          onClick={() => setType(t.type)}
+                          className={cn(
+                            "shrink-0 rounded-full border px-3 py-1.5 text-[13px] transition-colors",
+                            active
+                              ? "border-2 font-bold"
+                              : "border-border bg-background font-medium text-muted",
+                          )}
+                          style={
+                            active
+                              ? {
+                                  borderColor: t.color,
+                                  background: t.color.includes("oklch")
+                                    ? t.color.replace(")", " / 0.14)")
+                                    : "var(--hover)",
+                                }
+                              : undefined
                           }
-                        : undefined
-                    }
-                  >
-                    {t.label}
-                  </button>
-                );
-              })}
+                        >
+                          {t.label}
+                        </button>
+                      );
+                    })}
+                  </>
+                )}
+              </div>
             </div>
           )}
 
