@@ -214,10 +214,29 @@ describe("parseNoteCapture", () => {
     expect(r.tagIds).toContain("1");
   });
 
-  it("uses timestamped title when no colon", () => {
+  it("titles itself from the opening words when no colon", () => {
     const r = parseNoteCapture("quick thought about the app", tags, ref, TZ);
-    expect(r.title).toBe(defaultNoteTitle(ref, TZ));
+    expect(r.title).toBe("quick thought about the app");
+    // The words used as a title stay in the body — the title summarises the
+    // note, it does not take a bite out of it.
     expect(r.body).toBe("quick thought about the app");
+  });
+
+  it("falls back to a timestamp when there are no words to take", () => {
+    const r = parseNoteCapture("   ", tags, ref, TZ);
+    expect(r.title).toBe(defaultNoteTitle(ref, TZ));
+    expect(r.body).toBe("");
+  });
+
+  it("takes only the first eight words of a long capture", () => {
+    const r = parseNoteCapture(
+      "call the plumber about the leak in the kitchen sink",
+      tags,
+      ref,
+      TZ,
+    );
+    expect(r.title).toBe("call the plumber about the leak in the…");
+    expect(r.body).toBe("call the plumber about the leak in the kitchen sink");
   });
 
   it("does not treat dates in body as due dates", () => {

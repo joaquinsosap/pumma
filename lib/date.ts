@@ -73,6 +73,36 @@ export function formatDayFull(isoDate: string): string {
   return `${d}/${m}/${y}`;
 }
 
+const MONTH_ABBR = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+/**
+ * "2026-08-12" as "12 Aug 2026", for dates shown next to prose rather than in
+ * a grid. A slash-separated date is fine in a column of other dates; on its
+ * own in a sentence it reads as a number to decode.
+ *
+ * Takes the leading date of anything ISO-shaped, so a full timestamp works
+ * too, and hands back whatever it was given if it isn't a date at all.
+ */
+export function shortDate(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value ?? "");
+  if (!match) return value ?? "";
+  const [, year, month, day] = match;
+  return `${Number(day)} ${MONTH_ABBR[Number(month) - 1]} ${year}`;
+}
+
 /** Default note title when none is given, e.g. "New note 21/06 - 14:35" */
 export function defaultNoteTitle(
   d: Date = new Date(),

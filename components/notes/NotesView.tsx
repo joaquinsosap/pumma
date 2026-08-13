@@ -2,8 +2,16 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition, useState, useCallback, useEffect } from "react";
+import {
+  useTransition,
+  useState,
+  useCallback,
+  useEffect,
+  useMemo,
+} from "react";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import { useIsDesktop } from "@/lib/use-media-query";
+import { shortDate } from "@/lib/date";
 import { Star } from "@/components/icons";
 import type { Note, Tag } from "@/lib/schemas";
 import { tagBg } from "@/lib/parse";
@@ -76,18 +84,61 @@ export function NotesView({
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
-  const sorted = [...notes].sort(
-    (a, b) =>
-      Number(b.pinned) - Number(a.pinned) ||
-      (a.updatedAt < b.updatedAt ? 1 : -1),
+  const isDesktop = useIsDesktop();
+
+  // Which note the editor is showing. Held here rather than read straight off
+  // the route, so that picking one on a desktop is a click instead of a page
+  // load. See the list item's onClick for why.
+  const [openId, setOpenId] = useState<string | null>(selectedId);
+  useEffect(() => setOpenId(selectedId), [selectedId]);
+
+  // Text saved during this session, laid over what the server last sent.
+  // Every autosave used to end in router.refresh(), so half a second of typing
+  // re-fetched and re-rendered the entire page to be told what we had just
+  // typed. The save still happens; only the round trip is gone.
+  const [edits, setEdits] = useState<Record<string, Partial<Note>>>({});
+  const applyEdit = useCallback((id: string, patch: Partial<Note>) => {
+    setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
+  }, []);
+
+  // Ordered by what the server sent, and only then merged with local edits: a
+  // note being typed into should not climb the list under the cursor.
+  const sorted = useMemo(
+    () =>
+      [...notes]
+        .sort(
+          (a, b) =>
+            Number(b.pinned) - Number(a.pinned) ||
+            (a.updatedAt < b.updatedAt ? 1 : -1),
+        )
+        .map((n) => (edits[n.id] ? { ...n, ...edits[n.id] } : n)),
+    [notes, edits],
   );
-  const selected = sorted.find((n) => n.id === selectedId) ?? sorted[0] ?? null;
-  // Phone master-detail: /notes shows the list; /notes/[id] shows the editor
-  // with a back link. Wider screens show both side by side.
-  const explicit = Boolean(
-    selectedId && sorted.some((n) => n.id === selectedId),
-  );
+
+  const selected = sorted.find((n) => n.id === openId) ?? sorted[0] ?? null;
+  // Phone master-detail: the list, or the editor with a back link, never both.
+  // Wider screens show both side by side.
+  const explicit = Boolean(openId && sorted.some((n) => n.id === openId));
   const tagMap = new Map(tags.map((t) => [t.id, t]));
+
+  const openNote = (e: React.MouseEvent, id: string) => {
+    // A phone genuinely changes page here: the list and the editor are never
+    // on screen together, so the back button has to mean something. On a
+    // desktop both panes are already there, and all a navigation buys is a
+    // server round trip and a flash of skeleton over content that never
+    // changed. Modified clicks are left alone so "open in new tab" still works.
+    if (!isDesktop || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    e.preventDefault();
+    setOpenId(id);
+    // replaceState rather than push: the address stays copyable and reloadable
+    // without burying wherever you came from under a note-sized history entry
+    // for every note you glanced at.
+    window.history.replaceState(
+      null,
+      "",
+      hrefWithLife(`/notes/${id}`, lifeView),
+    );
+  };
 
   const togglePin = (noteId: string) => {
     startTransition(async () => {
@@ -135,6 +186,7 @@ export function NotesView({
                 <Link
                   href={hrefWithLife(`/notes/${n.id}`, lifeView)}
                   className="min-w-0 flex-1"
+                  onClick={(e) => openNote(e, n.id)}
                 >
                   <div className="mb-1 flex items-center gap-1.5">
                     <span className="flex-1 truncate text-[13.5px] font-bold">
@@ -194,6 +246,7 @@ export function NotesView({
               key={selected.id}
               note={selected}
               onRefresh={() => router.refresh()}
+              onSaved={applyEdit}
               onTogglePin={() => togglePin(selected.id)}
             />
           </div>
@@ -206,10 +259,14 @@ export function NotesView({
 function NoteEditor({
   note,
   onRefresh,
+  onSaved,
   onTogglePin,
 }: {
   note: Note;
+  /** Re-read from the server. For changes that alter the list, not the text. */
   onRefresh: () => void;
+  /** Text that has just been saved, so the list can show it without a refetch. */
+  onSaved: (id: string, patch: Partial<Note>) => void;
   onTogglePin: () => void;
 }) {
   const [pinned, setPinned] = useState(note.pinned);
@@ -221,12 +278,19 @@ function NoteEditor({
 
   const save = useCallback(
     (field: "title" | "body", noteId: string, value: string) => {
+      // Show it at once, persist in the background. Nothing here needs an
+      // answer from the server: we already know what was typed. A failure is
+      // the one case that does, and that is what falls back to a refetch.
+      onSaved(noteId, { [field]: value });
       startTransition(async () => {
-        await updateNoteAction(noteId, field, value);
-        onRefresh();
+        const res = await updateNoteAction(noteId, field, value);
+        if (!res.ok) {
+          toast.error(res.error ?? "Could not save that");
+          onRefresh();
+        }
       });
     },
-    [onRefresh, startTransition],
+    [onSaved, onRefresh, startTransition],
   );
 
   // The editor advertises "autosaves" — so it must actually survive closing the
@@ -291,8 +355,14 @@ function NoteEditor({
         onBlur={flushBody}
         placeholder="Start writing… markdown supported (# heading, **bold**, - list)"
       />
-      <div className="border-t border-border2 px-5 py-2 font-mono text-[10px] text-faint2">
-        edited {note.updatedAt.slice(5)} · autosaves
+      {/* When a note was written and when it was last touched are the two
+          things you want from a note you have not opened in months, and they
+          were previously a 10px whisper carrying only half of it. */}
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-t border-border2 px-5 py-2.5 font-mono text-[11.5px] text-faint">
+        <span>Created {shortDate(note.createdAt)}</span>
+        <span className="text-faint2">·</span>
+        <span>Edited {shortDate(note.updatedAt)}</span>
+        <span className="ml-auto text-faint2">autosaves</span>
       </div>
     </div>
   );

@@ -234,7 +234,38 @@ export function splitDescription(text: string): {
 }
 
 /**
- * Note capture: `Title: body` sets both; otherwise body only with a timestamped title.
+ * The opening words of a note, for when the capture never named a title.
+ *
+ * A note called "New note 12/08 - 14:32" tells you nothing in a list of forty
+ * of them; the first few words almost always do, because people start a note
+ * with what it is about. Same trick a phone's notes app plays, and for the
+ * same reason.
+ *
+ * Only the first line, because a title that runs across a paragraph break is
+ * not a title. Trailing punctuation goes when the text was cut short, so it
+ * reads as an opening rather than a sentence with its end lopped off.
+ *
+ * Returns "" for an empty body — the caller decides what to fall back to.
+ */
+export function noteTitleFromBody(body: string, maxWords = 8): string {
+  const firstLine = body.trim().split(/\r?\n/)[0]?.trim() ?? "";
+  if (!firstLine) return "";
+
+  const words = firstLine.split(/\s+/);
+  let title = words.slice(0, maxWords).join(" ");
+  // A wall of characters with no spaces in it would otherwise sail past the
+  // word count and take the whole line with it.
+  const clipped = title.length > 72;
+  if (clipped) title = title.slice(0, 72).trimEnd();
+
+  return words.length > maxWords || clipped
+    ? `${title.replace(/[.,;:!?—-]+$/, "")}…`
+    : title;
+}
+
+/**
+ * Note capture: `Title: body` sets both; otherwise the first words become the
+ * title, falling back to a timestamp when there are no words to take.
  */
 export function parseNoteCapture(
   text: string,
@@ -260,11 +291,13 @@ export function parseNoteCapture(
   }
 
   return {
-    title: defaultNoteTitle(
-      referenceDate ??
-        fakeLocalFromTz(new Date(), timeZone ?? getDefaultTimezone()),
-      timeZone,
-    ),
+    title:
+      noteTitleFromBody(cleaned) ||
+      defaultNoteTitle(
+        referenceDate ??
+          fakeLocalFromTz(new Date(), timeZone ?? getDefaultTimezone()),
+        timeZone,
+      ),
     body: cleaned,
     tagIds: p.tagIds,
     newTagNames: p.newTagNames,
