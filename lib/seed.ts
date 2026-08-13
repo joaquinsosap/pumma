@@ -620,6 +620,7 @@ export function createSeedData(userId: string): SeedData {
     // The seeded demo has already 'seen' nothing — let the tour play.
     dateOrder: "dmy" as const,
     tutorialSeenAt: null,
+    starterManifest: null,
   };
 
   return {

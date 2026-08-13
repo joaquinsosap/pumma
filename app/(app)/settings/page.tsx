@@ -4,6 +4,7 @@ import { resolveLifeView } from "@/lib/life-view-server";
 import { isAuthEnabled, requireAccess } from "@/lib/auth/session";
 import { billingEnabled } from "@/lib/billing/access";
 import { accountDeletionBlock } from "@/lib/actions/account";
+import { starterStatus } from "@/lib/actions/starter";
 import { SettingsView } from "@/components/settings/SettingsView";
 
 export default async function SettingsPage() {
@@ -16,6 +17,9 @@ export default async function SettingsPage() {
   // Resolved on the server so the Data section can explain the block before
   // the user types anything, rather than failing after they commit.
   const deletionBlock = await accountDeletionBlock();
+  // Null for an account that never had examples, or has finished with them —
+  // which is what keeps the button from appearing to everyone forever.
+  const starter = await starterStatus();
 
   return (
     <SettingsView
@@ -25,6 +29,7 @@ export default async function SettingsPage() {
       authEnabled={isAuthEnabled()}
       showSubscription={showSubscription}
       deletionBlock={deletionBlock}
+      starter={starter}
       tags={data.tags}
       stats={{ dayPct: 0, habitsLabel: "—", topStreak: 0 }}
     />

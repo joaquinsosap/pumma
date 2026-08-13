@@ -8,19 +8,42 @@ import {
   type DeleteAccountBlock,
 } from "@/lib/actions/account";
 import { Button } from "@/components/ui/button";
+import { useRouter } from "next/navigation";
+import { clearStarterContent, type StarterStatus } from "@/lib/actions/starter";
 import { cn } from "@/lib/utils";
 
 export function DataSection({
   userEmail,
   deletionBlock,
+  starter,
 }: {
   userEmail: string | null;
   /** Set when something (today: a live subscription) must be sorted first. */
   deletionBlock: DeleteAccountBlock | null;
+  /** Null when this account has no day-one examples left to offer. */
+  starter?: StarterStatus | null;
 }) {
   const [armed, setArmed] = useState(false);
   const [typed, setTyped] = useState("");
   const [pending, startTransition] = useTransition();
+  const router = useRouter();
+
+  const clearStarter = () => {
+    startTransition(async () => {
+      const res = await clearStarterContent();
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      const { removed = 0, kept = 0 } = res.data ?? {};
+      toast.success(
+        kept
+          ? `Removed ${removed}. Kept ${kept} you had edited.`
+          : `Removed ${removed} starter ${removed === 1 ? "item" : "items"}.`,
+      );
+      router.refresh();
+    });
+  };
 
   // Memory mode has no email on file; the action accepts this phrase instead.
   const expected =
@@ -41,6 +64,45 @@ export function DataSection({
 
   return (
     <div className="flex flex-col gap-5">
+      {starter ? (
+        <div className="rounded-lg border border-border bg-background/40 p-4">
+          <p className="m-0 text-[13px] font-semibold text-ink">
+            Remove the starter items
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-faint">
+            {starter.removable > 0 ? (
+              <>
+                {starter.removable} of the examples this account started with
+                are still exactly as they arrived. This clears those and leaves
+                everything else alone.
+                {starter.adopted > 0 ? (
+                  <>
+                    {" "}
+                    The {starter.adopted} you have since rewritten count as
+                    yours and stay.
+                  </>
+                ) : null}
+              </>
+            ) : (
+              <>
+                Nothing left to remove: every example you still have has been
+                edited, so they all count as yours now.
+              </>
+            )}
+          </p>
+          <Button
+            variant="outline"
+            className="mt-2.5"
+            disabled={pending || starter.removable === 0}
+            onClick={clearStarter}
+          >
+            {starter.removable > 0
+              ? `Remove ${starter.removable} starter ${starter.removable === 1 ? "item" : "items"}`
+              : "Nothing to remove"}
+          </Button>
+        </div>
+      ) : null}
+
       <div>
         <p className="m-0 text-[13px] font-semibold text-ink">
           Download your data

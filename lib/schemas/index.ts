@@ -81,6 +81,23 @@ export const settingsSchema = z.object({
   // travel — so it's a setting with an honest default.
   dateOrder: z.enum(["dmy", "mdy"]).default("dmy"),
   tutorialSeenAt: z.string().nullable().default(null),
+  /**
+   * The examples this account was given on day one, and what each looked like
+   * when it was planted — see `lib/starter.ts`. Kept here rather than as a
+   * flag on every seeded document so that clearing them is one write and
+   * touches no content schema. Null once cleared, which is also what hides
+   * the button.
+   */
+  starterManifest: z
+    .array(
+      z.object({
+        kind: z.enum(["task", "note", "habit", "goal", "project"]),
+        id: z.string(),
+        hash: z.string(),
+      }),
+    )
+    .nullable()
+    .default(null),
 });
 
 export const tagSchema = z.object({
