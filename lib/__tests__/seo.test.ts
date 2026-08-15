@@ -21,7 +21,15 @@ describe("robotsRules", () => {
       marketingPaths: "/landing,/demo,/contact,/legal/",
       siteUrl: "https://pumma.app",
     });
-    expect(allow).toEqual(["/$", "/landing", "/demo", "/contact", "/legal/"]);
+    expect(allow).toEqual([
+      "/$",
+      "/landing",
+      "/demo",
+      "/contact",
+      "/legal/",
+      "/sitemap.xml",
+      "/llms.txt",
+    ]);
   });
 
   it("anchors the home page so the allow does not open the whole app", () => {
@@ -38,19 +46,31 @@ describe("robotsRules", () => {
 
   it("tolerates the spacing a human leaves in an env var", () => {
     const { allow } = robotsRules({ marketingPaths: " /landing , /demo ,, " });
-    expect(allow).toEqual(["/$", "/landing", "/demo"]);
+    expect(allow).toEqual([
+      "/$",
+      "/landing",
+      "/demo",
+      "/sitemap.xml",
+      "/llms.txt",
+    ]);
   });
 
   it("does not repeat a path listed twice", () => {
     const { allow } = robotsRules({ marketingPaths: "/landing,/landing" });
-    expect(allow).toEqual(["/$", "/landing"]);
+    expect(allow).toEqual(["/$", "/landing", "/sitemap.xml", "/llms.txt"]);
   });
 
   it("falls back to the old single-page variable on an upgrade", () => {
     // A deployment that sets only MARKETING_HOME keeps exactly the behaviour
     // it had before MARKETING_PATHS existed.
     const { allow } = robotsRules({ marketingHome: "/landing" });
-    expect(allow).toEqual(["/$", "/landing", "/legal/"]);
+    expect(allow).toEqual([
+      "/$",
+      "/landing",
+      "/legal/",
+      "/sitemap.xml",
+      "/llms.txt",
+    ]);
   });
 
   it("prefers the explicit list when both variables are set", () => {
@@ -58,7 +78,35 @@ describe("robotsRules", () => {
       marketingPaths: "/landing,/demo",
       marketingHome: "/landing",
     });
-    expect(allow).toEqual(["/$", "/landing", "/demo"]);
+    expect(allow).toEqual([
+      "/$",
+      "/landing",
+      "/demo",
+      "/sitemap.xml",
+      "/llms.txt",
+    ]);
+  });
+
+  it("allows the sitemap it declares", () => {
+    // Google refuses to read a sitemap that robots.txt disallows, and reports
+    // it as "General HTTP error" even though the URL serves a clean 200.
+    // Declaring it and allowing it have to be one decision.
+    const { allow, sitemap } = robotsRules({
+      marketingPaths: "/landing",
+      siteUrl: "https://pumma.app",
+    });
+    expect(sitemap).toBe("https://pumma.app/sitemap.xml");
+    expect(allow).toContain("/sitemap.xml");
+  });
+
+  it("allows llms.txt, which nothing else would cover", () => {
+    const { allow } = robotsRules({ marketingPaths: "/landing" });
+    expect(allow).toContain("/llms.txt");
+  });
+
+  it("still allows the crawler files when no path happens to list them", () => {
+    const { allow } = robotsRules({ marketingHome: "/landing" });
+    expect(allow).toEqual(expect.arrayContaining(["/sitemap.xml", "/llms.txt"]));
   });
 
   it("declares an absolute sitemap URL", () => {

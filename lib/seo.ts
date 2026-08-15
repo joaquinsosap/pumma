@@ -32,6 +32,21 @@ export type RobotsRules = {
 };
 
 /**
+ * Files that describe the site to crawlers rather than being part of it.
+ *
+ * They have to be allowed explicitly. "Disallow: /" covers them like anything
+ * else, and Google will not read a sitemap it is not permitted to crawl — it
+ * reports "Sitemap could not be read: General HTTP error", which is a
+ * spectacularly misleading way to say "your own robots.txt said no" when the
+ * URL serves a clean 200 to every browser you test it with.
+ *
+ * Declaring the sitemap and allowing the sitemap are the same decision, so
+ * they are made in the same place. Leaving it to whoever writes
+ * MARKETING_PATHS is how this went wrong the first time.
+ */
+const CRAWLER_FILES = ["/sitemap.xml", "/llms.txt"];
+
+/**
  * "/$" is not a typo and not a regex: in robots.txt, "$" anchors the end of a
  * path, so "/$" means the home page exactly and nothing beneath it. Without it
  * a bare "Allow: /" would open the entire app.
@@ -55,7 +70,7 @@ export function robotsRules(env: RobotsInput): RobotsRules {
     return { allow: undefined, disallow: "/", sitemap: undefined };
   }
 
-  const allow = ["/$", ...new Set(paths)];
+  const allow = ["/$", ...new Set([...paths, ...CRAWLER_FILES])];
 
   // Only worth pointing at a sitemap when there are public pages in it, and
   // only with an absolute URL — crawlers reject a relative one.
