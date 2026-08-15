@@ -1,9 +1,16 @@
-# PUMMA — Procrastination Ultimate Megasor Monster Annihilator
+# PUMMA
 
-A calm, single-screen **personal life OS**: tasks, habits, goals, projects and
-notes, tied together by an agenda, a memento-mori life calendar, and an AI
-planner that turns a one-sentence intent ("run a half-marathon in 6 months")
-into a structured goal → project → task plan.
+A personal life OS: tasks, projects, habits, goals, notes and a life calendar in
+one prebuilt dashboard, with an AI assistant that runs on your own API key.
+Source-available and self-hostable, or hosted for $2/month.
+
+Nothing to configure before it is useful: habits are habits, goals roll up
+progress from the projects and habits under them, and the capture bar files what
+you type into the right place. The assistant also turns a one-sentence intent
+("run a half-marathon in 6 months") into a goal → project → task plan.
+
+<sub>PUMMA stands for Procrastination Ultimate Megasor Monster Annihilator. It
+is not important.</sub>
 
 Built with **Next.js 15** (App Router, React Server Components, Server Actions),
 **TypeScript** (strict), **Tailwind CSS v4**, and **MongoDB**. Runs fully
