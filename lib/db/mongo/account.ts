@@ -1,5 +1,16 @@
 import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
+import { decryptAllFor, SPECS } from "@/lib/db/mongo/encrypted";
+import { NEVER_EXPORT } from "@/lib/export-redaction";
+
+function stripSecrets<T>(rows: T[]): T[] {
+  return rows.map((row) => {
+    if (!row || typeof row !== "object") return row;
+    const copy = { ...(row as Record<string, unknown>) };
+    for (const field of NEVER_EXPORT) delete copy[field];
+    return copy as T;
+  });
+}
 
 /**
  * Every collection that holds something belonging to a user, keyed by userId.
@@ -37,19 +48,43 @@ function idCandidates(userId: string): (string | ObjectId)[] {
   return ids;
 }
 
+/**
+ * Everything this account owns, readable.
+ *
+ * The rows come straight from Mongo rather than through the repositories,
+ * because the repositories return the app's DTOs and an export wants the
+ * records as stored. That shortcut had a cost nobody noticed: it also skipped
+ * the decryption boundary, so every title, note body and tag name arrived as
+ * ciphertext and the file was worthless to the person who asked for it.
+ *
+ * So it decrypts explicitly, with the same helper the repositories use and
+ * the same key — this user's own, derived from the session id the caller
+ * passed. There is no path here that can decrypt somebody else's rows: the
+ * query is scoped by `userId` and the key is derived from that same value.
+ */
 export async function exportUserData(
   userId: string,
 ): Promise<Record<string, unknown[]>> {
   const db = await getDb();
   const out: Record<string, unknown[]> = {};
+
   for (const name of USER_COLLECTIONS) {
-    out[name] = await db.collection<AnyRow>(name).find({ userId }).toArray();
+    const rows = await db.collection<AnyRow>(name).find({ userId }).toArray();
+    // Collections absent from SPECS hold nothing encrypted and pass through.
+    const readable =
+      name in SPECS
+        ? await decryptAllFor(name as keyof typeof SPECS, userId, rows)
+        : rows;
+    out[name] = stripSecrets(readable);
   }
+
   // The app-side profile row is keyed by _id, not userId.
-  out.profile = await db
+  const profile = await db
     .collection<AnyRow>("users")
     .find({ _id: userId })
     .toArray();
+  out.profile = stripSecrets(profile);
+
   return out;
 }
 

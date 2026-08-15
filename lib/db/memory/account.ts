@@ -1,5 +1,15 @@
 import { getStore } from "@/lib/store/memory";
 import type { MemoryStore } from "@/lib/store/memory";
+import { NEVER_EXPORT } from "@/lib/export-redaction";
+
+function stripSecrets<T>(rows: T[]): T[] {
+  return rows.map((row) => {
+    if (!row || typeof row !== "object") return row;
+    const copy = { ...(row as Record<string, unknown>) };
+    for (const field of NEVER_EXPORT) delete copy[field];
+    return copy as T;
+  });
+}
 
 /**
  * Mirrors the mongo collection list. `users` is keyed by `_id` rather than
@@ -26,11 +36,13 @@ export async function exportUserData(
   const out: Record<string, unknown[]> = {};
   for (const key of USER_KEYS) {
     const rows = store[key] as unknown as { userId?: string }[];
-    out[key] = rows.filter((row) => row.userId === userId);
+    out[key] = stripSecrets(rows.filter((row) => row.userId === userId));
   }
   // No subscriptions collection in memory mode — billing is a hosted concern.
   out.subscriptions = [];
-  out.profile = store.users.filter((u) => u._id === userId);
+  // Memory mode stores nothing encrypted, but it shares the redaction list so
+  // the two backends cannot disagree about what must never be exported.
+  out.profile = stripSecrets(store.users.filter((u) => u._id === userId));
   return out;
 }
 

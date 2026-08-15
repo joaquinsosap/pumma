@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { exportUserData, deleteAllUserData } from "@/lib/db/memory/account";
 import { getStore, resetStore } from "@/lib/store/memory";
+import { NEVER_EXPORT } from "@/lib/export-redaction";
 
 const OTHER = "someone-else";
 
@@ -104,5 +105,59 @@ describe("account deletion", () => {
     await deleteAllUserData(userId);
     const second = await deleteAllUserData(userId);
     expect(Object.values(second).every((n) => n === 0)).toBe(true);
+  });
+});
+
+describe("what an export must never carry", () => {
+  beforeEach(() => resetStore());
+
+  it("strips the account's key material from the profile row", async () => {
+    // dekWrapped is this user's data key sealed by the master key, stored on
+    // their own profile row. It cannot be opened without the master key — but
+    // shipping it means one master-key leak retroactively opens every export
+    // anyone ever downloaded, and it is useless to the person exporting.
+    const store = getStore();
+    const me = store.users[0]._id;
+    Object.assign(store.users[0], {
+      dekWrapped: "wrapped-key-material",
+      dekKeyId: "key-1",
+    });
+
+    const data = await exportUserData(me);
+    const profile = data.profile as Record<string, unknown>[];
+    expect(profile).toHaveLength(1);
+    expect(profile[0].dekWrapped).toBeUndefined();
+    expect(profile[0].dekKeyId).toBeUndefined();
+    // The rest of the profile survives — this is a redaction, not a blanking.
+    expect(profile[0]._id).toBe(me);
+  });
+
+  it("strips the stored AI key from settings", async () => {
+    const store = getStore();
+    const me = store.users[0]._id;
+    const mine = store.settings.find((s) => s.userId === me);
+    if (mine) Object.assign(mine, { aiApiKeyEnc: "enc:secret" });
+
+    const data = await exportUserData(me);
+    for (const row of data.settings as Record<string, unknown>[]) {
+      expect(row.aiApiKeyEnc).toBeUndefined();
+    }
+  });
+
+  it("carries no field from the never-export list, in any collection", async () => {
+    const store = getStore();
+    const me = store.users[0]._id;
+    const data = await exportUserData(me);
+    for (const [collection, rows] of Object.entries(data)) {
+      for (const row of rows as Record<string, unknown>[]) {
+        for (const field of NEVER_EXPORT) {
+          expect({ collection, field, present: field in (row ?? {}) }).toEqual({
+            collection,
+            field,
+            present: false,
+          });
+        }
+      }
+    }
   });
 });
