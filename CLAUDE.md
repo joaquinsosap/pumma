@@ -49,6 +49,28 @@ handed back to the user to check.
   output invents bugs, and the in-memory data store (`DATA_SOURCE=memory`)
   resets — which looks exactly like a write that failed to persist.
 
+## Tests
+
+- **Every pure rule module gets a behavioural test file, written with the
+  feature.** Test the rule, not the implementation: "a pin outranks the sort",
+  not "calls localeCompare". One file per module, named after it. This is the
+  existing style of `lib/__tests__/` — keep it; do not rewrite passing tests
+  for style.
+- **Risk decides what gets tested next, not coverage percent.** Access rulings
+  (billing, quotas, auth gates), anything that deletes or renumbers data, and
+  arithmetic that renders as a number someone trusts (progress, stats, the
+  life grid) come first. A module at 0% that only formats a label can stay
+  at 0%.
+- **The suite is unit tests over `lib/` plus memory-store integration tests
+  for repo contracts** (see deletion-safety.test.ts). Components and full
+  flows are verified in the browser before shipping, not by the suite —
+  adding a component/E2E layer is a deliberate future decision, not something
+  to drift into one test at a time.
+- Mock at the module seam with `vi.mock` on the `@/lib/db/*` imports, never
+  deeper. Coverage runs with
+  `npx vitest run --coverage --coverage.include='lib/**/*.ts'`
+  (needs the pinned `@vitest/coverage-v8`).
+
 ## Commits
 
 - **No trailers.** No `Co-Authored-By: Claude`, no "Generated with Claude
