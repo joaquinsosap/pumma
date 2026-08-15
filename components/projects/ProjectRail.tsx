@@ -24,6 +24,7 @@ export function ProjectRail({
   onSelect,
   lifeArea,
   droppable = false,
+  sortControl,
 }: {
   projects: Project[];
   tasks: Task[];
@@ -31,6 +32,8 @@ export function ProjectRail({
   onSelect: (id: string) => void;
   lifeArea: LifeArea;
   droppable?: boolean;
+  /** The rail's sort menu, rendered as a slim leading chip in the strip. */
+  sortControl?: React.ReactNode;
 }) {
   const railRef = useRef<HTMLDivElement>(null);
 
@@ -40,6 +43,9 @@ export function ProjectRail({
         ref={railRef}
         className="flex snap-x gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]"
       >
+        {sortControl ? (
+          <div className="flex shrink-0 items-center">{sortControl}</div>
+        ) : null}
         {projects.map((p) => (
           <ProjectRailCard
             key={p.id}

@@ -539,3 +539,27 @@ export async function maybeAutoCleanTagsAction(): Promise<
   if (unused.length) revalidatePath("/", "layout");
   return { ok: true, data: { removed: unused.length } };
 }
+
+/**
+ * Persist a hand-arranged tag order: the array is the arrangement.
+ *
+ * Only ids the account owns can move (updateTag is per-user), and ids that
+ * are missing from the list simply keep their old numbers — a stale client
+ * that never heard about a new tag cannot delete its position.
+ *
+ * Also flips tagSort to "custom", because dragging IS choosing that sort:
+ * arranging a list and then watching it snap back to alphabetical would make
+ * the drag a lie.
+ */
+export async function reorderTagsAction(ids: string[]): Promise<ActionResult> {
+  const parsed = z.array(entityId).min(1).max(500).safeParse(ids);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const userId = await requireUserId();
+  for (const [index, id] of parsed.data.entries()) {
+    await updateTag(userId, id, { order: index });
+  }
+  await updateSettings(userId, { tagSort: "custom" });
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

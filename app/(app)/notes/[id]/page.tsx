@@ -19,6 +19,7 @@ export default async function NotePage({ params, searchParams }: Props) {
       lifeView={data.lifeView}
       birthDate={data.birthDate}
       lifeSpanYears={data.lifeSpanYears}
+      noteSort={data.settings?.noteSort ?? "edited"}
     />
   );
 }

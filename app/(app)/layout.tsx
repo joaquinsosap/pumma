@@ -73,6 +73,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
       lifeAuto={lifeAuto}
       demo={demo}
       spaceShortcuts={s?.spaceShortcuts ?? true}
+      tagSort={s?.tagSort ?? "custom"}
     />
   );
 

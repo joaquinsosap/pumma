@@ -53,7 +53,9 @@ export {
 } from "./glyphs";
 
 export {
+  ArrowUpDown,
   Briefcase,
+  GripVertical,
   CalendarPlus,
   CheckSquare,
   Download,

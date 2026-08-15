@@ -14,6 +14,8 @@ export default async function ProjectsPage({ searchParams }: Props) {
       stats={data.stats}
       birthDate={data.birthDate}
       lifeSpanYears={data.lifeSpanYears}
+      projectSort={data.settings?.projectSort ?? "created"}
+      projectTaskSort={data.settings?.projectTaskSort ?? "priority"}
     />
   );
 }

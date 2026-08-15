@@ -37,6 +37,7 @@ import {
   type SelectionController,
 } from "@/lib/use-task-selection";
 import { dropIndex } from "@/lib/kanban-drop";
+import { sortTasks, type ProjectTaskSort } from "@/lib/collection-sort";
 import { cn } from "@/lib/utils";
 
 export type ColumnId = "todo" | "doing" | "done";
@@ -54,33 +55,42 @@ type ItemsByColumn = Record<ColumnId, Task[]>;
  * board. Exported so the view can hand the same order to the selection hook
  * that the board renders in.
  */
-export function boardOrder(tasks: Task[]): string[] {
-  const by = groupByStatus(tasks);
+export function boardOrder(
+  tasks: Task[],
+  sort: ProjectTaskSort = "custom",
+): string[] {
+  const by = groupByStatus(tasks, sort);
   return [...by.todo, ...by.doing, ...by.done].map((t) => t.id);
 }
 
 /**
  * A column, in the order the board should show it.
  *
- * By `order`, which is what dropping a card writes. Tasks that have never been
- * arranged by hand carry their creation stamp there instead, and those stamps
- * are negative and descending, so an untouched column still comes out newest
- * first — the same as it has always looked. The sort is stable, so anything it
- * cannot separate keeps the order the query returned it in.
+ * "custom" reads `order`, which is what dropping a card writes; tasks never
+ * arranged by hand carry their creation stamp there, so an untouched column
+ * still comes out newest first. Any other sort is the shared comparator the
+ * rest of the app uses — the board shows the ordering, and the first drag
+ * flips the view back to custom (see onArrange).
  */
-function column(tasks: Task[], status: Task["status"]): Task[] {
-  return tasks
-    .filter((t) => t.status === status)
-    .map((task, index) => ({ task, index }))
-    .sort((a, b) => a.task.order - b.task.order || a.index - b.index)
-    .map((entry) => entry.task);
+function column(
+  tasks: Task[],
+  status: Task["status"],
+  sort: ProjectTaskSort,
+): Task[] {
+  return sortTasks(
+    tasks.filter((t) => t.status === status),
+    sort,
+  );
 }
 
-function groupByStatus(tasks: Task[]): ItemsByColumn {
+function groupByStatus(
+  tasks: Task[],
+  sort: ProjectTaskSort = "custom",
+): ItemsByColumn {
   return {
-    todo: column(tasks, "todo"),
-    doing: column(tasks, "doing"),
-    done: column(tasks, "done"),
+    todo: column(tasks, "todo", sort),
+    doing: column(tasks, "doing", sort),
+    done: column(tasks, "done", sort),
   };
 }
 
@@ -163,6 +173,10 @@ type Props = {
   onMoveToProject?: (taskId: string, projectId: string) => void;
   /** Multi-select across the columns. */
   selection?: SelectionController;
+  /** How the columns are ordered. Defaults to the hand-made order. */
+  sort?: ProjectTaskSort;
+  /** A drag just arranged things by hand — the view's cue to flip to custom. */
+  onArrange?: () => void;
 };
 
 export function KanbanBoard({
@@ -173,9 +187,13 @@ export function KanbanBoard({
   railHost,
   onMoveToProject,
   selection,
+  sort = "custom",
+  onArrange,
 }: Props) {
   const [, startTransition] = useTransition();
-  const [items, setItems] = useState<ItemsByColumn>(() => groupByStatus(tasks));
+  const [items, setItems] = useState<ItemsByColumn>(() =>
+    groupByStatus(tasks, sort),
+  );
   // The same arrangement, readable synchronously. A drag fires many moves per
   // render, and each one has to build on the one before it rather than on
   // whatever React last painted.
@@ -218,8 +236,11 @@ export function KanbanBoard({
   }, []);
 
   useEffect(() => {
-    setBoard(groupByStatus(tasks));
-  }, [tasks]);
+    setBoard(groupByStatus(tasks, sort));
+    // setBoard is a stable local wrapper around setState; listing it would
+    // re-run this every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, sort]);
 
   // Mouse drags start after a tiny move; touch needs a long-press first so
   // plain swipes keep scrolling the board instead of grabbing cards.
@@ -336,7 +357,7 @@ export function KanbanBoard({
       }
       // The card is leaving this board, so undo any column shuffling that the
       // drag did on the way over the rail.
-      setBoard(groupByStatus(tasks));
+      setBoard(groupByStatus(tasks, sort));
       return;
     }
 
@@ -352,6 +373,11 @@ export function KanbanBoard({
     const from = original.status;
     if (from === nextStatus && !reorderedRef.current) return;
     reorderedRef.current = false;
+
+    // A completed drag is an arrangement, whatever ordering was on screen —
+    // what gets persisted below is exactly what the user is looking at, so
+    // the view flips to custom and keeps showing it.
+    onArrange?.();
 
     // Send the arrangement the drag ended on. Both columns go when the card
     // crossed between them: the one it left has a hole where it used to be.
@@ -371,7 +397,7 @@ export function KanbanBoard({
     setActiveId(null);
     setDragActive(false);
     releaseClickSuppression();
-    setBoard(groupByStatus(tasks));
+    setBoard(groupByStatus(tasks, sort));
   };
 
   const columnBody = (col: (typeof COLS)[number]) => (

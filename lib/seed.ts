@@ -621,6 +621,11 @@ export function createSeedData(userId: string): SeedData {
     dateOrder: "dmy" as const,
     tutorialSeenAt: null,
     starterManifest: null,
+    taskSort: "priority",
+    projectTaskSort: "priority",
+    projectSort: "created",
+    noteSort: "edited",
+    tagSort: "custom",
   };
 
   return {

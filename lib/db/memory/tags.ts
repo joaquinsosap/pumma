@@ -75,7 +75,7 @@ export async function ensureLifeTags(userId: string): Promise<void> {
 export async function updateTag(
   userId: string,
   id: string,
-  patch: { name?: string; color?: string },
+  patch: { name?: string; color?: string; order?: number },
 ): Promise<Tag | null> {
   const store = getStore();
   const idx = store.tags.findIndex((t) => t._id === id && t.userId === userId);

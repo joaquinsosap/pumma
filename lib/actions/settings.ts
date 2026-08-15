@@ -56,6 +56,13 @@ const settingsPatchSchema = z
     workDays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     lifeAutoOverrideMins: z.number().int().min(5).max(720).optional(),
     spaceShortcuts: z.boolean().optional(),
+    taskSort: z.enum(["priority", "due", "created", "alpha"]).optional(),
+    projectTaskSort: z
+      .enum(["priority", "custom", "created", "alpha"])
+      .optional(),
+    projectSort: z.enum(["created", "alpha", "progress"]).optional(),
+    noteSort: z.enum(["edited", "created", "alpha"]).optional(),
+    tagSort: z.enum(["custom", "alpha", "usage", "created"]).optional(),
     tagAutoClean: z.boolean().optional(),
     tagAutoCleanDays: z.number().int().min(1).max(365).optional(),
     dateOrder: z.enum(["dmy", "mdy"]).optional(),
@@ -79,6 +86,11 @@ export async function updateSettingsAction(patch: {
   workDays?: number[];
   lifeAutoOverrideMins?: number;
   spaceShortcuts?: boolean;
+  taskSort?: "priority" | "due" | "created" | "alpha";
+  projectTaskSort?: "priority" | "custom" | "created" | "alpha";
+  projectSort?: "created" | "alpha" | "progress";
+  noteSort?: "edited" | "created" | "alpha";
+  tagSort?: "custom" | "alpha" | "usage" | "created";
   tagAutoClean?: boolean;
   tagAutoCleanDays?: number;
   dateOrder?: "dmy" | "mdy";

@@ -6,6 +6,7 @@ import { billingEnabled } from "@/lib/billing/access";
 import { accountDeletionBlock } from "@/lib/actions/account";
 import { starterStatus } from "@/lib/actions/starter";
 import { SettingsView } from "@/components/settings/SettingsView";
+import { tagCount } from "@/lib/metrics";
 
 export default async function SettingsPage() {
   const lifeView = await resolveLifeView();
@@ -20,6 +21,11 @@ export default async function SettingsPage() {
   // Null for an account that never had examples, or has finished with them —
   // which is what keeps the button from appearing to everyone forever.
   const starter = await starterStatus();
+  // How often each tag is actually used — the "Most used" sort reads this,
+  // and it is cheap here where the tasks and notes are already loaded.
+  const tagCounts = Object.fromEntries(
+    data.tags.map((t) => [t.id, tagCount(t.id, data.allTasks, data.notes)]),
+  );
 
   return (
     <SettingsView
@@ -31,6 +37,7 @@ export default async function SettingsPage() {
       deletionBlock={deletionBlock}
       starter={starter}
       tags={data.tags}
+      tagCounts={tagCounts}
       stats={{ dayPct: 0, habitsLabel: "—", topStreak: 0 }}
     />
   );

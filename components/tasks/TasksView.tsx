@@ -16,7 +16,9 @@ import {
 } from "nuqs";
 import { ListTodo, Search, X } from "@/components/icons";
 import { searchTasks } from "@/lib/task-search";
-import { sortTasksByPriority } from "@/lib/task-order";
+import { sortTasks, TASK_SORTS, type TaskSort } from "@/lib/collection-sort";
+import { SortMenu } from "@/components/ui/sort-menu";
+import { updateSettingsAction } from "@/lib/actions/settings";
 import { setTaskProject } from "@/lib/actions/tasks";
 import { toast } from "sonner";
 import {
@@ -85,6 +87,8 @@ type Props = {
   stats: { dayPct: number; habitsLabel: string; topStreak: number };
   birthDate?: string | null;
   lifeSpanYears?: number;
+  /** The saved ordering for this list. The view treats it as its own state. */
+  taskSort?: TaskSort;
 };
 
 type Group = {
@@ -105,7 +109,17 @@ export function TasksView({
   stats,
   birthDate = null,
   lifeSpanYears,
+  taskSort = "priority",
 }: Props) {
+  // The saved choice, applied locally the moment it changes. The server write
+  // follows behind; waiting for it would make a sort menu feel like a page
+  // load, and the sort itself is pure client work either way.
+  const [sort, setSort] = useState<TaskSort>(taskSort);
+  useEffect(() => setSort(taskSort), [taskSort]);
+  const changeSort = (next: TaskSort) => {
+    setSort(next);
+    void updateSettingsAction({ taskSort: next });
+  };
   const [tab, setTab] = useQueryState(
     "tab",
     // Opening Tasks from the nav shows everything; links that mean a specific
@@ -248,9 +262,9 @@ export function TasksView({
     if (projectFilter) {
       items = items.filter((t) => t.projectId === projectFilter);
     }
-    // Same order as the home widget: whatever the list is, the most important
-    // thing in it is at the top.
-    return sortTasksByPriority(applyTaskFilters(items, filters));
+    // Priority by default — same order as the home widget — or whatever the
+    // sort menu picked instead.
+    return sortTasks(applyTaskFilters(items, filters), sort);
   }, [
     tasks,
     carryover,
@@ -262,14 +276,15 @@ export function TasksView({
     tags,
     projects,
     filters,
+    sort,
   ]);
 
   const filteredCarryover = useMemo(() => {
     const items = projectFilter
       ? carryover.filter((t) => t.projectId === projectFilter)
       : carryover;
-    return sortTasksByPriority(applyTaskFilters(items, filters));
-  }, [carryover, projectFilter, filters]);
+    return sortTasks(applyTaskFilters(items, filters), sort);
+  }, [carryover, projectFilter, filters, sort]);
 
   const todayTasks = useMemo(() => {
     let items = tasks.filter((t) => (t.due ?? "").slice(0, 10) === td);
@@ -496,6 +511,7 @@ export function TasksView({
               onChange={setFilters}
               tags={tags}
             />
+            <SortMenu options={TASK_SORTS} value={sort} onChange={changeSort} />
 
             <div className="flex shrink-0 items-center gap-0.5 max-lg:hidden">
               <TaskStat

@@ -11,7 +11,29 @@ import {
   addTagAction,
   updateUserNameAction,
 } from "@/lib/actions/settings";
-import { deleteTagAction, updateTagAction } from "@/lib/actions/tags";
+import {
+  deleteTagAction,
+  reorderTagsAction,
+  updateTagAction,
+} from "@/lib/actions/tags";
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  rectSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "@/components/icons";
+import { sortTags, TAG_SORTS, type TagSort } from "@/lib/collection-sort";
+import { SortMenu } from "@/components/ui/sort-menu";
 import { CleanTagsButton } from "@/components/tags/CleanTagsButton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import { SignOutButton } from "@/components/auth/SignOutButton";
@@ -50,6 +72,8 @@ type Props = {
   deletionBlock?: DeleteAccountBlock | null;
   /** Null once the day-one examples are gone, which hides the offer. */
   starter?: StarterStatus | null;
+  /** Uses per tag, for the "Most used" sort. */
+  tagCounts?: Record<string, number>;
   tags: Tag[];
   stats: { dayPct: number; habitsLabel: string; topStreak: number };
 };
@@ -116,6 +140,7 @@ export function SettingsView({
   deletionBlock = null,
   starter = null,
   tags,
+  tagCounts = {},
   stats,
 }: Props) {
   const router = useRouter();
@@ -123,6 +148,54 @@ export function SettingsView({
   const { setTheme: setLocal } = useTheme();
   const [tagName, setTagName] = useState("");
   const [name, setName] = useState(userName);
+
+  // Tag ordering. The chosen sort applies instantly and persists behind; a
+  // drag both rearranges and IS the act of choosing "custom", so it flips the
+  // menu without a click. `draggedIds` holds the arrangement the hand just
+  // made until the server echoes it back.
+  const [tagSort, setTagSortState] = useState<TagSort>(
+    settings?.tagSort ?? "custom",
+  );
+  useEffect(() => {
+    setTagSortState(settings?.tagSort ?? "custom");
+  }, [settings?.tagSort]);
+  const [draggedIds, setDraggedIds] = useState<string[] | null>(null);
+  const changeTagSort = (next: TagSort) => {
+    setTagSortState(next);
+    void updateSettingsAction({ tagSort: next });
+  };
+
+  const countsMap = new Map(Object.entries(tagCounts));
+  const sortedTags = (() => {
+    const base = sortTags(tags, tagSort, countsMap);
+    if (tagSort !== "custom" || !draggedIds) return base;
+    const rank = new Map(draggedIds.map((id, i) => [id, i]));
+    return [...base].sort(
+      (a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9),
+    );
+  })();
+
+  const tagDragSensors = useSensors(
+    // A little travel before a drag starts, so clicking the name to rename or
+    // the dot to recolour stays a click.
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+  const handleTagDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = sortedTags.map((t) => t.id);
+    const from = ids.indexOf(String(active.id));
+    const to = ids.indexOf(String(over.id));
+    if (from < 0 || to < 0) return;
+    const next = arrayMove(ids, from, to);
+    setDraggedIds(next);
+    setTagSortState("custom");
+    startTransition(async () => {
+      const res = await reorderTagsAction(next);
+      if (!res.ok) toast.error(res.error ?? "Could not save that order");
+      router.refresh();
+    });
+  };
 
   useEffect(() => {
     setName(userName);
@@ -503,15 +576,34 @@ export function SettingsView({
           </SettingsSection>
 
           <SettingsSection title="Tags" className="lg:col-span-2">
-            <p className="mb-3 text-[12px] text-faint">
-              Click the dot to change a tag&apos;s color, click the name to
-              rename.
-            </p>
-            <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-              {tags.map((t) => (
-                <TagRow key={t.id} tag={t} />
-              ))}
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <p className="m-0 text-[12px] text-faint">
+                Click the dot to change a tag&apos;s color, click the name to
+                rename. Drag the handle to arrange them yourself — the sidebar
+                follows this order.
+              </p>
+              <SortMenu
+                options={TAG_SORTS}
+                value={tagSort}
+                onChange={changeTagSort}
+              />
             </div>
+            <DndContext
+              sensors={tagDragSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleTagDragEnd}
+            >
+              <SortableContext
+                items={sortedTags.map((t) => t.id)}
+                strategy={rectSortingStrategy}
+              >
+                <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                  {sortedTags.map((t) => (
+                    <SortableTagRow key={t.id} tag={t} />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
             <div className="flex max-w-xl gap-2">
               <Input
                 value={tagName}
@@ -652,7 +744,48 @@ function WorkDaysPicker({
 }
 
 /** Editable tag row: cycle color via the dot, rename inline, delete (non-default). */
-function TagRow({ tag }: { tag: Tag }) {
+/**
+ * A TagRow that can be picked up. The handle is the only drag surface, so the
+ * rename input and colour dot keep working as plain clicks; while a row is in
+ * flight it goes translucent and its neighbours shuffle around it.
+ */
+function SortableTagRow({ tag }: { tag: Tag }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: tag.id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition: transition ?? undefined,
+      }}
+      className={cn(isDragging && "z-10 opacity-60")}
+    >
+      <TagRow
+        tag={tag}
+        handle={
+          <button
+            type="button"
+            aria-label={`Reorder ${tag.name}`}
+            className="-ml-1 shrink-0 cursor-grab touch-none rounded p-0.5 text-faint2 transition-colors hover:text-faint active:cursor-grabbing"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-3.5 w-3.5" />
+          </button>
+        }
+      />
+    </div>
+  );
+}
+
+function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
   const [, startTransition] = useTransition();
   const confirm = useConfirm();
   const [draft, setDraft] = useState(tag.name);
@@ -700,6 +833,7 @@ function TagRow({ tag }: { tag: Tag }) {
 
   return (
     <div className="group flex items-center gap-2 rounded-lg border border-border/70 bg-background/40 px-3 py-2 text-sm">
+      {handle}
       <button
         type="button"
         onClick={cycleColor}

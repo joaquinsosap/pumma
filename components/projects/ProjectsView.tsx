@@ -9,6 +9,15 @@ import { projectProgress } from "@/lib/metrics";
 import { parseLifeView } from "@/lib/life-area";
 import { Topbar } from "@/components/shell/Topbar";
 import { KanbanBoard, boardOrder } from "@/components/projects/KanbanBoard";
+import {
+  sortProjects,
+  PROJECT_SORTS,
+  PROJECT_TASK_SORTS,
+  type ProjectSort,
+  type ProjectTaskSort,
+} from "@/lib/collection-sort";
+import { SortMenu } from "@/components/ui/sort-menu";
+import { updateSettingsAction } from "@/lib/actions/settings";
 import { ProjectDetailPanel } from "@/components/projects/ProjectDetailPanel";
 import { TaskDetailPanel } from "@/components/tasks/TaskDetailPanel";
 import { BulkEditPanel } from "@/components/tasks/BulkEditPanel";
@@ -30,19 +39,50 @@ type Props = {
   stats: { dayPct: number; habitsLabel: string; topStreak: number };
   birthDate?: string | null;
   lifeSpanYears?: number;
+  projectSort?: ProjectSort;
+  projectTaskSort?: ProjectTaskSort;
 };
 
 export function ProjectsView({
-  projects,
+  projects: rawProjects,
   tasks,
   tags,
   goals,
   stats,
   birthDate = null,
   lifeSpanYears,
+  projectSort = "created",
+  projectTaskSort = "priority",
 }: Props) {
   const searchParams = useSearchParams();
   const lifeView = parseLifeView(searchParams.get("life"));
+
+  // Both orderings apply locally the moment they change; the server write
+  // follows behind. See TasksView for the reasoning.
+  const [railSort, setRailSort] = useState<ProjectSort>(projectSort);
+  useEffect(() => setRailSort(projectSort), [projectSort]);
+  const changeRailSort = (next: ProjectSort) => {
+    setRailSort(next);
+    void updateSettingsAction({ projectSort: next });
+  };
+  const [taskSort, setTaskSort] = useState<ProjectTaskSort>(projectTaskSort);
+  useEffect(() => setTaskSort(projectTaskSort), [projectTaskSort]);
+  const changeTaskSort = (next: ProjectTaskSort) => {
+    setTaskSort(next);
+    void updateSettingsAction({ projectTaskSort: next });
+  };
+  // Dragging a card IS choosing an order, so the choice follows the hand:
+  // the board flips to custom and the menu says so, without a click.
+  const arrangedByHand = () => {
+    if (taskSort === "custom") return;
+    setTaskSort("custom");
+    void updateSettingsAction({ projectTaskSort: "custom" });
+  };
+
+  const projects = useMemo(
+    () => sortProjects(rawProjects, railSort),
+    [rawProjects, railSort],
+  );
   const [projectId, setProjectId] = useQueryState("project", {
     defaultValue: projects[0]?.id ?? "",
   });
@@ -70,7 +110,7 @@ export function ProjectsView({
 
   // Multi-select across the board's three columns, in the order they render.
   const selection = useTaskSelection(
-    useMemo(() => boardOrder(spTasks), [spTasks]),
+    useMemo(() => boardOrder(spTasks, taskSort), [spTasks, taskSort]),
   );
   const selectedTasks = useMemo(
     () =>
@@ -128,6 +168,13 @@ export function ProjectsView({
               tasks={tasks}
               onSelect={(id) => void setProjectId(id)}
               lifeArea={lifeAreaForCreate(lifeView)}
+              sortControl={
+                <SortMenu
+                  options={PROJECT_SORTS}
+                  value={railSort}
+                  onChange={changeRailSort}
+                />
+              }
             />
           )}
         </div>
@@ -161,9 +208,11 @@ export function ProjectsView({
                 <h3 className="m-0 min-w-0 flex-1 truncate text-sm font-bold">
                   {selected.title}
                 </h3>
-                <span className="font-mono text-[10px] text-faint max-lg:hidden">
-                  kanban
-                </span>
+                <SortMenu
+                  options={PROJECT_TASK_SORTS}
+                  value={taskSort}
+                  onChange={changeTaskSort}
+                />
                 <span
                   className="font-mono text-[10px] font-bold lg:hidden"
                   style={{ color: selected.color }}
@@ -189,6 +238,13 @@ export function ProjectsView({
                       onSelect={(id) => void setProjectId(id)}
                       lifeArea={lifeAreaForCreate(lifeView)}
                       droppable
+                      sortControl={
+                        <SortMenu
+                          options={PROJECT_SORTS}
+                          value={railSort}
+                          onChange={changeRailSort}
+                        />
+                      }
                     />
                   }
                   railHost={railHost}
@@ -197,6 +253,8 @@ export function ProjectsView({
                   tags={tags}
                   onEditTask={(id) => void setTaskId(id)}
                   selection={selection}
+                  sort={taskSort}
+                  onArrange={arrangedByHand}
                 />
               </div>
             </div>

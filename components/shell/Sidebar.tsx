@@ -116,6 +116,7 @@ type Props = {
   demo?: { expiresAt: string | null } | null;
   /** Show the number-key hint on hover. Off when the shortcut is disabled. */
   spaceShortcuts?: boolean;
+  tagSort?: import("@/lib/collection-sort").TagSort;
 };
 
 export function Sidebar({
@@ -128,6 +129,7 @@ export function Sidebar({
   lifeAuto,
   demo,
   spaceShortcuts = true,
+  tagSort = "custom",
 }: Props) {
   const pathname = usePathname();
   const [life] = useLifeView();
@@ -212,7 +214,7 @@ export function Sidebar({
       </div>
 
       <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden">
-        <TagRail tags={tags} tasks={tasks} notes={notes} />
+        <TagRail tags={tags} tasks={tasks} notes={notes} sort={tagSort} />
       </div>
 
       <div className="flex shrink-0 items-center gap-2.5 border-t border-border px-2.5 py-3">

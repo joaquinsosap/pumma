@@ -98,6 +98,19 @@ export const settingsSchema = z.object({
     )
     .nullable()
     .default(null),
+  /**
+   * How each list is ordered, one field per view. Defaults are exactly what
+   * each view did before the setting existed, so an untouched account changes
+   * nothing. Values come from lib/collection-sort.ts, which is also where a
+   * view learns which options it may offer.
+   */
+  taskSort: z.enum(["priority", "due", "created", "alpha"]).default("priority"),
+  projectTaskSort: z
+    .enum(["priority", "custom", "created", "alpha"])
+    .default("priority"),
+  projectSort: z.enum(["created", "alpha", "progress"]).default("created"),
+  noteSort: z.enum(["edited", "created", "alpha"]).default("edited"),
+  tagSort: z.enum(["custom", "alpha", "usage", "created"]).default("custom"),
 });
 
 export const tagSchema = z.object({

@@ -71,6 +71,11 @@ export async function bootstrapNewUser(user: {
     tutorialSeenAt: null,
     // Filled in below, once there is something to record.
     starterManifest: null,
+    taskSort: "priority",
+    projectTaskSort: "priority",
+    projectSort: "created",
+    noteSort: "edited",
+    tagSort: "custom",
   });
   await ensureLifeTags(user.id);
 

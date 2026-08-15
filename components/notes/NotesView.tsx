@@ -12,6 +12,9 @@ import {
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { useIsDesktop } from "@/lib/use-media-query";
 import { shortDate } from "@/lib/date";
+import { sortNotes, NOTE_SORTS, type NoteSort } from "@/lib/collection-sort";
+import { SortMenu } from "@/components/ui/sort-menu";
+import { updateSettingsAction } from "@/lib/actions/settings";
 import { Star } from "@/components/icons";
 import type { Note, Tag } from "@/lib/schemas";
 import { tagBg } from "@/lib/parse";
@@ -37,6 +40,7 @@ type Props = {
   lifeView?: LifeView;
   birthDate?: string | null;
   lifeSpanYears?: number;
+  noteSort?: NoteSort;
 };
 
 function NotePinButton({
@@ -81,8 +85,15 @@ export function NotesView({
   lifeView = "both",
   birthDate = null,
   lifeSpanYears,
+  noteSort = "edited",
 }: Props) {
   const router = useRouter();
+  const [sort, setSortState] = useState<NoteSort>(noteSort);
+  useEffect(() => setSortState(noteSort), [noteSort]);
+  const changeSort = (next: NoteSort) => {
+    setSortState(next);
+    void updateSettingsAction({ noteSort: next });
+  };
   const [, startTransition] = useTransition();
   const isDesktop = useIsDesktop();
 
@@ -105,14 +116,10 @@ export function NotesView({
   // note being typed into should not climb the list under the cursor.
   const sorted = useMemo(
     () =>
-      [...notes]
-        .sort(
-          (a, b) =>
-            Number(b.pinned) - Number(a.pinned) ||
-            (a.updatedAt < b.updatedAt ? 1 : -1),
-        )
-        .map((n) => (edits[n.id] ? { ...n, ...edits[n.id] } : n)),
-    [notes, edits],
+      sortNotes(notes, sort).map((n) =>
+        edits[n.id] ? { ...n, ...edits[n.id] } : n,
+      ),
+    [notes, edits, sort],
   );
 
   const selected = sorted.find((n) => n.id === openId) ?? sorted[0] ?? null;
@@ -168,6 +175,12 @@ export function NotesView({
             explicit ? "max-md:hidden" : "max-md:min-h-0 max-md:flex-1",
           )}
         >
+          <div className="mb-2 flex shrink-0 items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-faint2">
+              {sorted.length} {sorted.length === 1 ? "note" : "notes"}
+            </span>
+            <SortMenu options={NOTE_SORTS} value={sort} onChange={changeSort} />
+          </div>
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto max-lg:pb-24">
             {sorted.map((n) => (
               <Taggable
