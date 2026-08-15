@@ -23,6 +23,7 @@ import {
   activeToken,
   applyCompletion,
   suggestCompletions,
+  tagSuggestions,
   type OmniSuggestion,
 } from "@/lib/omni-suggest";
 import { deriveLifeAreaFromTags, withLifeTags } from "@/lib/life-area-sync";
@@ -188,6 +189,14 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
     [text, caret, tags],
   );
   const activeFragment = activeToken(text, caret)?.fragment ?? "";
+  // Mid-token it completes; otherwise it offers the tags themselves. It used
+  // to offer the four capture types here, which the sheet already lists just
+  // below — the one strip always under the thumb was spending itself on a
+  // duplicate.
+  const chips = useMemo(
+    () => (completions.length ? completions : tagSuggestions(tags)),
+    [completions, tags],
+  );
 
   const complete = (choice: OmniSuggestion) => {
     const next = applyCompletion(text, caret, choice);
@@ -230,7 +239,19 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
 
   const close = () => setOpen(false);
 
-  const submit = () => {
+  /**
+   * Add what is written and stay put.
+   *
+   * Same creation path as the button at the bottom of the sheet, minus the
+   * close: capturing five things in a row meant five rounds of dismiss,
+   * reopen and wait for the keyboard. The field keeps focus throughout — the
+   * bar prevents the pointerdown that would blur it, and this refocuses
+   * afterwards in case the transition moved it.
+   */
+  const quickAdd = () => submit({ keepOpen: true });
+
+  const submit = (options?: { keepOpen?: boolean }) => {
+    const keepOpen = options?.keepOpen ?? false;
     const trimmed = text.trim();
     if (!trimmed) return;
     if (mode === "assistant") {
@@ -273,7 +294,13 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
       });
       setText("");
       setSelectedTagIds([]);
-      close();
+      setCaret(0);
+      if (keepOpen) {
+        // Put the caret back in the field before the toast can take it.
+        requestAnimationFrame(() => fieldRef.current?.focus());
+      } else {
+        close();
+      }
       router.refresh();
     });
   };
@@ -438,72 +465,56 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
             >
               {/* Floating and shadowed rather than a bar welded to the
                   keyboard. Sitting flush, it read as part of the keyboard on a
-                  white background and disappeared entirely on a white one; a
+                  dark background and disappeared entirely on a white one; a
                   raised pill with its own shadow reads as the app's, on any
                   backdrop, and the gap underneath is what makes the shadow
                   visible at all. */}
-              <div className="pumma-floating flex items-center gap-1.5 overflow-x-auto rounded-2xl border border-border bg-surface px-2.5 py-2 shadow-[0_6px_20px_rgba(0,0,0,0.18)] [scrollbar-width:none]">
-                {completions.length > 0 ? (
-                  <>
+              <div className="pumma-floating flex items-center gap-1.5 rounded-2xl border border-border bg-surface px-2 py-2 shadow-[0_6px_20px_rgba(0,0,0,0.18)]">
+                <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+                  {activeFragment && (
                     <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">
-                      {activeFragment ? `#${activeFragment}` : "#"}
+                      #{activeFragment}
                     </span>
-                    {completions.map((s) => (
-                      <button
-                        key={`${s.kind}:${s.word}`}
-                        type="button"
-                        onClick={() => complete(s)}
-                        className={cn(
-                          "shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
-                          s.kind === "new"
-                            ? "border-dashed border-faint2 text-muted"
-                            : "border-border bg-background text-ink",
-                        )}
-                        style={
-                          s.color
-                            ? { color: s.color, background: tagBg(s.color) }
-                            : undefined
-                        }
-                      >
-                        {s.kind === "new" ? `+ #${s.word}` : `#${s.word}`}
-                      </button>
-                    ))}
-                  </>
-                ) : (
-                  <>
-                    <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">
-                      Save as
+                  )}
+                  {chips.map((s) => (
+                    <button
+                      key={`${s.kind}:${s.word}`}
+                      type="button"
+                      onClick={() => complete(s)}
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors",
+                        s.kind === "new"
+                          ? "border-dashed border-faint2 text-muted"
+                          : "border-border bg-background text-ink",
+                      )}
+                      style={
+                        s.color
+                          ? { color: s.color, background: tagBg(s.color) }
+                          : undefined
+                      }
+                    >
+                      {s.kind === "new" ? `+ #${s.word}` : `#${s.word}`}
+                    </button>
+                  ))}
+                  {chips.length === 0 && (
+                    <span className="shrink-0 px-1 font-mono text-[10px] uppercase tracking-widest text-faint2">
+                      type # for tags
                     </span>
-                    {TYPES.map((t) => {
-                      const active = type === t.type;
-                      return (
-                        <button
-                          key={t.type}
-                          type="button"
-                          onClick={() => setType(t.type)}
-                          className={cn(
-                            "shrink-0 rounded-full border px-3 py-1.5 text-[13px] transition-colors",
-                            active
-                              ? "border-2 font-bold"
-                              : "border-border bg-background font-medium text-muted",
-                          )}
-                          style={
-                            active
-                              ? {
-                                  borderColor: t.color,
-                                  background: t.color.includes("oklch")
-                                    ? t.color.replace(")", " / 0.14)")
-                                    : "var(--hover)",
-                                }
-                              : undefined
-                          }
-                        >
-                          {t.label}
-                        </button>
-                      );
-                    })}
-                  </>
-                )}
+                  )}
+                </div>
+
+                {/* Add without leaving. Outside the scroller so it stays under
+                    the thumb however long the tag list is. */}
+                <button
+                  type="button"
+                  onClick={quickAdd}
+                  disabled={pending || !text.trim()}
+                  aria-label={`Add ${activeType.label.toLowerCase()} and keep writing`}
+                  className="flex shrink-0 items-center gap-1 rounded-full bg-habits px-3.5 py-1.5 text-[13px] font-bold text-white transition-opacity disabled:opacity-35"
+                >
+                  <Plus className="h-3.5 w-3.5" strokeWidth={3} />
+                  Add
+                </button>
               </div>
             </div>
           )}
@@ -719,7 +730,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
           >
             <button
               type="button"
-              onClick={submit}
+              onClick={() => submit()}
               disabled={pending || busy || !text.trim()}
               className={cn(
                 "w-full rounded-2xl py-3.5 text-[15px] font-bold text-background transition-opacity disabled:opacity-40",

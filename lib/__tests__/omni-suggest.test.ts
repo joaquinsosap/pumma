@@ -3,6 +3,7 @@ import {
   activeToken,
   applyCompletion,
   suggestCompletions,
+  tagSuggestions,
 } from "@/lib/omni-suggest";
 
 const tags = [
@@ -91,19 +92,57 @@ describe("applyCompletion", () => {
     expect(res.caret).toBe(18);
   });
 
-  it("keeps whatever followed the caret", () => {
+  it("keeps whatever followed the caret, without doubling the space", () => {
+    // This used to assert "call #health  about it" — two spaces — which was a
+    // wart the test had frozen in place rather than a behaviour anyone wanted.
     const res = applyCompletion("call #he about it", 8, {
       word: "health",
       kind: "tag",
     });
-    expect(res.text).toBe("call #health  about it");
+    expect(res.text).toBe("call #health about it");
   });
 
-  it("does nothing when there is no token to finish", () => {
-    const res = applyCompletion("nothing here", 12, {
-      word: "health",
+  it("appends the tag when there is no token, spacing it properly", () => {
+    // Tapping a tag chip while looking at "my task" plainly means "tag this",
+    // so it appends rather than doing nothing.
+    const res = applyCompletion("my task", 7, { word: "tag", kind: "tag" });
+    expect(res.text).toBe("my task #tag ");
+    expect(res.caret).toBe(res.text.length);
+  });
+
+  it("does not double the space when one is already there", () => {
+    expect(
+      applyCompletion("my task ", 8, { word: "tag", kind: "tag" }).text,
+    ).toBe("my task #tag ");
+  });
+
+  it("adds no leading space at the very start", () => {
+    expect(applyCompletion("", 0, { word: "tag", kind: "tag" }).text).toBe(
+      "#tag ",
+    );
+  });
+
+  it("appends at the caret, keeping what follows", () => {
+    const res = applyCompletion("pay rent today", 8, {
+      word: "finance",
       kind: "tag",
     });
-    expect(res.text).toBe("nothing here");
+    expect(res.text).toBe("pay rent #finance today");
+  });
+});
+
+describe("tagSuggestions", () => {
+  it("offers the tags themselves, for the bar's resting state", () => {
+    expect(tagSuggestions(tags).map((s) => s.word)).toEqual([
+      "health",
+      "home-office",
+      "work",
+    ]);
+    expect(tagSuggestions(tags)[0].kind).toBe("tag");
+    expect(tagSuggestions(tags)[0].color).toBe("#0f0");
+  });
+
+  it("stays within the row it has to fit in", () => {
+    expect(tagSuggestions(tags, 2)).toHaveLength(2);
   });
 });

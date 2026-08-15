@@ -105,11 +105,35 @@ export function suggestCompletions(
 }
 
 /**
+ * Every tag, as the list to offer when nothing is being typed.
+ *
+ * The phone's bar shows this by default. It used to show the four capture
+ * types instead, which the sheet already lists two inches below it — so the
+ * one strip that is always within thumb reach spent itself repeating a
+ * control rather than offering the thing you cannot otherwise reach without
+ * typing "#" first.
+ */
+export function tagSuggestions(
+  tags: { name: string; color?: string }[],
+  limit = 12,
+): OmniSuggestion[] {
+  return tags
+    .slice(0, limit)
+    .map((tag) => ({ word: tag.name, kind: "tag" as const, color: tag.color }));
+}
+
+/**
  * The text after taking a suggestion, and where the caret should end up.
  *
- * A trailing space is added because the token is now finished — without it the
- * next keystroke would extend the word that was just completed, and the bar
- * would go on offering completions for something already chosen.
+ * Two jobs, because to the thumb pressing a chip they are the same gesture.
+ * Mid-token it completes what is being typed. With no token under the caret
+ * it appends the tag instead, which is what tapping "#health" while looking
+ * at "pay rent" plainly means.
+ *
+ * Spacing is handled rather than left to the caller: a space goes in front
+ * only when there is a word to separate from, and one always follows, because
+ * the token is finished and the next keystroke should start something new
+ * rather than extend the tag just chosen.
  */
 export function applyCompletion(
   text: string,
@@ -117,11 +141,19 @@ export function applyCompletion(
   suggestion: OmniSuggestion,
 ): { text: string; caret: number } {
   const token = activeToken(text, caret);
-  if (!token) return { text, caret };
 
-  const before = text.slice(0, token.start);
-  const after = text.slice(token.end);
-  const inserted = `#${suggestion.word} `;
+  const start = token ? token.start : caret;
+  const end = token ? token.end : caret;
+  const before = text.slice(0, start);
+  const after = text.slice(end);
+
+  // Pad on each side only where there is not already a space, so appending
+  // to "pay rent" gains one, "pay rent " does not gain a second, and dropping
+  // a tag into the middle of "pay rent| today" does not leave a gap.
+  const leading = !token && before.length > 0 && !/\s$/.test(before) ? " " : "";
+  const trailing = /^\s/.test(after) ? "" : " ";
+  const inserted = `${leading}#${suggestion.word}${trailing}`;
+
   return {
     text: `${before}${inserted}${after}`,
     caret: before.length + inserted.length,
