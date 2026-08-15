@@ -21,14 +21,12 @@ describe("robotsRules", () => {
       marketingPaths: "/landing,/demo,/contact,/legal/",
       siteUrl: "https://pumma.app",
     });
-    expect(allow).toEqual([
+    expect(allow?.slice(0, 5)).toEqual([
       "/$",
       "/landing",
       "/demo",
       "/contact",
       "/legal/",
-      "/sitemap.xml",
-      "/llms.txt",
     ]);
   });
 
@@ -46,31 +44,20 @@ describe("robotsRules", () => {
 
   it("tolerates the spacing a human leaves in an env var", () => {
     const { allow } = robotsRules({ marketingPaths: " /landing , /demo ,, " });
-    expect(allow).toEqual([
-      "/$",
-      "/landing",
-      "/demo",
-      "/sitemap.xml",
-      "/llms.txt",
-    ]);
+    expect(allow?.slice(0, 3)).toEqual(["/$", "/landing", "/demo"]);
   });
 
   it("does not repeat a path listed twice", () => {
     const { allow } = robotsRules({ marketingPaths: "/landing,/landing" });
-    expect(allow).toEqual(["/$", "/landing", "/sitemap.xml", "/llms.txt"]);
+    expect(allow?.slice(0, 2)).toEqual(["/$", "/landing"]);
+    expect(allow?.filter((p) => p === "/landing")).toHaveLength(1);
   });
 
   it("falls back to the old single-page variable on an upgrade", () => {
     // A deployment that sets only MARKETING_HOME keeps exactly the behaviour
     // it had before MARKETING_PATHS existed.
     const { allow } = robotsRules({ marketingHome: "/landing" });
-    expect(allow).toEqual([
-      "/$",
-      "/landing",
-      "/legal/",
-      "/sitemap.xml",
-      "/llms.txt",
-    ]);
+    expect(allow?.slice(0, 3)).toEqual(["/$", "/landing", "/legal/"]);
   });
 
   it("prefers the explicit list when both variables are set", () => {
@@ -78,13 +65,7 @@ describe("robotsRules", () => {
       marketingPaths: "/landing,/demo",
       marketingHome: "/landing",
     });
-    expect(allow).toEqual([
-      "/$",
-      "/landing",
-      "/demo",
-      "/sitemap.xml",
-      "/llms.txt",
-    ]);
+    expect(allow?.slice(0, 3)).toEqual(["/$", "/landing", "/demo"]);
   });
 
   it("allows the sitemap it declares", () => {
@@ -102,6 +83,22 @@ describe("robotsRules", () => {
   it("allows llms.txt, which nothing else would cover", () => {
     const { allow } = robotsRules({ marketingPaths: "/landing" });
     expect(allow).toContain("/llms.txt");
+  });
+
+  it("allows the site icon, or the result shows a generic globe", () => {
+    // Google will not display a favicon it is not allowed to fetch, and
+    // "Disallow: /" covers /icon.svg like any other path.
+    const { allow } = robotsRules({ marketingPaths: "/landing" });
+    expect(allow).toEqual(
+      expect.arrayContaining(["/favicon.ico", "/icon.svg"]),
+    );
+  });
+
+  it("allows robots.txt itself", () => {
+    // Crawlers fetch it regardless, but Search Console's URL inspection
+    // reports it as "blocked by robots.txt", which reads like a real fault.
+    const { allow } = robotsRules({ marketingPaths: "/landing" });
+    expect(allow).toContain("/robots.txt");
   });
 
   it("still allows the crawler files when no path happens to list them", () => {

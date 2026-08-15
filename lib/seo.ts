@@ -44,7 +44,19 @@ export type RobotsRules = {
  * they are made in the same place. Leaving it to whoever writes
  * MARKETING_PATHS is how this went wrong the first time.
  */
-const CRAWLER_FILES = ["/sitemap.xml", "/llms.txt"];
+const CRAWLER_FILES = [
+  "/robots.txt",
+  "/sitemap.xml",
+  "/llms.txt",
+  // The site icon. Google will not show one beside a result it cannot fetch,
+  // and "Disallow: /" covers /icon.svg like anything else — which is why the
+  // result for pumma.app carried a generic globe while the icon itself
+  // served a perfectly good 200 to everyone who was allowed to ask.
+  "/favicon.ico",
+  "/icon.svg",
+  "/apple-icon.png",
+  "/manifest.webmanifest",
+];
 
 /**
  * "/$" is not a typo and not a regex: in robots.txt, "$" anchors the end of a
