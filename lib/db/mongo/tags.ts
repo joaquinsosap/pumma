@@ -103,7 +103,17 @@ export async function ensureLifeTags(userId: string): Promise<void> {
     // the name is ciphertext that differs every write, so an upsert filtered
     // on it would match nothing and mint a duplicate every call. The unique
     // {userId, nameKey} index is what makes the race safe.
-    if (await findByName(c, userId, name)) continue;
+    const existing = await findByName(c, userId, name);
+    if (existing) {
+      // Self-heal an account whose life tags predate this flag: they were
+      // created as ordinary tags and never marked, so the settings list
+      // showed them as deletable and offered a button the server refused.
+      if (!existing.isDefault) {
+        await c.updateOne({ _id: existing._id }, { $set: { isDefault: true } });
+      }
+      continue;
+    }
+
     const doc: TagDoc = {
       _id: newId(),
       userId,

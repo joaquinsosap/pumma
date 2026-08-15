@@ -33,6 +33,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "@/components/icons";
 import { sortTags, TAG_SORTS, type TagSort } from "@/lib/collection-sort";
+import { isBuiltInTag, tagDeleteBlock } from "@/lib/tag-protection";
 import { SortMenu } from "@/components/ui/sort-menu";
 import { CleanTagsButton } from "@/components/tags/CleanTagsButton";
 import { useConfirm } from "@/components/ui/confirm-dialog";
@@ -786,6 +787,7 @@ function SortableTagRow({ tag }: { tag: Tag }) {
 }
 
 function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
+  const blocked = tagDeleteBlock(tag);
   const [, startTransition] = useTransition();
   const confirm = useConfirm();
   const [draft, setDraft] = useState(tag.name);
@@ -857,9 +859,14 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
         aria-label={`Rename tag ${tag.name}`}
         className="min-w-0 flex-1 truncate rounded border border-transparent bg-transparent px-1 py-0.5 lowercase outline-none transition-colors hover:border-border focus:border-faint"
       />
-      {tag.isDefault ? (
-        <span className="ml-auto shrink-0 font-mono text-[10px] text-faint">
-          default
+      {/* One rule for the button and the server: a tag that cannot be
+          deleted says why instead of offering a button that then refuses. */}
+      {blocked ? (
+        <span
+          className="ml-auto shrink-0 font-mono text-[10px] text-faint"
+          title={blocked}
+        >
+          {isBuiltInTag(tag) ? "built in" : "project"}
         </span>
       ) : (
         <DeleteButton

@@ -57,7 +57,14 @@ export async function insertTag(
 export async function ensureLifeTags(userId: string): Promise<void> {
   const store = getStore();
   SPECIAL_LIFE_TAGS.forEach((name, i) => {
-    if (store.tags.some((t) => t.userId === userId && t.name === name)) return;
+    const existing = store.tags.find(
+      (t) => t.userId === userId && t.name === name,
+    );
+    if (existing) {
+      // Same self-heal as the mongo impl — see the note there.
+      existing.isDefault = true;
+      return;
+    }
     store.tags.push({
       _id: newId(),
       userId,

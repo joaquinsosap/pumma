@@ -14,6 +14,7 @@ import { listNotes } from "@/lib/db/notes";
 import { getSettings, updateSettings } from "@/lib/db/settings";
 import type { TagDoc } from "@/lib/schemas";
 import { cssColor, entityId, tagName } from "@/lib/validation";
+import { tagDeleteBlock } from "@/lib/tag-protection";
 import {
   deriveLifeAreaFromTags,
   isLifeTag,
@@ -415,23 +416,10 @@ export async function deleteTagAction(id: string): Promise<ActionResult> {
   const tags = await listTags(userId);
   const tag = tags.find((t) => t.id === parsed.data);
   if (!tag) return { ok: false, error: "Not found" };
-  // personal/work aren't labels, they're the life area itself — removing one
-  // would leave everything carrying it with nowhere to belong.
-  if (isLifeTag(tag.name)) {
-    return {
-      ok: false,
-      error: `"${tag.name}" is a life tag and can't be deleted`,
-    };
-  }
-  if (tag.isProjectPrimary) {
-    return {
-      ok: false,
-      error: "That's the project's own tag, so rename it or delete the project",
-    };
-  }
-  if (tag.isDefault) {
-    return { ok: false, error: "Default tags can't be deleted" };
-  }
+  // The same rule the settings list shows, so the button and the server can
+  // never disagree about what is deletable.
+  const blocked = tagDeleteBlock(tag);
+  if (blocked) return { ok: false, error: blocked };
 
   // Detaches the tag from all tasks/notes, then removes it.
   await deleteTag(userId, parsed.data);
@@ -439,7 +427,14 @@ export async function deleteTagAction(id: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** A tag is unused when nothing references it. Default tags are never swept. */
+/**
+ * A tag is unused when nothing references it.
+ *
+ * Protected by the same rule as a manual delete, which also closes a hole:
+ * this used to filter on `isDefault` and the life-tag name, so a project's own
+ * tag with no tasks on it yet was eligible for the sweep — the auto-cleaner
+ * could delete the one tag a project is required to keep.
+ */
 async function findUnusedTags(userId: string) {
   const [tags, tasks, notes] = await Promise.all([
     listTags(userId),
@@ -449,9 +444,7 @@ async function findUnusedTags(userId: string) {
   const used = new Set<string>();
   for (const t of tasks) for (const id of t.tagIds) used.add(id);
   for (const n of notes) for (const id of n.tagIds) used.add(id);
-  return tags.filter(
-    (t) => !t.isDefault && !isLifeTag(t.name) && !used.has(t.id),
-  );
+  return tags.filter((t) => !tagDeleteBlock(t) && !used.has(t.id));
 }
 
 /** Rebuild the storable doc from a DTO so an undo can restore it verbatim. */
