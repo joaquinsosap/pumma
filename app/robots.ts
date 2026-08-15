@@ -1,15 +1,18 @@
 import type { MetadataRoute } from "next";
+import { robotsRules } from "@/lib/seo";
 
-// The app itself stays out of search indexes. When a hosted deployment serves
-// marketing pages behind the same domain (MARKETING_HOME), those
-// public paths are allowed — robots.txt is served from this app either way.
+// Served from this app because robots.txt must sit at the domain root, which
+// this app owns. The rules themselves live in lib/seo.ts so they can be tested
+// without booting Next. See that file for why MARKETING_PATHS exists.
 export default function robots(): MetadataRoute.Robots {
-  const marketing = process.env.MARKETING_HOME;
+  const { allow, disallow, sitemap } = robotsRules({
+    marketingPaths: process.env.MARKETING_PATHS,
+    marketingHome: process.env.MARKETING_HOME,
+    siteUrl: process.env.BETTER_AUTH_URL,
+  });
+
   return {
-    rules: {
-      userAgent: "*",
-      allow: marketing ? ["/$", marketing, "/legal/"] : undefined,
-      disallow: "/",
-    },
+    rules: { userAgent: "*", allow, disallow },
+    sitemap,
   };
 }

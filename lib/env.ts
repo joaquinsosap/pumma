@@ -24,6 +24,10 @@ const envSchema = z
     OWNER_EMAILS: z.string().optional(),
     // Where anonymous visitors at "/" are sent (a hosted marketing page).
     MARKETING_HOME: z.string().optional(),
+    // Every public path the proxy routes to the marketing service, comma
+    // separated. Only robots.txt reads it — see lib/seo.ts for why it is
+    // separate from MARKETING_HOME.
+    MARKETING_PATHS: z.string().optional(),
   })
   .check((ctx) => {
     if (ctx.value.DATA_SOURCE === "mongodb" && !ctx.value.MONGODB_URI) {
