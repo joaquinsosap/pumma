@@ -6,10 +6,46 @@ import { describe, expect, it } from "vitest";
 import { computeGoalProgress, habitStreakProgress } from "@/lib/goal-sync";
 import type { Habit, HabitEntry, Project, Task } from "@/lib/schemas";
 
+// Complete literals spread with overrides, matching the house style in
+// task-filters.test.ts: a partial cast keeps compiling until someone adds a
+// required field, and then fails everywhere at once for no real reason.
 const project = (id: string, goalId: string | null): Project =>
-  ({ id, goalId, title: id, progress: 0, createdAt: "2026-01-01" }) as Project;
+  ({
+    id,
+    userId: "u",
+    title: id,
+    description: "",
+    color: "#000",
+    progress: 0,
+    label: "",
+    goalId,
+    tagIds: [],
+    lifeArea: "personal",
+    createdAt: "2026-01-01",
+  }) as Project;
+
+let seq = 0;
 const task = (projectId: string, status: "todo" | "done"): Task =>
-  ({ id: Math.random().toString(16), projectId, status, tagIds: [] }) as Task;
+  ({
+    id: `t${seq++}`,
+    userId: "u",
+    title: "t",
+    description: "",
+    subtasks: [],
+    tagIds: [],
+    priority: "med",
+    status,
+    due: null,
+    projectId,
+    goalId: null,
+    lifeArea: "personal",
+    order: 0,
+    createdAt: "2026-01-01",
+    completedAt: null,
+    timeSpentSec: 0,
+    timerStartedAt: null,
+  }) as Task;
+
 const habit = (
   id: string,
   goalIds: string[],
@@ -17,10 +53,17 @@ const habit = (
 ): Habit =>
   ({
     id,
+    userId: "u",
     name: id,
-    goalIds,
+    color: "#000",
+    frequency: { type: "daily", target: 1 },
+    order: 0,
     archived: false,
+    goalIds,
     goalTargetStreak: null,
+    tagIds: [],
+    lifeArea: "personal",
+    createdAt: "2026-01-01",
     ...over,
   }) as Habit;
 

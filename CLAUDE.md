@@ -66,6 +66,13 @@ handed back to the user to check.
   flows are verified in the browser before shipping, not by the suite —
   adding a component/E2E layer is a deliberate future decision, not something
   to drift into one test at a time.
+- **Fixtures are complete literals spread with overrides** (see
+  `task-filters.test.ts`). A partial `as Task` cast compiles only by accident
+  of type overlap and breaks the build the day a required field is added —
+  which is exactly how a green local `vitest` run once shipped a red CI.
+- **`npm run typecheck` is part of running the tests, not a separate step.**
+  Vitest transpiles without checking types, so a test file can pass every
+  assertion and still fail CI.
 - Mock at the module seam with `vi.mock` on the `@/lib/db/*` imports, never
   deeper. Coverage runs with
   `npx vitest run --coverage --coverage.include='lib/**/*.ts'`

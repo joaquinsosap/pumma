@@ -11,17 +11,56 @@ import {
 } from "@/lib/metrics";
 import type { Habit, HabitEntry, Task } from "@/lib/schemas";
 
+// Complete literals spread with overrides, matching task-filters.test.ts. A
+// partial cast compiles only by accident of overlap, and stops compiling the
+// day a required field is added.
+let seq = 0;
 const task = (over: Partial<Task>): Task =>
   ({
-    id: Math.random().toString(16),
-    status: "todo",
+    id: `t${seq++}`,
+    userId: "u",
+    title: "t",
+    description: "",
+    subtasks: [],
     tagIds: [],
+    priority: "med",
+    status: "todo",
     due: null,
+    projectId: null,
+    goalId: null,
+    lifeArea: "personal",
+    order: 0,
+    createdAt: "2026-01-01",
+    completedAt: null,
+    timeSpentSec: 0,
+    timerStartedAt: null,
     ...over,
   }) as Task;
-const habit = (id: string): Habit => ({ id, name: id }) as Habit;
+
+const habit = (id: string): Habit =>
+  ({
+    id,
+    userId: "u",
+    name: id,
+    color: "#000",
+    frequency: { type: "daily", target: 1 },
+    order: 0,
+    archived: false,
+    goalIds: [],
+    goalTargetStreak: null,
+    tagIds: [],
+    lifeArea: "personal",
+    createdAt: "2026-01-01",
+  }) as Habit;
+
 const entry = (habitId: string, date: string): HabitEntry =>
-  ({ id: `${habitId}:${date}`, habitId, date }) as HabitEntry;
+  ({
+    id: `${habitId}:${date}`,
+    userId: "u",
+    habitId,
+    date,
+    done: true,
+  }) as HabitEntry;
 
 const TODAY = "2026-08-15";
 
