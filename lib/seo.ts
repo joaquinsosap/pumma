@@ -55,7 +55,11 @@ const CRAWLER_FILES = [
   "/favicon.ico",
   "/icon.svg",
   "/apple-icon.png",
+  // The manifest, and the icons it names. Listing the manifest without its
+  // icons would describe an installable app whose artwork nobody may fetch.
   "/manifest.webmanifest",
+  "/icon-192.png",
+  "/icon-512.png",
 ];
 
 /**

@@ -94,6 +94,19 @@ describe("robotsRules", () => {
     );
   });
 
+  it("allows the manifest and every icon it names", () => {
+    // A manifest a crawler may read, naming icons it may not fetch, describes
+    // an installable app with no artwork.
+    const { allow } = robotsRules({ marketingPaths: "/landing" });
+    expect(allow).toEqual(
+      expect.arrayContaining([
+        "/manifest.webmanifest",
+        "/icon-192.png",
+        "/icon-512.png",
+      ]),
+    );
+  });
+
   it("allows robots.txt itself", () => {
     // Crawlers fetch it regardless, but Search Console's URL inspection
     // reports it as "blocked by robots.txt", which reads like a real fault.
