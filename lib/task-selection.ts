@@ -35,6 +35,11 @@ export function intentFor(e: {
   return multi ? "toggle" : "open";
 }
 
+/** True when the id is non-empty and still rendered in the list. */
+function liveIn(order: string[], id: string | null | undefined): boolean {
+  return Boolean(id) && order.includes(id as string);
+}
+
 /** Ids between two positions in `order`, inclusive, whichever way round. */
 function span(order: string[], a: number, b: number): string[] {
   if (a < 0 || b < 0) return [];
@@ -78,10 +83,18 @@ export function reduceSelection(
   if (intent === "open") return { ids: [], anchor: id };
 
   if (intent === "toggle") {
-    const has = state.ids.includes(id);
+    // Same reasoning as the range below: with nothing selected yet, the open
+    // task's row is highlighted and reads as selected, so ctrl-clicking a
+    // second row should leave you holding both. Starting from an empty set
+    // dropped the row the user could see and kept only the new one.
+    const base =
+      state.ids.length === 0 && liveIn(order, anchorFallback)
+        ? [anchorFallback as string]
+        : state.ids;
+    const has = base.includes(id);
     const next = has
-      ? state.ids.filter((x) => x !== id)
-      : ordered(order, [...state.ids, id]);
+      ? base.filter((x) => x !== id)
+      : ordered(order, [...base, id]);
     // Deselecting the anchor leaves the next range measuring from this click,
     // which is where the user's attention is anyway.
     return { ids: next, anchor: id };
@@ -90,9 +103,9 @@ export function reduceSelection(
   // A range needs somewhere to measure from. Without a live anchor — first
   // click of the session, or the anchor scrolled out of the current filter —
   // this click becomes the anchor and selects only itself.
-  const live = (candidate: string | null | undefined) =>
-    candidate && order.includes(candidate) ? candidate : null;
-  const anchor = live(state.anchor) ?? live(anchorFallback);
+  const anchor =
+    (liveIn(order, state.anchor) ? state.anchor : null) ??
+    (liveIn(order, anchorFallback) ? (anchorFallback as string) : null);
   if (!anchor) return { ids: [id], anchor: id };
 
   const anchorAt = order.indexOf(anchor);

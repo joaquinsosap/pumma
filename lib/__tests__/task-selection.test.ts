@@ -217,6 +217,25 @@ describe("the open task as an anchor fallback", () => {
     expect(next.ids).toEqual(["d"]);
   });
 
+  it("keeps the open row when ctrl-clicking a second one", () => {
+    // The open row is highlighted and reads as selected. Ctrl-clicking
+    // another should leave you holding both, not just the new one.
+    const next = reduceSelection(EMPTY_SELECTION, ORDER, "d", "toggle", "b");
+    expect(next.ids).toEqual(["b", "d"]);
+  });
+
+  it("ctrl-clicking the open row itself clears it", () => {
+    const next = reduceSelection(EMPTY_SELECTION, ORDER, "b", "toggle", "b");
+    expect(next.ids).toEqual([]);
+  });
+
+  it("only seeds from the open row while nothing is selected", () => {
+    // Once a selection exists it is the truth; the open row does not sneak
+    // back into it on the next ctrl-click.
+    const next = reduceSelection(state(["d"], "d"), ORDER, "e", "toggle", "b");
+    expect(next.ids).toEqual(["d", "e"]);
+  });
+
   it("extends an added range from the open row as well", () => {
     const next = reduceSelection(EMPTY_SELECTION, ORDER, "d", "rangeAdd", "b");
     expect(next.ids).toEqual(["b", "c", "d"]);
