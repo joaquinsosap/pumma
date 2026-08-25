@@ -248,8 +248,15 @@ export function SettingsView({
         lifeSpanYears={settings?.lifeSpanYears}
       />
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pb-6 max-lg:pb-28 animate-pumma-view">
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <SettingsSection title="Profile" className="lg:col-span-2">
+        {/* Masonry, not a grid. These panels have wildly different heights
+            (General and Life areas are tall, Habits and Life calendar are
+            short), and a two-column GRID makes every row as tall as its
+            tallest cell, so a short panel next to a tall one left half a
+            screen of white. CSS columns let the short ones stack up under
+            each other and fill it. break-inside-avoid keeps a panel whole,
+            and the margin lives on the children because columns have no
+            row-gap. One column below lg, where the question does not arise. */}
+        <SettingsSection title="Profile" className="mb-6">
             <div className="grid gap-6 lg:grid-cols-2">
               <label className="block">
                 <span className="mb-1 block text-sm text-muted">
@@ -293,8 +300,9 @@ export function SettingsView({
                 )}
               </div>
             </div>
-          </SettingsSection>
+        </SettingsSection>
 
+        <div className="gap-6 lg:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid">
           <SettingsSection
             title="Assistant"
             description="Plan and Ask call the AI provider you choose, with your own key. It's stored encrypted and used only for your requests."
@@ -375,6 +383,12 @@ export function SettingsView({
                 onChange={(timezone) => update({ timezone })}
               />
             </div>
+          </SettingsSection>
+
+          <SettingsSection
+            title="Defaults"
+            description="Where each surface starts. A link that names a view, like Home’s Today, still wins."
+          >
             <SettingRow
               label="Default due today"
               description="New tasks from quick capture default to today."
