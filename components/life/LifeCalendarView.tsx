@@ -311,7 +311,7 @@ export function LifeCalendarView({
                       "flex flex-col",
                       fullView
                         ? "h-full flex-1 gap-px"
-                        : "gap-[3px] max-sm:gap-[1px]",
+                        : "gap-[3px] max-sm:gap-[5px]",
                     )}
                   >
                     {grid.rows.map((row) => (
@@ -322,7 +322,7 @@ export function LifeCalendarView({
                           "flex min-h-0 items-center",
                           fullView
                             ? "flex-1 gap-px"
-                            : "gap-[3px] max-sm:gap-[1px]",
+                            : "gap-[3px] max-sm:gap-[5px]",
                           !fullView && row.decadeGap && "mt-1.5",
                         )}
                       >
@@ -354,6 +354,11 @@ export function LifeCalendarView({
                             "flex min-h-0 min-w-0 flex-1",
                             fullView
                               ? "h-full gap-px"
+                              // 1px BETWEEN the two lines of a year, while
+                              // the stacks above use 5px BETWEEN years — a
+                              // year has to read as one block or wrapping it
+                              // turns the grid into an undifferentiated wall
+                              // and the "one row, one year" idea is lost.
                               : "gap-[3px] max-sm:flex-wrap max-sm:gap-[1px]",
                           )}
                         >

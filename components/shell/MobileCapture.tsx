@@ -217,6 +217,36 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
     });
   };
 
+  /**
+   * Type a "#" without hunting for it.
+   *
+   * The hash is the whole capture grammar — tags AND dates start with it —
+   * and on most phone keyboards it lives behind the 123 key, sometimes
+   * behind 123 and then #+=. Asking someone to make two keyboard trips for
+   * the character the bar is built around is the one place a button beats
+   * teaching the syntax.
+   *
+   * A space goes in front when the caret is mid-word, so tapping it after
+   * "pay rent" gives "pay rent #" rather than "pay rent#", which parses as
+   * part of the title.
+   */
+  const insertHash = () => {
+    const before = text.slice(0, caret);
+    const after = text.slice(caret);
+    const needsSpace = before.length > 0 && !/\s$/.test(before);
+    const insert = `${needsSpace ? " " : ""}#`;
+    const nextText = before + insert + after;
+    const nextCaret = caret + insert.length;
+    setText(nextText);
+    setCaret(nextCaret);
+    requestAnimationFrame(() => {
+      const el = fieldRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(nextCaret, nextCaret);
+    });
+  };
+
   const parsed = parseOmni(text, tags, undefined, undefined, timeZone);
 
   // Preview exactly what will be stored: the view's life tags get attached on
@@ -496,6 +526,17 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                   edge on white and the upward shadow gives it a body on
                   dark, so it survives both without floating. */}
               <div className="capture-dock flex items-center gap-1.5 px-3 py-2.5">
+                {/* Boxed and first, before the suggestions, because it is a
+                    key rather than a choice — the one thing here that types
+                    a character instead of picking a value. */}
+                <button
+                  type="button"
+                  onClick={insertHash}
+                  aria-label="Type a hash"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface2 font-mono text-[17px] font-bold leading-none text-ink"
+                >
+                  #
+                </button>
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
                   {activeFragment && (
                     <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">

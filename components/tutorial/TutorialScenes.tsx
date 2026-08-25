@@ -50,6 +50,15 @@ const isTouch = () =>
   typeof window !== "undefined" &&
   window.matchMedia?.("(pointer: fine)").matches === false;
 
+/**
+ * What to call the "open the menu on this row" gesture, in one place.
+ *
+ * The tour asks for it twice — filing a task, and selecting a range — and
+ * they were naming it separately, so one beat could say "right-click" on a
+ * device that has no right button while the other said "long press".
+ */
+const menuGestureShort = () => (isTouch() ? "long press" : "right click");
+
 /** Missions report completion once; the overlay handles moving on. */
 export type SceneProps = {
   onDone: () => void;
@@ -1555,8 +1564,15 @@ const easeOut = (x: number) => 1 - (1 - x) ** 3;
 const easeIn = (x: number) => x ** 3;
 
 /** Where the cursor starts and ends its pass, relative to the target. */
-const ENTER_X = 52;
-const ENTER_Y = 30;
+// How far the cursor drifts before settling.
+//
+// It used to swing in from 52x30, which is most of the width of a row on a
+// phone: the icon started outside the thing it was pointing at, crossed the
+// neighbouring rows on its way, and read as pointing at whatever it happened
+// to be over. The gesture is the press, not the journey — so it settles in
+// place from a couple of pixels away and spends its motion on the click.
+const ENTER_X = 12;
+const ENTER_Y = 8;
 
 function GhostCursor({ label }: { label: string }) {
   const wrapRef = useRef<HTMLSpanElement>(null);
@@ -1728,9 +1744,7 @@ export function SceneTag({
         ? "Filed"
         : menu
           ? "Pick where it lives"
-          : isTouch()
-            ? "Long-press the task"
-            : "Right-click the task",
+          : `${isTouch() ? "Long-press" : "Right-click"} the task`,
     );
   }, [menu, landed, onInstruction]);
 
@@ -1769,7 +1783,7 @@ export function SceneTag({
             >
               <span className="h-4 w-4 shrink-0 rounded-[5px] border-[1.8px] border-border" />
               {!menu && (
-                <GhostCursor label={isTouch() ? "long press" : "right click"} />
+                <GhostCursor label={menuGestureShort()} />
               )}
             </Row>
           )}
