@@ -269,7 +269,7 @@ export function SettingsView({
             each other and fill it. break-inside-avoid keeps a panel whole,
             and the margin lives on the children because columns have no
             row-gap. One column below lg, where the question does not arise. */}
-        <div className="lg:grid lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-6">
+        <div className="lg:grid lg:grid-cols-[40px_minmax(0,1fr)] lg:gap-6">
           {/* Sticky, because the point of an index is being reachable
               from anywhere in the thing it indexes. Hidden below lg,
               where the page is one column and short enough to scroll. */}
@@ -357,7 +357,7 @@ export function SettingsView({
             </div>
             </SettingsGroupBlock>
 
-            <SettingsGroupBlock id="appearance" label="Appearance and time">
+            <SettingsGroupBlock id="appearance" label="Appearance">
             <SettingsSection
               title="General"
               description="App-wide preferences for appearance, calendar, and quick capture."
@@ -858,7 +858,7 @@ export function SettingsView({
           </SettingsSection>
             </SettingsGroupBlock>
 
-            <SettingsGroupBlock id="data" label="Your data">
+            <SettingsGroupBlock id="data" label="Data">
           <SettingsSection
             className="mb-6"
             title="Data"
@@ -891,11 +891,11 @@ export function SettingsView({
  */
 const SETTINGS_GROUPS: SettingsGroup[] = [
   { id: "account", label: "Account", short: "Account" },
-  { id: "appearance", label: "Appearance and time", short: "Display" },
+  { id: "appearance", label: "Appearance", short: "Appearance" },
   { id: "defaults", label: "Defaults", short: "Defaults" },
-  { id: "workspace", label: "Workspace", short: "Space" },
+  { id: "workspace", label: "Workspace", short: "Workspace" },
   { id: "tags", label: "Tags", short: "Tags" },
-  { id: "data", label: "Your data", short: "Data" },
+  { id: "data", label: "Data", short: "Data" },
 ];
 
 /** Mon-first weekday toggles for the auto-switch schedule (values = JS getDay). */

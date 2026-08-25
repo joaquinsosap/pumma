@@ -1,35 +1,37 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 
 /**
- * The index down the left of Settings, with a marker that slides to whatever
- * you are looking at.
+ * The index down the left of Settings.
  *
  * Eleven panels in one scroll with no structure meant the only way to find a
  * setting was to read all of them. Grouping them is most of the fix; this is
- * the part that makes the grouping visible and lets you jump.
+ * the part that shows the grouping and lets you jump.
  *
- * Closed, it is a 34px strip and each entry reads DOWN it, one upright
- * letter at a time. A rail wide enough for six full names is a column of
- * prose beside a page that is already dense, and the headings inside the page
- * already say what each group is, so the rail only has to be findable.
- * Hovering widens it and the full names lie flat, because the moment you go
- * looking for something is the moment four letters stop being enough.
+ * No boxes and no words: each group is a bar whose LENGTH is the marker. The
+ * one you are in is longest and takes the accent, its neighbours are a little
+ * longer than the rest, so the column has a shape you can read from the
+ * corner of your eye without reading anything. An earlier version made every
+ * marker loud to be findable and read as a column of stray checkboxes; the
+ * fix was to make the ACTIVE one loud instead.
  *
- * The marker is one absolutely positioned block that moves, rather than a
- * border on the active item. A single travelling object reads as "you are
- * here" moving down a list; a border blinking on in different places reads as
- * separate things lighting up.
+ * Labels are deliberately absent for now.
  */
 export type SettingsGroup = {
   id: string;
-  /** Spelled out. Shown for the active entry, and for all of them on hover. */
+  /** Spelled out. Not rendered yet: the rail is markers only for now. */
   label: string;
-  /** One word, for entries you are not in. */
   short: string;
 };
+
+/** Bar length by distance from the group you are in. */
+function tickWidth(distance: number): number {
+  if (distance === 0) return 28;
+  if (distance === 1) return 20;
+  return 14;
+}
 
 export function SettingsNav({
   groups,
@@ -42,9 +44,6 @@ export function SettingsNav({
   className?: string;
 }) {
   const [active, setActive] = useState(groups[0]?.id ?? "");
-  const [open, setOpen] = useState(false);
-  const itemsRef = useRef<Record<string, HTMLButtonElement | null>>({});
-  const [marker, setMarker] = useState({ top: 0, height: 0 });
 
   // Scrollspy. rootMargin pulls the trigger line up near the top of the pane,
   // so a group becomes active as its heading arrives rather than when it
@@ -86,99 +85,44 @@ export function SettingsNav({
     };
   }, [groups, scrollerRef]);
 
-  // Follow the active item with the marker. Measured rather than derived from
-  // an index: entries change height as their labels expand and wrap, and the
-  // marker has to track that, which is also what makes the movement read as
-  // one object rather than a jump.
-  useEffect(() => {
-    const el = itemsRef.current[active];
-    if (!el) return;
-    const measure = () =>
-      setMarker({ top: el.offsetTop, height: el.offsetHeight });
-    measure();
-    // Expanding on hover reflows the list under the marker.
-    const ro = new ResizeObserver(measure);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [active, groups, open]);
+  const activeIndex = Math.max(
+    0,
+    groups.findIndex((g) => g.id === active),
+  );
 
   return (
-    <nav
-      className={cn(
-        "relative transition-[width] duration-300 ease-out motion-reduce:transition-none",
-        open ? "w-[146px]" : "w-[34px]",
-        className,
-      )}
-      aria-label="Settings sections"
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocusCapture={() => setOpen(true)}
-      onBlurCapture={(e) => {
-        if (!e.currentTarget.contains(e.relatedTarget as Node)) setOpen(false);
-      }}
-    >
-      <span
-        aria-hidden
-        className="absolute left-0 w-[3px] rounded-full bg-primary transition-all duration-300 ease-out motion-reduce:transition-none"
-        style={{ top: marker.top, height: marker.height }}
-      />
-      <ul className="flex flex-col gap-1 border-l border-border">
-        {groups.map((g) => {
-          const isActive = active === g.id;
+    <nav className={cn("w-[40px]", className)} aria-label="Settings sections">
+      <ul className="flex flex-col items-start gap-3">
+        {groups.map((g, i) => {
+          const isActive = g.id === active;
           return (
-            <li key={g.id}>
+            <li key={g.id} className="flex">
               <button
                 type="button"
-                ref={(el) => {
-                  itemsRef.current[g.id] = el;
-                }}
                 aria-current={isActive ? "true" : undefined}
                 aria-label={g.label}
-                onClick={() => {
+                title={g.label}
+                onClick={(e) => {
                   document
                     .getElementById(g.id)
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  e.currentTarget.blur();
                 }}
-                className={cn(
-                  "w-full rounded-r-md text-[12px] leading-tight transition-all duration-300 ease-out motion-reduce:transition-none",
-                  open ? "px-3 py-2 text-left" : "px-0 py-2 text-center",
-                  isActive
-                    ? "font-semibold text-ink"
-                    : "text-muted hover:bg-hover hover:text-ink",
-                )}
+                // The bar is 4px but the button is 16px tall: a 4px hit
+                // target is a dare, not a control.
+                className="group flex h-4 items-center py-0"
               >
-                {/* Two spellings of the same word, cross-fading in place.
-                    Closed, the short one runs down the rail a letter at a
-                    time (upright, not rotated, so it reads as letters rather
-                    than a sideways word). Open, the full name lies flat.
-                    Both are always rendered; only one has height, so the
-                    button grows and shrinks instead of jumping. */}
                 <span
-                  className={cn(
-                    "block overflow-hidden transition-all duration-300 ease-out motion-reduce:transition-none",
-                    open
-                      ? "max-h-0 opacity-0"
-                      : "max-h-[220px] opacity-100",
-                  )}
+                  className="block h-[4px] rounded-full transition-all duration-300 ease-out group-hover:!bg-primary motion-reduce:transition-none"
                   style={{
-                    writingMode: "vertical-rl",
-                    textOrientation: "upright",
-                    letterSpacing: "0.14em",
-                    margin: open ? undefined : "0 auto",
+                    width: tickWidth(Math.abs(i - activeIndex)),
+                    background: isActive
+                      ? "var(--primary)"
+                      : `color-mix(in oklab, var(--ink) ${
+                          Math.abs(i - activeIndex) === 1 ? 34 : 22
+                        }%, transparent)`,
                   }}
-                  aria-hidden
-                >
-                  {g.short}
-                </span>
-                <span
-                  className={cn(
-                    "block overflow-hidden whitespace-nowrap transition-all duration-300 ease-out motion-reduce:transition-none",
-                    open ? "max-h-[60px] opacity-100" : "max-h-0 opacity-0",
-                  )}
-                  aria-hidden
-                >
-                  {g.label}
-                </span>
+                />
               </button>
             </li>
           );
