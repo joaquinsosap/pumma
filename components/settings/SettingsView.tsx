@@ -306,7 +306,6 @@ export function SettingsView({
           <SettingsSection
             title="Assistant"
             description="Plan and Ask call the AI provider you choose, with your own key. It's stored encrypted and used only for your requests."
-            className="lg:col-span-2"
           >
             <AssistantProviderFields
               provider={settings?.aiProvider ?? null}
@@ -318,7 +317,6 @@ export function SettingsView({
           <SettingsSection
             title="Tour"
             description="The sixty seconds you watched on your first day. Worth another look after a while away, since it covers the things that aren't buttons."
-            className="lg:col-span-2"
           >
             <ReplayTutorialButton />
           </SettingsSection>
@@ -327,8 +325,7 @@ export function SettingsView({
             <SettingsSection
               title="Subscription"
               description="Your hosted PUMMA plan. Payments are handled by the billing provider, and this app never sees your card."
-              className="lg:col-span-2"
-            >
+              >
               <SubscriptionCard />
             </SettingsSection>
           )}
@@ -385,20 +382,28 @@ export function SettingsView({
             </div>
           </SettingsSection>
 
-          <SettingsSection
-            title="Defaults"
-            description="Where each surface starts. A link that names a view, like Home’s Today, still wins."
+        </div>
+
+        <SettingsSection
+          className="mb-6"
+          title="Defaults"
+          description="Where each surface starts. A link that names a view, like Home’s Today, still wins."
+        >
+          <SettingRow
+            label="Default due today"
+            description="New tasks from quick capture default to today."
           >
-            <SettingRow
-              label="Default due today"
-              description="New tasks from quick capture default to today."
-            >
-              <Switch
-                checked={settings?.defaultDueToday ?? true}
-                onCheckedChange={(v) => update({ defaultDueToday: v })}
-              />
-            </SettingRow>
-            <div className="border-t border-border/60 pt-3">
+            <Switch
+              checked={settings?.defaultDueToday ?? true}
+              onCheckedChange={(v) => update({ defaultDueToday: v })}
+            />
+          </SettingRow>
+          {/* Across the width, not down a narrow column. This panel is
+              full width because its copy needs the room, and stacking
+              four short controls under that copy just moved the empty
+              space from beside the panel to inside it. */}
+          <div className="grid gap-x-8 gap-y-5 border-t border-border/60 pt-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div>
               <label className="mb-1.5 block text-sm text-ink">
                 Default capture type
               </label>
@@ -406,7 +411,7 @@ export function SettingsView({
                 What the omnibar creates when you don&apos;t pick a type.
               </p>
               <select
-                className="w-full max-w-xs rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
                 value={settings?.defaultCaptureType ?? "task"}
                 onChange={(e) =>
                   update({ defaultCaptureType: e.target.value as OmniType })
@@ -418,7 +423,7 @@ export function SettingsView({
                 <option value="note">Note</option>
               </select>
             </div>
-            <div className="border-t border-border/60 pt-3">
+            <div>
               <label className="mb-1.5 block text-sm text-ink">
                 Tasks page opens on
               </label>
@@ -459,7 +464,7 @@ export function SettingsView({
                 </select>
               </div>
             </div>
-            <div className="border-t border-border/60 pt-3">
+            <div>
               <label className="mb-1.5 block text-sm text-ink">
                 Tasks page starts filtered by
               </label>
@@ -503,7 +508,7 @@ export function SettingsView({
                 ))}
               </div>
             </div>
-            <div className="border-t border-border/60 pt-3">
+            <div>
               <label className="mb-1.5 block text-sm text-ink">
                 New habits repeat
               </label>
@@ -511,7 +516,7 @@ export function SettingsView({
                 The cadence a freshly captured habit starts with.
               </p>
               <select
-                className="w-full max-w-xs rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
                 value={settings?.defaultHabitFrequency ?? "daily"}
                 onChange={(e) =>
                   update({
@@ -525,8 +530,10 @@ export function SettingsView({
                 <option value="monthly">Monthly</option>
               </select>
             </div>
-          </SettingsSection>
+          </div>
+        </SettingsSection>
 
+        <div className="gap-6 lg:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid">
           <SettingsSection
             title="Life calendar"
             description="Birth date, span, and how the life grid is displayed."
@@ -692,132 +699,133 @@ export function SettingsView({
             </div>
           </SettingsSection>
 
-          <SettingsSection
-            title="Data"
-            description="Take a copy with you, or close the account for good."
-            className="lg:col-span-2"
-          >
-            <DataSection
-              userEmail={userEmail}
-              deletionBlock={deletionBlock}
-              starter={starter}
-            />
-          </SettingsSection>
+        </div>
 
-          <SettingsSection title="Tags" className="lg:col-span-2">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="m-0 text-[12px] text-faint">
-                Click the dot to change a tag&apos;s color, click the name to
-                rename. Drag the handle to arrange them yourself — the sidebar
-                follows this order.
-              </p>
-              <SortMenu
-                options={TAG_SORTS}
-                value={tagSort}
-                onChange={changeTagSort}
-              />
-            </div>
-            <DndContext
-              sensors={tagDragSensors}
-              collisionDetection={closestCenter}
-              onDragEnd={handleTagDragEnd}
+        <SettingsSection
+          className="mb-6"
+          title="Data"
+          description="Take a copy with you, or close the account for good."
+        >
+          <DataSection
+            userEmail={userEmail}
+            deletionBlock={deletionBlock}
+            starter={starter}
+          />
+        </SettingsSection>
+
+        <SettingsSection title="Tags" className="mb-6">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <p className="m-0 text-[12px] text-faint">
+              Click the dot to change a tag&apos;s color, click the name to
+              rename. Drag the handle to arrange them yourself — the sidebar
+              follows this order.
+            </p>
+            <SortMenu
+              options={TAG_SORTS}
+              value={tagSort}
+              onChange={changeTagSort}
+            />
+          </div>
+          <DndContext
+            sensors={tagDragSensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleTagDragEnd}
+          >
+            <SortableContext
+              items={sortedTags.map((t) => t.id)}
+              strategy={rectSortingStrategy}
             >
-              <SortableContext
-                items={sortedTags.map((t) => t.id)}
-                strategy={rectSortingStrategy}
-              >
-                <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                  {sortedTags.map((t) => (
-                    <SortableTagRow key={t.id} tag={t} />
-                  ))}
-                </div>
-              </SortableContext>
-            </DndContext>
-            <div className="flex max-w-xl gap-2">
-              <Input
-                value={tagName}
-                onChange={(e) => setTagName(e.target.value)}
-                placeholder="New tag name"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && tagName.trim()) {
-                    startTransition(async () => {
-                      await addTagAction(tagName);
-                      setTagName("");
-                      router.refresh();
-                    });
-                  }
-                }}
-              />
-              <Button
-                onClick={() =>
+              <div className="mb-4 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {sortedTags.map((t) => (
+                  <SortableTagRow key={t.id} tag={t} />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+          <div className="flex max-w-xl gap-2">
+            <Input
+              value={tagName}
+              onChange={(e) => setTagName(e.target.value)}
+              placeholder="New tag name"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && tagName.trim()) {
                   startTransition(async () => {
                     await addTagAction(tagName);
                     setTagName("");
                     router.refresh();
-                  })
+                  });
                 }
-              >
-                Add
-              </Button>
-            </div>
+              }}
+            />
+            <Button
+              onClick={() =>
+                startTransition(async () => {
+                  await addTagAction(tagName);
+                  setTagName("");
+                  router.refresh();
+                })
+              }
+            >
+              Add
+            </Button>
+          </div>
 
-            <div className="mt-5 border-t border-border/60 pt-4">
-              <SettingRow
-                label="Number keys jump between spaces"
-                description="1 Home, 2 Tasks, 3 Notes, and on down the sidebar. While this is on, a capture cannot start with a digit, the key goes to the sidebar instead. Everything after the first character still goes to the bar."
-              >
-                <Switch
-                  checked={settings?.spaceShortcuts ?? true}
-                  onCheckedChange={(v) => update({ spaceShortcuts: v })}
-                />
-              </SettingRow>
+          <div className="mt-5 border-t border-border/60 pt-4">
+            <SettingRow
+              label="Number keys jump between spaces"
+              description="1 Home, 2 Tasks, 3 Notes, and on down the sidebar. While this is on, a capture cannot start with a digit, the key goes to the sidebar instead. Everything after the first character still goes to the bar."
+            >
+              <Switch
+                checked={settings?.spaceShortcuts ?? true}
+                onCheckedChange={(v) => update({ spaceShortcuts: v })}
+              />
+            </SettingRow>
 
-              <p className="mb-3 mt-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
-                Housekeeping
-              </p>
-              <SettingRow
-                label="Auto-clean unused tags"
-                description="Once a day, remove tags that nothing references and that are older than the window below. Off by default."
-              >
-                <Switch
-                  checked={settings?.tagAutoClean ?? false}
-                  onCheckedChange={(v) => update({ tagAutoClean: v })}
-                />
-              </SettingRow>
-              {settings?.tagAutoClean && (
-                <div className="border-t border-border/60 py-3">
-                  <label className="mb-1.5 block text-sm text-ink">
-                    Only clean tags unused for
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="number"
-                      min={1}
-                      max={365}
-                      className="w-24 rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                      value={settings?.tagAutoCleanDays ?? 30}
-                      onChange={(e) =>
-                        update({
-                          tagAutoCleanDays: Math.min(
-                            365,
-                            Math.max(1, Number(e.target.value) || 30),
-                          ),
-                        })
-                      }
-                    />
-                    <span className="text-sm text-muted">days</span>
-                  </div>
+            <p className="mb-3 mt-4 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
+              Housekeeping
+            </p>
+            <SettingRow
+              label="Auto-clean unused tags"
+              description="Once a day, remove tags that nothing references and that are older than the window below. Off by default."
+            >
+              <Switch
+                checked={settings?.tagAutoClean ?? false}
+                onCheckedChange={(v) => update({ tagAutoClean: v })}
+              />
+            </SettingRow>
+            {settings?.tagAutoClean && (
+              <div className="border-t border-border/60 py-3">
+                <label className="mb-1.5 block text-sm text-ink">
+                  Only clean tags unused for
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={365}
+                    className="w-24 rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                    value={settings?.tagAutoCleanDays ?? 30}
+                    onChange={(e) =>
+                      update({
+                        tagAutoCleanDays: Math.min(
+                          365,
+                          Math.max(1, Number(e.target.value) || 30),
+                        ),
+                      })
+                    }
+                  />
+                  <span className="text-sm text-muted">days</span>
                 </div>
-              )}
-              <div className="border-t border-border/60 pt-3">
-                <p className="mb-2 text-[12px] leading-relaxed text-faint">
-                  Or clean once, right now. You can undo it straight after.
-                </p>
-                <CleanTagsButton />
               </div>
+            )}
+            <div className="border-t border-border/60 pt-3">
+              <p className="mb-2 text-[12px] leading-relaxed text-faint">
+                Or clean once, right now. You can undo it straight after.
+              </p>
+              <CleanTagsButton />
             </div>
-          </SettingsSection>
-        </div>
+          </div>
+        </SettingsSection>
       </div>
     </>
   );
