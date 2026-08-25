@@ -269,7 +269,7 @@ export function SettingsView({
             each other and fill it. break-inside-avoid keeps a panel whole,
             and the margin lives on the children because columns have no
             row-gap. One column below lg, where the question does not arise. */}
-        <div className="lg:grid lg:grid-cols-[40px_minmax(0,1fr)] lg:gap-6">
+        <div className="lg:grid lg:grid-cols-[40px_minmax(0,1fr)] lg:gap-8">
           {/* Sticky, because the point of an index is being reachable
               from anywhere in the thing it indexes. Hidden below lg,
               where the page is one column and short enough to scroll. */}

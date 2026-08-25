@@ -17,10 +17,14 @@ import { cn } from "@/lib/utils";
  * marker loud to be findable and read as a column of stray checkboxes; the
  * fix was to make the ACTIVE one loud instead.
  *
- * Hovering a tick names it, and only it, in a caption pinned under the
- * stack. One label at a time is the point: six would undo the quiet the
- * lengths buy. The caption is absolutely positioned so the ticks never move
- * when it appears, and it reads downward like everything else in this column.
+ * Hovering a tick names it, and only it, right under that tick. One label at
+ * a time is the point: six would undo the quiet the lengths buy. The caption
+ * is absolutely positioned, so naming a tick never moves the ticks, and it
+ * overhangs the rail into the gutter rather than widening the column.
+ *
+ * The hovered tick also grows to the length of the selected one while keeping
+ * its own colour: halfway to selected, which is what pointing at something
+ * is.
  */
 export type SettingsGroup = {
   id: string;
@@ -94,19 +98,18 @@ export function SettingsNav({
     groups.findIndex((g) => g.id === active),
   );
 
-  const caption = groups.find((g) => g.id === hovered)?.label ?? "";
-
   return (
     <nav
       className={cn("relative w-[40px]", className)}
       aria-label="Settings sections"
       onMouseLeave={() => setHovered(null)}
     >
-      <ul className="flex flex-col items-start gap-3">
+      <ul className="flex flex-col items-start gap-[18px]">
         {groups.map((g, i) => {
           const isActive = g.id === active;
+          const isHovered = g.id === hovered;
           return (
-            <li key={g.id} className="flex">
+            <li key={g.id} className="relative flex">
               <button
                 type="button"
                 aria-current={isActive ? "true" : undefined}
@@ -126,32 +129,40 @@ export function SettingsNav({
                 className="group flex h-4 items-center py-0"
               >
                 <span
-                  className="block h-[4px] rounded-full transition-all duration-300 ease-out group-hover:!bg-primary motion-reduce:transition-none"
+                  className="block h-[4px] rounded-full transition-all duration-200 ease-out motion-reduce:transition-none"
                   style={{
-                    width: tickWidth(Math.abs(i - activeIndex)),
+                    // Pointing at a tick gives it the selected length while
+                    // it keeps its own colour, so the gesture reads as "this
+                    // one, if you want it" rather than as a second selection.
+                    width:
+                      isHovered && !isActive
+                        ? tickWidth(0)
+                        : tickWidth(Math.abs(i - activeIndex)),
                     background: isActive
                       ? "var(--primary)"
-                      : `color-mix(in oklab, var(--ink) ${
-                          Math.abs(i - activeIndex) === 1 ? 34 : 22
-                        }%, transparent)`,
+                      : isHovered
+                        ? "color-mix(in oklab, var(--primary) 55%, transparent)"
+                        : `color-mix(in oklab, var(--ink) ${
+                            Math.abs(i - activeIndex) === 1 ? 34 : 22
+                          }%, transparent)`,
                   }}
                 />
               </button>
+              {/* Out of flow and allowed to overhang into the gutter: the
+                  rail stays 40px whatever the word is. */}
+              <span
+                aria-hidden
+                className={cn(
+                  "pointer-events-none absolute left-0 top-full z-10 mt-[3px] whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.1em] text-faint transition-opacity duration-150 motion-reduce:transition-none",
+                  isHovered ? "opacity-100" : "opacity-0",
+                )}
+              >
+                {g.label}
+              </span>
             </li>
           );
         })}
       </ul>
-      {/* Out of flow, so naming a tick never nudges the ticks. */}
-      <span
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute left-0 top-full mt-3 block font-mono text-[10px] uppercase tracking-[0.14em] text-faint transition-opacity duration-200 motion-reduce:transition-none",
-          caption ? "opacity-100" : "opacity-0",
-        )}
-        style={{ writingMode: "vertical-lr", textOrientation: "upright" }}
-      >
-        {caption}
-      </span>
     </nav>
   );
 }
