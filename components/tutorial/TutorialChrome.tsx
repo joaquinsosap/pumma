@@ -244,7 +244,7 @@ export function FlounderCard({
             what your body&rsquo;s capable of doing.&rdquo;
           </p>
           <p className="m-0 mt-0.5 font-mono text-[10px] text-faint">
-            David Goggins, about something harder than this
+            David Goggins
           </p>
         </blockquote>
 

@@ -177,16 +177,26 @@
  * Height is a layout property and animating it is not free, but this is one
  * element for 420ms once per beat, and the alternative (scaleY) would squash
  * the contents along with the box. */
-.stage-frame {
+/* The default lives ABOVE the frame, not on it.
+ *
+ * A custom property declared on the element beats one inherited from an
+ * ancestor, so `.stage-frame { --stage-h: 404px }` would quietly ignore the
+ * overlay's override — which is how the tour is told to use a shorter stage
+ * while a phone keyboard is up. Declared on the root, the frame simply
+ * consumes whichever value reaches it. */
+:root {
   --stage-h: 404px;
-  height: var(--stage-h);
-  animation: stageBob 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @media (min-width: 640px) {
-  .stage-frame {
+  :root {
     --stage-h: 430px;
   }
+}
+
+.stage-frame {
+  height: var(--stage-h);
+  animation: stageBob 420ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes stageBob {

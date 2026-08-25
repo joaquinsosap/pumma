@@ -14,6 +14,7 @@ import {
 } from "@/lib/tutorial";
 import { markTutorialSeen } from "@/lib/actions/settings";
 import { setTutorialActive } from "@/lib/tutorial-lock";
+import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import { onTutorialReplay } from "@/lib/tutorial-replay";
 import { stallLimitMs, startTutorialClock } from "@/lib/tutorial-clock";
 import { TutorialIntro } from "@/components/tutorial/TutorialIntro";
@@ -51,6 +52,11 @@ const OUTRO_MS = 900;
 
 export function TutorialOverlay({ seen }: { seen: boolean }) {
   const router = useRouter();
+  // The capture beat puts a real field on screen, so on a phone a real
+  // keyboard comes up over it — and the stage is centred in the window, which
+  // means it centres behind the keyboard. Everything below lays out inside
+  // what is actually visible instead, the same way the capture sheet does.
+  const keyboardInset = useKeyboardInset();
   // Read once, on mount. `seen` flips to true the instant the tour starts —
   // it is written then so that abandoning it still counts — and re-reading it
   // on every render would close the tour on its own first frame.
@@ -336,6 +342,26 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
         "fixed inset-0 z-[200] flex flex-col bg-black/70 backdrop-blur-[3px]",
         outro && "tutorial-outro",
       )}
+      // Reserved rather than scrolled: the tour must not be a thing you have
+      // to scroll, and the checklist strip has to stay above the keyboard too.
+      //
+      // Reserving alone is not enough — the stage is a fixed 430px and the
+      // banner above it another 175, which does not fit in the ~500px a phone
+      // has left once a keyboard is up. So the stage is told to be smaller
+      // for as long as the keyboard is there, through the same variable its
+      // own rule reads. The floor stops it collapsing to nothing on a short
+      // screen; below that the scene would rather clip than vanish.
+      style={
+        keyboardInset > 0
+          ? ({
+              paddingBottom: keyboardInset,
+              "--stage-h": `${Math.max(
+                190,
+                window.innerHeight - keyboardInset - 270,
+              )}px`,
+            } as React.CSSProperties)
+          : undefined
+      }
     >
       {outro && (
         <span

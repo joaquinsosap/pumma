@@ -89,9 +89,11 @@ export function LifeCalendarView({
     [lifeWeeks, grid.weeks],
   );
 
+  // Switching views rebuilds the grid at a different row height, so the
+  // position that was centred is not centred any more — re-aim after either.
   useEffect(() => {
     didInitialScrollRef.current = false;
-  }, [birthDate, span]);
+  }, [birthDate, span, fullView]);
 
   useEffect(() => {
     if (
@@ -101,12 +103,22 @@ export function LifeCalendarView({
       !lifeStats
     )
       return;
-    const scrollAge = lifeViewStartAge(lifeStats.ageYears);
-    const target = gridScrollRef.current.querySelector(
-      `[data-life-age="${scrollAge}"]`,
+    const root = gridScrollRef.current;
+    // The week you are in, CENTRED — not fifteen years above it pinned to the
+    // top. That older aim put the current row roughly a screen down, which was
+    // survivable while a year was one thin line and is not now that a year is
+    // two lines on a phone: the one row the page exists to show sat below the
+    // fold on open.
+    const target = root.querySelector<HTMLElement>(
+      `[data-life-age="${lifeStats.ageYears}"]`,
     );
     if (!target) return;
-    target.scrollIntoView({ block: "start" });
+    // offsetTop against the scroller rather than scrollIntoView: that walks up
+    // and scrolls every ancestor it can, which on the phone layout drags the
+    // whole page instead of the grid.
+    const centred =
+      target.offsetTop - root.clientHeight / 2 + target.offsetHeight / 2;
+    root.scrollTop = Math.max(0, centred);
     didInitialScrollRef.current = true;
   }, [grid.rows.length, lifeStats, fullView]);
 
@@ -285,8 +297,16 @@ export function LifeCalendarView({
                   <span className={cn(fullView ? "pl-[22px]" : "pl-[30px]")}>
                     AGE 0
                   </span>
+                  {/* "per row" stopped being true on a phone the moment a
+                      year wrapped onto two lines; a year is still 52 weeks
+                      either way, so that is what it says there. */}
                   <span className={fullView ? "text-[9px]" : undefined}>
-                    ← {LIFE_GRID_COLS} WEEKS PER ROW →
+                    <span className="max-sm:hidden">
+                      ← {LIFE_GRID_COLS} WEEKS PER ROW →
+                    </span>
+                    <span className="sm:hidden">
+                      ← {LIFE_GRID_COLS} WEEKS PER YEAR →
+                    </span>
                   </span>
                   <span
                     className={cn(
