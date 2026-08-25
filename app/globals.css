@@ -1431,11 +1431,19 @@ select:hover:not(:disabled) {
 
 /* ── Switches ────────────────────────────────────────────────────────────
    Off is a well, on is the accent, and the thumb is the one part that sits
-   above the track — the same raised/sunken logic as buttons and inputs. */
+   above the track: the same raised/sunken logic as buttons and inputs.
+
+   The off state used to be --well (white at 85%) behind a --border hairline,
+   which on a white panel is white on white. On a large screen, sitting at the
+   far end of a wide row, it was genuinely hard to tell there was a control
+   there at all, let alone which way it was set. The track now carries a tint
+   of the ink and a firmer edge, so "off" is a visible thing rather than the
+   absence of one, and the difference between the states is not carried by
+   colour alone: the thumb also travels. */
 [role="switch"] {
   border-radius: 999px !important;
-  border: 1px solid var(--border) !important;
-  background-color: var(--well) !important;
+  border: 1.5px solid color-mix(in oklab, var(--ink) 22%, transparent) !important;
+  background-color: color-mix(in oklab, var(--ink) 10%, var(--well)) !important;
   background-image: none !important;
   box-shadow: inset 0 1px 2px var(--edge);
   transition:

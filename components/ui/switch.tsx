@@ -10,7 +10,12 @@ const Switch = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SwitchPrimitives.Root
     className={cn(
-      "peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border border-border bg-surface2 transition-colors data-[state=checked]:bg-ink",
+      // Off has to be visibly OFF. It was surface2 behind a hairline border,
+      // which on a white panel is white on white: you could not tell a
+      // switch from a gap. A filled track and a firmer edge make the control
+      // findable, and the thumb keeps a shadow so the two states differ in
+      // shape as well as colour, not by colour alone.
+      "peer inline-flex h-[22px] w-10 shrink-0 cursor-pointer items-center rounded-full border-[1.5px] border-faint2/70 bg-chip transition-colors hover:border-faint data-[state=checked]:border-primary data-[state=checked]:bg-primary",
       className,
     )}
     {...props}
@@ -18,7 +23,7 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        "pointer-events-none block h-4 w-4 rounded-full bg-surface shadow transition-transform data-[state=checked]:translate-x-4 data-[state=unchecked]:translate-x-0.5",
+        "pointer-events-none block h-[16px] w-[16px] rounded-full bg-surface shadow-[0_1px_2px_rgba(0,0,0,0.28)] ring-1 ring-black/5 transition-transform data-[state=checked]:translate-x-[19px] data-[state=unchecked]:translate-x-[2px]",
       )}
     />
   </SwitchPrimitives.Root>
