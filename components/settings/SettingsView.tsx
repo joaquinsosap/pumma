@@ -269,7 +269,7 @@ export function SettingsView({
             each other and fill it. break-inside-avoid keeps a panel whole,
             and the margin lives on the children because columns have no
             row-gap. One column below lg, where the question does not arise. */}
-        <div className="lg:grid lg:grid-cols-[180px_minmax(0,1fr)] lg:gap-8">
+        <div className="lg:grid lg:grid-cols-[auto_minmax(0,1fr)] lg:gap-6">
           {/* Sticky, because the point of an index is being reachable
               from anywhere in the thing it indexes. Hidden below lg,
               where the page is one column and short enough to scroll. */}
@@ -565,189 +565,197 @@ export function SettingsView({
             </SettingsGroupBlock>
 
             <SettingsGroupBlock id="workspace" label="Workspace">
-            <div className="gap-6 lg:columns-2 [&>*]:mb-6 [&>*]:break-inside-avoid">
-            <SettingsSection
-              title="Life calendar"
-              description="Birth date, span, and how the life grid is displayed."
-            >
-              <SettingRow
-                label="Full view"
-                description="Fit your entire life grid in the viewport with a simplified two-color layout."
+            {/* Explicit columns, not a packer. CSS columns balance by
+                height, so it kept putting Habits beside Life calendar and
+                Life areas underneath. These three have an arrangement that
+                is meant: the two short view settings stack together, and
+                the tall schedule sits beside them. */}
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+              <div className="flex flex-col gap-6">
+              <SettingsSection
+                title="Life calendar"
+                description="Birth date, span, and how the life grid is displayed."
               >
-                <Switch
-                  checked={settings?.lifeCalendarFullView ?? false}
-                  onCheckedChange={(v) => update({ lifeCalendarFullView: v })}
-                />
-              </SettingRow>
-              <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1 block text-sm text-muted">
-                    Birth date
-                  </span>
-                  <DueQuickPick
-                    mode="birth"
-                    value={settings?.birthDate ?? null}
-                    onChange={(next) => {
-                      if (next) update({ birthDate: next });
-                    }}
+                <SettingRow
+                  label="Full view"
+                  description="Fit your entire life grid in the viewport with a simplified two-color layout."
+                >
+                  <Switch
+                    checked={settings?.lifeCalendarFullView ?? false}
+                    onCheckedChange={(v) => update({ lifeCalendarFullView: v })}
                   />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-sm text-muted">
-                    Life span (years, max {LIFE_SPAN_MAX})
-                  </span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={LIFE_SPAN_MAX}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
-                    value={settings?.lifeSpanYears ?? LIFE_SPAN_DEFAULT}
-                    onChange={(e) =>
-                      update({
-                        lifeSpanYears: Math.min(
-                          LIFE_SPAN_MAX,
-                          Math.max(
-                            1,
-                            Number(e.target.value) || LIFE_SPAN_DEFAULT,
+                </SettingRow>
+                <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1 block text-sm text-muted">
+                      Birth date
+                    </span>
+                    <DueQuickPick
+                      mode="birth"
+                      value={settings?.birthDate ?? null}
+                      onChange={(next) => {
+                        if (next) update({ birthDate: next });
+                      }}
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm text-muted">
+                      Life span (years, max {LIFE_SPAN_MAX})
+                    </span>
+                    <input
+                      type="number"
+                      min={1}
+                      max={LIFE_SPAN_MAX}
+                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                      value={settings?.lifeSpanYears ?? LIFE_SPAN_DEFAULT}
+                      onChange={(e) =>
+                        update({
+                          lifeSpanYears: Math.min(
+                            LIFE_SPAN_MAX,
+                            Math.max(
+                              1,
+                              Number(e.target.value) || LIFE_SPAN_DEFAULT,
+                            ),
                           ),
-                        ),
-                      })
-                    }
-                  />
-                </label>
-              </div>
-            </SettingsSection>
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+              </SettingsSection>
 
-            <SettingsSection
-              title="Life areas"
-              description="Automatically switch the sidebar Personal/Work toggle with your working hours."
-            >
-              <SettingRow
-                label="Auto switch"
-                description="Work during working hours, Personal outside them. A manual pick holds for the override window below."
+              <SettingsSection
+                title="Habits"
+                description="How many squares each habit heatmap shows, by cadence."
               >
-                <Switch
-                  checked={settings?.lifeAutoSwitch ?? false}
-                  onCheckedChange={(v) => update({ lifeAutoSwitch: v })}
-                />
-              </SettingRow>
-              <div className="grid gap-4 border-t border-border/60 pt-3 sm:grid-cols-2">
-                <label className="block">
-                  <span className="mb-1 block text-sm text-muted">
-                    Work starts
-                  </span>
-                  <input
-                    type="time"
-                    value={settings?.workStart ?? "09:00"}
-                    onChange={(e) => {
-                      if (e.target.value) update({ workStart: e.target.value });
-                    }}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm"
-                  />
-                </label>
-                <label className="block">
-                  <span className="mb-1 block text-sm text-muted">Work ends</span>
-                  <input
-                    type="time"
-                    value={settings?.workEnd ?? "18:00"}
-                    onChange={(e) => {
-                      if (e.target.value) update({ workEnd: e.target.value });
-                    }}
-                    className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm"
-                  />
-                </label>
-              </div>
-              <div className="mt-4">
-                <span className="mb-1.5 block text-sm text-muted">Work days</span>
-                <WorkDaysPicker
-                  value={settings?.workDays ?? [1, 2, 3, 4, 5]}
-                  onChange={(workDays) => update({ workDays })}
-                />
-              </div>
-              <div className="mt-4 max-w-[220px]">
-                <span className="mb-1 block text-sm text-muted">
-                  Manual override lasts
-                </span>
-                <SettingsNumberField
-                  value={settings?.lifeAutoOverrideMins ?? 60}
-                  suffix="min"
-                  hint="Then the schedule takes back over"
-                  onSave={(lifeAutoOverrideMins) =>
-                    update({ lifeAutoOverrideMins })
-                  }
-                />
-              </div>
-            </SettingsSection>
+                <div className="grid gap-4 sm:grid-cols-3">
+                  <div>
+                    <span className="mb-1 block text-sm text-muted">
+                      Daily habits
+                    </span>
+                    <SettingsNumberField
+                      value={
+                        settings?.habitVisibleDays ??
+                        DEFAULT_HABIT_VISIBILITY.dailyDays
+                      }
+                      suffix="days"
+                      hint={`Default ${HABIT_VISIBILITY_DEFAULTS.dailyDays.default} days`}
+                      onSave={(habitVisibleDays) => update({ habitVisibleDays })}
+                    />
+                  </div>
+                  <div>
+                    <span className="mb-1 block text-sm text-muted">
+                      Weekly habits
+                    </span>
+                    <SettingsNumberField
+                      value={
+                        settings?.habitVisibleWeeks ??
+                        DEFAULT_HABIT_VISIBILITY.weeklyWeeks
+                      }
+                      suffix="weeks"
+                      hint={`Default ${HABIT_VISIBILITY_DEFAULTS.weeklyWeeks.default} weeks (2 months)`}
+                      onSave={(habitVisibleWeeks) => update({ habitVisibleWeeks })}
+                    />
+                  </div>
+                  <div>
+                    <span className="mb-1 block text-sm text-muted">
+                      Monthly habits
+                    </span>
+                    <SettingsNumberField
+                      value={
+                        settings?.habitVisibleMonths ??
+                        DEFAULT_HABIT_VISIBILITY.monthlyMonths
+                      }
+                      suffix="months"
+                      hint={`Default ${HABIT_VISIBILITY_DEFAULTS.monthlyMonths.default} months`}
+                      onSave={(habitVisibleMonths) =>
+                        update({ habitVisibleMonths })
+                      }
+                    />
+                  </div>
+                </div>
+              </SettingsSection>
 
-            <SettingsSection
-              title="Habits"
-              description="How many squares each habit heatmap shows, by cadence."
-            >
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div>
-                  <span className="mb-1 block text-sm text-muted">
-                    Daily habits
-                  </span>
-                  <SettingsNumberField
-                    value={
-                      settings?.habitVisibleDays ??
-                      DEFAULT_HABIT_VISIBILITY.dailyDays
-                    }
-                    suffix="days"
-                    hint={`Default ${HABIT_VISIBILITY_DEFAULTS.dailyDays.default} days`}
-                    onSave={(habitVisibleDays) => update({ habitVisibleDays })}
-                  />
-                </div>
-                <div>
-                  <span className="mb-1 block text-sm text-muted">
-                    Weekly habits
-                  </span>
-                  <SettingsNumberField
-                    value={
-                      settings?.habitVisibleWeeks ??
-                      DEFAULT_HABIT_VISIBILITY.weeklyWeeks
-                    }
-                    suffix="weeks"
-                    hint={`Default ${HABIT_VISIBILITY_DEFAULTS.weeklyWeeks.default} weeks (2 months)`}
-                    onSave={(habitVisibleWeeks) => update({ habitVisibleWeeks })}
-                  />
-                </div>
-                <div>
-                  <span className="mb-1 block text-sm text-muted">
-                    Monthly habits
-                  </span>
-                  <SettingsNumberField
-                    value={
-                      settings?.habitVisibleMonths ??
-                      DEFAULT_HABIT_VISIBILITY.monthlyMonths
-                    }
-                    suffix="months"
-                    hint={`Default ${HABIT_VISIBILITY_DEFAULTS.monthlyMonths.default} months`}
-                    onSave={(habitVisibleMonths) =>
-                      update({ habitVisibleMonths })
-                    }
-                  />
-                </div>
               </div>
-            </SettingsSection>
-
+              <div className="flex flex-col gap-6">
+              <SettingsSection
+                title="Life areas"
+                description="Automatically switch the sidebar Personal/Work toggle with your working hours."
+              >
+                <SettingRow
+                  label="Auto switch"
+                  description="Work during working hours, Personal outside them. A manual pick holds for the override window below."
+                >
+                  <Switch
+                    checked={settings?.lifeAutoSwitch ?? false}
+                    onCheckedChange={(v) => update({ lifeAutoSwitch: v })}
+                  />
+                </SettingRow>
+                <div className="grid gap-4 border-t border-border/60 pt-3 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1 block text-sm text-muted">
+                      Work starts
+                    </span>
+                    <input
+                      type="time"
+                      value={settings?.workStart ?? "09:00"}
+                      onChange={(e) => {
+                        if (e.target.value) update({ workStart: e.target.value });
+                      }}
+                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm"
+                    />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1 block text-sm text-muted">Work ends</span>
+                    <input
+                      type="time"
+                      value={settings?.workEnd ?? "18:00"}
+                      onChange={(e) => {
+                        if (e.target.value) update({ workEnd: e.target.value });
+                      }}
+                      className="w-full rounded-lg border border-border bg-surface px-3 py-2 font-mono text-sm"
+                    />
+                  </label>
+                </div>
+                <div className="mt-4">
+                  <span className="mb-1.5 block text-sm text-muted">Work days</span>
+                  <WorkDaysPicker
+                    value={settings?.workDays ?? [1, 2, 3, 4, 5]}
+                    onChange={(workDays) => update({ workDays })}
+                  />
+                </div>
+                <div className="mt-4 max-w-[220px]">
+                  <span className="mb-1 block text-sm text-muted">
+                    Manual override lasts
+                  </span>
+                  <SettingsNumberField
+                    value={settings?.lifeAutoOverrideMins ?? 60}
+                    suffix="min"
+                    hint="Then the schedule takes back over"
+                    onSave={(lifeAutoOverrideMins) =>
+                      update({ lifeAutoOverrideMins })
+                    }
+                  />
+                </div>
+              </SettingsSection>
+              </div>
             </div>
             </SettingsGroupBlock>
 
             <SettingsGroupBlock id="tags" label="Tags">
-          <SettingsSection title="Tags" className="mb-6">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <p className="m-0 text-[12px] text-faint">
-                Click the dot to change a tag&apos;s color, click the name to
-                rename. Drag the handle to arrange them yourself — the sidebar
-                follows this order.
-              </p>
-              <SortMenu
-                options={TAG_SORTS}
-                value={tagSort}
-                onChange={changeTagSort}
-              />
-            </div>
+            <SettingsSection title="Tags" className="mb-6">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="m-0 text-[12px] text-faint">
+                  Click the dot to change a tag&apos;s color, click the name to
+                  rename. Drag the handle to arrange them yourself — the sidebar
+                  follows this order.
+                </p>
+                <SortMenu
+                  options={TAG_SORTS}
+                  value={tagSort}
+                  onChange={changeTagSort}
+                />
+              </div>
             <DndContext
               sensors={tagDragSensors}
               collisionDetection={closestCenter}
@@ -882,12 +890,12 @@ export function SettingsView({
  * everything.
  */
 const SETTINGS_GROUPS: SettingsGroup[] = [
-  { id: "account", label: "Account" },
-  { id: "appearance", label: "Appearance and time" },
-  { id: "defaults", label: "Defaults" },
-  { id: "workspace", label: "Workspace" },
-  { id: "tags", label: "Tags" },
-  { id: "data", label: "Your data" },
+  { id: "account", label: "Account", short: "Account" },
+  { id: "appearance", label: "Appearance and time", short: "Display" },
+  { id: "defaults", label: "Defaults", short: "Defaults" },
+  { id: "workspace", label: "Workspace", short: "Space" },
+  { id: "tags", label: "Tags", short: "Tags" },
+  { id: "data", label: "Your data", short: "Data" },
 ];
 
 /** Mon-first weekday toggles for the auto-switch schedule (values = JS getDay). */
