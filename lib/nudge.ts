@@ -114,3 +114,45 @@ export function markAnswered(
   delete rest[key];
   return { history: rest, answered: { ...answered, [key]: when } };
 }
+
+/**
+ * Which quick-pick a chosen due date corresponds to, if any.
+ *
+ * Only the predefined picks are worth learning from. A date typed as
+ * "#friday" or chosen from the calendar is a decision about one task, not a
+ * standing preference, and recording it would teach the nudge to suggest a
+ * default nobody can express in the picker anyway. Null means "do not
+ * record", which is different from "none": none IS a pick.
+ */
+export function classifyDue(
+  picked: string | null,
+  todayIso: string,
+  tomorrowIso: string,
+): "none" | "today" | "tomorrow" | null {
+  if (picked === null) return "none";
+  const day = picked.slice(0, 10);
+  if (day === todayIso) return "today";
+  if (day === tomorrowIso) return "tomorrow";
+  return null;
+}
+
+/** Human labels for the values the offer can name. */
+export const NUDGE_LABELS: Record<string, string> = {
+  task: "Task",
+  habit: "Habit",
+  goal: "Goal",
+  note: "Note",
+  none: "No date",
+  today: "Today",
+  tomorrow: "Tomorrow",
+  daily: "Daily",
+  weekly: "Weekly",
+  monthly: "Monthly",
+};
+
+/** What the offer is about, in the user's words. */
+export const NUDGE_SUBJECT: Record<NudgeKey, string> = {
+  captureType: "what capture creates",
+  captureDue: "the due date for new tasks",
+  habitFrequency: "how new habits repeat",
+};

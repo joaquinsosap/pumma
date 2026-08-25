@@ -32,6 +32,8 @@ import { isTutorialActive } from "@/lib/tutorial-lock";
 import { sectionMetaFor } from "@/components/shell/MobileDock";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { cn } from "@/lib/utils";
+import { classifyDue } from "@/lib/nudge";
+import { NudgeOffer, useNudgeOffer } from "@/components/shell/NudgeOffer";
 import {
   PRIORITY_COLOR,
   PRIORITY_INK,
@@ -117,6 +119,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
   const [life] = useLifeView();
   const assistant = useAssistant();
   const timeZone = useTimezone();
+  const nudge = useNudgeOffer();
 
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("capture");
@@ -278,6 +281,14 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
       if (!res.ok) {
         toast.error(res.error);
         return;
+      }
+      // After the save. Same rule as the desk bar: only a quick-picked due is
+      // a preference worth learning from.
+      nudge.record("captureType", type);
+      if (type === "task" && !parsed.due) {
+        // td / tomorrow are already the user's own timezone; deriving them
+        // from UTC here would misfile a late-evening capture.
+        nudge.record("captureDue", classifyDue(pickedDue ?? null, td, tomorrow));
       }
       toast.success(res.data?.label ?? "Added", {
         action: res.undo
@@ -464,6 +475,13 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
               style={{ bottom: keyboardInset }}
               onPointerDown={(e) => e.preventDefault()}
             >
+              {/* The offer rides above the floating bar, so it never covers
+                  the field you are typing in. */}
+              <NudgeOffer
+                offer={nudge.offer}
+                onAnswer={nudge.answer}
+                className="mb-2"
+              />
               {/* Floating and shadowed rather than a bar welded to the
                   keyboard. Sitting flush, it read as part of the keyboard on a
                   dark background and disappeared entirely on a white one; a

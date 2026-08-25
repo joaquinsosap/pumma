@@ -3,6 +3,7 @@
 // people not to capture: these tests are the product promise.
 import { describe, expect, it } from "vitest";
 import {
+  classifyDue,
   markAnswered,
   nudgeVerdict,
   recordChoice,
@@ -146,5 +147,29 @@ describe("markAnswered", () => {
     for (let i = 0; i < 10; i++) h = recordChoice(h, a, "captureType", "note");
     expect(h.captureType).toBeUndefined();
     expect(nudgeVerdict(h, a, "captureType", "task")).toBeNull();
+  });
+});
+
+describe("classifyDue", () => {
+  const TODAY = "2026-08-25";
+  const TOMORROW = "2026-08-26";
+
+  it("treats no date as a real pick, not as nothing to record", () => {
+    expect(classifyDue(null, TODAY, TOMORROW)).toBe("none");
+  });
+
+  it("recognises today and tomorrow", () => {
+    expect(classifyDue(TODAY, TODAY, TOMORROW)).toBe("today");
+    expect(classifyDue(TOMORROW, TODAY, TOMORROW)).toBe("tomorrow");
+  });
+
+  it("ignores the time part", () => {
+    expect(classifyDue(`${TODAY}T14:00`, TODAY, TOMORROW)).toBe("today");
+  });
+
+  it("records nothing for a date the picker cannot express", () => {
+    // Typed "#friday", or picked from the calendar: a decision about one
+    // task, not a standing preference.
+    expect(classifyDue("2026-09-04", TODAY, TOMORROW)).toBeNull();
   });
 });

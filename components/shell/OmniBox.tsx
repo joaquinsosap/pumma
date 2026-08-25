@@ -32,6 +32,8 @@ import {
   tokenAtCaret,
 } from "@/lib/omni-complete";
 import { RESERVED_TYPE_WORDS, RESERVED_WORDS } from "@/lib/omni-reserved";
+import { classifyDue } from "@/lib/nudge";
+import { NudgeOffer, useNudgeOffer } from "@/components/shell/NudgeOffer";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
 import { isTutorialActive } from "@/lib/tutorial-lock";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
@@ -155,6 +157,7 @@ export function OmniBox({
   const [text, setText] = useState("");
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [pickedDue, setPickedDue] = useState<string | null>(null);
+  const nudge = useNudgeOffer();
   const [pickedPriority, setPickedPriority] = useState<TaskPriority>("med");
   const [type, setType] = useState<OmniType>(defaultType);
   const [mode, setMode] = useState<OmniMode>("capture");
@@ -511,6 +514,19 @@ export function OmniBox({
         toast.error(res.error);
         return;
       }
+      // After the save, never before. The due is only worth learning from
+      // when it came from the quick-pick: a typed "#friday" is a decision
+      // about one task, not a preference.
+      nudge.record("captureType", type);
+      if (type === "task" && !parsed.due) {
+        const today = iso(new Date(), timeZone);
+        const tmr = new Date();
+        tmr.setDate(tmr.getDate() + 1);
+        nudge.record(
+          "captureDue",
+          classifyDue(taskDue, today, iso(tmr, timeZone)),
+        );
+      }
       toast.success(res.data?.label ?? "Added", {
         action: res.undo
           ? {
@@ -777,6 +793,13 @@ export function OmniBox({
           </div>
         )}
       </div>
+      {/* Below the bar, not over it: the capture stays usable while this
+          sits there, and any click elsewhere dismisses it for good. */}
+      <NudgeOffer
+        offer={nudge.offer}
+        onAnswer={nudge.answer}
+        className="mt-2"
+      />
     </div>
   );
 }
