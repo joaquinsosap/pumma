@@ -6,6 +6,13 @@ import { useTransition } from "react";
 import { useTheme } from "next-themes";
 import type { Settings, Tag } from "@/lib/schemas";
 import {
+  PRIORITY_LABELS,
+  STATUS_LABELS,
+  TASK_PRIORITIES,
+  TASK_STATUSES,
+  toggleFilterValue,
+} from "@/lib/task-filters";
+import {
   updateSettingsAction,
   setTheme,
   addTagAction,
@@ -436,6 +443,50 @@ export function SettingsView({
                   <option value="tag">Group by tag</option>
                   <option value="project">Group by project</option>
                 </select>
+              </div>
+            </div>
+            <div className="border-t border-border/60 pt-3">
+              <label className="mb-1.5 block text-sm text-ink">
+                Tasks page starts filtered by
+              </label>
+              <p className="mb-2 text-[12px] text-faint">
+                Leave both empty to show everything. Tag filters stay
+                per-visit: they change too often to be a default.
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {TASK_STATUSES.map((v) => (
+                  <FilterDefaultChip
+                    key={v}
+                    label={STATUS_LABELS[v]}
+                    on={(settings?.defaultTasksStatus ?? []).includes(v)}
+                    onClick={() =>
+                      update({
+                        defaultTasksStatus: toggleFilterValue(
+                          settings?.defaultTasksStatus ?? [],
+                          v,
+                          TASK_STATUSES,
+                        ),
+                      })
+                    }
+                  />
+                ))}
+                <span className="mx-1 w-px self-stretch bg-border" />
+                {TASK_PRIORITIES.map((v) => (
+                  <FilterDefaultChip
+                    key={v}
+                    label={PRIORITY_LABELS[v]}
+                    on={(settings?.defaultTasksPriority ?? []).includes(v)}
+                    onClick={() =>
+                      update({
+                        defaultTasksPriority: toggleFilterValue(
+                          settings?.defaultTasksPriority ?? [],
+                          v,
+                          TASK_PRIORITIES,
+                        ),
+                      })
+                    }
+                  />
+                ))}
               </div>
             </div>
             <div className="border-t border-border/60 pt-3">
@@ -940,5 +991,37 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * One filter value, on or off, as a default rather than a live filter.
+ *
+ * Deliberately the same shape as the chips in the Filter menu: this sets
+ * where that menu starts, so it should look like the thing it configures.
+ */
+function FilterDefaultChip({
+  label,
+  on,
+  onClick,
+}: {
+  label: string;
+  on: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      onClick={onClick}
+      className={cn(
+        "rounded-[7px] border px-2.5 py-1 font-mono text-[11px] font-semibold transition-colors",
+        on
+          ? "border-primary bg-primary/[0.12] text-primary"
+          : "border-border bg-surface text-muted hover:border-faint",
+      )}
+    >
+      {label}
+    </button>
   );
 }
