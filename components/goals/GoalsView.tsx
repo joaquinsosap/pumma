@@ -8,7 +8,7 @@ import {
   useState,
   useTransition,
 } from "react";
-import { useQueryState, parseAsString, parseAsStringLiteral } from "nuqs";
+import { useQueryState, parseAsString } from "nuqs";
 import {
   DndContext,
   DragOverlay,
@@ -453,21 +453,9 @@ function GoalColumnStatic({
   selectedId: string | null;
   onSelect: (id: string | null) => void;
 }) {
-  const [activeCategory, setActiveCategory] = useQueryState(
-    "category",
-    parseAsStringLiteral(["personal", "work"] as const).withDefault("personal"),
-  );
-  const isActive = activeCategory === category;
-
   return (
-    <div
-      className={cn(
-        "rounded-[13px] p-1 transition-colors",
-        isActive && "bg-hover/40",
-      )}
-      onClick={() => setActiveCategory(category)}
-    >
-      <div className="mb-3 flex cursor-pointer items-center gap-2 px-1">
+    <div className="rounded-[13px] p-1">
+      <div className="mb-3 flex items-center gap-2 px-1">
         <span
           className="h-[9px] w-[9px] rotate-45"
           style={{ background: color }}
@@ -527,22 +515,14 @@ function GoalColumn({
   onSelect: (id: string | null) => void;
   isDragging: boolean;
 }) {
-  const [activeCategory, setActiveCategory] = useQueryState(
-    "category",
-    parseAsStringLiteral(["personal", "work"] as const).withDefault("personal"),
-  );
-  const isActive = activeCategory === category;
+  // No click-to-select: both columns are visible at once, so a "current"
+  // column was state you could set but never see the point of. A new goal
+  // follows the life area you are in, or the tag you typed.
   const { setNodeRef, isOver } = useDroppable({ id: category });
 
   return (
-    <div
-      className={cn(
-        "rounded-[13px] p-1 transition-colors",
-        isActive && "bg-hover/40",
-      )}
-      onClick={() => setActiveCategory(category)}
-    >
-      <div className="mb-3 flex cursor-pointer items-center gap-2 px-1">
+    <div className="rounded-[13px] p-1">
+      <div className="mb-3 flex items-center gap-2 px-1">
         <span
           className="h-[9px] w-[9px] rotate-45"
           style={{ background: color }}

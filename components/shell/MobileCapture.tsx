@@ -471,7 +471,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
               while the tap was still resolving. */}
           {mode === "capture" && keyboardInset > 0 && (
             <div
-              className="fixed inset-x-0 z-[71] px-3 pb-2"
+              className="fixed inset-x-0 z-[71]"
               style={{ bottom: keyboardInset }}
               onPointerDown={(e) => e.preventDefault()}
             >
@@ -480,15 +480,22 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
               <NudgeOffer
                 offer={nudge.offer}
                 onAnswer={nudge.answer}
-                className="mb-2"
+                className="mx-3 mb-2"
               />
-              {/* Floating and shadowed rather than a bar welded to the
-                  keyboard. Sitting flush, it read as part of the keyboard on a
-                  dark background and disappeared entirely on a white one; a
-                  raised pill with its own shadow reads as the app's, on any
-                  backdrop, and the gap underneath is what makes the shadow
-                  visible at all. */}
-              <div className="pumma-floating flex items-center gap-1.5 rounded-2xl border border-border bg-surface px-2 py-2 shadow-[0_6px_20px_rgba(0,0,0,0.18)]">
+              {/* A solid bar docked to the keyboard, not a pill floating
+                  over the form.
+                  The pill read as something hovering ON TOP of the options —
+                  and on iOS it genuinely was, landing across Due and
+                  Priority. A full-width opaque bar with a hairline top edge
+                  reads as chrome belonging to the keyboard, the way an
+                  autocomplete strip does, so it stops competing with the
+                  fields for the same space.
+                  An earlier attempt at flush was abandoned because it
+                  "disappeared on a white background" — but that version had
+                  neither a border nor elevation. The hairline gives it an
+                  edge on white and the upward shadow gives it a body on
+                  dark, so it survives both without floating. */}
+              <div className="capture-dock flex items-center gap-1.5 px-3 py-2.5">
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
                   {activeFragment && (
                     <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">

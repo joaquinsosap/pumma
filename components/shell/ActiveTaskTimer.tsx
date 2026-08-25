@@ -25,7 +25,11 @@ export function ActiveTaskTimer({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "flex h-8 items-center gap-2 overflow-hidden rounded-lg border px-2.5 transition-[max-width,opacity,border-color] duration-200",
+        // The list has to name every property the two states differ on:
+        // padding and background are part of the collapse too, and leaving
+        // them out made the contents jump 10px on the first frame while the
+        // width was still easing shut.
+        "flex h-8 items-center gap-2 overflow-hidden rounded-lg border px-2.5 transition-[max-width,opacity,border-color,background-color,padding] duration-200",
         runningTask
           ? "max-w-[min(340px,42vw)] border-primary/35 bg-primary/[0.08] opacity-100"
           : "max-w-0 border-transparent p-0 opacity-0",

@@ -1,7 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useLayoutEffect, useOptimistic, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "@/components/icons";
 import type { Task, Tag } from "@/lib/schemas";
@@ -18,6 +25,7 @@ import {
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { RangeIndicator } from "@/components/ui/range-indicator";
 import { useDraggable } from "@dnd-kit/core";
 import { PriorityChip } from "@/components/tasks/PriorityChip";
 import { budgetForWidth, fitTagLine } from "@/lib/tag-line";
@@ -277,6 +285,107 @@ export function TaskList({
     });
   };
 
+  // ---------------------------------------------------------------------
+  // The shift-range marker.
+  //
+  // Holding shift over a list is a question — "from where I clicked, to
+  // here?" — and until now the list answered it only after you committed.
+  // The tour teaches the gesture with a drawn range; the real list owes you
+  // the same picture, using the same component so the two cannot drift.
+  //
+  // Rows are found by delegation rather than by threading a ref through
+  // Taggable: the container already sees every mouseover, and `.task-row` is
+  // the class the rows already carry. Nothing else needed a prop.
+  const listRef = useRef<HTMLDivElement>(null);
+  const [shiftHeld, setShiftHeld] = useState(false);
+  const [hoverId, setHoverId] = useState<string | null>(null);
+  const [rangeSpan, setRangeSpan] = useState<{
+    top: number;
+    span: number;
+    direction: "down" | "up";
+  } | null>(null);
+
+  const rangeAnchor = selection?.anchor ?? null;
+
+  useEffect(() => {
+    if (!selection) return;
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setShiftHeld(true);
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setShiftHeld(false);
+    };
+    // A window that loses focus mid-hold never delivers the keyup, which
+    // would leave the marker painted over the list until the next shift.
+    const blur = () => setShiftHeld(false);
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", blur);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", blur);
+    };
+  }, [selection]);
+
+  // Measured, not calculated: real rows are not a fixed height the way the
+  // tour's are (tags wrap, the page and calendar variants differ), so the
+  // only honest source for where the two ends sit is the rows themselves.
+  useEffect(() => {
+    const root = listRef.current;
+    if (!root || !shiftHeld || !hoverId || !rangeAnchor || hoverId === rangeAnchor) {
+      setRangeSpan(null);
+      return;
+    }
+    const ids = listed.map((t) => t.id);
+    const from = ids.indexOf(rangeAnchor);
+    const to = ids.indexOf(hoverId);
+    if (from < 0 || to < 0) {
+      setRangeSpan(null);
+      return;
+    }
+    const rows = root.querySelectorAll<HTMLElement>(".task-row");
+    const a = rows[from];
+    const b = rows[to];
+    if (!a || !b) {
+      setRangeSpan(null);
+      return;
+    }
+    const base = root.getBoundingClientRect();
+    const ac = a.getBoundingClientRect();
+    const bc = b.getBoundingClientRect();
+    const aMid = ac.top + ac.height / 2 - base.top;
+    const bMid = bc.top + bc.height / 2 - base.top;
+    // The box always spans the two rows; which END carries the head is what
+    // `direction` decides, so an upward range points back at the pointer
+    // rather than at the anchor.
+    setRangeSpan({
+      top: Math.min(aMid, bMid),
+      span: Math.abs(bMid - aMid),
+      direction: to < from ? "up" : "down",
+    });
+  }, [shiftHeld, hoverId, rangeAnchor, listed]);
+
+  const showRange = Boolean(selection) && shiftHeld && rangeSpan !== null;
+
+  /**
+   * The rows a shift-click would take, tinted before it is taken.
+   *
+   * The arrow alone said "these two ends"; it did not say what happens to
+   * everything between them, which is the actual question. The tour shows the
+   * whole run lighting up and that is why the tour reads better — so the real
+   * list does the same, in a lighter key than a committed selection so the
+   * two are never confused.
+   */
+  const previewIds = (() => {
+    if (!selection || !shiftHeld || !hoverId || !rangeAnchor) return null;
+    const ids = listed.map((t) => t.id);
+    const a = ids.indexOf(rangeAnchor);
+    const b = ids.indexOf(hoverId);
+    if (a < 0 || b < 0 || a === b) return null;
+    return new Set(ids.slice(Math.min(a, b), Math.max(a, b) + 1));
+  })();
+
   return (
     <div
       // The page list has no gap: its rows carry `border-b border-border2`, so
@@ -284,14 +393,44 @@ export function TaskList({
       // every pair of rows. Flush rows let the separator be the separator, and
       // let a run of selected rows read as one block instead of stripes.
       // The calendar keeps its gap; those rows are cards, not a table.
+      ref={listRef}
       className={cn(
-        "flex flex-col",
+        "relative flex flex-col",
         isPage ? "" : isCalendar ? "gap-1" : "gap-px",
       )}
       // Capture, so it lands before any row's own handler and covers the
       // whole list including whatever child the click actually hit.
       onMouseDownCapture={selection ? suppressRangeTextSelection : undefined}
+      onMouseOver={
+        selection
+          ? (e) => {
+              // Recorded unconditionally. Gating this on shiftHeld meant the
+              // list only learned where the pointer was AFTER shift went
+              // down, so the overwhelmingly common order — settle on a row,
+              // then reach for shift — drew nothing until you jiggled the
+              // mouse. Where the pointer is is not shift's business.
+              const row = (e.target as HTMLElement).closest(".task-row");
+              if (!row || !listRef.current) return;
+              const rows = [
+                ...listRef.current.querySelectorAll<HTMLElement>(".task-row"),
+              ];
+              const i = rows.indexOf(row as HTMLElement);
+              if (i >= 0 && listed[i]) setHoverId(listed[i].id);
+            }
+          : undefined
+      }
+      onMouseLeave={selection ? () => setHoverId(null) : undefined}
     >
+      {showRange && rangeSpan && (
+        <RangeIndicator
+          span={rangeSpan.span}
+          direction={rangeSpan.direction}
+          className="absolute left-1/2 z-20 -translate-x-1/2"
+          // Positioned from the anchor row's centre; the component insets
+          // both ends itself so neither cap touches a row's text.
+          style={{ top: rangeSpan.top }}
+        />
+      )}
       {listed.map((t, rowIndex) => {
         const done = t.status === "done";
         const taskTags = t.tagIds
@@ -437,13 +576,23 @@ export function TaskList({
         // thing changes. Selection outranks "doing" outranks priority, and the
         // colour goes on as a style so the border-color shorthand cannot eat
         // it (see PRIO_RAIL).
+        // In the run a shift-click would take, but not taken yet. Lighter
+        // than `picked` on purpose: a proposal and a commitment must not look
+        // the same.
+        const inRange = Boolean(previewIds?.has(t.id)) && !picked;
+
+        // Page rows paint this inline, and an inline value beats the class,
+        // so the pending range has to be answered here too or the rail keeps
+        // its priority colour while the row behind it is tinted.
         const railColor = picked
           ? "var(--primary)"
-          : selected
-            ? "var(--tasks)"
-            : t.status === "doing"
-              ? "var(--primary)"
-              : PRIO_RAIL[t.priority];
+          : inRange
+            ? "color-mix(in oklab, var(--primary) 50%, transparent)"
+            : selected
+              ? "var(--tasks)"
+              : t.status === "doing"
+                ? "var(--primary)"
+                : PRIO_RAIL[t.priority];
         const accentBorder = isPage ? "border-l-[3px]" : "";
 
         // Spotlight selection: while anything is selected, the rows NOT in the
@@ -464,7 +613,10 @@ export function TaskList({
         const seamBelow = picked && nextPicked;
 
         const rowClass = cn(
-          "task-row group grid items-center transition-[opacity,background-color] duration-150",
+          // filter belongs in this list: the spotlight dims with opacity AND
+          // saturate together, and naming only opacity left the desaturation
+          // snapping on the first frame while the fade still had 150ms to run.
+          "task-row group grid items-center transition-[opacity,background-color,filter] duration-150",
           compact
             ? cn(
                 "cursor-pointer gap-x-2.5 border-b px-3 py-2 last:border-b-0",
@@ -473,9 +625,11 @@ export function TaskList({
                   : "grid-cols-[20px_34px_minmax(0,1fr)_72px] max-sm:grid-cols-[20px_18px_minmax(0,1fr)_46px]",
                 picked
                   ? "border-l-[3px] bg-primary/[0.16]"
-                  : selected
-                    ? "border-l-[3px] bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35"
-                    : cn("hover:bg-hover", accentBorder),
+                  : inRange
+                    ? "border-l-[3px] border-l-primary/50 bg-primary/[0.07]"
+                    : selected
+                      ? "border-l-[3px] bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35"
+                      : cn("hover:bg-hover", accentBorder),
                 dimmed && "opacity-45 saturate-50",
               )
             : cn(
@@ -488,10 +642,12 @@ export function TaskList({
                   : "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px] max-sm:grid-cols-[18px_18px_minmax(0,1fr)_0px_44px]",
                 isPage && t.status === "doing" && "bg-primary/[0.03]",
                 picked && "border-l-[3px] bg-primary/[0.16]",
+                inRange && "border-l-[3px] border-l-primary/50 bg-primary/[0.07]",
                 !picked &&
+                  !inRange &&
                   selected &&
                   "border-l-[3px] bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35",
-                !picked && !selected && accentBorder,
+                !picked && !inRange && !selected && accentBorder,
                 dimmed && "opacity-45 saturate-50",
               ),
         );

@@ -21,10 +21,14 @@ const STATUS_OPTIONS = [
   ["done", "Done"],
 ] as const;
 
+// The shared tokens. Low was `var(--border)`, which is ALSO the inactive
+// border and the inactive background, so a selected Low was pixel-identical
+// to an unselected one and its dot was invisible against the chip. Every
+// other surface gets Low's blue from --prio-low; so does this one.
 const PRIORITY_OPTIONS = [
-  ["low", "Low", "var(--border)"],
-  ["med", "Med", "oklch(0.7 0.12 70)"],
-  ["high", "High", "oklch(0.64 0.18 25)"],
+  ["low", "Low", "var(--prio-low)"],
+  ["med", "Med", "var(--prio-med)"],
+  ["high", "High", "var(--prio-high)"],
 ] as const;
 
 /** The fields a batch can share. Mirrors bulkUpdateTasks minus the ids. */
@@ -221,7 +225,12 @@ export function BulkEditPanel({
                   )}
                   style={
                     active
-                      ? { borderColor: color, background: `${tagBg(color)}` }
+                      ? {
+                          borderColor: color,
+                          // color-mix, not tagBg: that expects a literal
+                          // colour and cannot see through a var().
+                          background: `color-mix(in oklab, ${color} 14%, transparent)`,
+                        }
                       : undefined
                   }
                 >

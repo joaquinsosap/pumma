@@ -44,37 +44,42 @@ export type Beat = {
 };
 
 export const BEATS: Beat[] = [
+  // The copy is deliberately short. Every one of these lines competes with a
+  // headline that changes on nearly every keystroke, a key hint, and a scene
+  // that is doing the actual teaching — and a line nobody finishes reading
+  // before it changes teaches nothing at all. If a sentence can be a picture,
+  // it is one; if it can be three words, it is three words.
   {
     id: "type",
     kind: "do",
     step: "Capture",
-    caption: "Don't click anything. Just type.",
-    sub: "Give it a day and a #tag. Try: pay rent friday #finance",
-    done: "That's the whole capture flow.",
+    caption: "Just type. No clicking.",
+    sub: "A day and a #tag, in the same line.",
+    done: "One bar. Three places.",
   },
   {
     id: "tab",
     kind: "do",
     step: "Switch",
     caption: "Tab changes what you're making.",
-    sub: "Press Tab until the bar says goal, then hold it there.",
-    done: "One bar for tasks, habits, goals, notes and the assistant.",
+    sub: "One bar for everything.",
+    done: "Task, habit, goal, note, assistant.",
   },
   {
     id: "tag",
     kind: "do",
     step: "File it",
-    caption: "A tag isn't a label. It's where the thing lives.",
-    sub: "Right-click the task, or long-press on a phone, and send it somewhere.",
-    done: "It moved, and took that place's side of life with it.",
+    caption: "Tags are where things live.",
+    sub: "Right-click to send it somewhere.",
+    done: "It moved, and took its side of life with it.",
   },
   {
     id: "bulk",
     kind: "do",
     step: "Select",
     caption: "Pick many. Change them all.",
-    sub: "Shift-click a range, then move the lot of them at once.",
-    done: "Whatever you select changes together.",
+    sub: "Shift-click a range.",
+    done: "They change together.",
   },
   // Two beats, because it was always two scenes. The assistant half asks a
   // question and gets an answer; the other half gives an instruction and gets
@@ -84,8 +89,8 @@ export const BEATS: Beat[] = [
     id: "ask",
     kind: "watch",
     step: "Ask",
-    caption: "Ask it about your own data.",
-    sub: "It reads what you already have and answers from it.",
+    caption: "Ask about your own data.",
+    sub: "It answers from what you have.",
     ms: 7_000,
   },
   {
@@ -93,15 +98,15 @@ export const BEATS: Beat[] = [
     kind: "watch",
     step: "Tell it",
     caption: "Or tell it what to change.",
-    sub: "It proposes. You edit. Nothing is saved until you say so.",
+    sub: "Nothing saves until you say so.",
     ms: 8_000,
   },
   {
     id: "life",
     kind: "watch",
     step: "Your weeks",
-    caption: "This is your life in weeks.",
-    sub: "1,521 down. Spend the next one on purpose.",
+    caption: "Your life in weeks.",
+    sub: "1,521 down.",
     ms: 9_000,
   },
 ];

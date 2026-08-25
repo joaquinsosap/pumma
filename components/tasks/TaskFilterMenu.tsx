@@ -28,7 +28,7 @@ const STATUS_DOTS: Record<TaskStatus, string> = {
 const PRIORITY_DOTS: Record<TaskPriority, string> = {
   high: "oklch(0.64 0.18 25)",
   med: "oklch(0.72 0.15 70)",
-  low: "var(--faint2)",
+  low: "var(--prio-low)",
 };
 
 export function TaskFilterMenu({

@@ -28,9 +28,9 @@ import { Taggable } from "@/components/tags/TagMenuProvider";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 
 const PRIO_COLOR = {
-  high: "oklch(0.64 0.18 25)",
-  med: "oklch(0.7 0.12 70)",
-  low: "oklch(0.58 0.14 245)",
+  high: "var(--prio-high)",
+  med: "var(--prio-med)",
+  low: "var(--prio-low)",
 } as const;
 
 function taskTimeLabel(due: string | null): string {

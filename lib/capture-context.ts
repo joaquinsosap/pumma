@@ -1,5 +1,7 @@
 import type { GoalCategory, OmniType } from "@/lib/types";
 import { formatDay } from "@/lib/date";
+import { parseLifeView } from "@/lib/life-area";
+import { goalCategoryForLifeArea } from "@/lib/life-area-sync";
 
 export type CaptureContext = {
   type: OmniType;
@@ -49,8 +51,18 @@ export function getCaptureContext(
   }
 
   if (pathname === "/goals") {
-    const category =
-      searchParams.get("category") === "work" ? "work" : "personal";
+    // Which column a new goal lands in follows the life area you are already
+    // in, not a column you clicked.
+    //
+    // Goals is the one page that shows Personal and Work side by side, so
+    // "select a column" was invisible state on a page whose whole point is
+    // that you can see both at once: clicking tinted a column and changed
+    // nothing you could name. The side of life is already decided by where
+    // you are, and a #tag in the captured line still overrides it (see the
+    // askedForLife check in lib/actions/tasks).
+    const category = goalCategoryForLifeArea(
+      parseLifeView(searchParams.get("life")),
+    );
     const label = category === "work" ? "Work" : "Personal";
     return {
       type: "goal",

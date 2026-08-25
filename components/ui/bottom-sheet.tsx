@@ -168,14 +168,23 @@ export function BottomSheet({
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
+        {/* No strip — a floating pill over a transparent grab zone.
+            A strip with its own colour is the thing that came apart: it is
+            fixed while the panel head below it scrolls, so any tint it wore
+            was left stranded the moment you slid the sheet. Deleting the band
+            deletes the problem — there is nothing left to strand.
+            What stays is the GESTURE: this zone is full width and invisible,
+            so the drag target is still a whole row rather than a 40px pill,
+            which is the one thing the pill-only version gives up.
+            The pill keeps the accent; the surface behind it does not. */}
         <div
-          className="flex shrink-0 cursor-grab touch-none justify-center px-8 py-3 active:cursor-grabbing"
+          className="absolute inset-x-0 top-0 z-20 flex h-9 shrink-0 cursor-grab touch-none justify-center pt-2.5 active:cursor-grabbing"
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <div className="h-1.5 w-10 rounded-full bg-border" />
+          <div className="h-1.5 w-10 rounded-full bg-[color-mix(in_oklab,var(--primary)_45%,transparent)] shadow-[0_1px_4px_rgba(10,20,35,0.18)]" />
         </div>
         <div
           ref={contentRef}
@@ -183,7 +192,10 @@ export function BottomSheet({
           onTouchMove={onContentTouchMove}
           onTouchEnd={onContentTouchEnd}
           className={cn(
-            "min-h-0 flex-1 overscroll-contain",
+            // pt-9 clears the pill at rest AND gives the top of the sheet the
+            // breathing room it never had when a padded strip was doing the
+            // spacing for it.
+            "min-h-0 flex-1 overscroll-contain pt-9",
             // At peek the sheet itself is the gesture surface — content only
             // scrolls once the sheet is fully grown.
             snap === "full" ? "overflow-y-auto" : "overflow-hidden",

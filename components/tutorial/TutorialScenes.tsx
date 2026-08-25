@@ -29,6 +29,7 @@ import {
   tokenAtCaret,
 } from "@/lib/omni-complete";
 import { reduceSelection, type SelectionState } from "@/lib/task-selection";
+import { RangeIndicator } from "@/components/ui/range-indicator";
 import { cn } from "@/lib/utils";
 
 const TASK_RED = "oklch(0.64 0.18 25)";
@@ -80,7 +81,25 @@ function Frame({
   return (
     <div
       className={cn(
-        "w-full max-w-[560px] rounded-[16px] border bg-surface p-4 transition-shadow duration-300",
+        // A FIXED box, not a box that fits its contents.
+        //
+        // Every beat used to size itself, so the card grew 119px and jumped
+        // 85px up the screen the moment a mission cleared, then snapped back
+        // for the next one. The stage is centred, so any height change moves
+        // everything on it — you were reading a line and the line left.
+        // Reserving one square costs some empty space under the short scenes
+        // and buys a stage that never moves between beats.
+        // Fixed box, contents from the top, and the bottom edge bobs as each
+        // beat arrives.
+        //
+        // Centring the contents was tried and looked worse: a short scene
+        // floating in the middle of a tall card reads as badly laid out,
+        // where the same scene sitting on the top edge reads as a card with
+        // room to spare. So the content stays at the top and the SIZE does
+        // the moving — `stage-frame` overshoots its height slightly on mount
+        // and settles, so every beat change gives the bottom edge a small
+        // bounce instead of the card simply being replaced.
+        "stage-frame flex w-full max-w-[560px] flex-col overflow-hidden rounded-[16px] border bg-surface p-4 transition-shadow duration-300",
         // The ring used to be a hardcoded violet — `--primary` from two
         // themes ago — and the drop shadow a heavy black sized for a light
         // page. Both follow the tokens now, so the tour tracks the app.
@@ -215,7 +234,7 @@ function LandedIn({
               <span
                 key={n.label}
                 className={cn(
-                  "flex items-center gap-1.5 rounded-md px-1.5 py-1 font-mono text-[10px] transition-colors",
+                  "flex items-center gap-1.5 rounded-md px-1.5 py-1 font-mono text-[11.5px] transition-colors",
                   here ? "font-bold" : "text-faint2",
                 )}
                 style={
@@ -257,7 +276,7 @@ function LandedIn({
             </span>
             {tag && (
               <span
-                className="order-last shrink-0 rounded-[5px] px-[6px] py-px font-mono text-[10px]"
+                className="order-last shrink-0 rounded-[5px] px-[6px] py-px font-mono text-[11.5px]"
                 style={{
                   color: tag.color,
                   background: `color-mix(in oklch, ${tag.color} 16%, transparent)`,
@@ -267,6 +286,156 @@ function LandedIn({
               </span>
             )}
           </Row>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * The capture payoff: three of them landing, not one.
+ *
+ * One task appearing proved the bar worked but not what it was FOR — you read
+ * "Saved as a task", the scene ended, and the part that matters (the day and
+ * the tag are what decide where it goes) went past too fast to notice. Three
+ * arrive in sequence, each with a different day and a different tag, so the
+ * pattern is visible rather than described: same bar, same gesture, three
+ * different places.
+ *
+ * The first is the line the user typed themselves. Their own words landing
+ * first is what connects the thing they just did to the two that follow.
+ *
+ * Staggered with animation-delay rather than timers: the rows mount together
+ * and `both` fill keeps each one invisible until its turn, so there is no
+ * state to unwind if the beat is cut short.
+ */
+const LANDING_STAGGER_MS = 620;
+
+/**
+ * The two that land after the user's own.
+ *
+ * Different days and different tags on purpose: one example proves nothing —
+ * it reads as "that specific sentence works". Three with nothing in common
+ * but the shape is what makes the shape the lesson.
+ */
+const CAPTURE_ECHOES = [
+  { title: "gym", day: "monday", tag: "health", tagColor: HABIT_GREEN },
+  { title: "call mum", day: "today", tag: "family", tagColor: PROJECT_BLUE },
+];
+
+function LandedMany({
+  items,
+  revealed,
+}: {
+  items: { title: string; day: string; tag: string; tagColor: string }[];
+  /**
+   * How many rows have actually landed. The rest stay as outlines.
+   *
+   * The destination is on screen from the first keystroke rather than
+   * appearing at the end: a card that is empty until you finish teaches
+   * nothing while you are working, and the whole complaint about the payoff
+   * was that it arrived and left before it could be read. Showing the empty
+   * slots up front turns it from a reveal into a thing being filled in, and
+   * the first row fills in live as you type.
+   */
+  revealed: number;
+}) {
+  const accent = NAV_COLOR.task;
+  return (
+    <div className="tutorial-in">
+      {/* The sidebar is 92px of a 375px phone, and it was spending them on
+          truncating the rows to "g…" and "ca…" — the titles being readable is
+          the whole point of showing three. It goes on small screens; the rows
+          keep the day and tag chips, which are the part that says where. */}
+      <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[92px_minmax(0,1fr)]">
+        <div className="hidden flex-col gap-[3px] rounded-lg border border-border bg-surface2 p-1.5 sm:flex">
+          {NAV.map((n) => {
+            const here = n.section === "task";
+            return (
+              <span
+                key={n.label}
+                className={cn(
+                  "flex items-center gap-1.5 rounded-md px-1.5 py-1 font-mono text-[11.5px] transition-colors",
+                  here ? "tutorial-land-glow font-bold" : "text-faint2",
+                )}
+                style={
+                  here
+                    ? ({
+                        color: accent,
+                        background: `color-mix(in oklch, ${accent} 15%, transparent)`,
+                        "--land-accent": `color-mix(in oklch, ${accent} 45%, transparent)`,
+                      } as React.CSSProperties)
+                    : undefined
+                }
+              >
+                <span
+                  className="h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ background: here ? accent : "var(--border)" }}
+                />
+                {n.label}
+              </span>
+            );
+          })}
+        </div>
+
+        <div
+          className="flex flex-col gap-1.5 rounded-lg border p-1.5"
+          style={
+            {
+              borderColor: `color-mix(in oklch, ${accent} 45%, transparent)`,
+              background: `color-mix(in oklch, ${accent} 7%, transparent)`,
+            } as React.CSSProperties
+          }
+        >
+          {items.map((it, i) => {
+            const landed = i < revealed;
+            return (
+              <Row
+                key={i}
+                title={it.title}
+                accent={landed ? accent : "var(--border)"}
+                className={cn(
+                  "!py-1.5 transition-opacity duration-300",
+                  landed ? "tutorial-pop" : "border-dashed opacity-45",
+                )}
+                style={
+                  landed
+                    ? { animationDelay: `${i * LANDING_STAGGER_MS}ms` }
+                    : undefined
+                }
+              >
+                <span
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-[5px]"
+                  style={{
+                    background: landed ? accent : "transparent",
+                    border: landed ? undefined : "1px dashed var(--faint2)",
+                  }}
+                >
+                  {landed && (
+                    <Check className="h-2.5 w-2.5 text-white" strokeWidth={4} />
+                  )}
+                </span>
+                {/* Day and tag are the two tokens the bar pulled out, shown as
+                    the two chips they became. This is the "where it goes". */}
+                <span className="order-last flex shrink-0 items-center gap-1">
+                  <span className="rounded-[5px] bg-surface2 px-[6px] py-px font-mono text-[11.5px] text-faint">
+                    {it.day}
+                  </span>
+                  <span
+                    className="rounded-[5px] px-[6px] py-px font-mono text-[11.5px]"
+                    style={{
+                      color: landed ? it.tagColor : "var(--faint2)",
+                      background: landed
+                        ? `color-mix(in oklch, ${it.tagColor} 16%, transparent)`
+                        : "var(--surface2)",
+                    }}
+                  >
+                    #{it.tag}
+                  </span>
+                </span>
+              </Row>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -617,6 +786,10 @@ export function SceneType({
       .replace(/\s+/g, " ")
       .trim();
 
+  /** The day word the parser lifted out, to show as its own chip. */
+  const dayOf = (v: string) =>
+    v.match(new RegExp(DAY_RE_G.source, "i"))?.[0]?.toLowerCase() ?? null;
+
   /**
    * The value the field now holds, reduced to the one edit that made it — so
    * a step can accept or refuse that edit. A paste of ten characters is taken
@@ -806,14 +979,13 @@ export function SceneType({
     onDone();
   };
 
-  const copy = STEP_COPY[step];
   const now = askFor(step, text, done);
   const stepNumber = STEP_ORDER.indexOf(step) + 1;
 
   return (
     <Frame glow={!done}>
       <div className="mb-3 flex items-baseline gap-2">
-        <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 font-mono text-[9px] font-bold uppercase tracking-widest text-background">
+        <span className="shrink-0 rounded-full bg-ink px-2 py-0.5 font-mono text-[10.5px] font-bold uppercase tracking-widest text-background">
           Step {stepNumber}/{STEP_ORDER.length}
         </span>
         {/* No ask here. It is already the biggest line on the screen; saying
@@ -918,7 +1090,7 @@ export function SceneType({
           keystroke, and a block that resizes drags the card out from under
           whoever is reading it. */}
       <div className="mt-3 flex min-h-[68px] flex-col items-center justify-center gap-1.5">
-        <p className="m-0 text-center font-mono text-[10.5px] text-faint">
+        <p className="m-0 text-center font-mono text-[12px] text-faint">
           {shake
             ? "not that one. read the step"
             : // Switching with the step, and absent when the step has no
@@ -927,26 +1099,28 @@ export function SceneType({
         </p>
       </div>
 
-      {/* The reason, at the bottom, as the aside it is: it explains the step
-          rather than instructing it, and it was competing with the key. */}
-      {!captured && (
-        <p className="m-0 mt-3 text-center font-mono text-[10.5px] leading-relaxed text-faint2">
-          * {copy.why}
-        </p>
-      )}
+      {/* The "why" aside used to sit here. Between the banner's headline, the
+          banner's subtitle, the key hint and this, the card was asking to be
+          read four times over while a step-change was already rewriting the
+          top of it — and none of it survived long enough to land. The picture
+          below teaches the same thing without being read. */}
 
-      <div className="mt-3 min-h-[46px]">
-        {captured && (
-          <LandedIn
-            section="task"
-            note="Saved as a task"
-            title={titleOf(captured)}
-            tag={{
-              label: captured.match(/#([a-z0-9-]+)/i)?.[1] ?? "tag",
-              color: FINANCE_AMBER,
-            }}
-          />
-        )}
+      <div className="mt-3 flex-1">
+        {/* On screen from the first keystroke, not just at the end. The top
+            row is whatever is in the field right now, so you watch your own
+            words arrive in the place they are going while you type them. */}
+        <LandedMany
+          revealed={captured ? 3 : 0}
+          items={[
+            {
+              title: titleOf(captured ?? text) || "your task",
+              day: dayOf(captured ?? text) ?? "day",
+              tag: (captured ?? text).match(/#([a-z0-9-]+)/i)?.[1] ?? "tag",
+              tagColor: FINANCE_AMBER,
+            },
+            ...CAPTURE_ECHOES,
+          ]}
+        />
       </div>
     </Frame>
   );
@@ -1107,7 +1281,7 @@ export function SceneTab({
         <span className={cn(!presses && "tutorial-nudge-soft")}>
           <KeyCap label="⇥ Tab" pressed={presses} wide big />
         </span>
-        <p className="m-0 text-center font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">
+        <p className="m-0 text-center font-mono text-[12px] uppercase tracking-[0.14em] text-faint">
           {presses === 0
             ? "press Tab"
             : onTarget
@@ -1117,7 +1291,7 @@ export function SceneTab({
             <span className="ml-2 tabular-nums text-faint2">×{presses}</span>
           )}
         </p>
-        <p className="m-0 font-mono text-[9.5px] text-faint2">
+        <p className="m-0 font-mono text-[11px] text-faint2">
           shift + Tab goes back
         </p>
       </div>
@@ -1155,7 +1329,7 @@ export function SceneTab({
         </div>
         <p
           className={cn(
-            "m-0 mt-2 text-center font-mono text-[10.5px] transition-colors",
+            "m-0 mt-2 text-center font-mono text-[12px] transition-colors",
             onTarget ? "font-bold text-habits" : "text-faint",
           )}
         >
@@ -1222,7 +1396,7 @@ export function SceneTabTouch({
 
   return (
     <Frame glow={!done}>
-      <p className="m-0 mb-3 text-center font-mono text-[10.5px] uppercase tracking-[0.14em] text-faint">
+      <p className="m-0 mb-3 text-center font-mono text-[12px] uppercase tracking-[0.14em] text-faint">
         {done ? "★ goal" : "tap goal"}
       </p>
 
@@ -1506,7 +1680,7 @@ function GhostCursor({ label }: { label: string }) {
         {/* …and the word for it, drifting up as it fades. */}
         <span
           ref={labelRef}
-          className="absolute left-5 top-3 whitespace-nowrap rounded-md bg-ink px-2 py-1 font-mono text-[10px] font-bold text-background"
+          className="absolute left-5 top-3 whitespace-nowrap rounded-md bg-ink px-2 py-1 font-mono text-[11.5px] font-bold text-background"
           style={{ opacity: 0 }}
         >
           ✳ {label}
@@ -1564,11 +1738,11 @@ export function SceneTag({
     <Frame glow={!done}>
       <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
         <div>
-          <p className="m-0 mb-1.5 font-mono text-[9.5px] uppercase tracking-widest text-faint2">
+          <p className="m-0 mb-1.5 font-mono text-[11px] uppercase tracking-widest text-faint2">
             No project
           </p>
           {landed ? (
-            <p className="m-0 rounded-lg border border-dashed border-border px-2 py-3 text-center font-mono text-[10px] text-faint2">
+            <p className="m-0 rounded-lg border border-dashed border-border px-2 py-3 text-center font-mono text-[11.5px] text-faint2">
               empty
             </p>
           ) : (
@@ -1617,20 +1791,20 @@ export function SceneTag({
               <div key={opt.name}>
                 <div className="mb-1 flex items-center gap-1.5">
                   <span
-                    className="font-mono text-[9px] font-bold tabular-nums"
+                    className="font-mono text-[10.5px] font-bold tabular-nums"
                     style={{ color: here ? opt.color : "var(--faint2)" }}
                   >
                     {n + 1}
                   </span>
                   <p
-                    className="m-0 min-w-0 flex-1 truncate font-mono text-[9.5px] uppercase tracking-widest"
+                    className="m-0 min-w-0 flex-1 truncate font-mono text-[11px] uppercase tracking-widest"
                     style={{ color: here ? opt.color : "var(--faint2)" }}
                   >
                     {opt.label}
                   </p>
                   {/* The side of life that comes with the address. */}
                   <span
-                    className="shrink-0 rounded-[5px] px-1.5 py-px font-mono text-[9px] transition-opacity duration-500"
+                    className="shrink-0 rounded-[5px] px-1.5 py-px font-mono text-[10.5px] transition-opacity duration-500"
                     style={{
                       color: opt.tagColor,
                       background: `color-mix(in oklch, ${opt.tagColor} 15%, transparent)`,
@@ -1653,7 +1827,7 @@ export function SceneTag({
                       <span className="h-4 w-4 shrink-0 rounded-[5px] border-[1.8px] border-border" />
                     </Row>
                   ) : (
-                    <p className="m-0 px-2 py-1.5 text-center font-mono text-[10px] text-faint2">
+                    <p className="m-0 px-2 py-1.5 text-center font-mono text-[11.5px] text-faint2">
                       empty
                     </p>
                   )}
@@ -1668,7 +1842,7 @@ export function SceneTag({
           made filing look like something you do once and live with; it is two
           keystrokes to send it back. Both ends read as live for the same
           reason. */}
-      <div className="mt-3.5 flex items-center justify-center gap-2 font-mono text-[10px]">
+      <div className="mt-3.5 flex items-center justify-center gap-2 font-mono text-[11.5px]">
         <span
           className="rounded-[5px] px-2 py-0.5"
           style={{
@@ -1705,7 +1879,7 @@ export function SceneTag({
               top: Math.min(menu.y, window.innerHeight - 140),
             }}
           >
-            <p className="m-0 px-1.5 pb-1 pt-1 font-mono text-[9px] tracking-widest text-faint2">
+            <p className="m-0 px-1.5 pb-1 pt-1 font-mono text-[10.5px] tracking-widest text-faint2">
               TAG
             </p>
             {TAG_OPTIONS.map((t) => (
@@ -1721,7 +1895,7 @@ export function SceneTag({
                 />
                 <span className="min-w-0 flex-1 truncate">{t.name}</span>
                 <span
-                  className="shrink-0 font-mono text-[9px]"
+                  className="shrink-0 font-mono text-[10.5px]"
                   style={{ color: t.tagColor }}
                 >
                   #{t.tag}
@@ -1788,16 +1962,24 @@ function TargetBorder({ color }: { color: string }) {
     if (waves.some((w) => !w)) return;
     let t = 0;
     return startTutorialClock((dt) => {
-      t = (t + dt / 1900) % 1;
+      t = (t + dt / 1500) % 1;
       waves.forEach((w, i) => {
         // Half a cycle apart: as one wave dies the next is already leaving.
         const p = (t + i * 0.5) % 1;
-        // Grows and softens together — a shadow that spreads without also
-        // blurring reads as a solid outline creeping outwards.
-        const spread = (p * 7).toFixed(2);
-        const blur = (5 + p * 16).toFixed(2);
-        const alpha = (0.5 * (1 - p) ** 1.5 * 100).toFixed(1);
-        w!.style.boxShadow = `0 0 ${blur}px ${spread}px color-mix(in oklch, ${color} ${alpha}%, transparent)`;
+        // A ring that expands and fades, NOT a shadow that spreads and blurs.
+        //
+        // The old version grew `box-shadow` blur and spread together, which
+        // at this size — a chip about 40px wide — never resolved into a ring
+        // at all: it was a red haze thickening and thinning behind the word,
+        // and it repainted the element every frame to do it. An outline that
+        // travels outwards while fading reads as a pulse because you can see
+        // its edge, and scale/opacity are composited, so it costs nothing.
+        //
+        // Eased so the ring leaves quickly and dies slowly, which is how an
+        // actual ripple behaves; linear made it look mechanical.
+        const eased = 1 - (1 - p) ** 2;
+        w!.style.transform = `scale(${(1 + eased * 0.44).toFixed(3)})`;
+        w!.style.opacity = ((1 - p) ** 1.7 * 0.75).toFixed(3);
       });
     }, false);
   }, [color]);
@@ -1809,7 +1991,8 @@ function TargetBorder({ color }: { color: string }) {
           key={i}
           ref={ref}
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-md"
+          className="pointer-events-none absolute inset-0 rounded-md border-2"
+          style={{ borderColor: color, opacity: 0 }}
         />
       ))}
     </>
@@ -1845,7 +2028,7 @@ function BulkPanel({
       >
         {count} <span className="text-[11px] font-semibold">selected</span>
       </p>
-      <p className="m-0 mt-1 font-mono text-[9px] leading-relaxed text-faint2">
+      <p className="m-0 mt-1 font-mono text-[10.5px] leading-relaxed text-faint2">
         {applied
           ? "all four, at once"
           : armed
@@ -1854,7 +2037,7 @@ function BulkPanel({
               ? "release to take them"
               : "shift-click a range"}
       </p>
-      <p className="m-0 mt-2.5 font-mono text-[9px] uppercase tracking-widest text-faint2">
+      <p className="m-0 mt-2.5 font-mono text-[10.5px] uppercase tracking-widest text-faint2">
         Priority
       </p>
       {/* Live once the rows are selected — the panel is the second half of the
@@ -1871,7 +2054,7 @@ function BulkPanel({
                 disabled={!armed}
                 onClick={() => onPick?.(l)}
                 className={cn(
-                  "relative w-full rounded-md border py-1 text-center font-mono text-[9px] font-bold uppercase transition-colors duration-300",
+                  "relative w-full rounded-md border py-1 text-center font-mono text-[10.5px] font-bold uppercase transition-colors duration-300",
                   chosen || target
                     ? "border-2 text-ink"
                     : "border-border bg-surface text-faint2",
@@ -1909,6 +2092,8 @@ function BulkRow({
   anchor,
   onClick,
   onMouseEnter,
+  children,
+  ...press
 }: {
   title: string;
   picked: boolean;
@@ -1920,9 +2105,17 @@ function BulkRow({
   anchor?: boolean;
   onClick?: (e: React.MouseEvent) => void;
   onMouseEnter?: () => void;
+  /** Overlays the row draws on top of itself, e.g. the long-press cursor. */
+  children?: React.ReactNode;
+  /** Long-press and right-click, for the touch variant of this beat. */
+  onContextMenu?: (e: React.MouseEvent) => void;
+  onTouchStart?: (e: React.TouchEvent) => void;
+  onTouchEnd?: () => void;
+  onTouchMove?: () => void;
 }) {
   return (
     <Row
+      {...press}
       title={title}
       accent={picked ? "var(--primary)" : TASK_RED}
       onClick={onClick}
@@ -1950,8 +2143,9 @@ function BulkRow({
           <Check className="h-2.5 w-2.5 text-white" strokeWidth={3.4} />
         )}
       </span>
+      {children}
       <span
-        className="order-last shrink-0 rounded-md px-1.5 py-px font-mono text-[9px] font-bold transition-colors duration-300"
+        className="order-last shrink-0 rounded-md px-1.5 py-px font-mono text-[10.5px] font-bold transition-colors duration-300"
         style={
           applied && picked
             ? { color: TASK_RED, background: "oklch(0.64 0.18 25 / 0.14)" }
@@ -2100,7 +2294,7 @@ export function SceneBulk({
 
       <p
         className={cn(
-          "m-0 mt-3 text-center font-mono text-[10.5px] transition-colors",
+          "m-0 mt-3 text-center font-mono text-[12px] transition-colors",
           wrongClick ? "font-bold text-tasks" : "text-faint",
         )}
       >
@@ -2119,81 +2313,207 @@ export function SceneBulk({
 }
 
 /**
- * Spans from the first row to the hovered one. Absolutely positioned over the
- * list, so it costs the rows nothing and can't shift the layout as it grows.
+ * Spans from the anchor row to the hovered one, absolutely positioned over
+ * the list so it costs the rows nothing and cannot shift the layout.
+ *
+ * The drawing itself lives in components/ui/range-indicator, because the real
+ * task list needs exactly the same marker when you hold shift — one shape,
+ * one place to change it.
  */
 function RangeArrow({ rows }: { rows: number }) {
   // Rows are a fixed height with a fixed gap, so the geometry is arithmetic
-  // rather than a measurement — no observers, no reflow, no lag behind the
+  // rather than a measurement: no observers, no reflow, no lag behind the
   // pointer.
-  //
-  // Down the middle rather than the edge, dashed: it's a sketch of a range you
-  // haven't taken yet, and a solid line at the margin looked like a permanent
-  // part of the list.
-  //
-  // Both ends are pulled well inside the rows they mark. Running centre-to-
-  // centre made the line touch the text at each end, so it read as part of the
-  // rows rather than as a measurement across them — and it was long enough
-  // that the arrowhead had left the screen's centre of attention by the time
-  // your eye followed it down.
   const ROW = 44;
   const GAP = 6;
-  const INSET = 15;
-  const top = ROW / 2 + INSET;
-  const end = ROW / 2 + rows * (ROW + GAP) - INSET;
   return (
-    <svg
-      className="pointer-events-none absolute left-1/2 top-0 z-10 -translate-x-1/2 overflow-visible"
-      width="18"
-      height={end + 2}
-      aria-hidden
-    >
-      <defs>
-        {/* Hollow, not solid. A filled triangle at this size is a blob, and it
-            was the same blue as the selection ring behind it — so the marker
-            for "the range you are about to take" was drawn in the colour of
-            "already taken". */}
-        <marker
-          id="tut-arrow"
-          markerWidth="8"
-          markerHeight="8"
-          refX="5"
-          refY="4"
-          orient="auto"
-        >
-          {/* `stroke` as a style rather than an attribute: `color-mix()` is a
-              CSS value, and presentation attributes are not guaranteed to
-              parse one — a browser that doesn't drops the marker entirely. */}
-          <path
-            d="M1.4,1 L5.6,4 L1.4,7"
-            fill="none"
-            style={{ stroke: RANGE_INK }}
-            strokeWidth="1.7"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </marker>
-      </defs>
-      {/* The dashes stop well short of the head. Running the line all the way
-          into the marker put a dash directly under the chevron, so the two
-          overlapped into a smudge at exactly the point the eye lands. */}
-      <line
-        x1="9"
-        y1={top}
-        x2="9"
-        y2={end - 13}
-        style={{ stroke: RANGE_INK }}
-        strokeWidth="2"
-        strokeDasharray="5 5"
-        strokeLinecap="round"
-        markerEnd="url(#tut-arrow)"
-        className="tutorial-arrow"
-      />
-    </svg>
+    <RangeIndicator
+      span={rows * (ROW + GAP)}
+      ink={RANGE_INK}
+      className="absolute left-1/2 top-[22px] z-10 -translate-x-1/2"
+    />
   );
 }
 
 /** Touch has no ⌘ and no shift, so on a phone this beat plays instead. */
+/**
+ * The bulk beat on a phone.
+ *
+ * There is no shift key on a touch screen, so this beat used to play itself
+ * — which taught the idea and none of the gesture. But the range selection
+ * DOES exist on touch: it is the long-press menu's "Select through", the
+ * same `selectThrough` the real list exposes. So the beat is a mission here
+ * too, using the gesture the device actually has.
+ *
+ * The first row arrives already selected, exactly as the desktop version
+ * hands one over: the thing being taught is the SECOND half of the gesture,
+ * and starting from an empty list would make you do a plain selection first
+ * for no reason.
+ *
+ * The menu carries one item. Every other option would be a place to go wrong
+ * on the one beat that exists to show a single move.
+ */
+export function SceneBulkTouch({
+  onDone,
+  done,
+  onInstruction,
+  onStray,
+  onProgress,
+}: SceneProps) {
+  const order = useMemo(() => BULK_ROWS.map((_, i) => `r${i}`), []);
+  const [sel, setSel] = useState<SelectionState>({ ids: ["r0"], anchor: "r0" });
+  const [menu, setMenu] = useState<{ x: number; y: number; index: number } | null>(null);
+  const [phase, setPhase] = useState<"select" | "raise" | "applied">("select");
+  const [wrongTap, setWrongTap] = useState(false);
+  const pressTimer = useRef(0);
+  const reported = useRef(false);
+  const applied = phase === "applied";
+
+  const refuse = useCallback(() => {
+    setWrongTap(true);
+    onStray?.();
+    window.setTimeout(() => setWrongTap(false), 450);
+  }, [onStray]);
+
+  const openAt = (index: number, x: number, y: number) => {
+    if (done || phase !== "select") return;
+    // Row 0 is the end you already hold; a range to itself is not a range.
+    if (index === 0) return refuse();
+    setMenu({ x, y, index });
+  };
+
+  const selectThrough = () => {
+    if (!menu) return;
+    onProgress?.();
+    setSel((st) => reduceSelection(st, order, order[menu.index], "range"));
+    setMenu(null);
+    setPhase("raise");
+  };
+
+  const raise = (level: string) => {
+    if (done || reported.current || phase !== "raise") return;
+    if (level !== "High") return refuse();
+    reported.current = true;
+    onProgress?.();
+    setPhase("applied");
+    window.setTimeout(onDone, 1100);
+  };
+
+  useEffect(() => {
+    onInstruction?.(
+      applied || done
+        ? "Four rows, one tap"
+        : phase === "raise"
+          ? "Now set them all to high"
+          : menu
+            ? "Tap Select through"
+            : "Long-press any row below",
+    );
+  }, [applied, done, phase, menu, onInstruction]);
+
+  return (
+    <Frame glow={!done}>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_150px]">
+        <div
+          className={cn(
+            "relative flex flex-col gap-1.5",
+            wrongTap && "tutorial-shake",
+          )}
+        >
+          {BULK_ROWS.map((title, i) => {
+            const picked = sel.ids.includes(order[i]);
+            return (
+              <BulkRow
+                key={order[i]}
+                title={title}
+                picked={picked}
+                applied={applied}
+                anchor={i === 0}
+                nudge={i === 1 && phase === "select" && !menu}
+                onClick={(e) => {
+                  // A plain tap is not the gesture; say so rather than
+                  // quietly starting a different selection.
+                  e.preventDefault();
+                  if (i !== 0) refuse();
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  openAt(i, e.clientX, e.clientY);
+                }}
+                onTouchStart={(e) => {
+                  const t = e.touches[0];
+                  pressTimer.current = window.setTimeout(
+                    () => openAt(i, t.clientX, t.clientY),
+                    450,
+                  );
+                }}
+                onTouchEnd={() => window.clearTimeout(pressTimer.current)}
+                onTouchMove={() => window.clearTimeout(pressTimer.current)}
+              >
+                {i === 1 && phase === "select" && !menu && (
+                  <GhostCursor label="long press" />
+                )}
+              </BulkRow>
+            );
+          })}
+        </div>
+
+        <BulkPanel
+          count={sel.ids.length}
+          applied={applied}
+          armed={phase === "raise"}
+          onPick={raise}
+        />
+      </div>
+
+      <p
+        className={cn(
+          "m-0 mt-3 text-center font-mono text-[12px] transition-colors",
+          wrongTap ? "font-bold text-tasks" : "text-faint",
+        )}
+      >
+        {done || applied
+          ? "\u2605 four rows, one tap"
+          : wrongTap
+            ? phase === "raise"
+              ? "high. the one on the right."
+              : "long press, not a tap"
+            : phase === "raise"
+              ? "all four are yours now. send them to high"
+              : "first one's yours. long-press any row below it"}
+      </p>
+
+      {menu && (
+        <>
+          <div className="fixed inset-0 z-[210]" onClick={() => setMenu(null)} />
+          <div
+            className="pumma-floating tutorial-in fixed z-[211] w-[186px] rounded-lg border border-border bg-surface p-1 shadow-lg"
+            style={{
+              left: Math.min(menu.x, window.innerWidth - 200),
+              top: Math.min(menu.y, window.innerHeight - 120),
+            }}
+          >
+            <p className="m-0 px-1.5 pb-1 pt-1 font-mono text-[10.5px] tracking-widest text-faint2">
+              SELECT
+            </p>
+            <button
+              type="button"
+              onClick={selectThrough}
+              className="tutorial-nudge-soft flex w-full items-center gap-2 rounded-md px-1.5 py-1.5 text-left text-[13px] font-semibold text-ink"
+            >
+              <span
+                className="h-3.5 w-3.5 shrink-0 rounded-[4px]"
+                style={{ background: "var(--primary)" }}
+              />
+              Select through
+            </button>
+          </div>
+        </>
+      )}
+    </Frame>
+  );
+}
+
 export function SceneBulkWatch({ p }: { p: number }) {
   const ranged = p > 0.3 ? BULK_ROWS.length : p > 0.1 ? 1 : 0;
   const applied = p > 0.62;
@@ -2318,7 +2638,7 @@ export function SceneAssistant({
                       <span className="min-w-0 flex-1 truncate text-[11.5px] text-muted">
                         {a.label}
                       </span>
-                      <span className="shrink-0 font-mono text-[10.5px] text-ink">
+                      <span className="shrink-0 font-mono text-[12px] text-ink">
                         {Math.round(a.pct * chartIn)}%
                       </span>
                     </span>
@@ -2331,7 +2651,7 @@ export function SceneAssistant({
                 className="rounded-lg border border-border bg-surface p-3"
                 style={{ opacity: draftIn }}
               >
-                <p className="m-0 mb-2 font-mono text-[9px] uppercase tracking-widest text-faint2">
+                <p className="m-0 mb-2 font-mono text-[10.5px] uppercase tracking-widest text-faint2">
                   Changeset draft · 3 operations
                 </p>
                 {[
@@ -2358,7 +2678,7 @@ export function SceneAssistant({
                     <span className="min-w-0 flex-1 truncate text-ink">
                       {op.t}
                     </span>
-                    <span className="shrink-0 font-mono text-[10px] text-faint">
+                    <span className="shrink-0 font-mono text-[11.5px] text-faint">
                       → {op.to}
                     </span>
                   </div>
@@ -2367,7 +2687,7 @@ export function SceneAssistant({
                   <span className="rounded-lg bg-ink px-3 py-1.5 text-[11px] font-bold text-background">
                     Apply 3
                   </span>
-                  <span className="font-mono text-[9.5px] text-faint2">
+                  <span className="font-mono text-[11px] text-faint2">
                     nothing is saved until you do
                   </span>
                 </div>
@@ -2396,12 +2716,14 @@ export function SceneLife({ p }: { p: number }) {
   const shown = Math.round(LIVED * fill);
 
   return (
-    <Frame className="max-w-[620px]">
+    // Was max-w-[620px] while every other scene was 560, so the last beat
+    // arrived 60px wider than the six before it.
+    <Frame>
       <div className="mb-2.5 flex items-baseline gap-2">
         <span className="font-mono text-[22px] font-extrabold tabular-nums text-ink">
           {shown.toLocaleString()}
         </span>
-        <span className="font-mono text-[10px] uppercase tracking-widest text-faint2">
+        <span className="font-mono text-[11.5px] uppercase tracking-widest text-faint2">
           weeks lived · 4,436 if you&apos;re lucky
         </span>
       </div>

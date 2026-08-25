@@ -32,10 +32,15 @@ const STATUS_OPTIONS = [
   ["done", "Done"],
 ] as const;
 
+// The shared tokens, not a third private copy of the palette. Low was
+// `var(--border)` here, which is also the inactive border and inactive
+// background — so selecting Low produced a chip identical to an unselected
+// one, and the dot beside it was invisible. Low has a colour of its own
+// (the blue) everywhere else in the app; it has one here now too.
 const PRIORITY_OPTIONS = [
-  ["low", "Low", "var(--border)"],
-  ["med", "Med", "oklch(0.7 0.12 70)"],
-  ["high", "High", "oklch(0.64 0.18 25)"],
+  ["low", "Low", "var(--prio-low)"],
+  ["med", "Med", "var(--prio-med)"],
+  ["high", "High", "var(--prio-high)"],
 ] as const;
 
 type Props = {
@@ -231,7 +236,14 @@ export function TaskDetailPanel({
       )}
       style={embedded ? undefined : { boxShadow: "2px 2px 0 var(--shadow)" }}
     >
-      <header className="border-b border-border2 bg-surface2/60 px-4 py-3">
+      <header
+        className={cn(
+          "border-b border-border2 bg-surface2/60 px-4 py-3",
+          // In a bottom sheet the head is the top of the screen, so it stays
+          // plain and lets the grab pill be the only colour there.
+          embedded && "panel-head-plain",
+        )}
+      >
         {onBack && (
           <button
             type="button"
@@ -350,13 +362,15 @@ export function TaskDetailPanel({
                       ? "border-2 text-ink shadow-[1px_1px_0_var(--shadow)]"
                       : "border-border bg-surface2 text-faint hover:border-faint",
                   )}
+                  // color-mix rather than string-surgery on the colour: the
+                  // old `.replace(")", " / 0.12)")` only worked on a literal
+                  // oklch() and silently fell through to a plain surface for
+                  // anything else, which is how Low ended up with no tint.
                   style={
                     active
                       ? {
                           borderColor: color,
-                          background: color.includes("oklch")
-                            ? color.replace(")", " / 0.12)")
-                            : "var(--surface2)",
+                          background: `color-mix(in oklab, ${color} 14%, transparent)`,
                         }
                       : undefined
                   }

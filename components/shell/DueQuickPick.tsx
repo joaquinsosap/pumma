@@ -39,15 +39,35 @@ type Props = {
   className?: string;
 };
 
+/**
+ * The border NEVER changes width, and the transition never says "all".
+ *
+ * Selecting used to go `border` -> `border-2`. Because everything here is
+ * border-box, the outer size stayed put while the painted inside was squeezed
+ * by a pixel on each edge — and `transition-all` animated that squeeze, so a
+ * chip appeared to shrink and recover every time you picked a date. The hard
+ * offset shadow was animating in the same breath, growing out of the chip
+ * towards its neighbour and then retracting.
+ *
+ * Now the second pixel of the active ring is an INSET shadow rather than a
+ * fatter border, so geometry is identical in both states and only colour and
+ * shadow move. Both are cheap and neither reflows.
+ */
 const chipBase =
-  "rounded-lg px-2 py-1 font-mono text-[11px] transition-all disabled:pointer-events-none disabled:opacity-50";
+  "rounded-lg border px-2 py-1 font-mono text-[11px] transition-[color,background-color,border-color,box-shadow] duration-150 ease-out disabled:pointer-events-none disabled:opacity-50";
+
+const CHIP_ACTIVE_SHADOW =
+  "shadow-[inset_0_0_0_1px_var(--primary),2px_2px_0_var(--primary)]";
 
 function chipClass(active: boolean) {
   return cn(
     chipBase,
     active
-      ? "border-2 border-primary bg-primary/25 font-bold text-primary shadow-[2px_2px_0_var(--primary)]"
-      : "border border-border bg-surface font-medium text-muted hover:border-faint hover:bg-surface2",
+      ? cn(
+          "animate-chip-pick border-primary bg-primary/25 font-bold text-primary",
+          CHIP_ACTIVE_SHADOW,
+        )
+      : "border-border bg-surface font-medium text-muted hover:border-faint hover:bg-surface2",
   );
 }
 
@@ -222,8 +242,8 @@ export function DueQuickPick({
                 chipBase,
                 "flex items-center justify-center px-1.5 py-1",
                 calendarActive
-                  ? "border-2 border-primary bg-primary/25 text-primary shadow-[2px_2px_0_var(--primary)]"
-                  : "border border-border bg-surface text-muted",
+                  ? cn("border-primary bg-primary/25 text-primary", CHIP_ACTIVE_SHADOW)
+                  : "border-border bg-surface text-muted",
               )}
             >
               <Calendar
@@ -253,8 +273,8 @@ export function DueQuickPick({
                   chipBase,
                   "flex items-center justify-center px-1.5 py-1",
                   calendarActive
-                    ? "border-2 border-primary bg-primary/25 text-primary shadow-[2px_2px_0_var(--primary)]"
-                    : "border border-border bg-surface text-muted hover:border-faint hover:bg-surface2",
+                    ? cn("border-primary bg-primary/25 text-primary", CHIP_ACTIVE_SHADOW)
+                    : "border-border bg-surface text-muted hover:border-faint hover:bg-surface2",
                 )}
               >
                 <Calendar
@@ -361,10 +381,10 @@ export function DueQuickPick({
                       type="button"
                       onClick={() => pickDate(c.ds)}
                       className={cn(
-                        "flex h-8 w-full items-center justify-center rounded-lg font-mono text-[11px] transition-all",
+                        "flex h-8 w-full items-center justify-center rounded-lg border font-mono text-[11px] transition-[color,background-color,border-color,box-shadow] duration-150 ease-out",
                         isSelected
-                          ? "border-2 border-primary bg-primary/20 font-bold text-primary shadow-[1px_1px_0_var(--primary)]"
-                          : "border border-transparent text-ink hover:border-border hover:bg-surface2",
+                          ? "animate-chip-pick border-primary bg-primary/20 font-bold text-primary shadow-[inset_0_0_0_1px_var(--primary),1px_1px_0_var(--primary)]"
+                          : "border-transparent text-ink hover:border-border hover:bg-surface2",
                         !c.inMonth && !isSelected && "text-faint2",
                         isToday && !isSelected && "font-bold text-primary",
                       )}

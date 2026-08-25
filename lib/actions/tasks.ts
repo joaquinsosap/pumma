@@ -211,10 +211,14 @@ export async function createFromOmni(
     };
   }
 
-  // The column you captured from says which side of life a goal is on — but
-  // only as a default. Typing "#work" from the Personal column is the more
-  // specific instruction and wins, which is why this looks for a life tag that
-  // was actually asked for rather than one the view supplied.
+  // The life area you captured from says which side of life a goal is on —
+  // but only as a default. Typing "#work" while in the Personal view is the
+  // more specific instruction and wins, which is why this looks for a life tag
+  // that was actually asked for rather than one the view supplied.
+  //
+  // (This used to be "the column you captured from". Goals shows both columns
+  // at once, so clicking one to aim the capture bar was state you could set
+  // and never see; the life view supplies the default now.)
   const askedForLife = hasLifeTag(
     [...validPickedTagIds, ...p.tagIds, ...newTagIds],
     tags,

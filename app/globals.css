@@ -145,6 +145,112 @@
   }
 }
 
+/* A date chip taking the selection.
+ *
+ * A settle, not a bounce: these sit in a row of three or four and anything
+ * springier turns picking a date into a jelly wobble. Scale only, so it runs
+ * on the compositor and cannot disturb the chips beside it. */
+@keyframes chipPick {
+  0% {
+    transform: scale(0.94);
+  }
+  55% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-chip-pick {
+  animation: chipPick 0.26s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* The tutorial stage.
+ *
+ * One fixed height for every beat, so the card never jumps position between
+ * them — but the bottom edge overshoots and settles on arrival, which turns
+ * "the card was replaced" into "the card resized to hold this one". The
+ * height is a variable so the keyframes can talk about it without repeating
+ * the breakpoint.
+ *
+ * Height is a layout property and animating it is not free, but this is one
+ * element for 420ms once per beat, and the alternative (scaleY) would squash
+ * the contents along with the box. */
+.stage-frame {
+  --stage-h: 404px;
+  height: var(--stage-h);
+  animation: stageBob 420ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 640px) {
+  .stage-frame {
+    --stage-h: 430px;
+  }
+}
+
+@keyframes stageBob {
+  0% {
+    height: calc(var(--stage-h) - 26px);
+  }
+  58% {
+    height: calc(var(--stage-h) + 13px);
+  }
+  100% {
+    height: var(--stage-h);
+  }
+}
+
+/* Half-year rows on a phone.
+ *
+ * 52 weeks across 315px left each cell 4.6px wide against 15px tall — a
+ * picket fence, not a grid of weeks, and no amount of extra height fixes an
+ * aspect ratio; height was the thing making it worse. Width is the only
+ * dimension that helps, and the only way to buy width is fewer columns.
+ *
+ * So each age-year wraps into TWO lines of 26 instead of one line of 52. The
+ * DOM and the data are untouched — a row is still one year of your life, the
+ * age label still lines up with it — the cells simply wrap. Cost is that a
+ * year is two lines tall, so you see fewer years at once. That is the trade
+ * that was asked for.
+ *
+ * 26 cells with 25 gaps of 1px between them. */
+@media (max-width: 639px) {
+  .life-week-cell {
+    flex: 0 0 calc((100% - 25px) / 26);
+  }
+}
+
+/* The shift-range marker (components/ui/range-indicator).
+ *
+ * Direction told by motion rather than by the arrowhead alone: the dots run
+ * from the anchor towards the pointer. One dash period is 8 (2 + 6), so
+ * offsetting by 8 loops seamlessly with no visible jump. */
+@keyframes rangeFlow {
+  to {
+    stroke-dashoffset: -8;
+  }
+}
+
+.range-flow {
+  animation: rangeFlow 0.55s linear infinite;
+}
+
+/* Two pixels. Enough to read as pointing, not enough to be a bouncing ball. */
+@keyframes rangeHeadBob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+}
+
+.range-head {
+  animation: rangeHeadBob 1.15s ease-in-out infinite;
+}
+
 html {
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -619,6 +725,26 @@ html {
 
 .life-now {
   animation: lifeNowPulse 2.4s ease-in-out infinite;
+  /* OUTLINE, not a ring.
+   *
+   * Tailwind draws `ring-*` with box-shadow, and the pulse above animates
+   * box-shadow — so the ring was overwritten on every frame of every cycle
+   * and the one cell anybody looks for was marked by colour alone, which is
+   * exactly what it was not supposed to rely on. Outline is a separate
+   * property, so the two can coexist: the outline holds the shape and the
+   * box-shadow does the breathing.
+   *
+   * Square corners deliberately. At this size a radius is a smudge, and the
+   * grid is a block of time, not a mesh of dots. */
+  outline: 2px solid var(--life-now);
+  outline-offset: 2px;
+}
+
+/* Full view packs 85 years onto one screen; 2px of outline plus 2px of offset
+   would swallow a cell that is barely taller than that. */
+.life-now-tight {
+  outline-width: 1px;
+  outline-offset: 1px;
 }
 
 /* The skeleton waits a beat before showing itself.
@@ -1502,6 +1628,38 @@ select:hover:not(:disabled) {
    The bottom sheet was the worst of it: it used `bg-background`, which this
    theme sets to transparent so the page gradient can show through the app
    shell. On a sheet that meant no background at all. */
+/* A panel head with no tint.
+ *
+ * `.bg-surface2/60` is repainted with the shared accent tint by the rule
+ * further down, which is right for a section head sitting in a page and
+ * wrong at the top of a bottom sheet: there the tint is the first thing you
+ * see, it fights the floating grab pill for attention, and it used to strand
+ * a coloured band when the sheet scrolled. The sheet gets the plain surface
+ * and lets the pill carry the only colour up there. */
+.panel-head-plain {
+  background-color: var(--floating) !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-bottom-color: var(--rim) !important;
+}
+
+/* The capture sheet's tag bar, docked to the keyboard.
+ *
+ * It needs `--floating`'s opacity for the same reason a floating card does —
+ * `--surface` is deliberately translucent in this theme, and a see-through
+ * bar with the form scrolling underneath is mud — but it is NOT a floating
+ * card: it has a top edge and it sits on something, so it takes a hairline
+ * above and throws its shadow upwards instead of dropping one all round. */
+.capture-dock {
+  background-color: var(--floating) !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  border-top: 1px solid var(--rim) !important;
+  box-shadow: 0 -6px 18px rgba(10, 20, 35, 0.1) !important;
+}
+
 .pumma-floating {
   background-color: var(--floating) !important;
   background-image: none !important;

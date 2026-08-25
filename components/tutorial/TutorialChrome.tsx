@@ -72,12 +72,12 @@ export function MissionBanner({
           capture flow" over the top of it is the tour talking over its own
           demonstration, so the payoff line shrinks to a caption and lets the
           picture do it. */}
-      <div
-        className={cn(
-          "flex items-center justify-center",
-          cleared ? "min-h-[44px]" : "min-h-[70px] sm:min-h-[96px]",
-        )}
-      >
+      {/* One height, cleared or not. The payoff line is smaller type than the
+          ask, and letting the box shrink with it dropped 52px out of the
+          banner at the exact moment the scene below was growing — the two
+          compounded into the card leaping up the screen. The type still
+          changes size; the room it sits in does not. */}
+      <div className="flex min-h-[70px] items-center justify-center sm:min-h-[96px]">
         <p
           className={cn(
             "m-0 font-black leading-[1.06] tracking-tight text-white",

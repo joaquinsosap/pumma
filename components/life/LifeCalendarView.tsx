@@ -311,7 +311,7 @@ export function LifeCalendarView({
                       "flex flex-col",
                       fullView
                         ? "h-full flex-1 gap-px"
-                        : "gap-[3px] max-sm:gap-[2px]",
+                        : "gap-[3px] max-sm:gap-[1px]",
                     )}
                   >
                     {grid.rows.map((row) => (
@@ -322,7 +322,7 @@ export function LifeCalendarView({
                           "flex min-h-0 items-center",
                           fullView
                             ? "flex-1 gap-px"
-                            : "gap-[3px] max-sm:gap-[2px]",
+                            : "gap-[3px] max-sm:gap-[1px]",
                           !fullView && row.decadeGap && "mt-1.5",
                         )}
                       >
@@ -354,7 +354,7 @@ export function LifeCalendarView({
                             "flex min-h-0 min-w-0 flex-1",
                             fullView
                               ? "h-full gap-px"
-                              : "gap-[3px] max-sm:gap-[2px]",
+                              : "gap-[3px] max-sm:flex-wrap max-sm:gap-[1px]",
                           )}
                         >
                           {row.cells.map((week, col) => {

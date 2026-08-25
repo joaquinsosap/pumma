@@ -126,7 +126,7 @@ export function SettingsNav({
                 }}
                 // The bar is 4px but the button is 16px tall: a 4px hit
                 // target is a dare, not a control.
-                className="group flex h-4 items-center py-0"
+                className="group relative flex h-4 items-center py-0"
               >
                 <span
                   className="block h-[4px] rounded-full transition-all duration-200 ease-out motion-reduce:transition-none"
@@ -147,25 +147,41 @@ export function SettingsNav({
                           }%, transparent)`,
                   }}
                 />
+                {/* INSIDE the button, deliberately.
+
+                    As a sibling with pointer-events-none it was a label you
+                    could read and not press: the obvious thing to do once a
+                    word appears is click the word. Worse, it overhangs the
+                    40px rail, so reaching for it left the nav's box and the
+                    mouseleave wiped the hover before you arrived. As a
+                    descendant it inherits the button's click and cannot
+                    trigger that mouseleave — DOM hover follows the element
+                    tree, not the geometry, so the overhang is free.
+
+                    Pointer events only while it is actually visible: an
+                    invisible label would otherwise sit in the gutter eating
+                    clicks meant for the page. */}
+                <span
+                  aria-hidden
+                  className={cn(
+                    // Tailwind v4 emits translate-y-* as the `translate`
+                    // property, not `transform`: transitioning "transform"
+                    // here names a property nothing animates, and it snaps.
+                    "absolute left-0 top-full z-10 mt-[3px] whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.1em] transition-[opacity,translate,color] duration-200 ease-out motion-reduce:transition-none motion-reduce:translate-none",
+                    // It settles into place rather than blinking on: a couple
+                    // of pixels of travel is what makes a label read as
+                    // arriving. The delay is only on the way IN, so sweeping
+                    // the pointer down the rail does not strobe six captions,
+                    // while leaving is instant and never lags the mouse.
+                    isHovered
+                      ? "pointer-events-auto translate-y-0 cursor-pointer opacity-100 delay-[70ms]"
+                      : "pointer-events-none -translate-y-[3px] opacity-0 delay-0",
+                    isActive ? "text-primary" : "text-faint",
+                  )}
+                >
+                  {g.label}
+                </span>
               </button>
-              {/* Out of flow and allowed to overhang into the gutter: the
-                  rail stays 40px whatever the word is. */}
-              <span
-                aria-hidden
-                className={cn(
-                  "pointer-events-none absolute left-0 top-full z-10 mt-[3px] whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.1em] text-faint transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none",
-                  // It settles into place rather than blinking on: a couple of
-                  // pixels of travel is what makes a label read as arriving.
-                  // The delay is only on the way IN, so sweeping the pointer
-                  // down the rail does not strobe six captions, while leaving
-                  // is instant and the label never lags behind the mouse.
-                  isHovered
-                    ? "translate-y-0 opacity-100 delay-[70ms]"
-                    : "-translate-y-[3px] opacity-0 delay-0",
-                )}
-              >
-                {g.label}
-              </span>
             </li>
           );
         })}

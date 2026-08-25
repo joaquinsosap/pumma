@@ -26,7 +26,7 @@ import {
 import {
   SceneAssistant,
   SceneBulk,
-  SceneBulkWatch,
+  SceneBulkTouch,
   SceneLife,
   SceneTab,
   SceneTabTouch,
@@ -122,9 +122,11 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
   // ⌘ and shift are the point of the bulk beat and neither exists on a touch
   // screen, so there it plays itself instead of being asked for. (The Tab
   // beat is not in `beats` at all on touch — see above.)
+  // Only Tab still needs a keyboard. The bulk beat has a real gesture on a
+  // phone — long-press, then "Select through" — so it is a mission there too
+  // rather than a scene that plays itself at you.
   const isMission =
-    beat.kind === "do" &&
-    (["bulk", "tab"].includes(beat.id) ? canModifierClick : true);
+    beat.kind === "do" && (beat.id === "tab" ? canModifierClick : true);
 
   const advance = useCallback(() => {
     setIndex((i) => {
@@ -322,8 +324,7 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
   // a beat ACTUALLY plays as: on touch two missions become watch beats, so a
   // count taken off `beat.kind` would promise gestures the device can't make.
   const playsAsMission = (b: (typeof BEATS)[number]) =>
-    b.kind === "do" &&
-    (["bulk", "tab"].includes(b.id) ? canModifierClick : true);
+    b.kind === "do" && (b.id === "tab" ? canModifierClick : true);
   const sameKind = (b: (typeof BEATS)[number]) =>
     playsAsMission(b) === isMission;
   const kindTotal = beats.filter(sameKind).length;
@@ -362,6 +363,7 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
           <Scene
             id={beat.id}
             p={p}
+            touch={!canModifierClick}
             done={cleared}
             onDone={onDone}
             asMission={isMission}
@@ -415,6 +417,7 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
 function Scene({
   id,
   p,
+  touch,
   done,
   onDone,
   asMission,
@@ -424,6 +427,8 @@ function Scene({
 }: {
   id: (typeof BEATS)[number]["id"];
   p: number;
+  /** No keyboard and no pointer: the beats pick the gesture from this. */
+  touch: boolean;
   done: boolean;
   onDone: () => void;
   asMission: boolean;
@@ -445,7 +450,12 @@ function Scene({
     case "tag":
       return <SceneTag {...shared} />;
     case "bulk":
-      return asMission ? <SceneBulk {...shared} /> : <SceneBulkWatch p={p} />;
+      // Same mission, the gesture each device actually has.
+      return touch ? (
+        <SceneBulkTouch {...shared} />
+      ) : (
+        <SceneBulk {...shared} />
+      );
     case "ask":
       return <SceneAssistant p={p} half="ask" />;
     case "request":
