@@ -334,6 +334,63 @@ export const agendaItemSchema = z.object({
   exceptions: z.array(z.string()).default([]),
 });
 
+/**
+ * A calendar somebody else owns, that PUMMA reads.
+ *
+ * Read only, on purpose. The whole point of the subscription model is that it
+ * needs no OAuth, no app review and nobody's administrator: every calendar
+ * product can publish a secret .ics URL, and fetching one is a plain GET.
+ *
+ * `url` is a CREDENTIAL. Anyone holding it can read the calendar, forever,
+ * without signing in to anything. It is encrypted at rest like authored
+ * content and must never be logged or returned to the client in full.
+ */
+export const calendarFeedSchema = z.object({
+  _id: z.string(),
+  userId: z.string(),
+  /** The user's name for it, or the feed's own X-WR-CALNAME. */
+  label: z.string().max(80).default("Calendar"),
+  url: z.string().max(2048),
+  /** Which side of life its events belong to. */
+  lifeArea: z.enum(["personal", "work"]).default("personal"),
+  /** Dot colour in the agenda, so two feeds are told apart at a glance. */
+  color: z.string().max(40).default("var(--calendar)"),
+  enabled: z.boolean().default(true),
+  /** ISO. null until the first successful fetch. */
+  lastSyncedAt: z.string().nullable().default(null),
+  /** Empty when the last fetch was fine; otherwise what to show the user. */
+  lastError: z.string().max(300).default(""),
+  /** Conditional-GET validators, so a poll that changes nothing is cheap. */
+  etag: z.string().max(200).default(""),
+  lastModified: z.string().max(200).default(""),
+  createdAt: z.string(),
+});
+
+/**
+ * One occurrence of an external event, already expanded and localised.
+ *
+ * Occurrences are stored rather than rules. It costs rows, and it buys the
+ * thing that matters: reading a day is a query on a date, identical to how
+ * everything else in the app reads a day, with no expander in the hot path.
+ * They are disposable, and a resync rebuilds them.
+ */
+export const externalEventSchema = z.object({
+  _id: z.string(),
+  userId: z.string(),
+  feedId: z.string(),
+  /** Unique per occurrence (VEVENT UID plus its start). */
+  key: z.string(),
+  title: z.string(),
+  /** YYYY-MM-DD in the user's zone at sync time. */
+  date: z.string(),
+  /** HH:MM, or null for an all-day event. */
+  time: z.string().nullable().default(null),
+  durationMins: z.number().int().min(1).max(10080).default(30),
+  allDay: z.boolean().default(false),
+  location: z.string().max(500).default(""),
+  notes: z.string().max(2000).default(""),
+});
+
 export const lifeMoodSchema = z.enum(["great", "good", "okay", "low", "rough"]);
 
 export const lifeDaySchema = z.object({
@@ -353,6 +410,11 @@ export const lifeWeekSchema = z.object({
   mood: lifeMoodSchema.nullable().default(null),
   updatedAt: z.string(),
 });
+
+export type CalendarFeedDoc = z.infer<typeof calendarFeedSchema>;
+export type ExternalEventDoc = z.infer<typeof externalEventSchema>;
+export type CalendarFeed = Omit<CalendarFeedDoc, "_id"> & { id: string };
+export type ExternalEvent = Omit<ExternalEventDoc, "_id"> & { id: string };
 
 export type UserDoc = z.infer<typeof userSchema>;
 export type SettingsDoc = z.infer<typeof settingsSchema>;

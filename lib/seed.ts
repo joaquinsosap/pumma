@@ -11,6 +11,8 @@ import type {
   TagDoc,
   TaskDoc,
   UserDoc,
+  CalendarFeedDoc,
+  ExternalEventDoc,
 } from "@/lib/schemas";
 import { taskSchema } from "@/lib/schemas";
 import { LIFE_SPAN_DEFAULT } from "@/lib/life-constants";
@@ -30,6 +32,10 @@ export type SeedData = {
   agenda: AgendaItemDoc[];
   lifeDays: LifeDayDoc[];
   lifeWeeks: LifeWeekDoc[];
+  /** Subscribed calendars, and the events read out of them. Seeded empty:
+   *  a demo account has nobody else's calendar to read. */
+  calendarFeeds: CalendarFeedDoc[];
+  externalEvents: ExternalEventDoc[];
 };
 
 export function createSeedData(userId: string): SeedData {
@@ -650,5 +656,7 @@ export function createSeedData(userId: string): SeedData {
     agenda,
     lifeDays: [],
     lifeWeeks: [],
+    calendarFeeds: [],
+    externalEvents: [],
   };
 }

@@ -117,6 +117,8 @@ describe("every collection in the spec", () => {
     agenda: { title: "a" },
     lifeWeeks: { note: "a" },
     tags: { name: "a" },
+    calendarFeeds: { label: "a", url: "https://example.com/x.ics" },
+    externalEvents: { title: "a", location: "b", notes: "c" },
   };
 
   it("has a sample here, so a new collection can't be added unnoticed", () => {

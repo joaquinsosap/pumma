@@ -31,6 +31,14 @@ export const SPECS = {
   agenda: { fields: ["title"] },
   lifeWeeks: { fields: ["note"] },
   tags: { fields: ["name"] },
+  // The URL is the credential: whoever holds it can read that calendar for
+  // as long as it lives, with no sign-in. It is encrypted for the same reason
+  // the AI key is, and the label goes with it because a calendar's name
+  // ("Therapy", "Job interviews") is content in its own right.
+  calendarFeeds: { fields: ["label", "url"] },
+  // Somebody else's events, but sitting in our database and every bit as
+  // readable as the user's own agenda.
+  externalEvents: { fields: ["title", "location", "notes"] },
 } as const satisfies Record<string, Spec>;
 
 // Deliberately absent:
