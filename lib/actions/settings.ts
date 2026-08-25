@@ -17,6 +17,13 @@ import {
 import { persistTimezoneCookie } from "@/lib/timezone-server";
 import { isValidTimezone, normalizeTimezone } from "@/lib/timezone";
 import { isoDate, tagName } from "@/lib/validation";
+import {
+  markAnswered,
+  nudgeVerdict,
+  recordChoice,
+  type NudgeKey,
+  type NudgeVerdict,
+} from "@/lib/nudge";
 import { LIFE_SPAN_MAX } from "@/lib/life-constants";
 
 const themeSchema = z.enum(["light", "dark"]);
@@ -259,6 +266,133 @@ export async function updateUserNameAction(
   const updated = await updateUser(userId, { name: parsed.data });
   if (!updated) return { ok: false, error: "User not found" };
 
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+// ── The nudge ─────────────────────────────────────────────────────────────
+// Pure rules live in lib/nudge.ts; these two actions are the only writers of
+// nudgeHistory / nudgeAnswered. Values are validated per key so the history
+// can never hold anything but the enums the Settings UI could set anyway.
+
+const NUDGE_VALUES: Record<NudgeKey, readonly string[]> = {
+  captureType: ["task", "habit", "goal", "note"],
+  captureDue: ["none", "today", "tomorrow"],
+  habitFrequency: ["daily", "weekly", "monthly"],
+};
+
+const nudgeKeySchema = z.enum(["captureType", "captureDue", "habitFrequency"]);
+
+/** The current default for a key, in the value space the history records. */
+function currentDefaultFor(
+  key: NudgeKey,
+  settings: {
+    defaultCaptureType: string;
+    defaultDueToday: boolean;
+    defaultHabitFrequency: string;
+  },
+): string {
+  switch (key) {
+    case "captureType":
+      return settings.defaultCaptureType;
+    case "captureDue":
+      // Still bool-shaped in settings; "tomorrow" can be chosen but never be
+      // the default yet, which makes it eligible for a suggestion (correct,
+      // if premature, until the tri-state lands). See DEFAULTS-PLAN.local.md.
+      return settings.defaultDueToday ? "today" : "none";
+    case "habitFrequency":
+      return settings.defaultHabitFrequency;
+  }
+}
+
+/**
+ * Record one creation-time choice, and say whether to offer a new default.
+ *
+ * Called after a successful creation, never before it: the nudge must not
+ * stand between the user and their save. A non-null result means the UI may
+ * show the one-time popover; showing it must be followed by answerNudgeAction
+ * or the offer will (correctly) come back next time.
+ */
+export async function recordNudgeChoiceAction(
+  key: NudgeKey,
+  value: string,
+): Promise<ActionResult<{ suggest: NudgeVerdict | null }>> {
+  const parsedKey = nudgeKeySchema.safeParse(key);
+  if (!parsedKey.success) return { ok: false, error: "Invalid input" };
+  if (!NUDGE_VALUES[parsedKey.data].includes(value))
+    return { ok: false, error: "Invalid input" };
+
+  const userId = await requireUserId();
+  const settings = await getSettings(userId);
+  if (!settings) return { ok: false, error: "No settings" };
+
+  const history = recordChoice(
+    settings.nudgeHistory,
+    settings.nudgeAnswered,
+    parsedKey.data,
+    value,
+  );
+  if (history !== settings.nudgeHistory)
+    await updateSettings(userId, { nudgeHistory: history });
+
+  const suggest = nudgeVerdict(
+    history,
+    settings.nudgeAnswered,
+    parsedKey.data,
+    currentDefaultFor(parsedKey.data, settings),
+  );
+  return { ok: true, data: { suggest } };
+}
+
+/**
+ * Spend the one-time offer. Accepting also applies the new default; either
+ * way the key never asks again and its trail is dropped.
+ */
+export async function answerNudgeAction(
+  key: NudgeKey,
+  accept: boolean,
+  value: string,
+): Promise<ActionResult> {
+  const parsedKey = nudgeKeySchema.safeParse(key);
+  if (!parsedKey.success) return { ok: false, error: "Invalid input" };
+  if (!NUDGE_VALUES[parsedKey.data].includes(value))
+    return { ok: false, error: "Invalid input" };
+
+  const userId = await requireUserId();
+  const settings = await getSettings(userId);
+  if (!settings) return { ok: false, error: "No settings" };
+
+  const { history, answered } = markAnswered(
+    settings.nudgeHistory,
+    settings.nudgeAnswered,
+    parsedKey.data,
+    new Date().toISOString(),
+  );
+
+  const patch: Parameters<typeof updateSettings>[1] = {
+    nudgeHistory: history,
+    nudgeAnswered: answered,
+  };
+  if (accept) {
+    switch (parsedKey.data) {
+      case "captureType":
+        patch.defaultCaptureType = value as OmniType;
+        break;
+      case "captureDue":
+        // Until the tri-state default exists, "tomorrow" accepts as today
+        // being off, the closest the bool can express. Revisit with the
+        // tri-state (DEFAULTS-PLAN.local.md, open item 4).
+        patch.defaultDueToday = value === "today";
+        break;
+      case "habitFrequency":
+        patch.defaultHabitFrequency = value as
+          | "daily"
+          | "weekly"
+          | "monthly";
+        break;
+    }
+  }
+  await updateSettings(userId, patch);
   revalidatePath("/", "layout");
   return { ok: true };
 }
