@@ -153,8 +153,15 @@ export function SettingsNav({
               <span
                 aria-hidden
                 className={cn(
-                  "pointer-events-none absolute left-0 top-full z-10 mt-[3px] whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.1em] text-faint transition-opacity duration-150 motion-reduce:transition-none",
-                  isHovered ? "opacity-100" : "opacity-0",
+                  "pointer-events-none absolute left-0 top-full z-10 mt-[3px] whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.1em] text-faint transition-[opacity,transform] duration-200 ease-out motion-reduce:transition-none motion-reduce:transform-none",
+                  // It settles into place rather than blinking on: a couple of
+                  // pixels of travel is what makes a label read as arriving.
+                  // The delay is only on the way IN, so sweeping the pointer
+                  // down the rail does not strobe six captions, while leaving
+                  // is instant and the label never lags behind the mouse.
+                  isHovered
+                    ? "translate-y-0 opacity-100 delay-[70ms]"
+                    : "-translate-y-[3px] opacity-0 delay-0",
                 )}
               >
                 {g.label}
