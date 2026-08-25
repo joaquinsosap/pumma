@@ -59,6 +59,17 @@ export function reduceSelection(
   order: string[],
   id: string,
   intent: SelectIntent,
+  /**
+   * A row to measure from when the state has no anchor of its own.
+   *
+   * The open task is the case this exists for. Its id lives in the URL, so
+   * after a refresh the row is highlighted and looks every bit selected, while
+   * the anchor, which is React state, is gone. A shift-click then took the
+   * "no anchor" path and selected only the row it landed on, which reads as
+   * the range silently failing. The row you can see is the row you expect to
+   * measure from.
+   */
+  anchorFallback?: string | null,
 ): SelectionState {
   // A plain click drops the selection, but it still says where you are: the
   // shift-click that follows has to range from the row you just clicked, not
@@ -79,8 +90,9 @@ export function reduceSelection(
   // A range needs somewhere to measure from. Without a live anchor — first
   // click of the session, or the anchor scrolled out of the current filter —
   // this click becomes the anchor and selects only itself.
-  const anchor =
-    state.anchor && order.includes(state.anchor) ? state.anchor : null;
+  const live = (candidate: string | null | undefined) =>
+    candidate && order.includes(candidate) ? candidate : null;
+  const anchor = live(state.anchor) ?? live(anchorFallback);
   if (!anchor) return { ids: [id], anchor: id };
 
   const anchorAt = order.indexOf(anchor);

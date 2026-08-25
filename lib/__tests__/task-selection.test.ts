@@ -171,3 +171,54 @@ describe("pruneSelection", () => {
     expect(next).toEqual({ ids: ["a"], anchor: null });
   });
 });
+
+describe("the open task as an anchor fallback", () => {
+  // The open task's id is in the URL, so after a refresh its row is
+  // highlighted and looks selected while the anchor, which is React state, is
+  // gone. Shift-clicking then took the no-anchor path and selected only the
+  // row it landed on: the range appeared to do nothing.
+  it("ranges from the open row when nothing has been clicked yet", () => {
+    const next = reduceSelection(EMPTY_SELECTION, ORDER, "d", "range", "b");
+    expect(next.ids).toEqual(["b", "c", "d"]);
+    expect(next.anchor).toBe("b");
+  });
+
+  it("ranges upward from the open row too", () => {
+    const next = reduceSelection(EMPTY_SELECTION, ORDER, "a", "range", "c");
+    expect(next.ids).toEqual(["a", "b", "c"]);
+  });
+
+  it("does not select anything on its own", () => {
+    // The fallback is only somewhere to measure from. Nothing is selected
+    // after a refresh until the user actually selects something.
+    expect(EMPTY_SELECTION.ids).toEqual([]);
+    const plain = reduceSelection(EMPTY_SELECTION, ORDER, "d", "open", "b");
+    expect(plain.ids).toEqual([]);
+  });
+
+  it("prefers a real anchor over the open row", () => {
+    // Once you have clicked, that is what a range measures from, not whatever
+    // happens to be open in the panel.
+    const next = reduceSelection(state(["c"], "c"), ORDER, "e", "range", "a");
+    expect(next.ids).toEqual(["c", "d", "e"]);
+    expect(next.anchor).toBe("c");
+  });
+
+  it("ignores an open row that is no longer in the list", () => {
+    // Filtered out, or deleted on another device. Falling back to it would
+    // range from nowhere.
+    const next = reduceSelection(EMPTY_SELECTION, ORDER, "d", "range", "zz");
+    expect(next.ids).toEqual(["d"]);
+    expect(next.anchor).toBe("d");
+  });
+
+  it("still works with no fallback given at all", () => {
+    const next = reduceSelection(EMPTY_SELECTION, ORDER, "d", "range");
+    expect(next.ids).toEqual(["d"]);
+  });
+
+  it("extends an added range from the open row as well", () => {
+    const next = reduceSelection(EMPTY_SELECTION, ORDER, "d", "rangeAdd", "b");
+    expect(next.ids).toEqual(["b", "c", "d"]);
+  });
+});

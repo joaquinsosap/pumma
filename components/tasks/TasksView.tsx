@@ -395,7 +395,10 @@ export function TasksView({
     return ids;
   }, [taskGroups, showCarryover, filteredCarryover]);
 
-  const selection = useTaskSelection(orderedIds);
+  // `taskId` is the open task, which lives in the URL and so survives a
+  // refresh. Passing it in only gives a first shift-click somewhere to measure
+  // from; it does not restore a selection.
+  const selection = useTaskSelection(orderedIds, taskId);
   // Phone only: the bulk sheet is opened deliberately, not by selecting —
   // see SelectionBar. Selecting nothing closes it.
   const [bulkSheet, setBulkSheet] = useState(false);

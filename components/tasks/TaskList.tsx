@@ -279,12 +279,20 @@ export function TaskList({
 
   return (
     <div
-      className={cn("flex flex-col", isPage || isCalendar ? "gap-1" : "gap-px")}
+      // The page list has no gap: its rows carry `border-b border-border2`, so
+      // a gap on top of that drew a hairline AND a 4px white band between
+      // every pair of rows. Flush rows let the separator be the separator, and
+      // let a run of selected rows read as one block instead of stripes.
+      // The calendar keeps its gap; those rows are cards, not a table.
+      className={cn(
+        "flex flex-col",
+        isPage ? "" : isCalendar ? "gap-1" : "gap-px",
+      )}
       // Capture, so it lands before any row's own handler and covers the
       // whole list including whatever child the click actually hit.
       onMouseDownCapture={selection ? suppressRangeTextSelection : undefined}
     >
-      {listed.map((t) => {
+      {listed.map((t, rowIndex) => {
         const done = t.status === "done";
         const taskTags = t.tagIds
           .map((id) => tagMap.get(id))
@@ -446,12 +454,20 @@ export function TaskList({
         // is scoped to a data attribute here and did not behave as written,
         // and 0.40 against 0.45 is a difference nobody can see.
         const dimmed = Boolean(selection?.active) && !picked;
+        // A run of selected rows should read as one block. The hairline that
+        // separates rows is right for a table and wrong through the middle of
+        // a wash, so it goes away between two picked neighbours and comes back
+        // at the ends of the run.
+        const nextPicked = Boolean(
+          selection?.isSelected(listed[rowIndex + 1]?.id ?? ""),
+        );
+        const seamBelow = picked && nextPicked;
 
         const rowClass = cn(
           "task-row group grid items-center transition-[opacity,background-color] duration-150",
           compact
             ? cn(
-                "cursor-pointer gap-x-2.5 border-b border-border2 px-3 py-2.5 last:border-b-0",
+                "cursor-pointer gap-x-2.5 border-b px-3 py-2 last:border-b-0",
                 showDelete
                   ? "grid-cols-[20px_34px_minmax(0,1fr)_72px_28px] max-sm:grid-cols-[20px_18px_minmax(0,1fr)_46px_24px]"
                   : "grid-cols-[20px_34px_minmax(0,1fr)_72px] max-sm:grid-cols-[20px_18px_minmax(0,1fr)_46px]",
@@ -521,7 +537,23 @@ export function TaskList({
             tagIds={t.tagIds}
             lifeArea={t.lifeArea}
             className={rowClass}
-            style={isPage ? { borderLeftColor: railColor } : undefined}
+            style={
+              isPage
+                ? {
+                    borderLeftColor: railColor,
+                    // Inside a run of picked rows the divider is tinted with
+                    // the selection colour rather than removed. Removing it
+                    // was wrong: select the whole list and every divider
+                    // vanishes, which is exactly the "they feel joined" look.
+                    // Tinting keeps each row its own row while still reading
+                    // as one block. Inline because `.border-border2` sets
+                    // border-color !important and flattens any value.
+                    borderBottomColor: seamBelow
+                      ? "color-mix(in oklab, var(--primary) 30%, transparent)"
+                      : "var(--row-divider)",
+                  }
+                : undefined
+            }
             onClick={compact || selection ? handleRowClick : undefined}
             selection={
               selection
@@ -578,10 +610,7 @@ export function TaskList({
                 "min-w-0",
                 !compact && "flex min-w-0 items-center gap-1.5 overflow-hidden",
                 !compact && onSelect && "cursor-pointer",
-                // Room for the badge, which is absolutely placed so it sits at
-                // the same spot whether the cell is a flex row (page rows) or
-                // a stack (compact rows).
-                picked && "relative pr-5",
+
               )}
               onClick={
                 !compact && onSelect
@@ -648,46 +677,33 @@ export function TaskList({
                   <TagLine tags={taskTags} />
                 </>
               )}
-              {pickedAt > 0 && (
-                <span
-                  aria-label={`Selected, ${pickedAt} of ${selection?.ids.length}`}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 font-mono text-[11px] font-bold tabular-nums text-primary"
-                >
-                  {pickedAt}
-                </span>
-              )}
             </div>
 
             {compact ? (
               <div
-                className="flex flex-col items-end justify-center gap-0.5"
+                className="flex flex-col items-end justify-center gap-0 leading-none"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* The stopwatch is a desk feature. On a phone it costs the
                     title a third of its width, so below sm only the date
-                    stays and the row becomes one line.
-
-                    It is also a control rather than information, and a control
-                    nobody is reaching for is just noise on every row of a long
-                    list. Hidden until the pointer is on the row, or the clock
-                    is actually running, and it keeps its space either way so
-                    nothing shifts as you move down the list. */}
-                <span
-                  className={cn(
-                    "transition-opacity max-sm:hidden",
-                    t.timerStartedAt
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-lg:opacity-100",
-                  )}
-                >
+                    stays and the row becomes one line. */}
+                <span className="max-sm:hidden">
                   <TaskTimer
                     task={t}
                     compact
                     stopPropagation={Boolean(rowHref || onSelect)}
                   />
                 </span>
-                <span className="font-mono text-[10px] tabular-nums text-faint">
-                  {due}
+                <span className="flex items-baseline gap-1.5 font-mono text-[10px] tabular-nums">
+                  {pickedAt > 0 && (
+                    <span
+                      aria-label={`Selected, ${pickedAt} of ${selection?.ids.length}`}
+                      className="text-[11px] font-bold text-primary"
+                    >
+                      {pickedAt}
+                    </span>
+                  )}
+                  <span className="text-faint">{due}</span>
                 </span>
               </div>
             ) : (
@@ -715,7 +731,6 @@ export function TaskList({
 
             {showDelete && (
               <DeleteButton
-                revealOnHover
                 onClick={() => handleDelete(t.id)}
                 label={`Delete task ${t.title}`}
                 size={isPage ? "md" : "sm"}
