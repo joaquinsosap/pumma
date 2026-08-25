@@ -94,3 +94,20 @@ handed back to the user to check.
 
 - **No em dashes or en dashes in anything the user reads.** Interface copy,
   labels, empty states, marketing text. Use a comma, a full stop, or rewrite.
+
+## Brain context (auto-loaded)
+
+PUMMA is his own product, live with paying customers. Project summary, load-bearing facts
+and the OSS split:
+@~/programming/personal/brain/personal/projects/pumma.md
+
+Standing risk that applies here, read before touching secrets or deploys:
+@~/programming/personal/brain/work/jncloud/irrecoverable-secrets.md
+
+Deploy cadence and dev-server hygiene:
+@~/programming/personal/brain/guidelines/ai/session-workflow.md
+
+**Do not evaluate PUMMA on revenue.** He has said he will keep developing it regardless of
+whether it succeeds commercially.
+
+Capture new cross-cutting learnings with `/brain-save`.
