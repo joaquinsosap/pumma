@@ -1326,9 +1326,21 @@ select:hover:not(:disabled) {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
-/* Hairlines that survive a translucent ground. */
+/* Hairlines that survive a translucent ground.
+ *
+ * Deliberately NOT the border-color shorthand. It was, and being !important it
+ * painted all four sides of anything carrying this class, which quietly beat
+ * every border-l-<colour> utility and even inline styles. Task rows use
+ * `border-b border-border2` for the separator and a coloured left border for
+ * the priority rail, so the rail rendered in hairline grey on every row and a
+ * selected row had nothing to distinguish it.
+ *
+ * Only the sides that actually want the hairline are named, which leaves the
+ * left border free to mean something. */
 .border-border2 {
-  border-color: var(--border2) !important;
+  border-top-color: var(--border2) !important;
+  border-right-color: var(--border2) !important;
+  border-bottom-color: var(--border2) !important;
 }
 .bg-border {
   background-color: var(--border) !important;

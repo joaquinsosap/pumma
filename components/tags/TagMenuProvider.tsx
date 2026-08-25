@@ -497,6 +497,7 @@ export function Taggable({
   tagIds,
   lifeArea,
   className,
+  style,
   children,
   onClick,
   selection,
@@ -506,6 +507,9 @@ export function Taggable({
   tagIds: string[];
   lifeArea: EntityLifeArea;
   className?: string;
+  /** Inline overrides for things a utility class cannot win, such as a
+   *  border-left colour competing with the border-color shorthand. */
+  style?: React.CSSProperties;
   children: ReactNode;
   /** Gets the event so callers can read ctrl/shift off the click. */
   onClick?: (e: React.MouseEvent) => void;
@@ -538,6 +542,7 @@ export function Taggable({
         "select-none [-webkit-touch-callout:none] [&_input]:select-text [&_textarea]:select-text",
         className,
       )}
+      style={style}
       data-task-id={entity === "task" ? id : undefined}
       onClick={(e) => {
         // The tap that ends a long press is not a tap on the row.

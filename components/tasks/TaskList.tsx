@@ -23,6 +23,7 @@ import { PriorityChip } from "@/components/tasks/PriorityChip";
 import { budgetForWidth, fitTagLine } from "@/lib/tag-line";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import type { TaskPriority } from "@/lib/types";
 import { taskDetailHref } from "@/lib/task-links";
 import type { LifeView } from "@/lib/life-area";
 import { iso } from "@/lib/date";
@@ -36,13 +37,25 @@ import {
   sortCalendarDayTasks,
 } from "@/lib/calendar-tasks";
 
-// Widget rows keep the bar as hover garnish — the HIGH/MID/LOW chip states the
-// priority outright now, so a permanent stripe on every row was just noise.
-const PRIO_BORDER = {
-  high: "border-l-[oklch(0.64_0.18_25)]",
-  med: "border-l-[oklch(0.7_0.12_70)]",
-  low: "border-l-faint2/40",
-} as const;
+/**
+ * The rail colour, as a value rather than a class.
+ *
+ * It used to be `border-l-<colour>` utilities, and they never rendered: the
+ * row also carries `border-b border-border2`, which sets the border-color
+ * SHORTHAND, and that paints all four sides after the longhand has had its
+ * say. Every row on the page list drew its 3px rail in the default border
+ * grey, priority and selection alike, which is most of why a selected row was
+ * hard to pick out of a list.
+ *
+ * An inline style wins over both, and the colour is data anyway. These read
+ * the same variables as the priority chip and the boxed glyph, so the rail
+ * cannot drift from them again.
+ */
+const PRIO_RAIL: Record<TaskPriority, string> = {
+  high: "var(--prio-high)",
+  med: "var(--prio-med)",
+  low: "color-mix(in oklab, var(--faint2) 40%, transparent)",
+};
 
 type Props = {
   tasks: Task[];
@@ -412,11 +425,18 @@ export function TaskList({
           );
         }
 
-        const accentBorder = isPage
-          ? t.status === "doing"
-            ? "border-l-[3px] border-l-primary"
-            : `border-l-[3px] ${PRIO_BORDER[t.priority]}`
-          : "";
+        // The rail is always 3px and always coloured by something; only which
+        // thing changes. Selection outranks "doing" outranks priority, and the
+        // colour goes on as a style so the border-color shorthand cannot eat
+        // it (see PRIO_RAIL).
+        const railColor = picked
+          ? "var(--primary)"
+          : selected
+            ? "var(--tasks)"
+            : t.status === "doing"
+              ? "var(--primary)"
+              : PRIO_RAIL[t.priority];
+        const accentBorder = isPage ? "border-l-[3px]" : "";
 
         // Spotlight selection: while anything is selected, the rows NOT in the
         // selection step back — dimmed and desaturated — and the selected ones
@@ -428,7 +448,7 @@ export function TaskList({
         const dimmed = Boolean(selection?.active) && !picked;
 
         const rowClass = cn(
-          "task-row grid items-center transition-[opacity,background-color] duration-150",
+          "task-row group grid items-center transition-[opacity,background-color] duration-150",
           compact
             ? cn(
                 "cursor-pointer gap-x-2.5 border-b border-border2 px-3 py-2.5 last:border-b-0",
@@ -436,9 +456,9 @@ export function TaskList({
                   ? "grid-cols-[20px_34px_minmax(0,1fr)_72px_28px] max-sm:grid-cols-[20px_18px_minmax(0,1fr)_46px_24px]"
                   : "grid-cols-[20px_34px_minmax(0,1fr)_72px] max-sm:grid-cols-[20px_18px_minmax(0,1fr)_46px]",
                 picked
-                  ? "border-l-[3px] border-l-primary bg-primary/[0.14]"
+                  ? "border-l-[3px] bg-primary/[0.16]"
                   : selected
-                    ? "border-l-[3px] border-l-tasks bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35"
+                    ? "border-l-[3px] bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35"
                     : cn("hover:bg-hover", accentBorder),
                 dimmed && "opacity-45 saturate-50",
               )
@@ -451,10 +471,10 @@ export function TaskList({
                   ? "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px_16px] max-sm:grid-cols-[18px_18px_minmax(0,1fr)_0px_44px_16px]"
                   : "grid-cols-[18px_34px_minmax(0,1fr)_92px_52px] max-sm:grid-cols-[18px_18px_minmax(0,1fr)_0px_44px]",
                 isPage && t.status === "doing" && "bg-primary/[0.03]",
-                picked && "border-l-[3px] border-l-primary bg-primary/[0.14]",
+                picked && "border-l-[3px] bg-primary/[0.16]",
                 !picked &&
                   selected &&
-                  "border-l-[3px] border-l-tasks bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35",
+                  "border-l-[3px] bg-tasks/[0.12] ring-1 ring-inset ring-tasks/35",
                 !picked && !selected && accentBorder,
                 dimmed && "opacity-45 saturate-50",
               ),
@@ -501,6 +521,7 @@ export function TaskList({
             tagIds={t.tagIds}
             lifeArea={t.lifeArea}
             className={rowClass}
+            style={isPage ? { borderLeftColor: railColor } : undefined}
             onClick={compact || selection ? handleRowClick : undefined}
             selection={
               selection
@@ -644,8 +665,21 @@ export function TaskList({
               >
                 {/* The stopwatch is a desk feature. On a phone it costs the
                     title a third of its width, so below sm only the date
-                    stays and the row becomes one line. */}
-                <span className="max-sm:hidden">
+                    stays and the row becomes one line.
+
+                    It is also a control rather than information, and a control
+                    nobody is reaching for is just noise on every row of a long
+                    list. Hidden until the pointer is on the row, or the clock
+                    is actually running, and it keeps its space either way so
+                    nothing shifts as you move down the list. */}
+                <span
+                  className={cn(
+                    "transition-opacity max-sm:hidden",
+                    t.timerStartedAt
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 max-lg:opacity-100",
+                  )}
+                >
                   <TaskTimer
                     task={t}
                     compact
@@ -681,6 +715,7 @@ export function TaskList({
 
             {showDelete && (
               <DeleteButton
+                revealOnHover
                 onClick={() => handleDelete(t.id)}
                 label={`Delete task ${t.title}`}
                 size={isPage ? "md" : "sm"}
