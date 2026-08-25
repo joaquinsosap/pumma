@@ -3,6 +3,7 @@
 import type { TaskPriority } from "@/lib/types";
 import {
   PRIORITY_COLOR,
+  PRIORITY_INK,
   PRIORITY_GLYPH,
 } from "@/components/tasks/PriorityChip";
 import { cn } from "@/lib/utils";
@@ -57,8 +58,8 @@ export function PriorityQuickPick({
               active
                 ? {
                     borderColor: PRIORITY_COLOR[v],
-                    background: PRIORITY_COLOR[v].replace(")", " / 0.14)"),
-                    color: PRIORITY_COLOR[v],
+                    background: `color-mix(in oklab, ${PRIORITY_COLOR[v]} 14%, transparent)`,
+                    color: PRIORITY_INK[v],
                   }
                 : undefined
             }
@@ -66,7 +67,7 @@ export function PriorityQuickPick({
             <span
               aria-hidden
               className="w-2.5 shrink-0 text-center text-[14px] font-bold leading-[11px]"
-              style={active ? undefined : { color: PRIORITY_COLOR[v] }}
+              style={active ? undefined : { color: PRIORITY_INK[v] }}
             >
               {PRIORITY_GLYPH[v]}
             </span>

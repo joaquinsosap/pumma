@@ -542,7 +542,7 @@ export function TasksView({
         <TaskFilterChips filters={filters} onChange={setFilters} tags={tags} />
 
         <div
-          className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-[13px] border border-border bg-surface animate-pumma-view lg:grid-cols-[minmax(280px,34%)_minmax(480px,1fr)]"
+          className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden rounded-[13px] border border-border bg-surface animate-pumma-view lg:grid-cols-[minmax(340px,42%)_minmax(480px,1fr)]"
           style={{ boxShadow: "2px 2px 0 var(--shadow)" }}
         >
           <div

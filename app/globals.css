@@ -32,9 +32,27 @@
   --calendar: oklch(0.6 0.11 200);
   --life: oklch(0.52 0.09 265);
   --assistant: oklch(0.6 0.19 330);
+
+  /* Priority. The hue paints the box's border and tint; the ink paints the
+     glyph inside it, and has to be darker than the hue on a light ground or
+     the arrowhead disappears into its own tint. Mid especially: yellow at
+     full brightness is nearly invisible as text on white. */
+  --prio-high: oklch(0.58 0.21 25);
+  --prio-med: oklch(0.76 0.15 92);
+  --prio-low: oklch(0.62 0.12 245);
+  --prio-high-ink: oklch(0.52 0.2 25);
+  --prio-med-ink: oklch(0.55 0.12 92);
+  --prio-low-ink: oklch(0.54 0.13 245);
 }
 
 [data-theme="dark"] {
+  /* The ink inverts: on a dark ground the box's tint is dark too, so the
+     glyph has to go lighter than the hue rather than darker. The hues
+     themselves stay put — they are the same three colours either way. */
+  --prio-high-ink: oklch(0.74 0.18 25);
+  --prio-med-ink: oklch(0.84 0.14 92);
+  --prio-low-ink: oklch(0.76 0.12 245);
+
   --bg: #161519;
   --surface: #1f1e23;
   --surface2: #1a191e;

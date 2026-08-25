@@ -34,6 +34,7 @@ import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { cn } from "@/lib/utils";
 import {
   PRIORITY_COLOR,
+  PRIORITY_INK,
   PRIORITY_GLYPH,
 } from "@/components/tasks/PriorityChip";
 import type { TaskPriority } from "@/lib/types";
@@ -647,11 +648,8 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                               active
                                 ? {
                                     borderColor: PRIORITY_COLOR[value],
-                                    background: PRIORITY_COLOR[value].replace(
-                                      ")",
-                                      " / 0.12)",
-                                    ),
-                                    color: PRIORITY_COLOR[value],
+                                    background: `color-mix(in oklab, ${PRIORITY_COLOR[value]} 12%, transparent)`,
+                                    color: PRIORITY_INK[value],
                                   }
                                 : undefined
                             }
@@ -662,7 +660,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                               style={
                                 active
                                   ? undefined
-                                  : { color: PRIORITY_COLOR[value] }
+                                  : { color: PRIORITY_INK[value] }
                               }
                             >
                               {PRIORITY_GLYPH[value]}
