@@ -75,6 +75,7 @@ const settingsPatchSchema = z
       .max(3)
       .optional(),
     defaultHabitFrequency: z.enum(["daily", "weekly", "monthly"]).optional(),
+    projectsRailSortVisible: z.boolean().optional(),
     taskSort: z.enum(["priority", "due", "created", "alpha"]).optional(),
     projectTaskSort: z
       .enum(["priority", "custom", "created", "alpha"])
@@ -110,6 +111,7 @@ export async function updateSettingsAction(patch: {
   defaultTasksStatus?: ("todo" | "doing" | "done")[];
   defaultTasksPriority?: ("low" | "med" | "high")[];
   defaultHabitFrequency?: "daily" | "weekly" | "monthly";
+  projectsRailSortVisible?: boolean;
   taskSort?: "priority" | "due" | "created" | "alpha";
   projectTaskSort?: "priority" | "custom" | "created" | "alpha";
   projectSort?: "created" | "alpha" | "progress";

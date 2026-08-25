@@ -122,6 +122,14 @@ export const settingsSchema = z.object({
     .enum(["daily", "weekly", "monthly"])
     .default("daily"),
   /**
+   * Whether the projects rail rests on its sort control rather than on the
+   * first project. Off by default: the control costs a quarter of the rail
+   * on a phone, and most visits are about the projects. Scrolling the rail
+   * left reveals it and sets this; scrolling right or picking a project
+   * clears it.
+   */
+  projectsRailSortVisible: z.boolean().default(false),
+  /**
    * The nudge: per setting key, the last few values chosen at creation time,
    * and when the one-time "make it the default?" offer was answered. History
    * for a key stops being recorded once the key is answered, so this is

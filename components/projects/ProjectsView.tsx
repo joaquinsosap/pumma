@@ -40,6 +40,8 @@ type Props = {
   birthDate?: string | null;
   lifeSpanYears?: number;
   projectSort?: ProjectSort;
+  /** Whether the rail rests on its sort control. See ProjectRail. */
+  projectsRailSortVisible?: boolean;
   projectTaskSort?: ProjectTaskSort;
 };
 
@@ -53,6 +55,7 @@ export function ProjectsView({
   lifeSpanYears,
   projectSort = "created",
   projectTaskSort = "priority",
+  projectsRailSortVisible = false,
 }: Props) {
   const searchParams = useSearchParams();
   const lifeView = parseLifeView(searchParams.get("life"));
@@ -60,6 +63,19 @@ export function ProjectsView({
   // Both orderings apply locally the moment they change; the server write
   // follows behind. See TasksView for the reasoning.
   const [railSort, setRailSort] = useState<ProjectSort>(projectSort);
+  // Whether the rail rests on its sort control. Local for responsiveness,
+  // persisted behind it: this is a preference, not view state.
+  const [railSortVisible, setRailSortVisible] = useState(
+    projectsRailSortVisible,
+  );
+  useEffect(
+    () => setRailSortVisible(projectsRailSortVisible),
+    [projectsRailSortVisible],
+  );
+  const changeRailSortVisible = (visible: boolean) => {
+    setRailSortVisible(visible);
+    void updateSettingsAction({ projectsRailSortVisible: visible });
+  };
   useEffect(() => setRailSort(projectSort), [projectSort]);
   const changeRailSort = (next: ProjectSort) => {
     setRailSort(next);
@@ -168,6 +184,8 @@ export function ProjectsView({
               tasks={tasks}
               onSelect={(id) => void setProjectId(id)}
               lifeArea={lifeAreaForCreate(lifeView)}
+              sortVisible={railSortVisible}
+              onSortVisibleChange={changeRailSortVisible}
               sortControl={
                 <SortMenu
                   options={PROJECT_SORTS}
@@ -238,6 +256,8 @@ export function ProjectsView({
                       onSelect={(id) => void setProjectId(id)}
                       lifeArea={lifeAreaForCreate(lifeView)}
                       droppable
+                      sortVisible={railSortVisible}
+                      onSortVisibleChange={changeRailSortVisible}
                       sortControl={
                         <SortMenu
                           options={PROJECT_SORTS}

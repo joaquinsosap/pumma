@@ -16,6 +16,9 @@ export default async function ProjectsPage({ searchParams }: Props) {
       lifeSpanYears={data.lifeSpanYears}
       projectSort={data.settings?.projectSort ?? "created"}
       projectTaskSort={data.settings?.projectTaskSort ?? "priority"}
+      projectsRailSortVisible={
+        data.settings?.projectsRailSortVisible ?? false
+      }
     />
   );
 }

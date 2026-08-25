@@ -601,6 +601,7 @@ export function createSeedData(userId: string): SeedData {
     defaultTasksStatus: [],
     defaultTasksPriority: [],
     defaultHabitFrequency: "daily" as const,
+    projectsRailSortVisible: false,
     nudgeHistory: {},
     nudgeAnswered: {},
 

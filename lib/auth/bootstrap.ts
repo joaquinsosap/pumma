@@ -50,6 +50,7 @@ export async function bootstrapNewUser(user: {
     defaultTasksStatus: [],
     defaultTasksPriority: [],
     defaultHabitFrequency: "daily" as const,
+    projectsRailSortVisible: false,
     nudgeHistory: {},
     nudgeAnswered: {},
 
