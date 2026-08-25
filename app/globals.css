@@ -1140,8 +1140,16 @@ body {
    first and last ones looked trimmed. So the padding has to be at least that
    gap, and a little more above, because these shadows are cast downward and
    the top of the first card is where the eye notices the cut. */
+/* Longhand on purpose: this rule is unlayered, so it beats Tailwind's
+   utilities, and the shorthand was silently killing the `max-lg:pb-28` that
+   keeps the last habit card clear of the phone dock. Only the sides the glow
+   actually needs are claimed; bottom padding stays the caller's to set, and
+   the negative bottom margin compensates for the 14px the callers already
+   include in their own padding. */
 .glow-room {
-  padding: 16px 14px 14px;
+  padding-top: 16px;
+  padding-left: 14px;
+  padding-right: 14px;
   margin: -16px -14px -14px;
 }
 

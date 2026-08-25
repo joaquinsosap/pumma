@@ -524,7 +524,7 @@ function KanbanColumnStatic({
         <span className="text-[12.5px] font-bold">{label}</span>
         <span className="font-mono text-[10px] text-faint">{count}</span>
       </div>
-      <div className="glow-room flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+      <div className="glow-room flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-3.5">
         {children}
       </div>
     </div>
@@ -576,7 +576,7 @@ function KanbanColumn({
           something. Starting at the first card, aiming high hits that card. */}
       <div
         ref={setNodeRef}
-        className="glow-room flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto"
+        className="glow-room flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto pb-3.5"
       >
         {children}
       </div>
