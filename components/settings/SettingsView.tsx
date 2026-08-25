@@ -397,6 +397,69 @@ export function SettingsView({
                 <option value="note">Note</option>
               </select>
             </div>
+            <div className="border-t border-border/60 pt-3">
+              <label className="mb-1.5 block text-sm text-ink">
+                Tasks page opens on
+              </label>
+              <p className="mb-2 text-[12px] text-faint">
+                Links that name a view (Home&apos;s &quot;Today&quot;) still
+                win.
+              </p>
+              <div className="flex flex-wrap gap-4">
+                <select
+                  aria-label="Default tasks view"
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                  value={settings?.defaultTasksTab ?? "all"}
+                  onChange={(e) =>
+                    update({
+                      defaultTasksTab: e.target
+                        .value as Settings["defaultTasksTab"],
+                    })
+                  }
+                >
+                  <option value="today">Today</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="all">All</option>
+                </select>
+                <select
+                  aria-label="Default grouping"
+                  className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                  value={settings?.defaultTasksGroup ?? "none"}
+                  onChange={(e) =>
+                    update({
+                      defaultTasksGroup: e.target
+                        .value as Settings["defaultTasksGroup"],
+                    })
+                  }
+                >
+                  <option value="none">No grouping</option>
+                  <option value="tag">Group by tag</option>
+                  <option value="project">Group by project</option>
+                </select>
+              </div>
+            </div>
+            <div className="border-t border-border/60 pt-3">
+              <label className="mb-1.5 block text-sm text-ink">
+                New habits repeat
+              </label>
+              <p className="mb-2 text-[12px] text-faint">
+                The cadence a freshly captured habit starts with.
+              </p>
+              <select
+                className="w-full max-w-xs rounded-lg border border-border bg-surface px-3 py-2 text-sm"
+                value={settings?.defaultHabitFrequency ?? "daily"}
+                onChange={(e) =>
+                  update({
+                    defaultHabitFrequency: e.target
+                      .value as Settings["defaultHabitFrequency"],
+                  })
+                }
+              >
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
           </SettingsSection>
 
           <SettingsSection

@@ -5,6 +5,7 @@ import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
 import { listTags } from "@/lib/db/tags";
+import { getSettings } from "@/lib/db/settings";
 import { deriveLifeAreaFromTags, setLifeTags } from "@/lib/life-area-sync";
 import { userToday } from "@/lib/timezone-server";
 import { entityId, isoDate, title } from "@/lib/validation";
@@ -116,11 +117,17 @@ export async function addHabitAction(
   // the only place that lives.
   const tags = await listTags(userId);
   const tagIds = setLifeTags([], parsed.data.lifeView ?? "personal", tags);
+  // A new habit starts on the cadence the user chose in Settings. Target 1
+  // regardless: "how many times" is a per-habit edit, the cadence is a taste.
+  const settings = await getSettings(userId);
   await insertHabit({
     userId,
     name: parsed.data.name,
     color: "oklch(0.6 0.13 155)",
-    frequency: { type: "daily", target: 1 },
+    frequency: {
+      type: settings?.defaultHabitFrequency ?? "daily",
+      target: 1,
+    },
     order: 999,
     archived: false,
     goalIds: [],

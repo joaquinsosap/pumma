@@ -89,6 +89,18 @@ type Props = {
   lifeSpanYears?: number;
   /** The saved ordering for this list. The view treats it as its own state. */
   taskSort?: TaskSort;
+  /**
+   * Where this page opens when the URL does not say. URL params always win:
+   * Home's "Today's tasks" navigates with ?tab=today and lands there
+   * whatever these say. From settings; absent means the old hardcoded
+   * behaviour.
+   */
+  defaults?: {
+    tab: "today" | "upcoming" | "all";
+    group: "none" | "tag" | "project";
+    status: ("todo" | "doing" | "done")[];
+    priority: ("low" | "med" | "high")[];
+  };
 };
 
 type Group = {
@@ -110,6 +122,7 @@ export function TasksView({
   birthDate = null,
   lifeSpanYears,
   taskSort = "priority",
+  defaults,
 }: Props) {
   // The saved choice, applied locally the moment it changes. The server write
   // follows behind; waiting for it would make a sort menu feel like a page
@@ -124,11 +137,11 @@ export function TasksView({
     "tab",
     // Opening Tasks from the nav shows everything; links that mean a specific
     // slice (Home's "Today's tasks", a task deep-link) pass ?tab= explicitly.
-    parseAsStringLiteral(tabs).withDefault("all"),
+    parseAsStringLiteral(tabs).withDefault(defaults?.tab ?? "all"),
   );
   const [group, setGroup] = useQueryState(
     "group",
-    parseAsStringLiteral(groups).withDefault("none"),
+    parseAsStringLiteral(groups).withDefault(defaults?.group ?? "none"),
   );
   const [taskId, setTaskId] = useQueryState("task");
   const [projectFilter, setProjectFilter] = useQueryState(
@@ -138,11 +151,15 @@ export function TasksView({
   const [query, setQuery] = useQueryState("q", parseAsString.withDefault(""));
   const [statusFilter, setStatusFilter] = useQueryState(
     "status",
-    parseAsArrayOf(parseAsStringLiteral(TASK_STATUSES)).withDefault([]),
+    parseAsArrayOf(parseAsStringLiteral(TASK_STATUSES)).withDefault(
+      defaults?.status ?? [],
+    ),
   );
   const [priorityFilter, setPriorityFilter] = useQueryState(
     "priority",
-    parseAsArrayOf(parseAsStringLiteral(TASK_PRIORITIES)).withDefault([]),
+    parseAsArrayOf(parseAsStringLiteral(TASK_PRIORITIES)).withDefault(
+      defaults?.priority ?? [],
+    ),
   );
   const [tagFilter, setTagFilter] = useQueryState(
     "tag",

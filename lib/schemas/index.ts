@@ -104,6 +104,31 @@ export const settingsSchema = z.object({
    * nothing. Values come from lib/collection-sort.ts, which is also where a
    * view learns which options it may offer.
    */
+  /**
+   * Where each surface starts when the URL does not say otherwise. URL params
+   * always win (Home's "Today's tasks" navigates with ?tab=today), so these
+   * only fill silence. Defaults are exactly what each surface hardcoded
+   * before the setting existed: an untouched account changes nothing.
+   */
+  defaultTasksTab: z.enum(["today", "upcoming", "all"]).default("all"),
+  defaultTasksGroup: z.enum(["none", "tag", "project"]).default("none"),
+  defaultTasksStatus: z
+    .array(z.enum(["todo", "doing", "done"]))
+    .default([]),
+  defaultTasksPriority: z
+    .array(z.enum(["low", "med", "high"]))
+    .default([]),
+  defaultHabitFrequency: z
+    .enum(["daily", "weekly", "monthly"])
+    .default("daily"),
+  /**
+   * The nudge: per setting key, the last few values chosen at creation time,
+   * and when the one-time "make it the default?" offer was answered. History
+   * for a key stops being recorded once the key is answered, so this is
+   * self-limiting by construction — see lib/nudge.ts for the rules.
+   */
+  nudgeHistory: z.record(z.string(), z.array(z.string())).default({}),
+  nudgeAnswered: z.record(z.string(), z.string()).default({}),
   taskSort: z.enum(["priority", "due", "created", "alpha"]).default("priority"),
   projectTaskSort: z
     .enum(["priority", "custom", "created", "alpha"])

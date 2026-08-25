@@ -56,6 +56,18 @@ const settingsPatchSchema = z
     workDays: z.array(z.number().int().min(0).max(6)).max(7).optional(),
     lifeAutoOverrideMins: z.number().int().min(5).max(720).optional(),
     spaceShortcuts: z.boolean().optional(),
+    // Where each surface starts when the URL is silent; the URL always wins.
+    defaultTasksTab: z.enum(["today", "upcoming", "all"]).optional(),
+    defaultTasksGroup: z.enum(["none", "tag", "project"]).optional(),
+    defaultTasksStatus: z
+      .array(z.enum(["todo", "doing", "done"]))
+      .max(3)
+      .optional(),
+    defaultTasksPriority: z
+      .array(z.enum(["low", "med", "high"]))
+      .max(3)
+      .optional(),
+    defaultHabitFrequency: z.enum(["daily", "weekly", "monthly"]).optional(),
     taskSort: z.enum(["priority", "due", "created", "alpha"]).optional(),
     projectTaskSort: z
       .enum(["priority", "custom", "created", "alpha"])
@@ -86,6 +98,11 @@ export async function updateSettingsAction(patch: {
   workDays?: number[];
   lifeAutoOverrideMins?: number;
   spaceShortcuts?: boolean;
+  defaultTasksTab?: "today" | "upcoming" | "all";
+  defaultTasksGroup?: "none" | "tag" | "project";
+  defaultTasksStatus?: ("todo" | "doing" | "done")[];
+  defaultTasksPriority?: ("low" | "med" | "high")[];
+  defaultHabitFrequency?: "daily" | "weekly" | "monthly";
   taskSort?: "priority" | "due" | "created" | "alpha";
   projectTaskSort?: "priority" | "custom" | "created" | "alpha";
   projectSort?: "created" | "alpha" | "progress";
