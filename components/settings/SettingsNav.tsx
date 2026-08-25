@@ -17,7 +17,10 @@ import { cn } from "@/lib/utils";
  * marker loud to be findable and read as a column of stray checkboxes; the
  * fix was to make the ACTIVE one loud instead.
  *
- * Labels are deliberately absent for now.
+ * Hovering a tick names it, and only it, in a caption pinned under the
+ * stack. One label at a time is the point: six would undo the quiet the
+ * lengths buy. The caption is absolutely positioned so the ticks never move
+ * when it appears, and it reads downward like everything else in this column.
  */
 export type SettingsGroup = {
   id: string;
@@ -44,6 +47,7 @@ export function SettingsNav({
   className?: string;
 }) {
   const [active, setActive] = useState(groups[0]?.id ?? "");
+  const [hovered, setHovered] = useState<string | null>(null);
 
   // Scrollspy. rootMargin pulls the trigger line up near the top of the pane,
   // so a group becomes active as its heading arrives rather than when it
@@ -90,8 +94,14 @@ export function SettingsNav({
     groups.findIndex((g) => g.id === active),
   );
 
+  const caption = groups.find((g) => g.id === hovered)?.label ?? "";
+
   return (
-    <nav className={cn("w-[40px]", className)} aria-label="Settings sections">
+    <nav
+      className={cn("relative w-[40px]", className)}
+      aria-label="Settings sections"
+      onMouseLeave={() => setHovered(null)}
+    >
       <ul className="flex flex-col items-start gap-3">
         {groups.map((g, i) => {
           const isActive = g.id === active;
@@ -102,6 +112,9 @@ export function SettingsNav({
                 aria-current={isActive ? "true" : undefined}
                 aria-label={g.label}
                 title={g.label}
+                onMouseEnter={() => setHovered(g.id)}
+                onFocus={() => setHovered(g.id)}
+                onBlur={() => setHovered(null)}
                 onClick={(e) => {
                   document
                     .getElementById(g.id)
@@ -128,6 +141,17 @@ export function SettingsNav({
           );
         })}
       </ul>
+      {/* Out of flow, so naming a tick never nudges the ticks. */}
+      <span
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute left-0 top-full mt-3 block font-mono text-[10px] uppercase tracking-[0.14em] text-faint transition-opacity duration-200 motion-reduce:transition-none",
+          caption ? "opacity-100" : "opacity-0",
+        )}
+        style={{ writingMode: "vertical-lr", textOrientation: "upright" }}
+      >
+        {caption}
+      </span>
     </nav>
   );
 }
