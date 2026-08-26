@@ -1729,3 +1729,39 @@ select:hover:not(:disabled) {
     0 0 0 3px color-mix(in oklch, var(--omni-accent) 16%, transparent),
     0 14px 34px -10px var(--shadow);
 }
+
+/* Landing from the "link a calendar" offer.
+
+   A hash jump moves the page and says nothing about which of the six panels
+   you were sent to, so the one you asked for says so for a second and then
+   stops. Outline rather than a ring: rings are box-shadow here, and this panel
+   already carries one.
+
+   Driven by a class rather than :target, because Settings scrolls an inner
+   pane and the document does not move: the browser never performs the jump,
+   so SettingsView does it itself and marks where it landed. */
+#calendars {
+  outline: 2px solid transparent;
+  outline-offset: 5px;
+  border-radius: 14px;
+}
+
+.settings-landed {
+  animation: settingsLand 1600ms ease-out;
+}
+
+@keyframes settingsLand {
+  0%,
+  62% {
+    outline-color: var(--primary);
+  }
+  100% {
+    outline-color: transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-landed {
+    animation: none;
+  }
+}

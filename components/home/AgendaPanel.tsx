@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
-import { Repeat } from "@/components/icons";
+import { Link2, Repeat } from "@/components/icons";
 import { toast } from "sonner";
 import {
   iso,
@@ -21,7 +21,11 @@ import { MeetingDialog } from "@/components/agenda/MeetingDialog";
 import { WidgetHeader, WidgetHeaderLink } from "@/components/home/WidgetLink";
 import { AgendaTodayList } from "@/components/home/AgendaTodayList";
 import { AddMeetingButton } from "@/components/agenda/AddMeetingButton";
-import { ALL_DAY_LABEL, type AgendaEntry } from "@/lib/linked-agenda";
+import { ALL_DAY_LABEL, isLinked, type AgendaEntry } from "@/lib/linked-agenda";
+import {
+  MeetingBodyView,
+  hasJoinAction,
+} from "@/components/agenda/MeetingBodyView";
 import { SyncCalendarsButton } from "@/components/agenda/SyncCalendarsButton";
 import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
@@ -109,10 +113,16 @@ type Props = {
   weekStart?: WeekStart;
   /** How many calendars are subscribed; zero hides the sync button. */
   feedCount?: number;
+  /** Meeting ID and passcode on mirrored invites. Off unless asked for. */
+  showMeetingCodes?: boolean;
+  /** Has the one-time "link a calendar" offer already been made? */
+  calendarLinkOffered?: boolean;
 };
 
 export function AgendaPanel({
   feedCount = 0,
+  showMeetingCodes = false,
+  calendarLinkOffered = true,
   agenda,
   tasks,
   lifeView,
@@ -181,7 +191,9 @@ export function AgendaPanel({
             defaultDate={selectedDay}
             lifeView={lifeView}
             className="shrink-0"
-          />
+            feedCount={feedCount}
+            linkOffered={calendarLinkOffered}
+            />
         </WidgetHeader>
         <div className="grid grid-cols-7 gap-1">
           {week.map((d, i) => (
@@ -236,6 +248,7 @@ export function AgendaPanel({
           <>
             <DayMeetings
               meetings={agendaFor(selectedDay)}
+              showCodes={showMeetingCodes}
               onDelete={(id) => deleteOccurrence(id, selectedDay)}
               onEdit={(item) => setEditing({ item, date: selectedDay })}
             />
@@ -267,25 +280,33 @@ export function AgendaPanel({
 /** Dated meetings shown on a non-today day, above that day's tasks. */
 function DayMeetings({
   meetings,
+  showCodes,
   onDelete,
   onEdit,
 }: {
-  meetings: AgendaItem[];
+  meetings: AgendaEntry[];
+  showCodes: boolean;
   onDelete: (id: string) => void;
   onEdit: (item: AgendaItem) => void;
 }) {
   if (!meetings.length) return null;
-  const sorted = [...meetings].sort(
-    (a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time),
-  );
+  // Deliberately not re-sorted here. meetingsOnDay already puts all-day first
+  // and then everything else by the clock; the local sort this used to do ran
+  // raw parseTimeToMinutes, which returns NaN for "all day" and dropped those
+  // events wherever the comparison happened to land them.
   return (
     <div className="mb-2 flex flex-col gap-0.5">
-      {sorted.map((m) => (
+      {meetings.map((m) => (
         <div key={m.id} className="group relative -mx-1 rounded-lg px-1 py-0.5">
           <button
             type="button"
-            onClick={() => onEdit(m)}
-            className="flex w-full gap-2 text-left"
+            // A mirrored event has nothing to edit: it belongs to another
+            // calendar and PUMMA only reads it.
+            onClick={() => !isLinked(m) && onEdit(m)}
+            className={cn(
+              "flex w-full gap-2 text-left",
+              isLinked(m) && "cursor-default",
+            )}
           >
             <span className="w-10 shrink-0 pt-px font-mono text-[11px] text-faint2">
               {m.time}
@@ -309,16 +330,46 @@ function DayMeetings({
                 {m.time === ALL_DAY_LABEL
                   ? "All day"
                   : meetingTimeRange(m.time, m.durationMins)}
-                {m.notes ? ` · ${m.notes}` : ""}
               </div>
             </div>
           </button>
-          <DeleteButton
-            onClick={() => onDelete(m.id)}
-            label={`Delete meeting ${m.title}`}
-            revealOnHover
-            className="absolute right-0 top-1/2 -translate-y-1/2"
+          {/* The whole invite used to be pasted here, after the time, as one
+              unbroken line of "___________ Microsoft Teams Need help? Join
+              the meeting now Meeting ID: ...". A generated invite is a
+              document, not a subtitle. Same treatment as the calendar day
+              panel now: the join button, and the rest folded away. */}
+          <MeetingBodyView
+            notes={m.notes}
+            compact
+            showCodes={showCodes}
+            className="ml-[52px] mt-1"
+            trailing={
+              isLinked(m) && hasJoinAction(m.notes) ? (
+                <span
+                  title={`From ${m.linkedTo}`}
+                  className="flex h-6 w-6 items-center justify-center text-faint2"
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                </span>
+              ) : undefined
+            }
           />
+          {isLinked(m) && !hasJoinAction(m.notes) && (
+            <span
+              title={`From ${m.linkedTo}`}
+              className="absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center text-faint2"
+            >
+              <Link2 className="h-3.5 w-3.5" />
+            </span>
+          )}
+          {!isLinked(m) && (
+            <DeleteButton
+              onClick={() => onDelete(m.id)}
+              label={`Delete meeting ${m.title}`}
+              revealOnHover
+              className="absolute right-0 top-1/2 -translate-y-1/2"
+            />
+          )}
         </div>
       ))}
     </div>

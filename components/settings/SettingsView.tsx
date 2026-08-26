@@ -168,6 +168,34 @@ export function SettingsView({
   const [, startTransition] = useTransition();
   const { setTheme: setLocal } = useTheme();
   const scrollerRef = useRef<HTMLDivElement>(null);
+
+  // Arriving at one panel by link, e.g. /settings#calendars from the offer
+  // made on somebody's first meeting.
+  //
+  // Hand-rolled because the browser's own hash jump cannot work here: the
+  // page body does not scroll, an inner pane does, so a native jump has
+  // nothing to move and :target would flash a panel nobody was taken to.
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Deferred so the pane has been laid out to scroll within, but on a
+    // timeout rather than requestAnimationFrame: rAF is frozen while a tab is
+    // in the background, so opening this link in a new tab would have left
+    // the pane sitting at the top with no sign anything was meant to happen.
+    const timer = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      el.classList.add("settings-landed");
+    }, 0);
+    const done = () => el.classList.remove("settings-landed");
+    el.addEventListener("animationend", done);
+    return () => {
+      window.clearTimeout(timer);
+      el.removeEventListener("animationend", done);
+      el.classList.remove("settings-landed");
+    };
+  }, []);
   const [tagName, setTagName] = useState("");
   const [name, setName] = useState(userName);
 
@@ -571,8 +599,13 @@ export function SettingsView({
             <SettingsGroupBlock id="workspace" label="Workspace">
             {/* Full width: a list of subscriptions plus the "where do I find
                 the link" answer needs the room, and it is the one panel here
-                somebody arrives at with a task in hand. */}
-            <div className="mb-6">
+                somebody arrives at with a task in hand.
+
+                Its own id, because it is the only panel something LINKS to:
+                the first-meeting offer sends people here, and dropping them
+                at the top of a long Settings page to hunt for the thing they
+                just said yes to is how a good offer turns into a dead end. */}
+            <div id="calendars" className="mb-6 scroll-mt-4">
               <SettingsSection
                 title="Linked calendars"
                 description="Read events from Google, Outlook, Office 365, Apple or anything else that publishes an .ics link."

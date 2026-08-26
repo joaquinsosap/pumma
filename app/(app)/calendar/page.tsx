@@ -10,6 +10,8 @@ export default async function CalendarPage({ searchParams }: Props) {
       tasks={data.tasks}
       agenda={data.agenda}
       showMeetingCodes={data.settings?.showMeetingCodes ?? false}
+      feedCount={data.calendarFeeds.filter((f) => f.enabled).length}
+      calendarLinkOffered={data.settings?.calendarLinkOffered ?? false}
       habitEntries={data.habitEntries}
       tags={data.tags}
       stats={data.stats}

@@ -51,6 +51,15 @@ export const settingsSchema = z.object({
    * when you dial in by phone, or read the code to somebody else.
    */
   showMeetingCodes: z.boolean().default(false),
+  /**
+   * Has the one-time "you can mirror your real calendar in here" offer been
+   * shown?
+   *
+   * Server-side rather than localStorage because "only the first time" means
+   * the first time for the PERSON, not the first time per browser. Somebody
+   * who dismissed it on a laptop should not meet it again on their phone.
+   */
+  calendarLinkOffered: z.boolean().default(false),
   habitVisibleDays: z.number().min(1).default(30),
   habitVisibleWeeks: z.number().min(1).default(8),
   habitVisibleMonths: z.number().min(1).default(3),

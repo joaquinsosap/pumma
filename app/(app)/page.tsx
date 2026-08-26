@@ -33,6 +33,8 @@ export default async function HomePage({ searchParams }: Props) {
           lifeView={lifeView}
           weekStart={weekStart}
           feedCount={data.calendarFeeds.filter((f) => f.enabled).length}
+          showMeetingCodes={data.settings?.showMeetingCodes ?? false}
+          calendarLinkOffered={data.settings?.calendarLinkOffered ?? false}
         />
         <HomeTasksProjects
           projects={data.projects}

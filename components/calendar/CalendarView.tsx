@@ -9,7 +9,7 @@ import { useQueryState, parseAsInteger } from "nuqs";
 import { Repeat } from "@/components/icons";
 import { toast } from "sonner";
 import type { AgendaItem, Task, HabitEntry } from "@/lib/schemas";
-import { iso, parseTimeToMinutes } from "@/lib/date";
+import { iso } from "@/lib/date";
 import { deleteMeetingAction } from "@/lib/actions/agenda";
 import { meetingsOnDay, meetingTimeRange } from "@/lib/meetings";
 import { MeetingDialog } from "@/components/agenda/MeetingDialog";
@@ -41,6 +41,9 @@ type Props = {
   agenda: AgendaEntry[];
   /** Settings toggle: meeting ID and passcode under each meeting. */
   showMeetingCodes?: boolean;
+  /** Calendars already mirrored in, and whether the offer has been made. */
+  feedCount?: number;
+  calendarLinkOffered?: boolean;
   habitEntries: HabitEntry[];
   tags: Tag[];
   stats: { dayPct: number; habitsLabel: string; topStreak: number };
@@ -52,6 +55,8 @@ export function CalendarView({
   tasks,
   agenda,
   showMeetingCodes = false,
+  feedCount = 0,
+  calendarLinkOffered = true,
   habitEntries,
   tags,
   stats,
@@ -396,7 +401,9 @@ export function CalendarView({
               defaultDate={selected}
               lifeView={life}
               className="mt-0.5 shrink-0"
-            />
+              feedCount={feedCount}
+              linkOffered={calendarLinkOffered}
+              />
           </div>
           <div className="flex flex-1 flex-col gap-1 overflow-y-auto px-[18px] py-3.5 max-lg:pb-24">
             {meetingsFor(selected).length > 0 && (

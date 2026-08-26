@@ -48,6 +48,7 @@ const settingsPatchSchema = z
     lifeSpanYears: z.number().int().min(1).max(LIFE_SPAN_MAX).optional(),
     lifeCalendarFullView: z.boolean().optional(),
     showMeetingCodes: z.boolean().optional(),
+    calendarLinkOffered: z.boolean().optional(),
     habitVisibleDays: z.number().int().min(1).max(365).optional(),
     habitVisibleWeeks: z.number().int().min(1).max(52).optional(),
     habitVisibleMonths: z.number().int().min(1).max(24).optional(),
@@ -98,6 +99,7 @@ export async function updateSettingsAction(patch: {
   lifeSpanYears?: number;
   lifeCalendarFullView?: boolean;
   showMeetingCodes?: boolean;
+  calendarLinkOffered?: boolean;
   habitVisibleDays?: number;
   habitVisibleWeeks?: number;
   habitVisibleMonths?: number;

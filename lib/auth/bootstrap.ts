@@ -59,6 +59,7 @@ export async function bootstrapNewUser(user: {
     lifeSpanYears: LIFE_SPAN_DEFAULT,
     lifeCalendarFullView: false,
     showMeetingCodes: false,
+    calendarLinkOffered: false,
     habitVisibleDays: 30,
     habitVisibleWeeks: 8,
     habitVisibleMonths: 3,
