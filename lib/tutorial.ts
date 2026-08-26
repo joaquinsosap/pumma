@@ -95,7 +95,7 @@ export const BEATS: Beat[] = [
     sub: "Read only. Nothing leaves PUMMA.",
     // Six, not eight. The watch budget has a 30 second ceiling and it was
     // already at 24; this beat has three moves and does not need longer.
-    ms: 6_000,
+    ms: 9_000,
   },
   // Two beats, because it was always two scenes. The assistant half asks a
   // question and gets an answer; the other half gives an instruction and gets
@@ -107,7 +107,7 @@ export const BEATS: Beat[] = [
     step: "Ask",
     caption: "Ask about your own data.",
     sub: "It answers from what you have.",
-    ms: 7_000,
+    ms: 10_000,
   },
   {
     id: "request",
@@ -115,7 +115,7 @@ export const BEATS: Beat[] = [
     step: "Tell it",
     caption: "Or tell it what to change.",
     sub: "Nothing saves until you say so.",
-    ms: 8_000,
+    ms: 11_000,
   },
   {
     id: "life",
@@ -123,7 +123,7 @@ export const BEATS: Beat[] = [
     step: "Your weeks",
     caption: "Your life in weeks.",
     sub: "1,521 down.",
-    ms: 9_000,
+    ms: 12_000,
   },
 ];
 
@@ -132,7 +132,16 @@ export function progressAt(index: number, beats: Beat[] = BEATS): number {
   return Math.min(1, Math.max(0, index / beats.length));
 }
 
-/** What the self-playing beats add up to — the honest part of "60 seconds". */
+/**
+ * What the self-playing beats add up to.
+ *
+ * Longer than it was, on purpose. The old ceiling existed because a watch
+ * beat was something you were STUCK in front of, so every extra second was a
+ * second of somebody's life spent waiting. They now carry a Next control that
+ * doubles as the clock, so the wait is both visible and skippable — and a
+ * scene nobody can leave is the thing worth capping, not a scene that plays
+ * for a few seconds longer while you actually look at it.
+ */
 export function watchMs(beats: Beat[] = BEATS): number {
   return beats.reduce(
     (sum, b) => sum + (b.kind === "watch" ? (b.ms ?? 0) : 0),

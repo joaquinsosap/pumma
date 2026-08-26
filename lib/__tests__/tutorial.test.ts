@@ -49,7 +49,12 @@ describe("the cut", () => {
   });
 
   it("keeps the self-playing part short — the rest is up to the user", () => {
-    expect(watchMs() / 1000).toBeLessThanOrEqual(30);
+    // Was 30, when a watch beat was something you were stuck in front of.
+    // They are skippable now (the Next control in TutorialOverlay doubles as
+    // the clock), so the number that matters is not how long they run but
+    // that leaving is always possible. The ceiling stays as a brake on the
+    // whole thing quietly becoming a film.
+    expect(watchMs() / 1000).toBeLessThanOrEqual(45);
   });
 });
 

@@ -21,8 +21,19 @@ import {
 const WINDOW_BACK_DAYS = 45;
 const WINDOW_FORWARD_DAYS = 240;
 
-/** A feed is not worth re-fetching more often than this. */
-export const STALE_AFTER_MS = 30 * 60 * 1000;
+/**
+ * How old a feed has to be before it is worth fetching again.
+ *
+ * Five minutes, not thirty. The publishers cache far longer than this — a
+ * Google secret feed can sit on a change for hours — so a short window here
+ * does not make anything more live. What it does is make the delay OURS
+ * rather than ours plus theirs, and stop the answer to "why is it not there"
+ * being a button somebody has to remember to press.
+ *
+ * Cheap to be wrong about: a poll that finds nothing costs one conditional
+ * GET, and against a publisher that sends an ETag it costs only headers.
+ */
+export const STALE_AFTER_MS = 5 * 60 * 1000;
 
 /** Big enough for a busy year, small enough that a hostile feed cannot OOM us. */
 const MAX_BYTES = 5 * 1024 * 1024;

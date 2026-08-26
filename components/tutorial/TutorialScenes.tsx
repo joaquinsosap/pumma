@@ -1191,24 +1191,50 @@ const TYPES = [
 const TAB_TARGET = 2; // goal
 
 /** A keycap the size of a real one, that goes down when the real one does. */
+/**
+ * A key, in one of three states.
+ *
+ * `held` matters more than it looks. When a beat wants two things at once —
+ * shift AND a click — being told "not that one" says nothing about WHICH half
+ * was missing. A cap that is visibly down while you hold shift, and visibly
+ * up while you do not, turns a refusal into a diagram: you clicked, the click
+ * went down, shift never did.
+ *
+ * A held cap loses its bottom edge and sits into it, which is what a real key
+ * does. `dim` is the opposite state, for the half that is still wanted.
+ */
 function KeyCap({
   label,
   pressed,
   wide,
   big,
+  held,
+  dim,
 }: {
   label: string;
   pressed: number;
   wide?: boolean;
   big?: boolean;
+  /** Down right now. */
+  held?: boolean;
+  /** Still needed, and not being given. */
+  dim?: boolean;
 }) {
   return (
     <span
       key={pressed}
       className={cn(
-        "tutorial-key inline-flex items-center justify-center rounded-[9px] border-b-[4px] border-border bg-surface2 font-mono font-bold text-ink shadow-[0_2px_0_var(--shadow)]",
+        "inline-flex items-center justify-center rounded-[9px] font-mono font-bold transition-all duration-100",
         big ? "px-4 py-2.5 text-[15px]" : "px-2.5 py-1.5 text-[12px]",
         wide && (big ? "px-7" : "px-4"),
+        held
+          ? // Down: the 4px lip and the shadow are what made it look raised,
+            // so both go, and it moves into the gap they leave.
+            "translate-y-[3px] border-b-0 bg-primary/15 text-primary shadow-none ring-1 ring-inset ring-primary/40"
+          : cn(
+              "tutorial-key border-b-[4px] border-border bg-surface2 shadow-[0_2px_0_var(--shadow)]",
+              dim ? "text-faint2" : "text-ink",
+            ),
       )}
     >
       {label}
@@ -2201,8 +2227,32 @@ export function SceneBulk({
   // click has moved all four from low to high at once.
   const [phase, setPhase] = useState<"select" | "raise" | "applied">("select");
   const [wrongClick, setWrongClick] = useState(false);
+  // Which halves of "shift + click" the user is actually giving us. Being
+  // told "not that one" says nothing about WHICH half was missing.
+  const [shiftHeld, setShiftHeld] = useState(false);
+  const [clickFlash, setClickFlash] = useState(false);
   const applied = phase === "applied";
   const reported = useRef(false);
+
+  useEffect(() => {
+    if (done) return;
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setShiftHeld(true);
+    };
+    const up = (e: KeyboardEvent) => {
+      if (e.key === "Shift") setShiftHeld(false);
+    };
+    // Losing the window loses the keyup, which would leave the cap stuck down.
+    const blur = () => setShiftHeld(false);
+    window.addEventListener("keydown", down);
+    window.addEventListener("keyup", up);
+    window.addEventListener("blur", blur);
+    return () => {
+      window.removeEventListener("keydown", down);
+      window.removeEventListener("keyup", up);
+      window.removeEventListener("blur", blur);
+    };
+  }, [done]);
 
   useEffect(() => {
     if (phase !== "select" || done || sel.ids.length < 2) return;
@@ -2229,6 +2279,10 @@ export function SceneBulk({
 
   const click = (index: number, e: React.MouseEvent) => {
     if (done || phase !== "select") return;
+    // The click happened, whatever else did not. Showing it go down is the
+    // whole point: it isolates the missing half.
+    setClickFlash(true);
+    window.setTimeout(() => setClickFlash(false), 260);
     // Only shift. A plain or ⌘ click would start a different selection and
     // quietly undo the half of the gesture the tour set up.
     if (!e.shiftKey || index === 0) return refuse();
@@ -2252,13 +2306,19 @@ export function SceneBulk({
 
   return (
     <Frame glow={!done}>
+      {/* Both halves, each showing whether it is being given. */}
       <div className="mb-3.5 flex items-center justify-center gap-2">
-        <KeyCap label="⇧ shift" pressed={0} big />
+        <KeyCap label="⇧ shift" pressed={0} big held={shiftHeld} dim={!shiftHeld} />
         <span className="font-mono text-[13px] font-bold text-faint2">+</span>
         <span
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-[9px] border-b-[4px] border-border bg-surface2 px-4 py-2.5 font-mono text-[15px] font-bold text-ink shadow-[0_2px_0_var(--shadow)]",
-            !applied && "tutorial-nudge-soft",
+            "inline-flex items-center gap-1.5 rounded-[9px] px-4 py-2.5 font-mono text-[15px] font-bold transition-all duration-100",
+            clickFlash
+              ? "translate-y-[3px] border-b-0 bg-primary/15 text-primary shadow-none ring-1 ring-inset ring-primary/40"
+              : cn(
+                  "border-b-[4px] border-border bg-surface2 text-ink shadow-[0_2px_0_var(--shadow)]",
+                  !applied && !shiftHeld && "tutorial-nudge-soft",
+                ),
           )}
         >
           <MousePointerClick className="h-4 w-4" />

@@ -130,6 +130,31 @@ export async function setCalendarFeedEnabledAction(
   return { ok: true };
 }
 
+/**
+ * Refresh anything that has gone stale, if anything has.
+ *
+ * Called from the client while somebody is actually looking at the app. That
+ * is deliberate: a cron would fetch every feed for every account around the
+ * clock, including the ones nobody has opened in a month, and this is a
+ * personal tool whose users are asleep two thirds of the day. Tying the work
+ * to attention means the cost scales with use rather than with the user
+ * table.
+ *
+ * Cheap when there is nothing to do: `syncStaleFeeds` checks timestamps
+ * first, so the common call touches the database and returns.
+ */
+export async function syncStaleCalendarsAction(): Promise<
+  ActionResult<{ synced: number; failed: number }>
+> {
+  const userId = await requireUserId();
+  const out = await syncStaleFeeds(userId, await userTimezone(userId), false);
+  // Only when something actually changed. Revalidating the layout on every
+  // poll would re-render the whole app every few minutes to show the same
+  // thing, which is worse than the staleness it is fixing.
+  if (out.synced > 0) revalidatePath("/", "layout");
+  return { ok: true, data: out };
+}
+
 /** The "refresh now" button, for when waiting for the timer is not the mood. */
 export async function refreshCalendarFeedsAction(): Promise<
   ActionResult<{ synced: number; failed: number }>

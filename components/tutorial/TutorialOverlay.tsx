@@ -13,6 +13,7 @@ import {
   progressAt,
 } from "@/lib/tutorial";
 import { markTutorialSeen } from "@/lib/actions/settings";
+import { ChevronRight } from "@/components/icons";
 import { setTutorialActive } from "@/lib/tutorial-lock";
 import { useVisualViewport } from "@/lib/use-visual-viewport";
 import { onTutorialReplay } from "@/lib/tutorial-replay";
@@ -404,6 +405,38 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
           />
         </div>
       </div>
+
+      {/* Watch beats get a way out.
+          A scene that plays itself is a scene you are stuck in front of, and
+          the honest fix is not to make them shorter but to let the viewer
+          leave. The button doubles as the clock: it fills as the beat runs,
+          so the wait is visible rather than indefinite, and pressing it early
+          is the same as reaching the end. */}
+      {!isMission && !outro && !cleared && (
+        <div className="flex shrink-0 justify-center px-4 pb-1">
+          <button
+            type="button"
+            onClick={() => {
+              if (index + 1 >= beats.length) finish();
+              else advance();
+            }}
+            className="pumma-floating relative flex h-9 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-4 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
+          >
+            {/* The fill sits behind the label and is the same value the
+                beat's own clock reports, so it can never disagree with when
+                the scene actually ends. */}
+            <span
+              aria-hidden
+              className="absolute inset-y-0 left-0 bg-white/15"
+              style={{ width: `${Math.round(p * 100)}%` }}
+            />
+            <span className="relative">
+              {index + 1 >= beats.length ? "Finish" : "Next"}
+            </span>
+            <ChevronRight className="relative h-3 w-3" />
+          </button>
+        </div>
+      )}
 
       {/* Desktop: down the left, out of the way. Phone: a strip along the
           bottom, where there's width to spare and no height. */}
