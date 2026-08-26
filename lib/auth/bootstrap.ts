@@ -64,6 +64,13 @@ export async function bootstrapNewUser(user: {
     calendarLinkOffered: false,
     installOffered: false,
     sortReversed: [],
+    mcp: {
+      enabled: false,
+      allowCreate: true,
+      allowUpdate: true,
+      allowDelete: false,
+      serveExternal: true,
+    },
     notifications: {
       meetingsEnabled: true,
       meetingLeadMins: [10],

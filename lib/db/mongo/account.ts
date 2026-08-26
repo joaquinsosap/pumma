@@ -103,7 +103,22 @@ export async function deleteAllUserData(
   const removed: Record<string, number> = {};
   const ids = idCandidates(userId);
 
-  for (const name of ["session", "account"]) {
+  // Sessions and credentials first, then every other way back in.
+  //
+  // The OAuth rows matter as much as the password does. A refresh token is a
+  // thirty-day credential living in some other application, and deleting the
+  // account without revoking it would leave a key to a door that no longer
+  // exists. mcpAudit and mcpRate are not credentials but they are this
+  // person's records, and "delete everything" has to mean it.
+  for (const name of [
+    "session",
+    "account",
+    "oauthAccessToken",
+    "oauthRefreshToken",
+    "oauthConsent",
+    "mcpAudit",
+    "mcpRate",
+  ]) {
     const res = await db
       .collection<AnyRow>(name)
       .deleteMany({ userId: { $in: ids as string[] } });

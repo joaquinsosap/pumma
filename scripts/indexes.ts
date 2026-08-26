@@ -75,6 +75,20 @@ async function main() {
       .createIndex({ createdAt: 1 }, { expireAfterSeconds: 2 * 86_400 });
     await db.collection("users").createIndex({ isDemo: 1, demoExpiresAt: 1 });
 
+    // MCP. The audit trail is read newest-first per account, so it wants the
+    // compound index; ninety days is long enough to answer "what did that
+    // thing do last quarter" and short enough not to accumulate forever.
+    await db.collection("mcpAudit").createIndex({ userId: 1, at: -1 });
+    await db
+      .collection("mcpAudit")
+      .createIndex({ at: 1 }, { expireAfterSeconds: 90 * 86_400 });
+    // One rate-limit bucket per user, per client, per minute. Without the TTL
+    // these rows are never read again and never deleted.
+    await db.collection("mcpRate").createIndex({ key: 1 }, { unique: true });
+    await db
+      .collection("mcpRate")
+      .createIndex({ at: 1 }, { expireAfterSeconds: 3600 });
+
     console.log(`Indexes created on "${dbName}".`);
   } finally {
     await client.close();

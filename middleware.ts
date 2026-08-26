@@ -51,7 +51,21 @@ export function middleware(request: NextRequest) {
 export const config = {
   // Protect everything except auth endpoints, health, and static assets
   // (`.*\\..*` = any path with a file extension, i.e. public/ files).
+  //
+  // api/mcp is excluded because this gate answers a missing cookie with a
+  // redirect to /login, and MCP clients authenticate with a bearer token and
+  // have no cookie to present. Left in, every MCP request would be answered
+  // with an HTML login page: a 200, with a body no JSON-RPC client can parse,
+  // and no hint anywhere that authentication was the problem. The endpoint
+  // does its own, stricter check (requireMcpAuth verifies signature, issuer,
+  // audience and expiry), so this exclusion removes a redirect rather than a
+  // protection.
+  //
+  // .well-known/* is public by specification: discovery is what a client reads
+  // BEFORE it has any token. It is excluded by the `.*\\..*` rule already
+  // (the dot in ".well-known"), and named here so that staying reachable is a
+  // decision rather than a side effect of a pattern about file extensions.
   matcher: [
-    "/((?!api/auth|api/health|_next/static|_next/image|.*\\..*).*)",
+    "/((?!api/auth|api/mcp|api/health|\\.well-known|_next/static|_next/image|.*\\..*).*)",
   ],
 };

@@ -181,6 +181,34 @@ export const settingsSchema = z.object({
   sortReversed: z
     .array(z.enum(["task", "projectTask", "project", "note", "tag"]))
     .default([]),
+  /**
+   * What a connected MCP client is allowed to do, enforced by the server on
+   * every request rather than asked of the model.
+   *
+   * These are deliberately separate from OAuth scopes. A scope records what
+   * you granted one client when you connected it; these record what you allow
+   * anyone right now. Both have to pass, and turning one off here takes
+   * effect on the next request instead of the next token.
+   */
+  mcp: z
+    .object({
+      /** Master switch. Off means the endpoint refuses everything. */
+      enabled: z.boolean().default(false),
+      allowCreate: z.boolean().default(true),
+      allowUpdate: z.boolean().default(true),
+      /** Off by default: the one action with no undo. */
+      allowDelete: z.boolean().default(false),
+      /**
+       * Whether synced calendar events are served over MCP.
+       *
+       * On, because an agenda answer that silently omits half your meetings
+       * is worse than useless. Their third-party text is always labelled as
+       * untrusted regardless of this setting; this only decides whether it
+       * is sent at all.
+       */
+      serveExternal: z.boolean().default(true),
+    })
+    .default({}),
 });
 
 export const tagSchema = z.object({

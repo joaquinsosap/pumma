@@ -701,6 +701,13 @@ export function createSeedData(userId: string): SeedData {
     calendarLinkOffered: false,
     installOffered: false,
     sortReversed: [],
+    mcp: {
+      enabled: false,
+      allowCreate: true,
+      allowUpdate: true,
+      allowDelete: false,
+      serveExternal: true,
+    },
     notifications: {
       meetingsEnabled: true,
       meetingLeadMins: [10],
