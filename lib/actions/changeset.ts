@@ -8,6 +8,12 @@
 import { revalidatePath } from "next/cache";
 import type { ActionResult } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
+import {
+  deleteAgendaItem,
+  insertAgendaItem,
+  listAgenda,
+  updateAgendaItem,
+} from "@/lib/db/agenda";
 import { userToday } from "@/lib/timezone-server";
 import { AI_QUOTA_MESSAGE, reserveAiCall } from "@/lib/ai/quota";
 import { aiInput } from "@/lib/validation";
@@ -228,6 +234,7 @@ export async function applyChangesetAction(
     habit: 2,
     task: 3,
     note: 4,
+    meeting: 5,
   };
   const ops = [...parsed.data.ops].sort(
     (a, b) =>
@@ -315,6 +322,7 @@ export async function undoChangesetAction(
       habit: updateHabit,
       task: updateTask,
       note: updateNote,
+      meeting: updateAgendaItem,
     }[u.entity] as (
       uid: string,
       id: string,
@@ -330,6 +338,7 @@ export async function undoChangesetAction(
       habit: deleteHabit,
       task: deleteTask,
       note: deleteNote,
+      meeting: deleteAgendaItem,
     }[c.entity](userId, c.id);
     if (ok) reverted++;
   }
@@ -459,6 +468,36 @@ async function applyCreate(
         completedAt: null,
       });
       return { id: t.id, title: t.title };
+    }
+    case "meeting": {
+      // The repeat rule is filled in rather than passed through: the model
+      // sends only what the user said, and the schema underneath wants every
+      // key. `date` is the series start when it repeats, which is why a
+      // meeting with a rule and no date still gets today rather than null.
+      const repeat = f.repeat
+        ? {
+            freq: f.repeat.freq,
+            interval: f.repeat.interval ?? 1,
+            byWeekday: f.repeat.byWeekday ?? [],
+            until: val(f.repeat.until),
+            count: f.repeat.count ?? null,
+          }
+        : null;
+      const m = await insertAgendaItem({
+        userId,
+        time: val(f.time) ?? "09:00",
+        title: val(f.title) ?? "Untitled meeting",
+        sub: "",
+        color: area === "work" ? "var(--projects)" : "var(--calendar)",
+        lifeArea: area,
+        date: val(f.date) ?? td,
+        kind: "meeting",
+        durationMins: f.durationMins ?? 30,
+        notes: f.description ?? "",
+        recurrence: repeat,
+        exceptions: [],
+      });
+      return { id: m.id, title: m.title };
     }
     case "note": {
       const named = await ensureTags(userId, f.tagNames ?? []);
@@ -623,6 +662,35 @@ async function applyUpdate(
       applyLife(current.tagIds, current);
       return (await updateNote(userId, op.id, patch)) ? before : null;
     }
+    case "meeting": {
+      const current = (await listAgenda(userId)).find((a) => a.id === op.id);
+      if (!current) return null;
+      const before: Record<string, unknown> = {};
+      const set = <K extends string>(key: K, next: unknown, prev: unknown) => {
+        if (next === undefined || next === null) return;
+        patch[key] = next;
+        before[key] = prev;
+      };
+      set("title", val(f.title), current.title);
+      set("time", val(f.time), current.time);
+      set("date", val(f.date), current.date);
+      set("durationMins", f.durationMins, current.durationMins);
+      set("notes", f.description, current.notes);
+      set("lifeArea", val(f.lifeArea), current.lifeArea);
+      if (f.repeat !== undefined) {
+        patch.recurrence = f.repeat
+          ? {
+              freq: f.repeat.freq,
+              interval: f.repeat.interval ?? 1,
+              byWeekday: f.repeat.byWeekday ?? [],
+              until: val(f.repeat.until),
+              count: f.repeat.count ?? null,
+            }
+          : null;
+        before.recurrence = current.recurrence;
+      }
+      return (await updateAgendaItem(userId, op.id, patch)) ? before : null;
+    }
   }
 }
 
@@ -649,6 +717,9 @@ async function applyDelete(
       await deleteTask(userId, id);
       return;
     }
+    case "meeting":
+      await deleteAgendaItem(userId, id);
+      return;
     case "note":
       await deleteNote(userId, id);
       return;
@@ -658,12 +729,13 @@ async function applyDelete(
 async function liveIds(
   userId: string,
 ): Promise<Record<ChangeEntity, Set<string>>> {
-  const [goals, projects, habits, tasks, notes] = await Promise.all([
+  const [goals, projects, habits, tasks, notes, agenda] = await Promise.all([
     listGoals(userId),
     listProjects(userId),
     listHabits(userId),
     listTasks(userId),
     listNotes(userId),
+    listAgenda(userId),
   ]);
   return {
     goal: new Set(goals.map((g) => g.id)),
@@ -671,5 +743,6 @@ async function liveIds(
     habit: new Set(habits.map((h) => h.id)),
     task: new Set(tasks.map((t) => t.id)),
     note: new Set(notes.map((n) => n.id)),
+    meeting: new Set(agenda.map((a) => a.id)),
   };
 }

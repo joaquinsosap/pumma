@@ -14,7 +14,7 @@ import {
 } from "@/lib/tutorial";
 import { markTutorialSeen } from "@/lib/actions/settings";
 import { setTutorialActive } from "@/lib/tutorial-lock";
-import { useKeyboardInset } from "@/lib/use-keyboard-inset";
+import { useVisualViewport } from "@/lib/use-visual-viewport";
 import { onTutorialReplay } from "@/lib/tutorial-replay";
 import { stallLimitMs, startTutorialClock } from "@/lib/tutorial-clock";
 import { TutorialIntro } from "@/components/tutorial/TutorialIntro";
@@ -53,10 +53,16 @@ const OUTRO_MS = 900;
 export function TutorialOverlay({ seen }: { seen: boolean }) {
   const router = useRouter();
   // The capture beat puts a real field on screen, so on a phone a real
-  // keyboard comes up over it — and the stage is centred in the window, which
-  // means it centres behind the keyboard. Everything below lays out inside
-  // what is actually visible instead, the same way the capture sheet does.
-  const keyboardInset = useKeyboardInset();
+  // keyboard comes up over it, and an overlay sized to the WINDOW centres
+  // itself behind that keyboard.
+  //
+  // Measured as the visible box rather than as "window minus keyboard". The
+  // subtraction version was tried and shipped, and on iOS it over-reserved by
+  // about a hundred pixels, because the number it subtracts also contains
+  // Safari's own bottom bar and the accessory strip. That is what made the
+  // bottom of the tour drift and its contents get cut. Matching the visible
+  // box needs no theory about what is covering the rest.
+  const viewport = useVisualViewport();
   // Read once, on mount. `seen` flips to true the instant the tour starts —
   // it is written then so that abandoning it still counts — and re-reading it
   // on every render would close the tour on its own first frame.
@@ -342,23 +348,21 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
         "fixed inset-0 z-[200] flex flex-col bg-black/70 backdrop-blur-[3px]",
         outro && "tutorial-outro",
       )}
-      // Reserved rather than scrolled: the tour must not be a thing you have
-      // to scroll, and the checklist strip has to stay above the keyboard too.
+      // The overlay BECOMES the visible box rather than covering the window
+      // and padding the difference. `inset-0` still applies when there is no
+      // keyboard, so nothing changes on a desktop.
       //
-      // Reserving alone is not enough — the stage is a fixed 430px and the
-      // banner above it another 175, which does not fit in the ~500px a phone
-      // has left once a keyboard is up. So the stage is told to be smaller
-      // for as long as the keyboard is there, through the same variable its
-      // own rule reads. The floor stops it collapsing to nothing on a short
-      // screen; below that the scene would rather clip than vanish.
+      // The stage is also told to be smaller while the keyboard is up: a
+      // fixed 430px stage plus a 175px banner does not fit in what a phone
+      // has left. The floor stops it collapsing on a short screen; below that
+      // the scene would rather clip than vanish.
       style={
-        keyboardInset > 0
+        viewport?.keyboardOpen
           ? ({
-              paddingBottom: keyboardInset,
-              "--stage-h": `${Math.max(
-                190,
-                window.innerHeight - keyboardInset - 270,
-              )}px`,
+              top: viewport.top,
+              height: viewport.height,
+              bottom: "auto",
+              "--stage-h": `${Math.max(190, viewport.height - 270)}px`,
             } as React.CSSProperties)
           : undefined
       }

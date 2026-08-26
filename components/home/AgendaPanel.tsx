@@ -21,6 +21,7 @@ import { MeetingDialog } from "@/components/agenda/MeetingDialog";
 import { WidgetHeader, WidgetHeaderLink } from "@/components/home/WidgetLink";
 import { AgendaTodayList } from "@/components/home/AgendaTodayList";
 import { AddMeetingButton } from "@/components/agenda/AddMeetingButton";
+import { ALL_DAY_LABEL } from "@/lib/linked-agenda";
 import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 import { taskDetailHref } from "@/lib/task-links";
@@ -294,7 +295,9 @@ function DayMeetings({
                 )}
               </div>
               <div className="text-[11px] text-faint">
-                {meetingTimeRange(m.time, m.durationMins)}
+                {m.time === ALL_DAY_LABEL
+                  ? "All day"
+                  : meetingTimeRange(m.time, m.durationMins)}
                 {m.notes ? ` · ${m.notes}` : ""}
               </div>
             </div>

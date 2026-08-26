@@ -68,6 +68,7 @@ const ENTITY_COLOR: Record<ChangeEntity, string> = {
   habit: "var(--habits)",
   task: "var(--tasks)",
   note: "var(--notes)",
+  meeting: "var(--calendar)",
 };
 
 /** The op's display title, whatever shape its fields take. */
@@ -1212,6 +1213,9 @@ const ENTITY_HREF: Record<ChangeEntity, (id: string) => string> = {
   goal: (id) => `/goals?goal=${id}`,
   habit: (id) => `/habits?habit=${id}`,
   note: (id) => `/notes/${id}`,
+  // A meeting has no page of its own; the calendar is where it lives, and the
+  // day it is on is the useful place to land.
+  meeting: () => `/calendar`,
 };
 
 function AppliedView({

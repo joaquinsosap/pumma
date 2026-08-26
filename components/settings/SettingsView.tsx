@@ -578,6 +578,17 @@ export function SettingsView({
                 description="Read events from Google, Outlook, Office 365, Apple or anything else that publishes an .ics link."
               >
                 <CalendarFeeds feeds={calendarFeeds} />
+                <div className="mt-4 border-t border-border2 pt-3">
+                  <SettingRow
+                    label="Show meeting ID and passcode"
+                    description="Under each meeting, for dialling in by phone or reading a code out. Off by default: the join button already carries both."
+                  >
+                    <Switch
+                      checked={settings?.showMeetingCodes ?? false}
+                      onCheckedChange={(v) => update({ showMeetingCodes: v })}
+                    />
+                  </SettingRow>
+                </div>
               </SettingsSection>
             </div>
 

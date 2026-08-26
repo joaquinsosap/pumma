@@ -615,6 +615,7 @@ export function createSeedData(userId: string): SeedData {
     birthDate: "1997-06-15",
     lifeSpanYears: LIFE_SPAN_DEFAULT,
     lifeCalendarFullView: false,
+    showMeetingCodes: false,
     habitVisibleDays: 30,
     habitVisibleWeeks: 8,
     habitVisibleMonths: 3,

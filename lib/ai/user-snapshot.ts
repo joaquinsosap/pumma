@@ -76,7 +76,17 @@ export type SnapshotData = {
     tags: string[];
     createdAt: string;
   }[];
-  agenda: { time: string; title: string }[];
+  // The id and date are what make a meeting EDITABLE by the assistant: an
+  // update op needs the real id, and without the date the model cannot tell
+  // "the standup" on Monday from the one next week.
+  agenda: {
+    id: string;
+    time: string;
+    title: string;
+    date: string | null;
+    durationMins: number;
+    repeats: boolean;
+  }[];
 };
 
 export type SnapshotResult = {
@@ -209,7 +219,14 @@ export async function buildUserSnapshot(
         tags: n.tagIds.map((id) => tagName.get(id) ?? id),
         createdAt: n.createdAt,
       })),
-      agenda: agenda.map((a) => ({ time: a.time, title: a.title })),
+      agenda: agenda.map((a) => ({
+        id: a.id,
+        time: a.time,
+        title: a.title,
+        date: a.date,
+        durationMins: a.durationMins,
+        repeats: a.recurrence != null,
+      })),
     };
   };
 

@@ -8,6 +8,7 @@ import {
   addCalendarFeedAction,
   refreshCalendarFeedsAction,
   removeCalendarFeedAction,
+  renameCalendarFeedAction,
   setCalendarFeedEnabledAction,
 } from "@/lib/actions/calendar-feeds";
 import { cn } from "@/lib/utils";
@@ -163,9 +164,38 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                 style={{ background: f.color }}
               />
               <div className="min-w-0 flex-1">
-                <p className="m-0 flex items-center gap-1.5 truncate text-[13px] font-semibold text-ink">
+                {/* Editable in place. Google names a feed after the account,
+                    Outlook names every one of them "Calendar", so two work
+                    subscriptions arrive indistinguishable and the only fix is
+                    letting you say which is which. */}
+                <p className="m-0 flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                   <Link2 className="h-3 w-3 shrink-0 text-faint2" />
-                  {f.label}
+                  <input
+                    defaultValue={f.label}
+                    aria-label={`Name for ${f.label}`}
+                    onBlur={(e) => {
+                      const next = e.target.value.trim();
+                      if (!next || next === f.label) {
+                        e.target.value = f.label;
+                        return;
+                      }
+                      start(async () => {
+                        const res = await renameCalendarFeedAction(f.id, next);
+                        if (!res.ok) {
+                          toast.error(res.error);
+                          e.target.value = f.label;
+                        }
+                      });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") e.currentTarget.blur();
+                      if (e.key === "Escape") {
+                        e.currentTarget.value = f.label;
+                        e.currentTarget.blur();
+                      }
+                    }}
+                    className="min-w-0 flex-1 truncate rounded border border-transparent bg-transparent px-1 py-0.5 text-[13px] font-semibold text-ink outline-none transition-colors hover:border-border focus:border-faint focus:bg-surface2"
+                  />
                 </p>
                 <p className="m-0 mt-0.5 font-mono text-[10.5px] text-faint2">
                   {f.lifeArea} · synced {relative(f.lastSyncedAt)}

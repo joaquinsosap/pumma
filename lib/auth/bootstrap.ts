@@ -58,6 +58,7 @@ export async function bootstrapNewUser(user: {
     birthDate: null,
     lifeSpanYears: LIFE_SPAN_DEFAULT,
     lifeCalendarFullView: false,
+    showMeetingCodes: false,
     habitVisibleDays: 30,
     habitVisibleWeeks: 8,
     habitVisibleMonths: 3,

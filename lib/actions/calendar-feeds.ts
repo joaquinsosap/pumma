@@ -82,6 +82,27 @@ export async function removeCalendarFeedAction(
   return { ok: true };
 }
 
+/**
+ * Give a calendar a name you will recognise.
+ *
+ * Feeds name themselves from X-WR-CALNAME, which Google fills in with the
+ * account and Outlook fills in with "Calendar" — so two Outlook subscriptions
+ * arrive indistinguishable. The nickname is per-subscription and purely
+ * visual; nothing is sent anywhere.
+ */
+export async function renameCalendarFeedAction(
+  id: string,
+  label: string,
+): Promise<ActionResult> {
+  const userId = await requireUserId();
+  const next = label.trim().slice(0, 80);
+  if (!next) return { ok: false, error: "Give it a name." };
+  const saved = await updateFeed(userId, id, { label: next });
+  if (!saved) return { ok: false, error: "That calendar is gone." };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 export async function setCalendarFeedEnabledAction(
   id: string,
   enabled: boolean,

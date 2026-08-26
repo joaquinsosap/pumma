@@ -14,7 +14,7 @@
 // — see lib/ai/generate.ts — where they don't exist.)
 import * as z from "zod/v4";
 
-const entity = z.enum(["goal", "project", "habit", "task", "note"]);
+const entity = z.enum(["goal", "project", "habit", "task", "note", "meeting"]);
 
 /**
  * The one fields block. An absent key means "not set" on a create and
@@ -47,7 +47,9 @@ export const opFieldsSchema = z.object({
   date: z
     .string()
     .nullish()
-    .describe("YYYY-MM-DD. A task's due date, or a goal's target date."),
+    .describe(
+      "YYYY-MM-DD. A task's due date, a goal's target date, or a meeting's date (the START date when it repeats).",
+    ),
   // These carry the same names the snapshot uses for the same links. The model
   // reads tasks with a projectId and projects with a goalId, and reaches for
   // those words when it writes ops — a differently-named field here just gets
@@ -72,6 +74,51 @@ export const opFieldsSchema = z.object({
     .array(z.string())
     .nullish()
     .describe("Tag names for a task or note. Plain words, no # prefix."),
+  time: z
+    .string()
+    .nullish()
+    .describe("For a meeting: start time as HH:MM on a 24 hour clock."),
+  durationMins: z
+    .number()
+    .int()
+    .nullish()
+    .describe("For a meeting: how long it runs, in minutes. Default 30."),
+  // One rule carries ONE time, which is the thing to get right when somebody
+  // asks for "Mondays at 17 and Wednesdays at 18": that is two meetings, each
+  // with its own weekly rule, not one rule listing two days. Said here
+  // because this description is what the model actually reads.
+  repeat: z
+    .object({
+      freq: z.enum(["daily", "weekly", "monthly"]),
+      interval: z
+        .number()
+        .int()
+        .min(1)
+        .max(52)
+        .nullish()
+        .describe("Every N days/weeks/months. Default 1."),
+      byWeekday: z
+        .array(z.number().int().min(0).max(6))
+        .nullish()
+        .describe(
+          "Weekly only. 0=Sunday through 6=Saturday. Every day listed here happens at the SAME time; if the user wants different times on different days, emit one meeting per time instead.",
+        ),
+      until: z
+        .string()
+        .nullish()
+        .describe("YYYY-MM-DD, inclusive last day, or omit for no end."),
+      count: z
+        .number()
+        .int()
+        .min(1)
+        .max(730)
+        .nullish()
+        .describe("Stop after N occurrences, or omit."),
+    })
+    .nullish()
+    .describe(
+      "For a meeting: how it repeats. Omit for a one-off. `date` is the series start.",
+    ),
   archived: z
     .boolean()
     .nullish()

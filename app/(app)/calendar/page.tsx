@@ -9,6 +9,7 @@ export default async function CalendarPage({ searchParams }: Props) {
     <CalendarView
       tasks={data.tasks}
       agenda={data.agenda}
+      showMeetingCodes={data.settings?.showMeetingCodes ?? false}
       habitEntries={data.habitEntries}
       tags={data.tags}
       stats={data.stats}

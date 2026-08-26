@@ -1,6 +1,6 @@
 "use client";
 import { DeleteButton } from "@/components/ui/delete-button";
-import { isLinked, type AgendaEntry } from "@/lib/linked-agenda";
+import { ALL_DAY_LABEL, isLinked, type AgendaEntry } from "@/lib/linked-agenda";
 import { Link2 } from "@/components/icons";
 
 import { useEffect, useRef, useState, useTransition } from "react";
@@ -13,6 +13,7 @@ import { iso, parseTimeToMinutes } from "@/lib/date";
 import { deleteMeetingAction } from "@/lib/actions/agenda";
 import { meetingsOnDay, meetingTimeRange } from "@/lib/meetings";
 import { MeetingDialog } from "@/components/agenda/MeetingDialog";
+import { MeetingBodyView } from "@/components/agenda/MeetingBodyView";
 import { AddMeetingButton } from "@/components/agenda/AddMeetingButton";
 import {
   CALENDAR_PRIO,
@@ -35,6 +36,8 @@ const PRIO = CALENDAR_PRIO;
 type Props = {
   tasks: Task[];
   agenda: AgendaEntry[];
+  /** Settings toggle: meeting ID and passcode under each meeting. */
+  showMeetingCodes?: boolean;
   habitEntries: HabitEntry[];
   tags: Tag[];
   stats: { dayPct: number; habitsLabel: string; topStreak: number };
@@ -45,6 +48,7 @@ type Props = {
 export function CalendarView({
   tasks,
   agenda,
+  showMeetingCodes = false,
   habitEntries,
   tags,
   stats,
@@ -147,7 +151,10 @@ export function CalendarView({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-6 animate-pumma-view lg:flex-row lg:gap-[18px]">
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-border bg-surface">
           <div className="flex items-center gap-3 px-5 py-4">
-            <h3 className="m-0 min-w-[190px] text-lg font-extrabold tracking-tight">
+            {/* No min-width. It was 190px, which parked the arrows a fixed
+                distance away from a label that is usually much shorter, so
+                "October 2026" and its own controls looked unrelated. */}
+            <h3 className="m-0 whitespace-nowrap text-lg font-extrabold tracking-tight">
               {monthLabel}
             </h3>
             <div className="flex gap-1">
@@ -224,21 +231,34 @@ export function CalendarView({
                   }
                 }}
                 className={cn(
-                  "flex min-h-0 cursor-pointer flex-col overflow-hidden rounded-lg border p-[6px_7px] text-left",
+                  "flex min-h-0 cursor-pointer flex-col overflow-hidden rounded-lg border p-[6px_7px] text-left transition-[background-color,border-color,box-shadow] duration-150",
+                  // The selected day paints its OWN background and does not
+                  // also ask for bg-surface. A global rule in globals.css
+                  // sets .bg-surface with !important, so a cell carrying both
+                  // kept the plain surface and the selection came down to one
+                  // pixel of border, which is why it was hard to see.
                   c.isSel
-                    ? "border-primary bg-primary/[0.06]"
-                    : "border-border2",
-                  c.isTdy &&
-                    "max-lg:ring-2 max-lg:ring-inset max-lg:ring-primary/60",
-                  c.inM ? "bg-surface" : "bg-transparent",
+                    ? "border-primary bg-primary/[0.14] ring-2 ring-inset ring-primary/45"
+                    : cn(
+                        "border-border2",
+                        c.inM ? "bg-surface" : "bg-transparent",
+                      ),
+
                 )}
               >
                 <div className="mb-0.5 flex items-center gap-1">
+                  {/* Today wears a filled disc, at every size.
+                      It used to be a coloured NUMBER on desktop and a ring
+                      only below lg, so on a wide screen the one date everybody
+                      looks for was a slightly different shade of text among
+                      forty others. A filled disc reads before you focus on
+                      it, and it survives the day also being selected, which a
+                      second ring would not. */}
                   <span
                     className={cn(
-                      "text-xs",
+                      "flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-[3px] text-xs",
                       c.isTdy
-                        ? "font-bold text-primary"
+                        ? "bg-primary font-bold text-background"
                         : c.inM
                           ? "text-ink"
                           : "text-faint2",
@@ -410,11 +430,25 @@ export function CalendarView({
                           )}
                         </div>
                         <div className="text-[11px] text-faint">
-                          {meetingTimeRange(m.time, m.durationMins)}
-                          {m.notes ? ` · ${m.notes}` : ""}
+                          {/* An all-day event has no clock time, and running
+                              "all day" through a HH:MM formatter is where
+                              "NaN:NaN to NaN:NaN" came from. */}
+                          {m.time === ALL_DAY_LABEL
+                            ? "All day"
+                            : meetingTimeRange(m.time, m.durationMins)}
                         </div>
                       </div>
                     </button>
+                    {/* Outside the button: a join link inside a button is a
+                        link you cannot click. */}
+                    {m.notes && (
+                      <MeetingBodyView
+                        notes={m.notes}
+                        compact
+                        showCodes={showMeetingCodes}
+                        className="ml-[52px] mt-1.5"
+                      />
+                    )}
                     {isLinked(m) ? (
                       // The chain sits exactly where delete would, so the row
                       // keeps its shape while saying this one is a mirror. Not
