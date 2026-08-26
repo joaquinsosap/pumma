@@ -73,6 +73,8 @@ import type { DeleteAccountBlock } from "@/lib/actions/account";
 import type { StarterStatus } from "@/lib/actions/starter";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { CalendarFeeds } from "@/components/settings/CalendarFeeds";
+import { McpSettings, type McpPrefs } from "@/components/settings/McpSettings";
+import type { McpAuditRow } from "@/lib/mcp/audit-types";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { InstallCard } from "@/components/pwa/InstallCard";
 import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/notifications";
@@ -102,6 +104,10 @@ type Props = {
   calendarFeeds?: CalendarFeed[];
   /** Empty when the server has no VAPID keys — push is then simply not offered. */
   pushPublicKey?: string;
+  /** The MCP server URL to paste into a client. Empty when not served here. */
+  mcpEndpoint?: string;
+  /** Last few MCP tool calls, newest first. */
+  mcpActivity?: McpAuditRow[];
 };
 
 function SettingRow({
@@ -174,9 +180,21 @@ export function SettingsView({
   stats,
   calendarFeeds = [],
   pushPublicKey = "",
+  mcpEndpoint = "",
+  mcpActivity = [],
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
+
+  // Defaults filled in here so the panel always has a complete object to send
+  // back: a settings row written before MCP existed has no `mcp` key at all.
+  const mcpPrefs: McpPrefs = {
+    enabled: settings?.mcp?.enabled ?? false,
+    allowCreate: settings?.mcp?.allowCreate ?? true,
+    allowUpdate: settings?.mcp?.allowUpdate ?? true,
+    allowDelete: settings?.mcp?.allowDelete ?? false,
+    serveExternal: settings?.mcp?.serveExternal ?? true,
+  };
   const { setTheme: setLocal } = useTheme();
   const scrollerRef = useRef<HTMLDivElement>(null);
 
@@ -903,6 +921,35 @@ export function SettingsView({
             </div>
             </SettingsGroupBlock>
 
+            <SettingsGroupBlock id="connections" label="Connections">
+            <div id="mcp" className="mb-6 scroll-mt-4">
+              <SettingsSection
+                title="AI clients (MCP)"
+                description="Connect PUMMA to an AI assistant so it can work with your tasks, projects, goals, habits, notes and agenda. These switches are enforced by PUMMA on every request, not left to the assistant to respect."
+              >
+                {mcpEndpoint ? (
+                  <McpSettings
+                    prefs={mcpPrefs}
+                    endpoint={mcpEndpoint}
+                    activity={mcpActivity}
+                    // The whole object goes back every time, not the one key
+                    // that changed. `updateSettings` writes with $set, which
+                    // replaces a nested object wholesale, so sending a partial
+                    // here would quietly reset every other switch to its
+                    // default: turning MCP on would silently re-enable
+                    // creating and editing. Same reason the reminders panel
+                    // sends its full object.
+                    onChange={(patch) => update({ mcp: { ...mcpPrefs, ...patch } })}
+                  />
+                ) : (
+                  <p className="text-[12px] text-faint">
+                    This PUMMA instance does not serve MCP.
+                  </p>
+                )}
+              </SettingsSection>
+            </div>
+            </SettingsGroupBlock>
+
             <SettingsGroupBlock id="tags" label="Tags">
             <SettingsSection title="Tags" className="mb-6">
               <div className="mb-3 flex items-center justify-between gap-3">
@@ -1057,6 +1104,7 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
   { id: "appearance", label: "Appearance", short: "Appearance" },
   { id: "defaults", label: "Defaults", short: "Defaults" },
   { id: "workspace", label: "Workspace", short: "Workspace" },
+  { id: "connections", label: "Connections", short: "Connections" },
   { id: "tags", label: "Tags", short: "Tags" },
   { id: "data", label: "Data", short: "Data" },
 ];

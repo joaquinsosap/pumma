@@ -36,14 +36,12 @@ import {
 import { resolveMcpCaller, McpAccessError, type McpCaller } from "@/lib/mcp/context";
 import { annotationsFor, runTool } from "@/lib/mcp/registry";
 import { toolInput } from "@/lib/mcp/schema";
-import { getOverview, listTasksTool } from "@/lib/mcp/tools/read";
+import { MCP_TOOLS } from "@/lib/mcp/tools";
 
 export const dynamic = "force-dynamic";
 // Tools do real database work; the default is fine but be explicit, because a
 // silent platform timeout looks like a hung client.
 export const maxDuration = 60;
-
-const TOOLS = [getOverview, listTasksTool];
 
 function buildServer(caller: McpCaller): McpServer {
   const server = new McpServer({
@@ -51,7 +49,7 @@ function buildServer(caller: McpCaller): McpServer {
     version: MCP_SERVER_VERSION,
   });
 
-  for (const tool of TOOLS) {
+  for (const tool of MCP_TOOLS) {
     server.registerTool(
       tool.name,
       {

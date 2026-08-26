@@ -104,6 +104,24 @@ const settingsPatchSchema = z
     tagAutoClean: z.boolean().optional(),
     tagAutoCleanDays: z.number().int().min(1).max(365).optional(),
     dateOrder: z.enum(["dmy", "mdy"]).optional(),
+    // What a connected MCP client may do.
+    //
+    // Every field is required, deliberately. `updateSettings` writes with
+    // $set, which replaces a nested object wholesale, so accepting a partial
+    // here would let one flipped switch silently reset the other four to
+    // their defaults, quietly re-enabling create and edit. Requiring the whole
+    // object makes that impossible at the boundary rather than relying on
+    // every caller to remember. Same shape as `notifications` above.
+    mcp: z
+      .object({
+        enabled: z.boolean(),
+        allowCreate: z.boolean(),
+        allowUpdate: z.boolean(),
+        allowDelete: z.boolean(),
+        serveExternal: z.boolean(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 
@@ -150,6 +168,13 @@ export async function updateSettingsAction(patch: {
   tagAutoClean?: boolean;
   tagAutoCleanDays?: number;
   dateOrder?: "dmy" | "mdy";
+  mcp?: {
+    enabled: boolean;
+    allowCreate: boolean;
+    allowUpdate: boolean;
+    allowDelete: boolean;
+    serveExternal: boolean;
+  };
 }): Promise<ActionResult> {
   const parsed = settingsPatchSchema.safeParse(patch);
   if (!parsed.success) return { ok: false, error: "Invalid input" };

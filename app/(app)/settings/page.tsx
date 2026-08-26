@@ -8,6 +8,9 @@ import { accountDeletionBlock } from "@/lib/actions/account";
 import { starterStatus } from "@/lib/actions/starter";
 import { SettingsView } from "@/components/settings/SettingsView";
 import { tagCount } from "@/lib/metrics";
+import { mcpAvailable, mcpResourceUrl } from "@/lib/mcp/config";
+import { listMcpAudit } from "@/lib/db/mcp-audit";
+import { getSessionUserId } from "@/lib/auth/session";
 
 export default async function SettingsPage() {
   const lifeView = await resolveLifeView();
@@ -28,6 +31,14 @@ export default async function SettingsPage() {
     data.tags.map((t) => [t.id, tagCount(t.id, data.allTasks, data.notes)]),
   );
 
+  // Empty when this instance does not serve MCP (memory mode, or the operator
+  // kill switch), which is what hides the panel rather than showing switches
+  // that could not do anything.
+  const mcpEndpoint = mcpAvailable() ? mcpResourceUrl() : "";
+  // Only worth reading when the panel will render it.
+  const userId = mcpEndpoint ? await getSessionUserId() : null;
+  const mcpActivity = userId ? await listMcpAudit(userId, 8) : [];
+
   return (
     <SettingsView
       settings={data.settings}
@@ -43,6 +54,8 @@ export default async function SettingsPage() {
       // Public half of the VAPID pair, read at runtime and handed over as a
       // prop. See vapidPublicKey() for why it is not a NEXT_PUBLIC_ variable.
       pushPublicKey={vapidPublicKey()}
+      mcpEndpoint={mcpEndpoint}
+      mcpActivity={mcpActivity}
       stats={{ dayPct: 0, habitsLabel: "—", topStreak: 0 }}
     />
   );
