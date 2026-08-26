@@ -10,6 +10,7 @@ import { SettingsView } from "@/components/settings/SettingsView";
 import { tagCount } from "@/lib/metrics";
 import { mcpAvailable, mcpResourceUrl } from "@/lib/mcp/config";
 import { listMcpAudit } from "@/lib/db/mcp-audit";
+import { listConnectedClients } from "@/lib/mcp/connections";
 import { getSessionUserId } from "@/lib/auth/session";
 
 export default async function SettingsPage() {
@@ -38,6 +39,7 @@ export default async function SettingsPage() {
   // Only worth reading when the panel will render it.
   const userId = mcpEndpoint ? await getSessionUserId() : null;
   const mcpActivity = userId ? await listMcpAudit(userId, 8) : [];
+  const mcpClients = userId ? await listConnectedClients(userId) : [];
 
   return (
     <SettingsView
@@ -56,6 +58,7 @@ export default async function SettingsPage() {
       pushPublicKey={vapidPublicKey()}
       mcpEndpoint={mcpEndpoint}
       mcpActivity={mcpActivity}
+      mcpClients={mcpClients}
       stats={{ dayPct: 0, habitsLabel: "—", topStreak: 0 }}
     />
   );

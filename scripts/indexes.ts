@@ -88,6 +88,13 @@ async function main() {
     await db
       .collection("mcpRate")
       .createIndex({ at: 1 }, { expireAfterSeconds: 3600 });
+    // Delete-confirmation handles. Unique so one cannot be issued twice, and
+    // expiring so an unredeemed one stops being redeemable rather than
+    // sitting there indefinitely waiting to authorise a delete.
+    await db.collection("mcpConfirm").createIndex({ handle: 1 }, { unique: true });
+    await db
+      .collection("mcpConfirm")
+      .createIndex({ at: 1 }, { expireAfterSeconds: 900 });
 
     console.log(`Indexes created on "${dbName}".`);
   } finally {

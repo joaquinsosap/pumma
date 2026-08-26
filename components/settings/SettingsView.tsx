@@ -75,6 +75,7 @@ import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { CalendarFeeds } from "@/components/settings/CalendarFeeds";
 import { McpSettings, type McpPrefs } from "@/components/settings/McpSettings";
 import type { McpAuditRow } from "@/lib/mcp/audit-types";
+import type { ConnectedClient } from "@/lib/mcp/connections";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
 import { InstallCard } from "@/components/pwa/InstallCard";
 import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/notifications";
@@ -108,6 +109,8 @@ type Props = {
   mcpEndpoint?: string;
   /** Last few MCP tool calls, newest first. */
   mcpActivity?: McpAuditRow[];
+  /** Apps this account has approved, newest first. */
+  mcpClients?: ConnectedClient[];
 };
 
 function SettingRow({
@@ -182,6 +185,7 @@ export function SettingsView({
   pushPublicKey = "",
   mcpEndpoint = "",
   mcpActivity = [],
+  mcpClients = [],
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -932,6 +936,7 @@ export function SettingsView({
                     prefs={mcpPrefs}
                     endpoint={mcpEndpoint}
                     activity={mcpActivity}
+                    clients={mcpClients}
                     // The whole object goes back every time, not the one key
                     // that changed. `updateSettings` writes with $set, which
                     // replaces a nested object wholesale, so sending a partial

@@ -19,6 +19,9 @@ import {
   updateTask, completeTask, updateNote, updateProject, updateGoal, updateHabit,
   updateMeeting, logHabit, setGoalProgress,
 } from "@/lib/mcp/tools/write";
+import {
+  deleteTask, deleteNote, deleteGoal, deleteHabit, deleteMeeting, deleteProject,
+} from "@/lib/mcp/tools/delete";
 
 export const MCP_TOOLS = [
   getOverview,
@@ -44,4 +47,10 @@ export const MCP_TOOLS = [
   updateMeeting,
   logHabit,
   setGoalProgress,
+  deleteTask,
+  deleteNote,
+  deleteGoal,
+  deleteHabit,
+  deleteMeeting,
+  deleteProject,
 ];

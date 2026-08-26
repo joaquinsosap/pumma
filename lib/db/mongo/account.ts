@@ -2,6 +2,7 @@ import { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { decryptAllFor, SPECS } from "@/lib/db/mongo/encrypted";
 import { NEVER_EXPORT } from "@/lib/export-redaction";
+import { userIdCandidates } from "@/lib/db/mongo/user-id";
 
 function stripSecrets<T>(rows: T[]): T[] {
   return rows.map((row) => {
@@ -41,12 +42,7 @@ export type UserCollection = (typeof USER_COLLECTIONS)[number];
  */
 type AnyRow = { _id: string | ObjectId; userId?: string };
 
-/** Better Auth writes its own `_id`, which may be a string or an ObjectId. */
-function idCandidates(userId: string): (string | ObjectId)[] {
-  const ids: (string | ObjectId)[] = [userId];
-  if (ObjectId.isValid(userId)) ids.push(new ObjectId(userId));
-  return ids;
-}
+
 
 /**
  * Everything this account owns, readable.
@@ -101,7 +97,7 @@ export async function deleteAllUserData(
 ): Promise<Record<string, number>> {
   const db = await getDb();
   const removed: Record<string, number> = {};
-  const ids = idCandidates(userId);
+  const ids = userIdCandidates(userId);
 
   // Sessions and credentials first, then every other way back in.
   //

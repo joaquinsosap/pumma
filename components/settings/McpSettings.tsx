@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
+import { revokeMcpClientAction } from "@/lib/actions/mcp";
 import type { McpAuditRow } from "@/lib/mcp/audit-types";
+import type { ConnectedClient } from "@/lib/mcp/connections";
 
 export interface McpPrefs {
   enabled: boolean;
@@ -31,14 +33,17 @@ export function McpSettings({
   endpoint,
   onChange,
   activity,
+  clients,
 }: {
   prefs: McpPrefs;
   /** The URL to paste into a client. */
   endpoint: string;
   onChange: (patch: Partial<McpPrefs>) => void;
   activity: McpAuditRow[];
+  clients: ConnectedClient[];
 }) {
   const [copied, setCopied] = useState(false);
+  const [revoking, setRevoking] = useState<string | null>(null);
 
   const copy = async () => {
     try {
@@ -51,6 +56,22 @@ export function McpSettings({
   };
 
   const off = !prefs.enabled;
+
+  const disconnect = async (clientId: string, name: string) => {
+    if (revoking) return;
+    // A browser confirm rather than a designed dialog: this is destructive,
+    // rare, and the name is the only thing worth reading before deciding.
+    if (!window.confirm(`Disconnect ${name}? It will lose access to your PUMMA.`)) {
+      return;
+    }
+    setRevoking(clientId);
+    try {
+      await revokeMcpClientAction(clientId);
+      window.location.reload();
+    } finally {
+      setRevoking(null);
+    }
+  };
 
   return (
     <div>
@@ -136,6 +157,37 @@ export function McpSettings({
           />
         </Row>
       </div>
+
+      {prefs.enabled && clients.length > 0 && (
+        <div className="mt-5 border-t border-border/60 pt-4">
+          <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-faint2">
+            Connected apps
+          </p>
+          <ul className="space-y-2">
+            {clients.map((c) => (
+              <li key={c.clientId} className="flex items-center gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm text-ink">{c.name}</p>
+                  <p className="mt-0.5 text-[11px] text-faint">
+                    {c.canDelete ? "Can read, edit and delete" : "Can read and edit"}
+                    {c.connectedAt
+                      ? ` · connected ${new Date(c.connectedAt).toLocaleDateString()}`
+                      : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={revoking !== null}
+                  onClick={() => disconnect(c.clientId, c.name)}
+                  className="shrink-0 rounded-[8px] border border-border bg-surface px-2.5 py-1 text-[11px] font-semibold text-tasks transition-colors hover:bg-hover disabled:opacity-50"
+                >
+                  {revoking === c.clientId ? "..." : "Disconnect"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {prefs.enabled && (
         <div className="mt-5 border-t border-border/60 pt-4">
