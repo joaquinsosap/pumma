@@ -5,6 +5,7 @@ import {
   SORTS_FOR,
   SCOPE_ENTITIES,
   scopeSchema,
+  describeScope,
   type Scope,
 } from "@/lib/ai/scope-schema";
 import type { Goal, Habit, Note, Project, Task } from "@/lib/schemas";
@@ -369,5 +370,33 @@ describe("assumed is a closed vocabulary", () => {
       assumed: ["status", "vibes", "status"],
     });
     expect(got.assumed).toEqual(["status"]);
+  });
+});
+
+describe("describeScope", () => {
+  it("says what narrows the selection and nothing that does not", () => {
+    const got = describeScope(
+      scope({
+        filters: { status: ["todo", "doing"], priority: null, lifeArea: "both" },
+        sort: { by: "created", reversed: false },
+        count: 3,
+      }),
+    );
+    expect(got).toEqual(["open tasks", "oldest first", "first 3"]);
+    // "any priority" and "both areas" are chips that say nothing.
+    expect(got.join(" ")).not.toMatch(/priority|both/);
+  });
+
+  it("turns the direction into words rather than a flag", () => {
+    expect(
+      describeScope(scope({ sort: { by: "created", reversed: true } })),
+    ).toContain("newest first");
+    expect(
+      describeScope(scope({ sort: { by: "due", reversed: false } })),
+    ).toContain("soonest first");
+  });
+
+  it("names an unlimited count honestly", () => {
+    expect(describeScope(scope({ count: "all" }))).toContain("all of them");
   });
 });

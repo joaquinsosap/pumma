@@ -14,7 +14,9 @@ import { ScopeScreen } from "@/components/assistant/ScopeScreen";
 import { draftFromScopeAction } from "@/lib/actions/scope";
 import type { AssistOutcome } from "@/lib/ai/assist";
 import type { ResolvedScope, Scope } from "@/lib/ai/scope-schema";
+import type { Changeset } from "@/lib/ai/changeset-schema";
 import { readBulkOverride, type DevBulk } from "@/lib/ai/scope-dev";
+import { describeScope } from "@/lib/ai/scope-schema";
 import type { Tag } from "@/lib/schemas";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -63,7 +65,7 @@ export function AssistantView({
   tags = [],
   aiReady = true,
 }: Props) {
-  const { status, outcome, error, intent, run, setOutcome, flipMode, clear } =
+  const { status, outcome, error, intent, run, flipMode, clear } =
     useAssistant();
   // `?bulk=1` in development opens the scope screen with a fabricated request,
   // so it can be worked on without paying for a generation. Compiled out of
@@ -102,10 +104,6 @@ export function AssistantView({
             // outcome itself changes from bulk to changeset and this branch
             // stops matching; the override has to let go by hand or it keeps
             // winning and the canvas never renders.
-            onDrafted={(next) => {
-              setDevBulk(null);
-              setOutcome(next);
-            }}
             onDiscard={() => setDevBulk(null)}
           />
         ) : status === "ready" && outcome?.kind === "bulk" ? (
@@ -114,7 +112,6 @@ export function AssistantView({
             outcome={outcome}
             intent={intent ?? ""}
             tags={tags}
-            onDrafted={setOutcome}
             onDiscard={clear}
           />
         ) : status === "ready" && outcome?.kind === "changeset" ? (
@@ -452,15 +449,17 @@ function BulkStep({
   outcome,
   intent,
   tags,
-  onDrafted,
   onDiscard,
 }: {
   outcome: Extract<AssistOutcome, { kind: "bulk" }>;
   intent: string;
   tags: Tag[];
-  onDrafted: (next: AssistOutcome) => void;
   onDiscard: () => void;
 }) {
+  const [drafted, setDrafted] = useState<{
+    changeset: Changeset;
+    scope: Scope;
+  } | null>(null);
   const [drafting, setDrafting] = useState(false);
 
   const draft = useCallback(
@@ -478,20 +477,39 @@ function BulkStep({
             setDrafting(false);
             return;
           }
-          if (res.data) onDrafted({ kind: "changeset", changeset: res.data });
+          if (res.data) setDrafted({ changeset: res.data, scope });
+          setDrafting(false);
         })
         .catch(() => {
           toast.error("Could not build that draft");
           setDrafting(false);
         });
     },
-    [outcome, onDrafted],
+    [outcome],
   );
 
+  // Nothing assumed means the request was fully stated, so the screen would be
+  // a click between somebody and the thing they asked for clearly.
   const skip = (outcome.scope.assumed ?? []).length === 0;
   useEffect(() => {
     if (skip) draft(outcome.scope);
   }, [skip, draft, outcome.scope]);
+
+  if (drafted) {
+    return (
+      <ChangesetCanvas
+        changeset={drafted.changeset}
+        intent={intent}
+        scope={describeScope(drafted.scope)}
+        // Back to the criteria. The draft is thrown away rather than kept
+        // alongside: two versions of the same change, one stale, is how
+        // somebody applies the wrong one.
+        onReopenScope={skip ? undefined : () => setDrafted(null)}
+        onFlipMode={onDiscard}
+        onDiscard={onDiscard}
+      />
+    );
+  }
 
   if (skip || drafting) return <Thinking intent={intent} />;
 

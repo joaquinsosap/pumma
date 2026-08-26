@@ -331,3 +331,53 @@ export type ResolvedScope = {
   /** True when `count: "all"` hit the safety cap. */
   capped: boolean;
 };
+
+/**
+ * A scope, as short phrases a person can read.
+ *
+ * Deliberately not a sentence: these become chips, and a chip that is half a
+ * sentence reads as broken. Only what NARROWS the selection appears, because
+ * a chip saying "any priority" is a chip saying nothing.
+ */
+export function describeScope(scope: Scope): string[] {
+  const out: string[] = [];
+  const f = scope.filters ?? {};
+
+  const statuses = f.status ?? [];
+  if (statuses.length && statuses.length < 3) {
+    out.push(
+      statuses.length === 2 && !statuses.includes("done")
+        ? `open ${scope.entity}s`
+        : statuses.map((s) => (s === "doing" ? "in progress" : s)).join(" + "),
+    );
+  } else {
+    out.push(`${scope.entity}s`);
+  }
+
+  if (f.priority?.length) out.push(`${f.priority.join("/")} priority`);
+  if (f.due && f.due !== "any") out.push(String(f.due).replace(/([A-Z])/g, " $1").toLowerCase());
+  if (f.archived) out.push("archived");
+  if (f.frequency?.length) out.push(f.frequency.join("/"));
+  if (f.category) out.push(f.category);
+  if (f.pinned) out.push("pinned");
+  if (f.lifeArea && f.lifeArea !== "both") out.push(f.lifeArea);
+  if (f.contains) out.push(`“${f.contains}”`);
+  if (f.tagIds?.length) {
+    out.push(`${f.tagIds.length} tag${f.tagIds.length === 1 ? "" : "s"}`);
+  }
+  if (f.progressBelow != null) out.push(`under ${f.progressBelow}%`);
+  if (f.progressAbove != null) out.push(`over ${f.progressAbove}%`);
+
+  const order: Record<ScopeSort, [string, string]> = {
+    created: ["oldest first", "newest first"],
+    due: ["soonest first", "latest first"],
+    target: ["soonest first", "latest first"],
+    edited: ["least recent", "most recent"],
+    priority: ["highest first", "lowest first"],
+    progress: ["least done", "most done"],
+    alpha: ["A to Z", "Z to A"],
+  };
+  out.push(order[scope.sort.by][scope.sort.reversed ? 1 : 0]);
+  out.push(scope.count === "all" ? "all of them" : `first ${scope.count}`);
+  return out;
+}

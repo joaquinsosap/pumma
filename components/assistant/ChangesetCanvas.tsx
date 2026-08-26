@@ -108,6 +108,13 @@ type Props = {
   changeset: Changeset;
   intent: string;
   quotaLabel?: string | null;
+  /**
+   * The criteria this draft came from, already worded for reading
+   * ("open tasks", "oldest first", "first 3"). Only bulk drafts have one.
+   */
+  scope?: string[] | null;
+  /** Back to the scope screen, with the draft thrown away. */
+  onReopenScope?: () => void;
   onFlipMode: () => void;
   onDiscard: () => void;
 };
@@ -121,6 +128,8 @@ export function ChangesetCanvas({
   changeset,
   intent,
   quotaLabel,
+  scope,
+  onReopenScope,
   onFlipMode,
   onDiscard,
 }: Props) {
@@ -363,6 +372,36 @@ export function ChangesetCanvas({
             <p className="m-0 mt-1.5 text-[13px] text-muted">
               You asked: <span className="text-ink">“{intent}”</span>
             </p>
+            {/* Where these rows came from, kept in sight.
+                A bulk draft is the only kind whose membership was decided by
+                criteria rather than by reading the ops, so without this the
+                canvas is a list of changes with no visible reason for being
+                that list — and the whole point was to make the reason
+                visible. */}
+            {scope && (
+              <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                <span className="font-mono text-[10px] uppercase tracking-widest text-faint2">
+                  From
+                </span>
+                {scope.map((chip) => (
+                  <span
+                    key={chip}
+                    className="rounded-[7px] border border-border bg-surface2 px-2 py-0.5 font-mono text-[10.5px] font-semibold text-muted"
+                  >
+                    {chip}
+                  </span>
+                ))}
+                {onReopenScope && (
+                  <button
+                    type="button"
+                    onClick={onReopenScope}
+                    className="ml-0.5 font-mono text-[10.5px] text-faint underline underline-offset-2 transition-colors hover:text-ink"
+                  >
+                    change
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           <div className="flex shrink-0 flex-col items-end gap-1.5">
             <button

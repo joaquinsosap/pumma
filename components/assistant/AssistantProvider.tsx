@@ -17,14 +17,6 @@ type AssistantState = {
 
 type AssistantContextValue = AssistantState & {
   run: (text: string, mode?: AssistantMode) => void;
-  /**
-   * Replace the outcome in place, without another model call.
-   *
-   * How the scope screen hands over: it drafts a changeset from the criteria
-   * the user confirmed and swaps it in. Nothing is re-generated, so what the
-   * preview showed is exactly what the canvas gets.
-   */
-  setOutcome: (outcome: AssistOutcome) => void;
   /** Re-run the last intent pinned to the other branch ("I meant to…"). */
   flipMode: () => void;
   clear: () => void;
@@ -52,10 +44,6 @@ const IDLE: AssistantState = {
  */
 export function AssistantProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<AssistantState>(IDLE);
-
-  const setOutcome = useCallback((outcome: AssistOutcome) => {
-    setState((s) => ({ ...s, status: "ready", outcome, error: null }));
-  }, []);
 
   const run = useCallback((text: string, mode: AssistantMode = "auto") => {
     setState({ ...IDLE, status: "pending", intent: text, mode });
@@ -103,7 +91,7 @@ export function AssistantProvider({ children }: { children: React.ReactNode }) {
   const clear = useCallback(() => setState(IDLE), []);
 
   return (
-    <AssistantContext.Provider value={{ ...state, run, setOutcome, flipMode, clear }}>
+    <AssistantContext.Provider value={{ ...state, run, flipMode, clear }}>
       {children}
     </AssistantContext.Provider>
   );
