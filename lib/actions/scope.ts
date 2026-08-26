@@ -53,6 +53,14 @@ export async function draftFromScopeAction(input: {
   const check = checkPatch(scope.data.entity, patch.data);
   if (!check.ok) return { ok: false, error: check.error };
 
+  // Neither a change nor a removal. Reachable when the model meant to delete
+  // and did not say so, and an empty draft would be a baffling way to find
+  // that out.
+  const patches = Object.values(patch.data).some((v) => v != null);
+  if (!input.remove && !patches) {
+    return { ok: false, error: "That request did not describe a change." };
+  }
+
   const userId = await requireUserId();
   const resolved = await resolveScopeFor(userId, scope.data);
   if (!resolved.ids.length) {

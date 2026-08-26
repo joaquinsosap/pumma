@@ -490,7 +490,16 @@ function BulkStep({
 
   // Nothing assumed means the request was fully stated, so the screen would be
   // a click between somebody and the thing they asked for clearly.
-  const skip = (outcome.scope.assumed ?? []).length === 0;
+  //
+  // Except when it deletes. A scope can only say what the vocabulary can
+  // express, and when it cannot express the user's qualifier the model does
+  // not fail — it emits the nearest thing it CAN say, which is broader.
+  // "Delete my empty notes" came back as every note, because nothing in the
+  // vocabulary means empty, and with nothing marked assumed that would have
+  // gone straight to a draft. The canvas would still have asked before
+  // applying, but "here are the rows" belongs in front of a delete every
+  // time, not only when the model admits to guessing.
+  const skip = !outcome.remove && (outcome.scope.assumed ?? []).length === 0;
   useEffect(() => {
     if (skip) draft(outcome.scope);
   }, [skip, draft, outcome.scope]);
