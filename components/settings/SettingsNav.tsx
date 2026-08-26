@@ -53,43 +53,70 @@ export function SettingsNav({
   const [active, setActive] = useState(groups[0]?.id ?? "");
   const [hovered, setHovered] = useState<string | null>(null);
 
-  // Scrollspy. rootMargin pulls the trigger line up near the top of the pane,
-  // so a group becomes active as its heading arrives rather than when it
-  // happens to occupy the most pixels.
+  /**
+   * Scrollspy: whichever group's heading last crossed the trigger line.
+   *
+   * This was an IntersectionObserver over a narrow band near the top, taking
+   * the first group reported as intersecting. Two things were wrong with that,
+   * and they compounded.
+   *
+   * A group taller than the band intersects it for the whole time it takes to
+   * scroll past. While the next group's top is already inside the band, the
+   * previous one's bottom still is too, and "first in document order" keeps
+   * choosing the previous one. So scrolling DOWN changed late.
+   *
+   * Scrolling UP is the mirror image: the group above re-enters the band and
+   * is immediately first, so it changed early. Late one way and early the
+   * other means the marker never lines up with what you are reading, and
+   * around short groups it can appear to skip one entirely.
+   *
+   * Comparing positions to a single line has neither problem. The active group
+   * is the last one whose top has passed the line, which is the same answer
+   * going up as coming down, and a short group gets its turn on the way past
+   * exactly as a tall one does.
+   */
   useEffect(() => {
     const root = scrollerRef.current;
     if (!root) return;
-    const seen = new Map<string, boolean>();
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) seen.set(e.target.id, e.isIntersecting);
-        const first = groups.find((g) => seen.get(g.id));
-        if (first) setActive(first.id);
-      },
-      { root, rootMargin: "-8% 0px -75% 0px", threshold: 0 },
-    );
-    for (const g of groups) {
-      const el = document.getElementById(g.id);
-      if (el) io.observe(el);
-    }
 
-    // The last group is usually too short to ever reach the trigger band:
-    // there is nothing below it to push it up there, so scrolling to the
-    // bottom leaves the previous group marked. Bottom of the scroller means
-    // the last group, whatever the observer thinks.
-    const onScroll = () => {
-      const atEnd =
-        root.scrollTop + root.clientHeight >= root.scrollHeight - 24;
-      if (atEnd) {
-        const last = groups[groups.length - 1];
-        if (last) setActive(last.id);
+    let frame = 0;
+    const measure = () => {
+      frame = 0;
+      // A little below the top of the pane, so a group takes the marker as its
+      // heading arrives rather than when it has already filled the view.
+      const line =
+        root.getBoundingClientRect().top +
+        Math.min(140, root.clientHeight * 0.28);
+
+      let current = groups[0]?.id ?? "";
+      for (const g of groups) {
+        const el = document.getElementById(g.id);
+        if (el && el.getBoundingClientRect().top <= line) current = g.id;
       }
-    };
-    root.addEventListener("scroll", onScroll, { passive: true });
 
+      // The last group is usually too short to reach the line: there is
+      // nothing below it to push it up there, so the bottom of the scroll
+      // would otherwise leave the previous group marked.
+      if (root.scrollTop + root.clientHeight >= root.scrollHeight - 24) {
+        const last = groups[groups.length - 1];
+        if (last) current = last.id;
+      }
+
+      // Only on a real change: this runs on every scroll frame.
+      setActive((prev) => (prev === current ? prev : current));
+    };
+
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(measure);
+    };
+
+    measure();
+    root.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
     return () => {
-      io.disconnect();
-      root.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+      root.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
     };
   }, [groups, scrollerRef]);
 
@@ -104,7 +131,12 @@ export function SettingsNav({
       aria-label="Settings sections"
       onMouseLeave={() => setHovered(null)}
     >
-      <ul className="flex flex-col items-start gap-[18px]">
+      {/* No gap. The rows sit flush and carry their spacing as padding
+          instead, so the whole column is hit area and there is no dead strip
+          between one tick and the next. The rhythm is unchanged: a 34px row
+          with the bar centred puts the bars the same distance apart as a 16px
+          row plus an 18px gap did. */}
+      <ul className="flex flex-col items-stretch">
         {groups.map((g, i) => {
           const isActive = g.id === active;
           const isHovered = g.id === hovered;
@@ -124,9 +156,13 @@ export function SettingsNav({
                     ?.scrollIntoView({ behavior: "smooth", block: "start" });
                   e.currentTarget.blur();
                 }}
-                // The bar is 4px but the button is 16px tall: a 4px hit
-                // target is a dare, not a control.
-                className="group relative flex h-4 items-center py-0"
+                // The bar is 4px tall and at most 28px wide. Hitting THAT was
+                // the control, which meant most of the column did nothing and
+                // a label only appeared once you had already landed on the
+                // bar. The button now takes the full width of the rail and the
+                // full height of its row, so pointing anywhere on the line
+                // works and moving down the column never passes through a gap.
+                className="group relative flex h-[34px] w-full items-center py-0"
               >
                 <span
                   className="block h-[4px] rounded-full transition-all duration-200 ease-out motion-reduce:transition-none"
@@ -167,7 +203,11 @@ export function SettingsNav({
                     // Tailwind v4 emits translate-y-* as the `translate`
                     // property, not `transform`: transitioning "transform"
                     // here names a property nothing animates, and it snaps.
-                    "absolute left-0 top-full z-10 mt-[3px] whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.1em] transition-[opacity,translate,color] duration-200 ease-out motion-reduce:transition-none motion-reduce:translate-none",
+                    // Anchored to the middle of the row rather than its
+                    // bottom, so it sits just under the BAR. Now that the row
+                    // is the full 34px, "bottom of the button" is most of a
+                    // line away from the tick it belongs to.
+                    "absolute left-0 top-1/2 z-10 mt-[7px] whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.1em] transition-[opacity,translate,color] duration-200 ease-out motion-reduce:transition-none motion-reduce:translate-none",
                     // It settles into place rather than blinking on: a couple
                     // of pixels of travel is what makes a label read as
                     // arriving. The delay is only on the way IN, so sweeping
