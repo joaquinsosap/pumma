@@ -8,9 +8,23 @@
  * let go.
  *
  * `overIndex` is the position of the card under the pointer, or -1 when the
- * pointer is over the column's empty space rather than any card. That empty
- * space is only ever BELOW the last card, because the column's drop area
- * starts at the first card, so -1 genuinely does mean last.
+ * pointer is over the column itself rather than any card.
+ *
+ * -1 does NOT mean "last". It used to be treated that way, on the reasoning
+ * that the column's drop area starts at the first card so its bare space must
+ * be below them all. That is wrong: the cards are laid out with a gap between
+ * them, and those gaps belong to the column, not to either neighbour. Every
+ * gap in the list is a strip a few pixels tall where the pointer is over the
+ * column and no card, and releasing there sent the card to the bottom of the
+ * list. It reads as random, because the strips are thin and you only land in
+ * one when moving quickly, and the whole column lighting up at that moment is
+ * the same fact showing itself.
+ *
+ * So when the pointer is over the column, the position is worked out from the
+ * cards themselves: `slots` holds the vertical midpoint of every card
+ * currently drawn in that column, and the card goes after each one the pointer
+ * has passed. Below the last card that still yields "last", which is how the
+ * old assumption looked right whenever it was tested at the bottom.
  *
  * The half is measured against the POINTER, not against the dragged card's own
  * box. The board re-sorts the list while the drag is in flight, which moves the
@@ -24,6 +38,7 @@ export function dropIndex({
   pointerY,
   overTop,
   overHeight,
+  slots,
 }: {
   /** Cards already in the target column. */
   count: number;
@@ -33,8 +48,23 @@ export function dropIndex({
   pointerY: number;
   overTop: number;
   overHeight: number;
+  /**
+   * Vertical midpoints of the cards currently drawn in the target column,
+   * excluding the one being dragged. Only consulted when the pointer is over
+   * the column rather than a card. Order does not matter: the answer is a
+   * count, not a lookup. Omitted or empty means an empty column, where last
+   * and first are the same thing.
+   */
+  slots?: readonly number[];
 }): number {
-  if (overIndex < 0) return count;
+  if (overIndex < 0) {
+    if (!slots || slots.length === 0) return count;
+    // Every card whose middle the pointer is already past is a card this one
+    // goes after.
+    let passed = 0;
+    for (const mid of slots) if (mid < pointerY) passed++;
+    return Math.min(count, passed);
+  }
   // Past the midpoint of the card you are over means you are aiming at the gap
   // under it, not the gap above it.
   const below = pointerY > overTop + overHeight / 2;

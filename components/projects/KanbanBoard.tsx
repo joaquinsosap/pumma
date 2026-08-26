@@ -125,9 +125,27 @@ function groupByStatus(
  */
 function makeBoardCollisionDetection(
   pointer: React.RefObject<{ x: number; y: number } | null>,
+  slots: React.RefObject<Map<UniqueIdentifier, { mid: number; status: string }>>,
 ): CollisionDetection {
   return (args) => {
     if (args.pointerCoordinates) pointer.current = args.pointerCoordinates;
+
+    // Where every card currently sits. Recorded here for the same reason the
+    // pointer is: this runs on each move with freshly measured rects, and the
+    // drag handlers get neither. Needed to place a card released in the gap
+    // BETWEEN two cards, which belongs to the column and names no card.
+    const measured = slots.current;
+    measured.clear();
+    for (const d of args.droppableContainers) {
+      const data = d.data.current;
+      if (data?.type !== "task") continue;
+      const rect = d.rect.current;
+      if (!rect) continue;
+      measured.set(d.id, {
+        mid: rect.top + rect.height / 2,
+        status: String(data.status),
+      });
+    }
 
     const typeOf = (id: UniqueIdentifier) =>
       args.droppableContainers.find((d) => d.id === id)?.data.current?.type;
@@ -218,11 +236,15 @@ export function KanbanBoard({
   const landedRef = useRef<ColumnId | null>(null);
   // Where the cursor is, filled in by the collision detector.
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
+  // Where every card is, filled in by the same place and for the same reason.
+  const slotsRef = useRef<Map<UniqueIdentifier, { mid: number; status: string }>>(
+    new Map(),
+  );
   // Whether this drag actually rearranged anything, so a click-sized wobble
   // that ends where it started doesn't write a renumbering nobody asked for.
   const reorderedRef = useRef(false);
   const collisionDetection = useMemo(
-    () => makeBoardCollisionDetection(pointerRef),
+    () => makeBoardCollisionDetection(pointerRef, slotsRef),
     [],
   );
   const { setDragActive } = useTagMenu();
@@ -322,13 +344,27 @@ export function KanbanBoard({
     const to = sameColumn ? from : [...prev[overContainer]];
     const updated = sameColumn ? moved : { ...moved, status: overContainer };
 
+    const overIndex =
+      over.id === overContainer ? -1 : to.findIndex((t) => t.id === over.id);
     const insertAt = dropIndex({
       count: to.length,
-      overIndex:
-        over.id === overContainer ? -1 : to.findIndex((t) => t.id === over.id),
+      overIndex,
       pointerY: pointerRef.current?.y ?? over.rect.top,
       overTop: over.rect.top,
       overHeight: over.rect.height,
+      // Only consulted when the pointer is over bare column. Read off what is
+      // actually drawn rather than off `to`, because `to` is the arrangement
+      // being proposed and the pointer is being compared against the one on
+      // screen. The dragged card is excluded so it cannot count as an obstacle
+      // to itself.
+      slots:
+        overIndex >= 0
+          ? undefined
+          : [...slotsRef.current.entries()]
+              .filter(
+                ([id, s]) => s.status === overContainer && id !== active.id,
+              )
+              .map(([, s]) => s.mid),
     });
     // Moving the pointer inside one slot is most of a drag. Do nothing when
     // nothing has actually moved, or every mouse move re-renders the board.
@@ -550,25 +586,35 @@ function KanbanColumn({
   isDragging: boolean;
   children: React.ReactNode;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id, data: { type: "column" } });
+  const { setNodeRef } = useDroppable({ id, data: { type: "column" } });
+  // No whole-column highlight. It is left over from when a drop meant "put it
+  // in this column somewhere" and position did not exist.
+  //
+  // Two things were wrong with keeping it. The pointer counts as over the
+  // column whenever it is not over a card, which includes every gap between
+  // two cards, so a thin strip between each pair flashed the entire column at
+  // exactly the moment you were trying to place something precisely. And it
+  // was never needed: the card is moved into position on the same pointer
+  // move, so it is already sitting in the target column, in its slot, in front
+  // of you. Showing the card where it will land beats colouring in the region
+  // it will land somewhere inside.
+  //
+  // That holds for an empty column too, which was the one case worth keeping
+  // it for: the card lands there and becomes the column's only card, so there
+  // is still something to see.
 
   return (
     <div
       className={cn(
         "kanban-column flex min-h-0 flex-col rounded-xl border p-3 transition-all duration-200 ease-out max-lg:w-[76vw] md:max-lg:w-[44vw] max-lg:max-w-[360px] max-lg:shrink-0 max-lg:snap-center",
-        isOver
-          ? "kanban-column--over border-primary/40 bg-primary/[0.04] shadow-[inset_0_0_0_1px_oklch(0.55_0.16_274/0.15)]"
-          : "border-border bg-surface2",
-        isDragging && !isOver && "opacity-95",
+        "border-border bg-surface2",
+        isDragging && "opacity-95",
       )}
     >
       <div className="mb-2.5 flex items-center gap-1.5 px-0.5">
         <span
           className="h-2 w-2 rounded-full transition-transform duration-200"
-          style={{
-            background: color,
-            transform: isOver ? "scale(1.25)" : undefined,
-          }}
+          style={{ background: color }}
         />
         <span className="text-[12.5px] font-bold">{label}</span>
         <span className="font-mono text-[10px] text-faint">{count}</span>
