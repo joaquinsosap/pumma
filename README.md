@@ -96,9 +96,27 @@ hosted-mode settings — all off by default for self-hosted installs.
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run lint` | ESLint |
 | `npm run test` | Unit tests (Vitest) |
+| `npm run ci` | Everything CI runs, locally, before you push (see below) |
 | `npm run db:setup` | Indexes + seed (MongoDB mode) |
 | `npm run db:repair-refs` | Report/unlink dangling references |
 | `npm run db:migrate-auth-issuer` | One-off, required when upgrading past Better Auth 1.7 (see Deploy) |
+
+### Before pushing
+
+```bash
+npm run ci
+```
+
+Runs the whole pipeline here rather than waiting on a runner: that the files
+the Docker install stage needs are committed, that `npm ci` resolves from the
+lockfile alone, then typecheck, lint, tests and a production build.
+
+The first two exist because CI starts from a clean checkout and a clean
+install, and a working tree is neither. `npm install` succeeds against a
+node_modules that already exists while `npm ci` refuses the same lockfile, and
+a file can be present locally yet missing from the image because the Dockerfile
+copies an explicit list. Both have broken the pipeline; both are caught here in
+seconds.
 
 ## Architecture
 

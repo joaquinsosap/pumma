@@ -23,7 +23,8 @@
     "db:encryption-audit": "tsx scripts/encryption-audit.ts",
     "db:cleanup-routines": "tsx scripts/cleanup-routines.ts",
     "db:migrate-tags": "tsx scripts/migrate-tags-projects.ts",
-    "db:goal-categories": "tsx scripts/goal-categories.ts"
+    "db:goal-categories": "tsx scripts/goal-categories.ts",
+    "ci": "bash scripts/ci-local.sh"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.27",
