@@ -5,7 +5,11 @@ import { buildUserSnapshot } from "@/lib/ai/user-snapshot";
 import { ASSISTANT_CONTEXT, contextForMode } from "@/lib/ai/assistant-context";
 import { enrichAskAnswer } from "@/lib/ai/enrich-ask";
 import type { AskAnswer } from "@/lib/ai/ask-schema";
-import type { Changeset } from "@/lib/ai/changeset-schema";
+import type { Changeset, OpFields } from "@/lib/ai/changeset-schema";
+import type { ResolvedScope, Scope } from "@/lib/ai/scope-schema";
+import { resolveScope } from "@/lib/scope-resolver";
+import { getSettings } from "@/lib/db/settings";
+import { isoDateInTz, normalizeTimezone } from "@/lib/timezone";
 import { schemaForMode, type AssistantMode } from "@/lib/ai/assistant-schema";
 import { generateStructured } from "@/lib/ai/generate";
 import { normalizeOps, type CurrentFields } from "@/lib/ai/normalize-changeset";
@@ -18,7 +22,22 @@ import { listTags } from "@/lib/db/tags";
 
 export type AssistOutcome =
   | { kind: "answer"; answer: AskAnswer; dataMode: "full" | "trimmed" }
-  | { kind: "changeset"; changeset: Changeset };
+  | { kind: "changeset"; changeset: Changeset }
+  /**
+   * A change described by criteria rather than by a list of ids.
+   *
+   * The scope is resolved here, on the same request, so the client already has
+   * the rows to show and never renders a screen it would have to correct a
+   * moment later.
+   */
+  | {
+      kind: "bulk";
+      summary: string;
+      scope: Scope;
+      patch: OpFields;
+      remove: boolean;
+      resolved: ResolvedScope;
+    };
 
 export async function assist(
   userId: string,
@@ -56,6 +75,17 @@ export async function assist(
       dataMode,
     };
   }
+  if (response.kind === "bulk") {
+    return {
+      kind: "bulk",
+      summary: response.summary,
+      scope: response.scope,
+      patch: response.patch,
+      remove: Boolean(response.remove),
+      resolved: await resolveScopeFor(userId, response.scope),
+    };
+  }
+
   return {
     kind: "changeset",
     changeset: {
@@ -63,6 +93,37 @@ export async function assist(
       ops: normalizeOps(response.ops, await currentFields(userId)),
     },
   };
+}
+
+/**
+ * Resolve a scope against this user's data.
+ *
+ * Lives here rather than in the resolver because the resolver is pure on
+ * purpose: it takes lists, so it can be tested without a database and cannot
+ * accidentally read another user's rows.
+ */
+export async function resolveScopeFor(
+  userId: string,
+  scope: Scope,
+): Promise<ResolvedScope> {
+  const [tasks, habits, goals, projects, notes, settings] = await Promise.all([
+    listTasks(userId),
+    listHabits(userId),
+    listGoals(userId),
+    listProjects(userId),
+    listNotes(userId),
+    getSettings(userId),
+  ]);
+  const timeZone = normalizeTimezone(settings?.timezone);
+  return resolveScope(scope, {
+    today: isoDateInTz(new Date(), timeZone),
+    timeZone,
+    tasks,
+    habits,
+    goals,
+    projects,
+    notes,
+  });
 }
 
 /**

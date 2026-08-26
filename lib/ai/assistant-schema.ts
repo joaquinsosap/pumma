@@ -2,11 +2,32 @@
 // either an answer or a changeset via the discriminator — it cannot hedge.
 import * as z from "zod/v4";
 import { askAnswerSchema } from "@/lib/ai/ask-schema";
-import { changesetSchema } from "@/lib/ai/changeset-schema";
+import { changesetSchema, opFieldsSchema } from "@/lib/ai/changeset-schema";
+import { scopeSchema } from "@/lib/ai/scope-schema";
+
+/**
+ * The third branch: one change, applied to a set described by criteria.
+ *
+ * Deliberately carries NO ids. The model says what to select and what to
+ * change; our code resolves the selection and builds the ops (see
+ * lib/scope-resolver and buildBulkChangeset). That is what makes the result
+ * reproducible, and what stopped "the oldest 3 tasks" from silently including
+ * a completed one.
+ */
+export const bulkSchema = z.object({
+  /** One line, said to the user: what this will do. */
+  summary: z.string(),
+  scope: scopeSchema,
+  /** The change itself. Absent keys are left alone. */
+  patch: opFieldsSchema,
+  /** True to delete the selection instead of patching it. */
+  remove: z.boolean().nullish(),
+});
 
 const responseUnion = z.discriminatedUnion("kind", [
   askAnswerSchema.extend({ kind: z.literal("answer") }),
   changesetSchema.extend({ kind: z.literal("changeset") }),
+  bulkSchema.extend({ kind: z.literal("bulk") }),
 ]);
 
 /**
@@ -52,7 +73,13 @@ export const answerOnlySchema = z.object({
 });
 
 export const changesetOnlySchema = z.object({
-  response: changesetSchema.extend({ kind: z.literal("changeset") }),
+  // A pinned "build it" keeps BOTH shapes: pinning is the user saying they
+  // wanted a change rather than an answer, not that they wanted it hand-listed
+  // rather than filtered.
+  response: z.discriminatedUnion("kind", [
+    changesetSchema.extend({ kind: z.literal("changeset") }),
+    bulkSchema.extend({ kind: z.literal("bulk") }),
+  ]),
 });
 
 export function schemaForMode(mode: AssistantMode) {
