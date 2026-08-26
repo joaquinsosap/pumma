@@ -14,10 +14,12 @@ import { useEffect } from "react";
 export function ServiceWorkerBridge() {
   useEffect(() => {
     if (!("serviceWorker" in navigator)) return;
-    // Dev builds churn the worker on every reload for no benefit, and an
-    // unregistered-then-registered worker mid-session breaks the message
-    // channel the notification click path depends on.
-    if (process.env.NODE_ENV !== "production") return;
+    // Registered in development too. It was skipped there at first, on the
+    // grounds that a dev reload churns the worker for no benefit — but the
+    // worker is also what makes the browser consider the app installable, so
+    // skipping it meant localhost could never show the Install button and the
+    // whole install path was untestable without deploying. Behaving the same
+    // in both places is worth more than avoiding the churn.
     navigator.serviceWorker.register("/sw.js").catch(() => {
       /* an unavailable worker costs push, not the app */
     });

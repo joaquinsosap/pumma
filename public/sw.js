@@ -11,6 +11,22 @@
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 
+/* A fetch handler that does nothing. Deliberately.
+ *
+ * This worker caches nothing and is not meant to — but Chromium will not
+ * treat a site as installable unless its service worker handles `fetch`, and
+ * with no handler there is no `beforeinstallprompt`, so the Install button
+ * never appears and PUMMA can never reach a home screen. On iOS that would
+ * also mean notifications could never work at all, since Apple gates push
+ * behind being installed.
+ *
+ * So the event is handled and the request is left alone: no respondWith means
+ * it falls through to the network exactly as it would have. Real caching here
+ * would mean deciding what a stale task list is worth, which is a much bigger
+ * question than "let people install this".
+ */
+self.addEventListener("fetch", () => {});
+
 self.addEventListener("push", (event) => {
   let data = {};
   try {
