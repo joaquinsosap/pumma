@@ -40,6 +40,12 @@ export const opFieldsSchema = z.object({
     .nullish()
     .describe("Which side of life this belongs to."),
   priority: z.enum(["low", "med", "high"]).nullish().describe("Task priority."),
+  status: z
+    .enum(["todo", "doing", "done"])
+    .nullish()
+    .describe(
+      "Task status. Setting it to done also stamps the completion date; moving it back off done clears that stamp.",
+    ),
   frequency: z
     .enum(["daily", "weekly", "monthly"])
     .nullish()

@@ -20,16 +20,17 @@ import type { Goal, Habit, Note, Project, Task } from "@/lib/schemas";
 
 /** Which patch keys mean anything for which entity. */
 const PATCHABLE: Record<ScopeEntity, readonly (keyof OpFields)[]> = {
-  // No `status`: opFieldsSchema has no such key and the apply path cannot set
-  // one, so "mark these done" is not expressible as a change in EITHER branch
-  // today. Listing it here would let the model emit a patch that silently did
-  // nothing. Adding it is its own piece of work, in the changeset vocabulary
-  // first.
+  // `status` earns its place here now that opFieldsSchema carries it and the
+  // apply path stamps completedAt alongside it. Before that it was left out
+  // deliberately: listing a key the apply path ignored would have let the
+  // model emit a patch that silently did nothing, which reads to the user as
+  // the assistant lying about what it did.
   task: [
     "title",
     "description",
     "lifeArea",
     "priority",
+    "status",
     "date",
     "projectId",
     "goalId",

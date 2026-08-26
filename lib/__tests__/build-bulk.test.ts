@@ -118,13 +118,25 @@ describe("patch validation", () => {
     expect(checkPatch("note", { title: "x" }).ok).toBe(true);
   });
 
-  it("refuses status, which nothing downstream can apply", () => {
-    // opFieldsSchema has no status key and the apply path cannot set one, so
-    // accepting it would produce a patch that silently did nothing.
-    const res = checkPatch("task", {
-      status: "done",
-    } as unknown as Parameters<typeof checkPatch>[1]);
-    expect(res.ok).toBe(false);
+  it("accepts status on a task, now that the apply path can set one", () => {
+    // This used to assert the opposite, and was right to: opFieldsSchema had
+    // no status key, so accepting one produced a patch that silently did
+    // nothing and left the assistant claiming work it had not done. The
+    // vocabulary and the apply path now both carry it (and stamp completedAt
+    // with it), so "mark these done" is finally expressible.
+    expect(checkPatch("task", { status: "done" }).ok).toBe(true);
+    expect(checkPatch("task", { status: "todo" }).ok).toBe(true);
+  });
+
+  it("still refuses status on entities that have none", () => {
+    // Only tasks have a status. A habit or a note accepting one would be the
+    // same silently-ignored patch in a different costume.
+    for (const entity of ["habit", "note", "goal", "project"] as const) {
+      const res = checkPatch(entity, {
+        status: "done",
+      } as unknown as Parameters<typeof checkPatch>[1]);
+      expect(res.ok).toBe(false);
+    }
   });
 
   it("ignores keys explicitly set to null", () => {

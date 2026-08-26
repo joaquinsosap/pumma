@@ -14,6 +14,11 @@ import {
   listNotesTool,
 } from "@/lib/mcp/tools/collections";
 import { getAgenda } from "@/lib/mcp/tools/agenda";
+import {
+  createTask, createNote, createProject, createGoal, createHabit, createMeeting,
+  updateTask, completeTask, updateNote, updateProject, updateGoal, updateHabit,
+  updateMeeting, logHabit, setGoalProgress,
+} from "@/lib/mcp/tools/write";
 
 export const MCP_TOOLS = [
   getOverview,
@@ -24,4 +29,19 @@ export const MCP_TOOLS = [
   listHabitsTool,
   listNotesTool,
   getAgenda,
+  createTask,
+  createNote,
+  createProject,
+  createGoal,
+  createHabit,
+  createMeeting,
+  updateTask,
+  completeTask,
+  updateNote,
+  updateProject,
+  updateGoal,
+  updateHabit,
+  updateMeeting,
+  logHabit,
+  setGoalProgress,
 ];
