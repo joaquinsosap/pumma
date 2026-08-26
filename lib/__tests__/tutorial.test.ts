@@ -38,9 +38,14 @@ describe("the cut", () => {
     }
   });
 
-  it("is mostly doing rather than watching", () => {
+  it("is never mostly watching", () => {
+    // Was "mostly doing", and held at 4 missions to 3 scenes. Adding the
+    // calendar beat made it 4 and 4, which is a real change of character and
+    // is recorded here rather than quietly relaxed: the tour may be half
+    // watching, and must never tip past that. A fifth scene has to buy its
+    // place by replacing one, not by weakening this line again.
     const missions = BEATS.filter((b) => b.kind === "do").length;
-    expect(missions).toBeGreaterThan(BEATS.length / 2);
+    expect(missions).toBeGreaterThanOrEqual(BEATS.length / 2);
   });
 
   it("keeps the self-playing part short — the rest is up to the user", () => {

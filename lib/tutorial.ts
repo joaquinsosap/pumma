@@ -24,6 +24,7 @@ export type BeatId =
   | "tab"
   | "tag"
   | "bulk"
+  | "sync"
   | "ask"
   | "request"
   | "life";
@@ -80,6 +81,21 @@ export const BEATS: Beat[] = [
     caption: "Pick many. Change them all.",
     sub: "Shift-click a range.",
     done: "They change together.",
+  },
+  // A watch beat on purpose. The gesture it would ask for is "paste a secret
+  // URL", which is a terrible thing to ask of somebody sixty seconds into an
+  // app, and the setting is one tap away once the tour is over. What this has
+  // to do is make the feature KNOWN, and show that mirrored events and your
+  // own live in one list without being confusable.
+  {
+    id: "sync",
+    kind: "watch",
+    step: "Link",
+    caption: "Your other calendars, in here.",
+    sub: "Read only. Nothing leaves PUMMA.",
+    // Six, not eight. The watch budget has a 30 second ceiling and it was
+    // already at 24; this beat has three moves and does not need longer.
+    ms: 6_000,
   },
   // Two beats, because it was always two scenes. The assistant half asks a
   // question and gets an answer; the other half gives an instruction and gets

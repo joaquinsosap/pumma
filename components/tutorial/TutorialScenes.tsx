@@ -37,6 +37,11 @@ const HABIT_GREEN = "oklch(0.6 0.13 155)";
 const GOAL_PURPLE = "oklch(0.58 0.17 300)";
 const PROJECT_BLUE = "oklch(0.58 0.14 245)";
 const FINANCE_AMBER = "oklch(0.7 0.12 70)";
+// Borrowed from the real palette so the tour teaches the colours the app
+// actually uses (lib/calendar-colors), rather than a set invented for a demo.
+const OWN_TINT = "oklch(0.55 0.16 274)";
+const FEED_TEAL = "oklch(0.62 0.13 200)";
+const FEED_AMBER = "oklch(0.68 0.14 75)";
 
 /** Ease so scripted motion lands rather than arriving at constant speed. */
 const ease = (t: number) => 1 - Math.pow(1 - Math.min(1, Math.max(0, t)), 3);
@@ -2546,6 +2551,188 @@ export function SceneBulkWatch({ p }: { p: number }) {
         </div>
         <BulkPanel count={ranged} applied={applied} />
       </div>
+    </Frame>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 5 — your other calendars · WATCH (there is nothing to press, and asking
+// somebody to paste a secret URL sixty seconds in would be absurd)
+
+/**
+ * The day, before and after linking.
+ *
+ * One PUMMA meeting is already there. Two mirrored ones arrive from two
+ * different calendars, land in TIME order among it rather than in a block of
+ * their own, and settle wearing their calendar's colour with a chain. That is
+ * the whole idea in one picture: they live together, and you can still tell
+ * whose is whose.
+ *
+ * Times are chosen so the arrivals bracket the existing meeting. If the
+ * mirrored ones landed above and below as a group, the scene would teach the
+ * opposite of what the merge actually does.
+ */
+const SYNC_OWN = { time: "09:30", title: "Standup + planning" };
+const SYNC_MIRRORED = [
+  { time: "09:00", title: "VP daily", source: "Work", color: FEED_TEAL },
+  { time: "14:30", title: "Dentist", source: "Personal", color: FEED_AMBER },
+];
+
+function SyncRow({
+  time,
+  title,
+  color,
+  linked,
+  source,
+  style,
+}: {
+  time: string;
+  title: string;
+  color: string;
+  linked?: boolean;
+  source?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <div
+      className="flex items-center gap-2.5 rounded-lg border border-border2 bg-surface px-3 py-2"
+      style={{ borderLeft: `3px solid ${color}`, ...style }}
+    >
+      <span className="w-[38px] shrink-0 font-mono text-[11px] text-faint2">
+        {time}
+      </span>
+      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
+        {title}
+      </span>
+      {linked ? (
+        <span
+          className="flex shrink-0 items-center gap-1 rounded-[5px] px-1.5 py-px font-mono text-[10px]"
+          style={{
+            color,
+            background: `color-mix(in oklch, ${color} 15%, transparent)`,
+          }}
+        >
+          <LinkGlyph />
+          {source}
+        </span>
+      ) : (
+        <span
+          className="shrink-0 rounded-[5px] px-1.5 py-px font-mono text-[10px]"
+          style={{
+            color: OWN_TINT,
+            background: `color-mix(in oklch, ${OWN_TINT} 15%, transparent)`,
+          }}
+        >
+          yours
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** A chain, small enough to sit inside a chip. */
+function LinkGlyph() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M10 13a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 11a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function SceneSync({ p }: { p: number }) {
+  // Three moves. The link travels, the events arrive, the colours settle.
+  const linkTravel = ease(phase(p, 0.06, 0.3));
+  const arrive = [ease(phase(p, 0.34, 0.56)), ease(phase(p, 0.5, 0.72))];
+  const settled = phase(p, 0.72, 0.88);
+
+  return (
+    <Frame>
+      {/* The two sources, and the link leaving them. */}
+      <div className="mb-3 flex items-center gap-2">
+        {["Google", "Outlook"].map((name, i) => (
+          <span
+            key={name}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-surface2 px-2.5 py-1.5 font-mono text-[11px] font-semibold text-muted"
+            style={{
+              opacity: 0.35 + 0.65 * ease(phase(p, 0.02 + i * 0.05, 0.2)),
+            }}
+          >
+            <span
+              className="h-2 w-2 rounded-[3px]"
+              style={{ background: i === 0 ? FEED_TEAL : FEED_AMBER }}
+            />
+            {name}
+          </span>
+        ))}
+
+        {/* The .ics link, travelling right and then absorbed.
+            It used to hold its position until the colours settled, which
+            parked it on top of the PUMMA badge for half the beat. Arriving
+            means disappearing INTO the thing you arrived at. */}
+        <span className="relative flex-1">
+          <span
+            className="absolute top-1/2 flex -translate-y-1/2 items-center gap-1 whitespace-nowrap rounded-full border border-border bg-surface px-2 py-0.5 font-mono text-[9.5px] text-faint"
+            style={{
+              left: `${linkTravel * 48}%`,
+              opacity:
+                ease(phase(p, 0.06, 0.13)) * (1 - phase(p, 0.26, 0.34)),
+            }}
+          >
+            <LinkGlyph />
+            .ics
+          </span>
+        </span>
+
+        <span className="shrink-0 rounded-lg border-2 border-ink bg-surface px-2.5 py-1.5 font-mono text-[11px] font-bold text-ink">
+          PUMMA
+        </span>
+      </div>
+
+      <p className="mb-2 font-mono text-[10.5px] uppercase tracking-widest text-faint2">
+        Tuesday
+      </p>
+
+      {/* One list, time-ordered. The mirrored rows slide in from the right so
+          it reads as them JOINING a day that already existed, rather than the
+          day being rebuilt around them. */}
+      <div className="flex flex-col gap-1.5">
+        <SyncRow
+          time={SYNC_MIRRORED[0].time}
+          title={SYNC_MIRRORED[0].title}
+          color={SYNC_MIRRORED[0].color}
+          linked
+          source={SYNC_MIRRORED[0].source}
+          style={{
+            opacity: arrive[0],
+            transform: `translateX(${(1 - arrive[0]) * 26}px)`,
+          }}
+        />
+        <SyncRow time={SYNC_OWN.time} title={SYNC_OWN.title} color={OWN_TINT} />
+        <SyncRow
+          time={SYNC_MIRRORED[1].time}
+          title={SYNC_MIRRORED[1].title}
+          color={SYNC_MIRRORED[1].color}
+          linked
+          source={SYNC_MIRRORED[1].source}
+          style={{
+            opacity: arrive[1],
+            transform: `translateX(${(1 - arrive[1]) * 26}px)`,
+          }}
+        />
+      </div>
+
+      {/* The point, said once, as the colours finish settling. */}
+      <p
+        className="m-0 mt-3 text-center font-mono text-[11px] text-faint transition-opacity"
+        style={{ opacity: settled }}
+      >
+        one day &#183; every calendar &#183; still yours vs theirs
+      </p>
     </Frame>
   );
 }

@@ -29,6 +29,7 @@ import {
   SceneBulk,
   SceneBulkTouch,
   SceneLife,
+  SceneSync,
   SceneTab,
   SceneTabTouch,
   SceneTag,
@@ -486,6 +487,8 @@ function Scene({
       ) : (
         <SceneBulk {...shared} />
       );
+    case "sync":
+      return <SceneSync p={p} />;
     case "ask":
       return <SceneAssistant p={p} half="ask" />;
     case "request":
