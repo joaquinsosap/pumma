@@ -621,6 +621,7 @@ export function createSeedData(userId: string): SeedData {
     lifeCalendarFullView: false,
     showMeetingCodes: false,
     calendarLinkOffered: false,
+    installOffered: false,
     sortReversed: [],
     notifications: {
       meetingsEnabled: true,

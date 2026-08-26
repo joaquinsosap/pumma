@@ -60,6 +60,8 @@ export const settingsSchema = z.object({
    * who dismissed it on a laptop should not meet it again on their phone.
    */
   calendarLinkOffered: z.boolean().default(false),
+  /** Has the one-time "add PUMMA to your home screen" nudge been shown? */
+  installOffered: z.boolean().default(false),
   habitVisibleDays: z.number().min(1).default(30),
   habitVisibleWeeks: z.number().min(1).default(8),
   habitVisibleMonths: z.number().min(1).default(3),

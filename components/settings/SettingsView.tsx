@@ -74,6 +74,7 @@ import type { StarterStatus } from "@/lib/actions/starter";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { CalendarFeeds } from "@/components/settings/CalendarFeeds";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { InstallCard } from "@/components/pwa/InstallCard";
 import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 import {
@@ -186,6 +187,19 @@ export function SettingsView({
   // page body does not scroll, an inner pane does, so a native jump has
   // nothing to move and :target would flash a panel nobody was taken to.
   useEffect(() => {
+    // Also on hashchange, not just on mount: the Reminders panel links to
+    // #install, and the pane does not scroll itself, so an in-page anchor
+    // would otherwise change the URL and move nothing.
+    const run = () => landOnHash();
+    window.addEventListener("hashchange", run);
+    const cleanup = landOnHash();
+    return () => {
+      window.removeEventListener("hashchange", run);
+      cleanup?.();
+    };
+  }, []);
+
+  function landOnHash() {
     const id = window.location.hash.slice(1);
     if (!id) return;
 
@@ -205,12 +219,26 @@ export function SettingsView({
     const attempt = () => {
       el = document.getElementById(id);
       if (!el) {
-        // ~2 seconds of trying. Past that the anchor is wrong, not late.
-        if (tries++ > 40) return;
+        // ~6 seconds of trying. The panels are client-rendered from data
+        // that can take a moment on a cold load, and giving up at two
+        // seconds meant the link worked on a warm page and silently did
+        // nothing on a fresh one. Past six, the anchor is wrong, not late.
+        if (tries++ > 120) return;
         timer = window.setTimeout(attempt, 50);
         return;
       }
-      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Smooth only when somebody is actually watching. A hidden or
+      // background tab drops smooth scrolling entirely — the call returns
+      // having moved nothing — so a link opened in a new tab would land at
+      // the top of Settings with no idea where it was meant to go. Reduced
+      // motion gets the same instant jump, for the obvious reason.
+      const watching =
+        document.visibilityState === "visible" &&
+        !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      el.scrollIntoView({
+        behavior: watching ? "smooth" : "auto",
+        block: "start",
+      });
       el.classList.add("settings-landed");
       el.addEventListener("animationend", done);
     };
@@ -221,7 +249,7 @@ export function SettingsView({
       el?.removeEventListener("animationend", done);
       done();
     };
-  }, []);
+  }
   const [tagName, setTagName] = useState("");
   const [name, setName] = useState(userName);
 
@@ -639,6 +667,18 @@ export function SettingsView({
             </SettingsGroupBlock>
 
             <SettingsGroupBlock id="workspace" label="Workspace">
+            {/* First, because it is the prerequisite for the panel under it
+                on iPhone: Apple only allows notifications for a site that has
+                been added to the Home Screen. */}
+            <div id="install" className="mb-6 scroll-mt-4">
+              <SettingsSection
+                title="Install PUMMA"
+                description="Its own icon and window, without the browser around it."
+              >
+                <InstallCard />
+              </SettingsSection>
+            </div>
+
             {/* Beside the calendars it reminds you about, because the two
                 questions arrive together: somebody who just linked a work
                 calendar is the same person wondering whether it will tell

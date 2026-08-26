@@ -11,6 +11,7 @@ import {
   removePushDeviceAction,
 } from "@/lib/actions/notifications";
 import { updateSettingsAction } from "@/lib/actions/settings";
+import { isIos, isStandalone } from "@/lib/pwa";
 import { cn } from "@/lib/utils";
 
 type Prefs = {
@@ -182,10 +183,13 @@ export function NotificationSettings({
     }
   };
 
-  const iosNeedsInstall =
-    typeof navigator !== "undefined" &&
-    /iPhone|iPad/.test(navigator.userAgent) &&
-    !window.matchMedia("(display-mode: standalone)").matches;
+  // Computed in an effect rather than during render: both checks touch
+  // window, and reading them while rendering makes the server and the client
+  // disagree about what to draw.
+  const [iosNeedsInstall, setIosNeedsInstall] = useState(false);
+  useEffect(() => {
+    setIosNeedsInstall(isIos() && !isStandalone());
+  }, []);
 
   return (
     <div className="flex flex-col gap-4">
@@ -307,8 +311,14 @@ export function NotificationSettings({
             )}
             {iosNeedsInstall && (
               <p className="m-0 font-mono text-[10.5px] leading-relaxed text-faint2">
-                On iPhone, add PUMMA to your Home Screen first — Safari only
-                allows notifications for installed apps.
+                On iPhone this needs PUMMA on your Home Screen first: Apple
+                does not allow notifications for a site in a browser tab.{" "}
+                <a
+                  href="#install"
+                  className="font-semibold text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+                >
+                  How to install
+                </a>
               </p>
             )}
           </div>

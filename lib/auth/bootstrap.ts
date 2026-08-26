@@ -60,6 +60,7 @@ export async function bootstrapNewUser(user: {
     lifeCalendarFullView: false,
     showMeetingCodes: false,
     calendarLinkOffered: false,
+    installOffered: false,
     sortReversed: [],
     notifications: {
       meetingsEnabled: true,
