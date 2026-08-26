@@ -18,11 +18,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { AppNotification } from "@/lib/schemas";
+import { toast } from "sonner";
 import {
-  deleteNotificationAction,
+  dismissNotificationAction,
   loadNotificationsAction,
   markAllNotificationsReadAction,
   markNotificationReadAction,
+  restoreNotificationAction,
 } from "@/lib/actions/notifications";
 import { NotificationSheet } from "@/components/notifications/NotificationSheet";
 import { showLocalNotification } from "@/lib/notify-local";
@@ -279,10 +281,35 @@ export function NotificationCenter() {
                         dismissed.current.add(n.id);
                         if (pillId === n.id) setPillId(null);
                         startTransition(async () => {
-                          const res = await deleteNotificationAction(n.id);
-                          // Put it back rather than lie: the row is gone from the
-                          // screen but still in the database.
-                          if (!res.ok) void load();
+                          const res = await dismissNotificationAction(n.id);
+                          if (!res.ok) {
+                            // Put it back rather than lie: the row left the
+                            // screen but is still in the database.
+                            void load();
+                            return;
+                          }
+                          const was = res.data?.was ?? "read";
+                          toast.success("Notification removed", {
+                            action: {
+                              label: "Undo",
+                              onClick: () => {
+                                void restoreNotificationAction(n.id, was).then(
+                                  (r) => {
+                                    if (!r.ok) {
+                                      toast.error(r.error);
+                                      return;
+                                    }
+                                    // Let it back into the pill's reckoning,
+                                    // or an undone unread could never
+                                    // announce itself again.
+                                    dismissed.current.delete(n.id);
+                                    known.current.delete(n.id);
+                                    void load();
+                                  },
+                                );
+                              },
+                            },
+                          });
                         });
                       }}
                       className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-faint2 opacity-0 transition-opacity hover:text-tasks focus-visible:opacity-100 group-hover/row:opacity-100"
@@ -347,7 +374,11 @@ export function NotificationCenter() {
         </div>
       )}
 
-      <NotificationSheet notification={focused} onClose={closeSheet} />
+      <NotificationSheet
+        notification={focused}
+        onClose={closeSheet}
+        onChanged={() => void load()}
+      />
     </>
   );
 }

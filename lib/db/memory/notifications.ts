@@ -1,4 +1,5 @@
 import { getStore } from "@/lib/store/memory";
+import { UNDO_GRACE_MS } from "@/lib/notifications";
 import {
   toDto,
   notificationSchema,
@@ -43,7 +44,12 @@ export async function listNotifications(
   limit = 50,
 ): Promise<AppNotification[]> {
   return store()
-    .notifications.filter((n) => n.userId === userId && n.status !== "scheduled")
+    // Dismissed rows are gone from the user's point of view but still on
+    // disk for a few minutes, which is what makes undo possible.
+    .notifications.filter(
+      (n) =>
+        n.userId === userId && (n.status === "sent" || n.status === "read"),
+    )
     .sort((a, b) => (a.fireAt < b.fireAt ? 1 : a.fireAt > b.fireAt ? -1 : 0))
     .slice(0, limit)
     .map((n) => toDto(notificationSchema.parse(n)));
@@ -146,13 +152,28 @@ export async function pruneNotifications(
 ): Promise<number> {
   const s = store();
   const delivered = s.notifications
-    .filter((n) => n.userId === userId && n.status !== "scheduled")
+    .filter(
+      (n) =>
+        n.userId === userId && (n.status === "sent" || n.status === "read"),
+    )
     .sort((a, b) => (a.fireAt < b.fireAt ? 1 : -1));
   const doomed = new Set(
     delivered
       .filter((n, i) => i >= keep || n.fireAt < cutoffIso)
       .map((n) => n._id),
   );
+  // Dismissed rows get a short grace period rather than the keep/age rules:
+  // long enough that undo works, short enough that they are not history.
+  const undoDeadline = new Date(Date.now() - UNDO_GRACE_MS).toISOString();
+  for (const n of s.notifications) {
+    if (
+      n.userId === userId &&
+      n.status === "dismissed" &&
+      (n.readAt ?? n.sentAt ?? n.createdAt) < undoDeadline
+    ) {
+      doomed.add(n._id);
+    }
+  }
   if (!doomed.size) return 0;
   s.notifications = s.notifications.filter((n) => !doomed.has(n._id));
   return doomed.size;

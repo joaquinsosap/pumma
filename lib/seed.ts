@@ -609,47 +609,55 @@ export function createSeedData(userId: string): SeedData {
   const notifyAt = (minutesAgo: number) =>
     new Date(Date.now() - minutesAgo * 60_000).toISOString();
 
+  // Dated to YESTERDAY on purpose. These ids are the same shape the planner
+  // derives, so dating them to today made them collide with the rows it plans
+  // for today's meetings: it adopted them, overwrote their times with real
+  // future ones, and a tray meant to read as history announced a meeting nine
+  // hours away instead. Yesterday cannot collide, and history is the point.
+
   const notifications: NotificationDoc[] = [
     {
-      _id: `${userId}:meeting:${agenda[1]._id}:${td}:10`,
+      _id: `${userId}:meeting:${agenda[1]._id}:${yd}:10`,
       userId,
       kind: "meeting",
       entityId: agenda[1]._id,
-      entityDate: td,
+      entityDate: yd,
       leadMins: 10,
       fireAt: notifyAt(25),
       status: "sent",
       title: agenda[1].title,
-      body: `${agenda[1].time} · in 10 min`,
-      url: `/calendar?day=${td}`,
+      // The clock time only — the "in 10 min" half is worked out when it is
+      // read, or these rows start lying the moment the day moves on.
+      body: agenda[1].time,
+      url: `/calendar?day=${yd}`,
       joinUrl: "",
       sentAt: notifyAt(25),
       readAt: null,
       createdAt: notifyAt(40),
     },
     {
-      _id: `${userId}:meeting:${agenda[0]._id}:${td}:10`,
+      _id: `${userId}:meeting:${agenda[0]._id}:${yd}:10`,
       userId,
       kind: "meeting",
       entityId: agenda[0]._id,
-      entityDate: td,
+      entityDate: yd,
       leadMins: 10,
       fireAt: notifyAt(200),
       status: "read",
       title: agenda[0].title,
-      body: `${agenda[0].time} · in 10 min`,
-      url: `/calendar?day=${td}`,
+      body: agenda[0].time,
+      url: `/calendar?day=${yd}`,
       joinUrl: "",
       sentAt: notifyAt(200),
       readAt: notifyAt(195),
       createdAt: notifyAt(220),
     },
     {
-      _id: `${userId}:digest::${td}:0`,
+      _id: `${userId}:digest::${yd}:0`,
       userId,
       kind: "digest",
       entityId: "",
-      entityDate: td,
+      entityDate: yd,
       leadMins: 0,
       fireAt: notifyAt(400),
       status: "read",

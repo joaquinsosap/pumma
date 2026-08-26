@@ -1,134 +1,269 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import Link from "next/link";
-import { Bell, CalendarPlus, CheckSquare, Link2 } from "@/components/icons";
+import { useRouter } from "next/navigation";
+import {
+  Bell,
+  CalendarPlus,
+  Check,
+  CheckSquare,
+  ChevronDown,
+  Link2,
+  Trash2,
+} from "@/components/icons";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import type { AppNotification } from "@/lib/schemas";
 import {
+  eventStartFrom,
+  relativeToNow,
+  SNOOZE_CHOICES,
+} from "@/lib/notifications";
+import {
+  dismissNotificationAction,
   markNotificationReadAction,
+  restoreNotificationAction,
   snoozeNotificationAction,
 } from "@/lib/actions/notifications";
+import { cn } from "@/lib/utils";
 
-const KIND_ICON = {
-  meeting: CalendarPlus,
-  task: CheckSquare,
-  digest: Bell,
+const KIND = {
+  meeting: { icon: CalendarPlus, tint: "var(--calendar)", noun: "Meeting" },
+  task: { icon: CheckSquare, tint: "var(--tasks)", noun: "Task" },
+  digest: { icon: Bell, tint: "var(--primary)", noun: "Today" },
 } as const;
 
-const KIND_TINT = {
-  meeting: "var(--calendar)",
-  task: "var(--tasks)",
-  digest: "var(--primary)",
-} as const;
+/** What the main button should say, given what this notification is about. */
+function primaryLabel(n: AppNotification): string {
+  if (n.kind === "task") return "Open the task";
+  if (n.kind === "digest") return "See today's tasks";
+  return "Show it in the calendar";
+}
 
 /**
  * One notification, opened.
  *
- * The reason this exists rather than a link straight to /calendar: arriving
- * from a notification means you were somewhere else entirely — another app, a
- * locked phone — and landing on a page full of everything you own does not
- * answer the question you tapped to ask. This shows the ONE thing, with the
- * button you actually wanted on it.
- *
- * Same component for the tray and for the click-through, so what a banner
- * gives you is what the bell gives you.
+ * Rewritten because the first version was two vague buttons. "Open" did not
+ * say where it went and sometimes appeared to do nothing — it navigated to a
+ * page you might already be on — and the body read "in 10 min" forever,
+ * because that phrase was baked in when the reminder was PLANNED rather than
+ * worked out when somebody read it. Both are fixed here: the countdown is
+ * live and ticks, and every button names its destination.
  */
 export function NotificationSheet({
   notification,
   onClose,
+  onChanged,
 }: {
   notification: AppNotification | null;
   onClose: () => void;
+  /** Something happened that the tray needs to reload for. */
+  onChanged?: () => void;
 }) {
+  const router = useRouter();
   const [pending, start] = useTransition();
+  const [snoozeOpen, setSnoozeOpen] = useState(false);
+  // Ticks so "in 3 min" becomes "in 2 min" while the sheet is open, rather
+  // than freezing at whatever it said when it was opened.
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const t = window.setInterval(() => setNow(new Date()), 30_000);
+    return () => window.clearInterval(t);
+  }, []);
+
   if (!notification) return null;
+  const n = notification;
+  const meta = KIND[n.kind] ?? KIND.digest;
+  const Icon = meta.icon;
 
-  const Icon = KIND_ICON[notification.kind] ?? Bell;
-  const tint = KIND_TINT[notification.kind] ?? "var(--primary)";
+  const startsAt = eventStartFrom(n.fireAt, n.leadMins);
+  const relative = relativeToNow(startsAt, now);
+  const past = new Date(startsAt).getTime() < now.getTime();
 
-  const snooze = () =>
+  const done = (message: string) => {
+    toast.success(message);
+    onChanged?.();
+    onClose();
+  };
+
+  const snooze = (minutes: number) =>
     start(async () => {
-      const res = await snoozeNotificationAction(notification.id);
-      if (!res.ok) toast.error(res.error);
-      else toast.success("Back in 10 minutes");
+      const res = await snoozeNotificationAction(n.id, minutes);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      done(
+        minutes < 60
+          ? `Back in ${minutes} minutes`
+          : `Back in ${minutes / 60} hour${minutes === 60 ? "" : "s"}`,
+      );
+    });
+
+  const dismiss = () =>
+    start(async () => {
+      const res = await dismissNotificationAction(n.id);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      const was = res.data?.was ?? "read";
+      toast.success("Notification removed", {
+        action: {
+          label: "Undo",
+          onClick: () => {
+            void restoreNotificationAction(n.id, was).then((r) => {
+              if (!r.ok) toast.error(r.error);
+              else onChanged?.();
+            });
+          },
+        },
+      });
+      onChanged?.();
       onClose();
     });
+
+  const go = () => {
+    void markNotificationReadAction(n.id);
+    router.push(n.url);
+    onChanged?.();
+    onClose();
+  };
 
   return (
     <Dialog
       open
       onOpenChange={(o) => {
         if (o) return;
-        // Opening it IS reading it. A separate "mark read" would be a chore
-        // bolted onto the thing that already told you.
-        void markNotificationReadAction(notification.id);
+        // Opening it IS reading it.
+        void markNotificationReadAction(n.id);
+        onChanged?.();
         onClose();
       }}
     >
       <DialogContent
-        className="max-w-[420px] gap-0 rounded-[13px] p-0"
+        className="max-w-[430px] gap-0 rounded-[13px] p-0"
         style={{ boxShadow: "2px 2px 0 var(--shadow)" }}
       >
         <div className="border-b border-border2 bg-surface2/60 px-5 py-4">
-          <DialogHeader className="gap-1">
-            <DialogTitle className="flex items-start gap-2.5 text-base font-extrabold tracking-tight">
+          <DialogHeader className="gap-2">
+            <div className="flex items-center gap-2">
               <span
                 aria-hidden
-                className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-lg"
+                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
                 style={{
-                  background: `color-mix(in oklab, ${tint} 16%, transparent)`,
-                  color: tint,
+                  background: `color-mix(in oklab, ${meta.tint} 16%, transparent)`,
+                  color: meta.tint,
                 }}
               >
-                <Icon className="h-3.5 w-3.5" />
+                <Icon className="h-3 w-3" />
               </span>
-              <span className="min-w-0">{notification.title}</span>
+              <span className="font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
+                {meta.noun}
+              </span>
+            </div>
+            <DialogTitle className="text-base font-extrabold leading-snug tracking-tight">
+              {n.title}
             </DialogTitle>
-            <p className="m-0 pl-[34px] text-[13px] leading-relaxed text-muted">
-              {notification.body}
+            {/* The clock time is fixed and stored; the relative half is
+                computed now and keeps ticking. */}
+            <p className="m-0 flex items-baseline gap-2 text-[13px] text-muted">
+              <span className="font-mono">{n.body}</span>
+              <span
+                className={cn(
+                  "font-mono text-[11px] font-semibold",
+                  past ? "text-faint2" : "text-primary",
+                )}
+              >
+                {past ? `started ${relative}` : relative}
+              </span>
             </p>
           </DialogHeader>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 px-5 py-4">
-          {notification.joinUrl && (
+        <div className="flex flex-col gap-3 px-5 py-4">
+          {/* The thing somebody actually opened this for, when there is one. */}
+          {n.joinUrl && (
             <a
-              href={notification.joinUrl}
+              href={n.joinUrl}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={() => void markNotificationReadAction(notification.id)}
-              className="flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90"
-              style={{ background: "var(--calendar)" }}
+              onClick={() => {
+                void markNotificationReadAction(n.id);
+                onChanged?.();
+              }}
+              className="flex w-full items-center justify-center gap-2 rounded-lg px-3.5 py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90"
+              style={{ background: meta.tint }}
             >
-              <Link2 className="h-3.5 w-3.5" />
-              Join now
+              <Link2 className="h-4 w-4" />
+              Join the call
             </a>
           )}
-          <Link
-            href={notification.url}
-            onClick={() => {
-              void markNotificationReadAction(notification.id);
-              onClose();
-            }}
-            className="rounded-lg border border-border bg-surface px-3.5 py-2 text-[12.5px] font-semibold text-muted transition-colors hover:border-faint hover:text-ink"
-          >
-            {notification.kind === "task" ? "Open task" : "Open"}
-          </Link>
-          <button
-            type="button"
-            disabled={pending}
-            onClick={snooze}
-            className="ml-auto rounded-lg px-3 py-2 text-[12px] font-semibold text-faint transition-colors hover:text-ink disabled:opacity-50"
-          >
-            Snooze 10m
-          </button>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={go}
+              className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] font-semibold text-muted transition-colors hover:border-faint hover:text-ink"
+            >
+              {primaryLabel(n)}
+            </button>
+
+            {/* Snooze, with a choice. One fixed length was either too short
+                or too long for most of what lands here. */}
+            <Popover open={snoozeOpen} onOpenChange={setSnoozeOpen}>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  disabled={pending}
+                  className="flex items-center gap-1 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] font-semibold text-muted transition-colors hover:border-faint hover:text-ink disabled:opacity-50"
+                >
+                  Snooze
+                  <ChevronDown className="h-3 w-3" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-36 p-1.5">
+                <p className="px-2 pb-1 pt-0.5 font-mono text-[10px] uppercase tracking-widest text-faint2">
+                  Remind me in
+                </p>
+                {SNOOZE_CHOICES.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      setSnoozeOpen(false);
+                      snooze(m);
+                    }}
+                    className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] text-muted transition-colors hover:bg-hover hover:text-ink"
+                  >
+                    {m < 60 ? `${m} minutes` : "1 hour"}
+                    <Check className="h-3.5 w-3.5 opacity-0" />
+                  </button>
+                ))}
+              </PopoverContent>
+            </Popover>
+
+            <button
+              type="button"
+              disabled={pending}
+              onClick={dismiss}
+              aria-label="Remove this notification"
+              title="Remove"
+              className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-border bg-surface text-faint2 transition-colors hover:border-tasks/40 hover:text-tasks disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

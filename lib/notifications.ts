@@ -112,6 +112,53 @@ export function leadPhrase(leadMins: number): string {
   return m ? `in ${h}h ${m}m` : `in ${h}h`;
 }
 
+/**
+ * When the thing itself happens, worked back from when we said something.
+ *
+ * The row stores `fireAt` (already shifted by the lead) and `leadMins`, so
+ * the event's own moment is the two added back together. Storing it a second
+ * time would be a field that can disagree with the other two.
+ */
+export function eventStartFrom(fireAt: string, leadMins: number): string {
+  return new Date(new Date(fireAt).getTime() + leadMins * 60_000).toISOString();
+}
+
+/**
+ * "in 8 min", "now", "12 min ago" — computed against the CURRENT time.
+ *
+ * The notification's stored body used to carry this phrase, baked in at
+ * planning time. An hour later it still read "in 10 min", which is how a
+ * reminder ends up lying about the only thing it is for. The clock time is
+ * fixed and belongs in the row; anything relative has to be worked out at the
+ * moment somebody looks at it.
+ */
+export function relativeToNow(iso: string, now: Date = new Date()): string {
+  const diffMs = new Date(iso).getTime() - now.getTime();
+  const mins = Math.round(Math.abs(diffMs) / 60_000);
+  if (mins < 1) return "now";
+  const phrase =
+    mins < 60
+      ? `${mins} min`
+      : (() => {
+          const h = Math.floor(mins / 60);
+          const m = mins % 60;
+          return m ? `${h}h ${m}m` : `${h}h`;
+        })();
+  return diffMs > 0 ? `in ${phrase}` : `${phrase} ago`;
+}
+
+/**
+ * How long a dismissed notification lingers before it is really gone.
+ *
+ * Dismissing hides it immediately and deletes it later, which is what makes
+ * Undo possible without keeping a copy in the browser: the row is still
+ * there, just not shown.
+ */
+export const UNDO_GRACE_MS = 10 * 60_000;
+
+/** Snooze lengths offered in the menu. */
+export const SNOOZE_CHOICES = [5, 10, 15, 30, 60] as const;
+
 function shiftIso(iso: string, minutes: number): string {
   return new Date(new Date(iso).getTime() - minutes * 60_000).toISOString();
 }
@@ -166,7 +213,9 @@ export function planNotifications(input: {
           leadMins: lead,
           fireAt,
           title: m.title,
-          body: `${m.time} · ${leadPhrase(lead)}`,
+          // The clock time only. Anything relative is worked out when
+          // somebody reads it, or the row starts lying within the hour.
+          body: m.time,
           url: `/calendar?day=${occ.date}`,
           joinUrl: join,
         });
@@ -202,7 +251,7 @@ export function planNotifications(input: {
         leadMins: lead,
         fireAt,
         title: t.title,
-        body: lead ? `Due ${leadPhrase(lead)}` : "Due now",
+        body: `Due ${t.due.slice(11, 16)}`,
         url: `/tasks?task=${t.id}`,
         joinUrl: "",
       });

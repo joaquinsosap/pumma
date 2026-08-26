@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/mongodb";
+import { UNDO_GRACE_MS } from "@/lib/notifications";
 import {
   decryptAllFor,
   decryptFor,
@@ -55,7 +56,7 @@ export async function listNotifications(
   limit = 50,
 ): Promise<AppNotification[]> {
   const docs = await (await coll())
-    .find({ userId, status: { $ne: "scheduled" } })
+    .find({ userId, status: { $in: ["sent", "read"] } })
     .sort({ fireAt: -1 })
     .limit(limit)
     .toArray();
@@ -155,13 +156,21 @@ export async function pruneNotifications(
   const c = await coll();
   const byAge = await c.deleteMany({
     userId,
-    status: { $ne: "scheduled" },
+    status: { $in: ["sent", "read"] },
     fireAt: { $lt: cutoffIso },
+  });
+
+  // Dismissed rows get a short grace period instead: long enough for undo,
+  // short enough that they are not history.
+  await c.deleteMany({
+    userId,
+    status: "dismissed",
+    createdAt: { $lt: new Date(Date.now() - UNDO_GRACE_MS).toISOString() },
   });
 
   const survivors = await c
     .find(
-      { userId, status: { $ne: "scheduled" } },
+      { userId, status: { $in: ["sent", "read"] } },
       { projection: { _id: 1 }, sort: { fireAt: -1 } },
     )
     .toArray();

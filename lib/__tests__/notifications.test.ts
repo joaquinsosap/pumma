@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
+  eventStartFrom,
+  relativeToNow,
   HISTORY_KEEP,
   HISTORY_MAX_AGE_DAYS,
   leadPhrase,
@@ -266,5 +268,35 @@ describe("history retention", () => {
   it("also bounds by age, for the account with one reminder a week", () => {
     expect(HISTORY_MAX_AGE_DAYS).toBeGreaterThan(0);
     expect(HISTORY_MAX_AGE_DAYS).toBeLessThanOrEqual(30);
+  });
+});
+
+describe("live relative time", () => {
+  const now = new Date("2026-08-25T12:00:00Z");
+
+  it("works the event's own moment back from the fire time", () => {
+    // The row stores when we SPEAK, not when the thing happens.
+    expect(eventStartFrom("2026-08-25T17:50:00.000Z", 10)).toBe(
+      "2026-08-25T18:00:00.000Z",
+    );
+    expect(eventStartFrom("2026-08-25T18:00:00.000Z", 0)).toBe(
+      "2026-08-25T18:00:00.000Z",
+    );
+  });
+
+  it("counts forwards and backwards, so a passed reminder stops lying", () => {
+    expect(relativeToNow("2026-08-25T12:10:00Z", now)).toBe("in 10 min");
+    expect(relativeToNow("2026-08-25T11:50:00Z", now)).toBe("10 min ago");
+    expect(relativeToNow("2026-08-25T12:00:20Z", now)).toBe("now");
+    expect(relativeToNow("2026-08-25T13:30:00Z", now)).toBe("in 1h 30m");
+    expect(relativeToNow("2026-08-25T10:00:00Z", now)).toBe("2h ago");
+  });
+
+  it("keeps the stored body free of anything that goes stale", () => {
+    const got = planNotifications(
+      base({ agenda: [meeting({ id: "m1", time: "15:00" })] }),
+    );
+    // The clock time, and nothing relative — that is computed on read.
+    expect(got[0].body).toBe("15:00");
   });
 });
