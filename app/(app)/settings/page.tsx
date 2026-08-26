@@ -1,4 +1,5 @@
 import { loadShellData } from "@/lib/data";
+import { vapidPublicKey } from "@/lib/push";
 import { displayName } from "@/lib/user-display";
 import { resolveLifeView } from "@/lib/life-view-server";
 import { isAuthEnabled, requireAccess } from "@/lib/auth/session";
@@ -39,9 +40,9 @@ export default async function SettingsPage() {
       tags={data.tags}
       tagCounts={tagCounts}
       calendarFeeds={data.calendarFeeds}
-      // Public half of the VAPID pair. Public by design: it is what the
-      // browser encrypts to, and it is in the client bundle either way.
-      pushPublicKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? ""}
+      // Public half of the VAPID pair, read at runtime and handed over as a
+      // prop. See vapidPublicKey() for why it is not a NEXT_PUBLIC_ variable.
+      pushPublicKey={vapidPublicKey()}
       stats={{ dayPct: 0, habitsLabel: "—", topStreak: 0 }}
     />
   );

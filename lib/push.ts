@@ -15,10 +15,30 @@ import type { DeliverableNotification } from "@/lib/notifications-server";
  * cannot reach a browser that is closed. That is the difference between a
  * self-hosted install that skipped a setup step and a broken one.
  */
-export function pushConfigured(): boolean {
-  return Boolean(
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY,
+/**
+ * The public half of the VAPID pair, read at RUNTIME.
+ *
+ * Deliberately not spelled NEXT_PUBLIC_: that prefix makes Next inline the
+ * value into the bundle at BUILD time, and the image is built in CI where no
+ * such variable exists — so the deployed app would ship an empty string and
+ * report push as unconfigured however carefully the server was set up. The
+ * key is public, but it does not need to be baked in: every read of it is
+ * server-side, and the settings page already hands it to the browser as a
+ * prop.
+ *
+ * The prefixed spelling is still accepted, because installs configured before
+ * this was understood are using it and should not break on an upgrade.
+ */
+export function vapidPublicKey(): string {
+  return (
+    process.env.VAPID_PUBLIC_KEY ||
+    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ||
+    ""
   );
+}
+
+export function pushConfigured(): boolean {
+  return Boolean(vapidPublicKey() && process.env.VAPID_PRIVATE_KEY);
 }
 
 let armed = false;
@@ -29,7 +49,7 @@ function arm(): boolean {
     // A contact address, per RFC 8292, so a push service has somebody to
     // complain to. The URL of the app is an acceptable stand-in.
     process.env.VAPID_SUBJECT || "https://pumma.app",
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
+    vapidPublicKey(),
     process.env.VAPID_PRIVATE_KEY!,
   );
   armed = true;
