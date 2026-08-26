@@ -152,6 +152,8 @@ export async function pruneNotifications(
   userId: string,
   keep: number,
   cutoffIso: string,
+  /** Nothing newer than this is deleted. See the memory impl for why. */
+  protectAfterIso: string,
 ): Promise<number> {
   const c = await coll();
   const byAge = await c.deleteMany({
@@ -171,10 +173,15 @@ export async function pruneNotifications(
   const survivors = await c
     .find(
       { userId, status: { $in: ["sent", "read"] } },
-      { projection: { _id: 1 }, sort: { fireAt: -1 } },
+      { projection: { _id: 1, fireAt: 1 }, sort: { fireAt: -1 } },
     )
     .toArray();
-  const doomed = survivors.slice(keep).map((d) => d._id);
+  // Only rows the planner can no longer recreate are eligible, or trimming
+  // to the keep count re-arms whatever it deletes.
+  const doomed = survivors
+    .slice(keep)
+    .filter((d) => d.fireAt < protectAfterIso)
+    .map((d) => d._id);
   if (!doomed.length) return byAge.deletedCount;
   const byCount = await c.deleteMany({ _id: { $in: doomed } });
   return byAge.deletedCount + byCount.deletedCount;

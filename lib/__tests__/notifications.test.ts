@@ -3,6 +3,10 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   eventStartFrom,
   relativeToNow,
+  worthSending,
+  REPLAN_SAFE_MS,
+  LATE_TOLERANCE_MS,
+  LEAD_CHOICES,
   HISTORY_KEEP,
   HISTORY_MAX_AGE_DAYS,
   leadPhrase,
@@ -296,7 +300,103 @@ describe("live relative time", () => {
     const got = planNotifications(
       base({ agenda: [meeting({ id: "m1", time: "15:00" })] }),
     );
-    // The clock time, and nothing relative — that is computed on read.
-    expect(got[0].body).toBe("15:00");
+    // Absolute, and the whole slot. Anything relative is computed on read.
+    expect(got[0].body).toBe("15:00 to 15:30");
+  });
+});
+
+describe("worth sending", () => {
+  // A 09:00 meeting with a ten minute lead: we mean to speak at 08:50.
+  const fireAt = "2026-08-26T11:50:00.000Z"; // 08:50 in UTC-3
+  const lead = 10;
+  const at = (hhmm: string) => new Date(`2026-08-26T${hhmm}:00.000Z`);
+
+  it("sends when it is on time", () => {
+    expect(worthSending(fireAt, lead, at("11:50"))).toBe(true);
+    expect(worthSending(fireAt, lead, at("11:51"))).toBe(true);
+  });
+
+  it("still sends a late warning while the thing has not started", () => {
+    // Five minutes late is late, but there are five minutes left, so the
+    // reminder can still do its job.
+    expect(worthSending(fireAt, lead, at("11:55"))).toBe(true);
+  });
+
+  it("goes quiet once the meeting has begun", () => {
+    // The bug: this used to keep sending until 20 minutes past the hour, and
+    // a reminder arriving after the meeting started is worse than silence,
+    // because you reach for your phone thinking you still have time.
+    expect(worthSending(fireAt, lead, at("12:01"))).toBe(false);
+    expect(worthSending(fireAt, lead, at("12:16"))).toBe(false);
+  });
+
+  it("gives an on-time reminder its moment", () => {
+    // lead 0 means fireAt IS the event, so "already started" would reject it
+    // instantly without the tolerance.
+    const now = "2026-08-26T12:00:00.000Z";
+    expect(worthSending(now, 0, at("12:00"))).toBe(true);
+    expect(worthSending(now, 0, at("12:01"))).toBe(true);
+    expect(worthSending(now, 0, at("12:20"))).toBe(false);
+  });
+});
+
+describe("planning stops at the event, not at the reminder", () => {
+  it("does not plan a reminder for a meeting already under way", () => {
+    const got = planNotifications(
+      base({
+        // 09:00 local, and it is already 09:05.
+        now: new Date("2026-08-25T12:05:00Z"),
+        agenda: [meeting({ id: "m1", time: "09:00" })],
+      }),
+    );
+    expect(got).toHaveLength(0);
+  });
+
+  it("still plans one that has not started, even if we are late saying so", () => {
+    const got = planNotifications(
+      base({
+        // 08:55: past the 08:50 fire time, but the meeting is still ahead.
+        now: new Date("2026-08-25T11:55:00Z"),
+        agenda: [meeting({ id: "m1", time: "09:00" })],
+      }),
+    );
+    expect(got).toHaveLength(1);
+  });
+});
+
+describe("the body carries the whole slot", () => {
+  it("stores a range rather than a start time", () => {
+    const got = planNotifications(
+      base({ agenda: [meeting({ id: "m1", time: "15:00", durationMins: 30 })] }),
+    );
+    expect(got[0].body).toBe("15:00 to 15:30");
+  });
+});
+
+describe("the prune must not re-arm what it deletes", () => {
+  it("protects anything the planner could still rebuild", () => {
+    // The loop this guards against: the prune drops a delivered row to hold
+    // the tray at its limit, the next planning pass sees that meeting still
+    // ahead inside the horizon and no row for it, and creates a fresh one
+    // marked scheduled. It fires again. From outside, that is a reminder
+    // going off at random.
+    //
+    // A day is past every lead time on offer, so a row older than this can
+    // never be justified by the planner again.
+    expect(REPLAN_SAFE_MS).toBeGreaterThan(
+      Math.max(...LEAD_CHOICES) * 60 * 1000,
+    );
+    // And past the point where worthSending would still deliver it.
+    expect(REPLAN_SAFE_MS).toBeGreaterThan(LATE_TOLERANCE_MS);
+  });
+
+  it("keeps a delivered row alive while its meeting is still ahead", () => {
+    // Same meeting, planned twice. The second pass must not produce a row
+    // the first pass already delivered, which is only true while that row
+    // still exists to be upserted over.
+    const agenda = [meeting({ id: "m1", time: "15:00" })];
+    const first = planNotifications(base({ agenda }));
+    const second = planNotifications(base({ agenda }));
+    expect(second.map((n) => n.id)).toEqual(first.map((n) => n.id));
   });
 });

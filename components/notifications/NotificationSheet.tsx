@@ -210,7 +210,10 @@ export function NotificationSheet({
             </a>
           )}
 
-          <div className="flex items-center gap-2">
+          {/* Wraps rather than squeezing. Three controls plus a trash icon is
+              more than a narrow phone fits on one line, and a button that has
+              been crushed to fit is harder to hit than one on its own row. */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={go}

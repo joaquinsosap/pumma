@@ -149,6 +149,20 @@ export async function pruneNotifications(
   userId: string,
   keep: number,
   cutoffIso: string,
+  /**
+   * Nothing newer than this is ever deleted, whatever the keep count says.
+   *
+   * This is the fix for notifications that fired correctly and then kept
+   * firing. The planner and the prune were fighting: the prune deleted a
+   * delivered row to hold the tray at five, the next planning pass found that
+   * meeting still ahead inside its 48 hour window and no row for it, so it
+   * created a fresh one marked scheduled, and it went off again. Round and
+   * round, which from the outside looks exactly like random re-firing.
+   *
+   * A row can only be deleted safely once the planner could no longer
+   * recreate it, which means once its event is properly in the past.
+   */
+  protectAfterIso: string,
 ): Promise<number> {
   const s = store();
   const delivered = s.notifications
@@ -159,7 +173,10 @@ export async function pruneNotifications(
     .sort((a, b) => (a.fireAt < b.fireAt ? 1 : -1));
   const doomed = new Set(
     delivered
-      .filter((n, i) => i >= keep || n.fireAt < cutoffIso)
+      .filter(
+        (n, i) =>
+          n.fireAt < protectAfterIso && (i >= keep || n.fireAt < cutoffIso),
+      )
       .map((n) => n._id),
   );
   // Dismissed rows get a short grace period rather than the keep/age rules:

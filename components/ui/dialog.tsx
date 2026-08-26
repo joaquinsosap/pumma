@@ -31,7 +31,13 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "pumma-floating fixed left-1/2 top-1/2 z-[80] w-full max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[13px] border border-border bg-surface p-6 shadow-lg",
+        // Not w-full. On a phone that is the whole viewport, so a rounded
+        // card with a border sat flush against both edges with its corners
+        // cut off by the screen, which reads as a broken layout rather than
+        // a dialog. Every dialog in the app shares this base, so every one of
+        // them had it. calc keeps the gutter fixed at any width while max-w
+        // still caps it on a desktop.
+        "pumma-floating fixed left-1/2 top-1/2 z-[80] w-[calc(100%-1.75rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[13px] border border-border bg-surface p-6 shadow-lg",
         className,
       )}
       {...props}

@@ -13,7 +13,7 @@
 import type { AgendaItem, Task } from "@/lib/schemas";
 import { parseTimeToMinutes } from "@/lib/date";
 import { utcForLocalTime } from "@/lib/timezone";
-import { expandMeetings } from "@/lib/meetings";
+import { expandMeetings, meetingTimeRange } from "@/lib/meetings";
 import { ALL_DAY_LABEL } from "@/lib/linked-agenda";
 import { parseMeetingBody } from "@/lib/meeting-body";
 
@@ -21,13 +21,37 @@ import { parseMeetingBody } from "@/lib/meeting-body";
 export const HORIZON_DAYS = 2;
 
 /**
- * How stale a fire time can be and still be worth showing.
+ * How late a reminder may be and still be worth sending.
  *
- * A server that was down for three hours must not open with a burst of
- * banners for meetings that already happened. Past this, the row is marked
- * delivered and lands quietly in the tray instead.
+ * Small on purpose. This used to be thirty minutes measured from `fireAt`,
+ * which sounds generous until you notice what it means for a lead time: a
+ * "ten minutes before" reminder stayed deliverable until twenty minutes AFTER
+ * the meeting started, and duly arrived at 09:16 for a 09:00 call. A reminder
+ * that lands after the thing began is worse than no reminder, because you
+ * reach for your phone expecting to still have time.
+ *
+ * Two minutes covers a tick that ran a moment late or a container that just
+ * restarted. Anything later is judged against the EVENT instead, below.
  */
-export const STALE_AFTER_MS = 30 * 60 * 1000;
+export const LATE_TOLERANCE_MS = 2 * 60 * 1000;
+
+/**
+ * Is this still worth putting on somebody's screen?
+ *
+ * Yes if it is roughly on time, and yes if the thing has not started yet even
+ * though we are late saying so, since a late warning is still a warning. No
+ * once the moment has passed: it goes to the tray, where it reads as history
+ * rather than interrupting with news that is no longer news.
+ */
+export function worthSending(
+  fireAt: string,
+  leadMins: number,
+  now: Date = new Date(),
+): boolean {
+  const at = new Date(fireAt).getTime();
+  if (now.getTime() - at <= LATE_TOLERANCE_MS) return true;
+  return now.getTime() < new Date(eventStartFrom(fireAt, leadMins)).getTime();
+}
 
 /**
  * How much delivered history to keep.
@@ -47,6 +71,17 @@ export const HISTORY_KEEP = 5;
  * meeting from three weeks ago is not history, it is litter.
  */
 export const HISTORY_MAX_AGE_DAYS = 7;
+
+/**
+ * How far back a delivered notification is safe to delete.
+ *
+ * The planner will happily rebuild any row it can still justify, and a
+ * rebuilt row is a SCHEDULED row, which fires. So deleting history the
+ * planner can still reach turns the tray's size limit into a loop that
+ * re-notifies. A day is comfortably past the longest lead time offered, so
+ * anything older than this is genuinely finished with.
+ */
+export const REPLAN_SAFE_MS = 24 * 60 * 60 * 1000;
 
 /** The lead times offered in Settings. Minutes before the event. */
 export const LEAD_CHOICES = [0, 5, 10, 15, 30, 60] as const;
@@ -202,9 +237,11 @@ export function planNotifications(input: {
 
       for (const lead of dedupeLeads(settings.meetingLeadMins)) {
         const fireAt = shiftIso(startsAt, lead);
-        // Already past: a reminder for a meeting that started is noise. The
-        // meeting itself is still visible in the agenda.
-        if (new Date(fireAt).getTime() < nowMs - STALE_AFTER_MS) continue;
+        // Nothing to warn about once it has begun. Judged on the MEETING, not
+        // on the reminder: a lead time means the fire moment is always in the
+        // past relative to the event, so measuring the reminder would keep
+        // scheduling warnings for things already under way.
+        if (new Date(startsAt).getTime() < nowMs) continue;
         out.push({
           id: notificationId(userId, "meeting", m.id, occ.date, lead),
           kind: "meeting",
@@ -213,9 +250,10 @@ export function planNotifications(input: {
           leadMins: lead,
           fireAt,
           title: m.title,
-          // The clock time only. Anything relative is worked out when
-          // somebody reads it, or the row starts lying within the hour.
-          body: m.time,
+          // The whole slot, absolute. Anything relative is worked out when
+          // it is read, or the row starts lying within the hour, but a range
+          // is more use than a start time and never goes stale.
+          body: meetingTimeRange(m.time, m.durationMins),
           url: `/calendar?day=${occ.date}`,
           joinUrl: join,
         });
@@ -242,7 +280,8 @@ export function planNotifications(input: {
       ).toISOString();
       const lead = Math.max(0, settings.taskLeadMins);
       const fireAt = shiftIso(dueAt, lead);
-      if (new Date(fireAt).getTime() < nowMs - STALE_AFTER_MS) continue;
+      // Same rule as meetings: the deadline is the thing, not the warning.
+      if (new Date(dueAt).getTime() < nowMs) continue;
       out.push({
         id: notificationId(userId, "task", t.id, date, lead),
         kind: "task",
@@ -268,7 +307,9 @@ export function planNotifications(input: {
           mins % 60,
           timeZone,
         ).toISOString();
-        if (new Date(fireAt).getTime() < nowMs - STALE_AFTER_MS) continue;
+        // The digest has no event behind it: the moment IS the thing, so a
+        // small tolerance is right here.
+        if (new Date(fireAt).getTime() < nowMs - LATE_TOLERANCE_MS) continue;
         const count = countDueOn(input.tasks, date);
         // Nothing to say. A daily "you have 0 tasks" is the fastest way to
         // teach somebody to ignore the app.

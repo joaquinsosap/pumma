@@ -20,7 +20,10 @@ import {
   HISTORY_KEEP,
   HISTORY_MAX_AGE_DAYS,
   HORIZON_DAYS,
-  STALE_AFTER_MS,
+  REPLAN_SAFE_MS,
+  eventStartFrom,
+  relativeToNow,
+  worthSending,
   planNotifications,
   type NotificationSettings,
 } from "@/lib/notifications";
@@ -125,6 +128,10 @@ export async function materializeFor(
     new Date(
       now.getTime() - HISTORY_MAX_AGE_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString(),
+    // Anything newer than this is off limits, because the planner above could
+    // still recreate it, and a recreated row is a scheduled row that fires
+    // again. One day is comfortably past the longest lead time on offer.
+    new Date(now.getTime() - REPLAN_SAFE_MS).toISOString(),
   );
 
   return planned.length;
@@ -169,9 +176,10 @@ export type DeliverableNotification = {
  * scheduled would be retried every minute forever, so a single dead endpoint
  * would turn into an endless loop of the same notification.
  *
- * Rows whose moment passed a long time ago are marked without being returned.
- * A server that was down for three hours must not wake up and fire a burst of
- * banners for meetings that already ended; those land quietly in the tray.
+ * Rows too late to be useful are marked WITHOUT being returned: they land in
+ * the tray as history instead of interrupting with news that is no longer
+ * news. See worthSending, which judges that against the event rather than
+ * against the reminder.
  */
 export async function collectDue(now = new Date()): Promise<
   DeliverableNotification[]
@@ -182,16 +190,59 @@ export async function collectDue(now = new Date()): Promise<
 
   for (const n of rows) {
     await markNotification(n.userId, n.id, { status: "sent", sentAt });
-    if (now.getTime() - new Date(n.fireAt).getTime() > STALE_AFTER_MS) continue;
+    if (!worthSending(n.fireAt, n.leadMins, now)) continue;
     out.push({
       id: n.id,
       userId: n.userId,
       title: n.title,
-      body: n.body,
+      body: notificationBody(n, now),
       url: n.url,
       joinUrl: n.joinUrl,
       kind: n.kind,
     });
   }
   return out;
+}
+
+/**
+ * The line under the title, written at the moment it is sent.
+ *
+ * The stored body is deliberately absolute ("09:00 to 09:30") because a row
+ * that says "in 10 min" starts lying within the hour. But a notification is
+ * read the instant it arrives, so the relative half is true exactly then, and
+ * it is the half that tells you whether to stand up.
+ *
+ * A phone gives this two lines at most on the lock screen, so the order is
+ * what matters most first: how long you have, then when, then whether there
+ * is a call to join. "VP daily / 09:00" told somebody nothing they could act
+ * on.
+ */
+function notificationBody(
+  n: { body: string; joinUrl: string; kind: string; fireAt: string; leadMins: number },
+  now: Date,
+): string {
+  const starts = eventStartFrom(n.fireAt, n.leadMins);
+  const when = relativeToNow(starts, now);
+  const parts: string[] = [];
+
+  if (n.kind === "meeting") {
+    parts.push(new Date(starts) > now ? `Starts ${when}` : `Started ${when}`);
+  } else if (n.kind === "task") {
+    parts.push(new Date(starts) > now ? `Due ${when}` : `Was due ${when}`);
+  }
+
+  if (n.body) parts.push(n.body);
+  // Said last and said plainly: it is the difference between reaching for a
+  // laptop and walking to a room.
+  if (n.joinUrl) parts.push(joinWord(n.joinUrl));
+  return parts.join(" · ");
+}
+
+/** Which kind of call, from the link. Named, because "Join" says less. */
+function joinWord(url: string): string {
+  if (/teams\.microsoft\.com/i.test(url)) return "Teams call";
+  if (/zoom\.us/i.test(url)) return "Zoom call";
+  if (/meet\.google\.com/i.test(url)) return "Google Meet";
+  if (/webex\.com/i.test(url)) return "Webex call";
+  return "Has a join link";
 }

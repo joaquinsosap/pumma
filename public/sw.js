@@ -47,10 +47,14 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(title, {
       body: data.body || "",
-      // Same tag as the notification's id, so a re-send replaces the banner
-      // instead of stacking a second copy of the same reminder.
+      // The notification's own id, so a re-send replaces the banner rather
+      // than stacking a second copy of the same reminder.
       tag: data.id || "pumma",
       renotify: false,
+      /* Meetings vibrate, tasks do not. A meeting has a room or a call
+         waiting; a task is a deadline you can answer in your own time, and
+         buzzing for both trains somebody to ignore the buzz. */
+      silent: data.kind === "task",
       icon: "/icon-192.png",
       badge: "/icon-192.png",
       data: {
