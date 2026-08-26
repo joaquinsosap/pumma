@@ -189,6 +189,10 @@ export function NotesView({
                 id={n.id}
                 tagIds={n.tagIds}
                 lifeArea={n.lifeArea}
+                // No multi-select here, so a right-click simply opens the
+                // note it lands on. Otherwise the menu would be about a note
+                // while a different one sat highlighted beside it.
+                onContextSelect={() => setOpenId(n.id)}
                 className={cn(
                   "flex items-start gap-1 rounded-[10px] border p-3 hover:bg-hover",
                   selected?.id === n.id

@@ -716,6 +716,7 @@ export function TaskList({
                 ? {
                     selected: picked,
                     active: selection.active,
+                    ids: selection.ids,
                     onToggle: () => selection.toggle(t.id),
                     onThrough: () => selection.selectThrough(t.id),
                   }

@@ -22,9 +22,14 @@ import {
 import type { Tag, Task, Note } from "@/lib/schemas";
 import type { EntityLifeArea } from "@/lib/types";
 import { toggleEntityTag, type TaggableEntity } from "@/lib/actions/tags";
-import { deleteTaskAction, undoDeleteTask } from "@/lib/actions/tasks";
+import {
+  bulkUpdateTasks,
+  deleteTaskAction,
+  undoDeleteTask,
+} from "@/lib/actions/tasks";
 import { deleteNoteAction } from "@/lib/actions/notes";
 import { addTagAction } from "@/lib/actions/settings";
+import { addDays, iso } from "@/lib/date";
 import { tagsByUsage } from "@/lib/metrics";
 import { isLifeTag, SPECIAL_LIFE_TAGS } from "@/lib/life-area-sync";
 import { toast } from "sonner";
@@ -41,9 +46,26 @@ export type MenuSelection = {
   selected: boolean;
   /** True when something is already selected, so a range has an anchor. */
   active: boolean;
+  /**
+   * Every id currently selected.
+   *
+   * What a bulk action in this menu applies to — but only when the row you
+   * right-clicked is one of them. Right-clicking OUTSIDE the selection is a
+   * question about that row, not about the selection, and quietly retargeting
+   * a "set to high" at four other tasks would be the worst kind of surprise.
+   */
+  ids: string[];
   onToggle: () => void;
   onThrough: () => void;
 };
+
+/** What a bulk row in this menu will act on, and how to say so. */
+const PRIORITIES: { value: "low" | "med" | "high"; label: string; ink: string }[] =
+  [
+    { value: "low", label: "Low", ink: "var(--prio-low)" },
+    { value: "med", label: "Mid", ink: "var(--prio-med)" },
+    { value: "high", label: "High", ink: "var(--prio-high)" },
+  ];
 
 type TagTarget = {
   entity: TaggableEntity;
@@ -56,6 +78,14 @@ type TagTarget = {
 };
 
 type TagMenuContextValue = {
+  /**
+   * The row the open menu points at, or null.
+   *
+   * Rows read this to mark themselves while the menu is up. Without it a
+   * right-click on an unselected row in a list of forty gives no clue which
+   * one the menu is about to act on.
+   */
+  activeId: string | null;
   open: (target: Omit<TagTarget, "x" | "y"> & { x: number; y: number }) => void;
   /** Dismiss it — used when the thing it points at is about to move away. */
   close: () => void;
@@ -311,9 +341,42 @@ export function TagMenuProvider({
       })()
     : null;
 
+  /**
+   * What the bulk rows act on.
+   *
+   * The selection only counts when the right-clicked row is IN it. Outside it,
+   * the menu is a question about that one row.
+   */
+  const bulkTargets =
+    menu?.selection?.selected && menu.selection.ids.length
+      ? menu.selection.ids
+      : menu
+        ? [menu.id]
+        : [];
+
+  const applyBulk = (
+    patch: { priority?: "low" | "med" | "high"; due?: string | null },
+    label: string,
+  ) => {
+    if (!menu || bulkTargets.length === 0) return;
+    const ids = bulkTargets;
+    setPending(true);
+    close();
+    void (async () => {
+      const res = await bulkUpdateTasks({ ids, ...patch });
+      setPending(false);
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      toast.success(ids.length > 1 ? `${label} · ${ids.length} tasks` : label);
+      router.refresh();
+    })();
+  };
+
   const tagMenuValue = useMemo(
-    () => ({ open, close, setDragActive }),
-    [open, close, setDragActive],
+    () => ({ activeId: menu?.id ?? null, open, close, setDragActive }),
+    [menu?.id, open, close, setDragActive],
   );
 
   return (
@@ -341,6 +404,55 @@ export function TagMenuProvider({
             style={{ left: pos.left, top: pos.top }}
             onContextMenu={(e) => e.preventDefault()}
           >
+            {/* Priority and due, at the top, because they are the two things
+                anybody opens this menu to change and they were both a trip to
+                the detail panel away.
+
+                They act on the SELECTION when the row you right-clicked is
+                part of it, and on that row alone when it is not. Silently
+                retargeting a "set to high" at four other tasks because
+                something was selected elsewhere would be the worst kind of
+                surprise, so the count is spelled out above them. */}
+            {menu.entity === "task" && (
+              <div className="mb-1 border-b border-border2 pb-1">
+                {bulkTargets.length > 1 && (
+                  <p className="m-0 px-2 pb-1 pt-0.5 font-mono text-[10px] uppercase tracking-widest text-faint2">
+                    {bulkTargets.length} selected
+                  </p>
+                )}
+                <div className="flex items-center gap-1 px-1 pb-1">
+                  {PRIORITIES.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => applyBulk({ priority: p.value }, p.label)}
+                      className="flex flex-1 items-center justify-center gap-1 rounded-md border border-border px-1.5 py-1 font-mono text-[10.5px] font-bold uppercase transition-colors hover:bg-hover disabled:opacity-50"
+                      style={{ color: p.ink }}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="flex items-center gap-1 px-1">
+                  {[
+                    { label: "Today", due: iso() },
+                    { label: "Tomorrow", due: iso(addDays(1)) },
+                    { label: "Clear", due: null },
+                  ].map((d) => (
+                    <button
+                      key={d.label}
+                      type="button"
+                      disabled={pending}
+                      onClick={() => applyBulk({ due: d.due }, d.label)}
+                      className="flex flex-1 items-center justify-center rounded-md border border-border px-1.5 py-1 font-mono text-[10.5px] text-muted transition-colors hover:bg-hover hover:text-ink disabled:opacity-50"
+                    >
+                      {d.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             {menu.selection && (
               <div className="mb-1 border-b border-border2 pb-1">
                 <button
@@ -512,6 +624,7 @@ export function Taggable({
   children,
   onClick,
   selection,
+  onContextSelect,
 }: {
   entity: TaggableEntity;
   id: string;
@@ -525,8 +638,21 @@ export function Taggable({
   /** Gets the event so callers can read ctrl/shift off the click. */
   onClick?: (e: React.MouseEvent) => void;
   selection?: MenuSelection;
+  /**
+   * For surfaces with no multi-select, like notes.
+   *
+   * There, "which one is this menu about" cannot be answered with a lighter
+   * shade of selected, because there is no selected. So the right-click just
+   * makes it the open one, which is both the answer and what you were
+   * probably about to do anyway.
+   */
+  onContextSelect?: () => void;
 }) {
-  const { open } = useTagMenu();
+  const { open, activeId } = useTagMenu();
+  // Lighter than a real selection on purpose: this is "the menu is about to
+  // act on THIS one", not "this is selected". Two states that look the same
+  // would be worse than no marker at all.
+  const menuTarget = activeId === id;
   // A long press, spelled out, because `contextmenu` is not a gesture on a
   // phone. Android fires it; iOS mostly does not, and what happens there
   // instead is the text under your finger gets selected and the system
@@ -540,8 +666,10 @@ export function Taggable({
     press.current = null;
   };
 
-  const openAt = (x: number, y: number) =>
+  const openAt = (x: number, y: number) => {
+    onContextSelect?.();
     open({ entity, id, tagIds, lifeArea, x, y, selection });
+  };
 
   return (
     <div
@@ -551,6 +679,7 @@ export function Taggable({
         // selection was competing with the gesture rather than accompanying
         // it. Inputs inside re-enable it for themselves below.
         "select-none [-webkit-touch-callout:none] [&_input]:select-text [&_textarea]:select-text",
+        menuTarget && !selection?.selected && "bg-primary/[0.09]",
         className,
       )}
       style={style}

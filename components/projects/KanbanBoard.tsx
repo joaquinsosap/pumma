@@ -663,6 +663,7 @@ function KanbanCardShell({
             ? {
                 selected: picked,
                 active: selection.active,
+                ids: selection.ids,
                 onToggle: () => selection.toggle(task.id),
                 onThrough: () => selection.selectThrough(task.id),
               }
