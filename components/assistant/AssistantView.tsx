@@ -3,13 +3,20 @@
 // The unified assistant workspace: one input, and the result is either an
 // answer (widgets) or a changeset (an editable canvas). See ChangesetCanvas
 // for the editing half.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { KeyRound } from "@/components/icons";
 import { Topbar } from "@/components/shell/Topbar";
 import { AskDashboard } from "@/components/assistant/AskDashboard";
 import { ChangesetCanvas } from "@/components/assistant/ChangesetCanvas";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
+import { ScopeScreen } from "@/components/assistant/ScopeScreen";
+import { draftFromScopeAction } from "@/lib/actions/scope";
+import type { AssistOutcome } from "@/lib/ai/assist";
+import type { ResolvedScope, Scope } from "@/lib/ai/scope-schema";
+import { readBulkOverride, type DevBulk } from "@/lib/ai/scope-dev";
+import type { Tag } from "@/lib/schemas";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -18,6 +25,8 @@ type Props = {
   lifeSpanYears?: number;
   /** False when no usable AI key is configured for this account. */
   aiReady?: boolean;
+  /** For the scope screen's tag chips, which show their real colours. */
+  tags?: Tag[];
 };
 
 // Examples earn their place by showing something the assistant can do that
@@ -38,14 +47,29 @@ const BUILD_EXAMPLES = [
   "Archive the habits I haven't done in a month",
 ];
 
+/** An empty resolve, so the dev screen mounts and then loads real rows. */
+const EMPTY_RESOLVED: ResolvedScope = {
+  ids: [],
+  rows: [],
+  excluded: [],
+  matched: 0,
+  capped: false,
+};
+
 export function AssistantView({
   stats,
   birthDate = null,
   lifeSpanYears,
+  tags = [],
   aiReady = true,
 }: Props) {
-  const { status, outcome, error, intent, run, flipMode, clear } =
+  const { status, outcome, error, intent, run, setOutcome, flipMode, clear } =
     useAssistant();
+  // `?bulk=1` in development opens the scope screen with a fabricated request,
+  // so it can be worked on without paying for a generation. Compiled out of
+  // production entirely — see lib/ai/scope-dev.
+  const [devBulk, setDevBulk] = useState<DevBulk>(null);
+  useEffect(() => setDevBulk(readBulkOverride()), []);
 
   return (
     <>
@@ -67,6 +91,31 @@ export function AssistantView({
             error={error}
             intent={intent}
             onRetry={() => intent && run(intent)}
+          />
+        ) : devBulk ? (
+          <BulkStep
+            key="dev-bulk"
+            outcome={{ ...devBulk, kind: "bulk", resolved: EMPTY_RESOLVED }}
+            intent="give the highest priority to the oldest 3 tasks"
+            tags={tags}
+            // Stands down once it has produced a draft. In the real flow the
+            // outcome itself changes from bulk to changeset and this branch
+            // stops matching; the override has to let go by hand or it keeps
+            // winning and the canvas never renders.
+            onDrafted={(next) => {
+              setDevBulk(null);
+              setOutcome(next);
+            }}
+            onDiscard={() => setDevBulk(null)}
+          />
+        ) : status === "ready" && outcome?.kind === "bulk" ? (
+          <BulkStep
+            key={intent ?? "bulk"}
+            outcome={outcome}
+            intent={intent ?? ""}
+            tags={tags}
+            onDrafted={setOutcome}
+            onDiscard={clear}
           />
         ) : status === "ready" && outcome?.kind === "changeset" ? (
           <ChangesetCanvas
@@ -389,5 +438,102 @@ function ApiKeyNeeded() {
         Open Settings
       </Link>
     </div>
+  );
+}
+
+/**
+ * The scope step, and the decision about whether to show it at all.
+ *
+ * Nothing assumed means the request was fully stated, so it drafts straight
+ * away and the user never sees this — the screen is for correcting guesses,
+ * not a toll booth on every request.
+ */
+function BulkStep({
+  outcome,
+  intent,
+  tags,
+  onDrafted,
+  onDiscard,
+}: {
+  outcome: Extract<AssistOutcome, { kind: "bulk" }>;
+  intent: string;
+  tags: Tag[];
+  onDrafted: (next: AssistOutcome) => void;
+  onDiscard: () => void;
+}) {
+  const [drafting, setDrafting] = useState(false);
+
+  const draft = useCallback(
+    (scope: Scope) => {
+      setDrafting(true);
+      void draftFromScopeAction({
+        scope,
+        patch: outcome.patch,
+        remove: outcome.remove,
+        summary: outcome.summary,
+      })
+        .then((res) => {
+          if (!res.ok) {
+            toast.error(res.error);
+            setDrafting(false);
+            return;
+          }
+          if (res.data) onDrafted({ kind: "changeset", changeset: res.data });
+        })
+        .catch(() => {
+          toast.error("Could not build that draft");
+          setDrafting(false);
+        });
+    },
+    [outcome, onDrafted],
+  );
+
+  const skip = (outcome.scope.assumed ?? []).length === 0;
+  useEffect(() => {
+    if (skip) draft(outcome.scope);
+  }, [skip, draft, outcome.scope]);
+
+  if (skip || drafting) return <Thinking intent={intent} />;
+
+  return (
+    <ScopeScreen
+      intent={intent}
+      summary={outcome.summary}
+      scope={outcome.scope}
+      resolved={outcome.resolved}
+      tags={tags}
+      // A row already holding the value is selected and still changes
+      // nothing, so the screen greys it and leaves it out of the count.
+      willChange={(row) =>
+        outcome.remove ||
+        !outcome.patch.priority ||
+        row.from !== outcome.patch.priority
+      }
+      patchLabel={(row) => {
+        if (outcome.remove) return "remove";
+        const to = outcome.patch.priority;
+        if (to && row.from === to) return `already ${to}`;
+        if (to && row.from) {
+          return (
+            <>
+              <span className="line-through">{row.from}</span>
+              <span className="px-1 text-faint2">&rarr;</span>
+              {/* Inline, because the priority inks are raw CSS variables
+                  rather than Tailwind colours — the same way PriorityChip
+                  reads them. */}
+              <span
+                className="font-bold"
+                style={{ color: `var(--prio-${to}-ink)` }}
+              >
+                {to}
+              </span>
+            </>
+          );
+        }
+        return null;
+      }}
+      onDraft={draft}
+      onCancel={onDiscard}
+    />
   );
 }

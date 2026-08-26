@@ -15,6 +15,7 @@ export default async function AssistantPage({ searchParams }: Props) {
       stats={data.stats}
       birthDate={data.birthDate}
       lifeSpanYears={data.lifeSpanYears}
+      tags={data.tags}
       aiReady={aiReady}
     />
   );
