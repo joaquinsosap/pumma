@@ -187,6 +187,27 @@ describe("a forwarded invite", () => {
   });
 });
 
+describe("unrecognisedLink", () => {
+  it("is true when there are links but none is a call we know", () => {
+    // "No join link found" beats an empty space, which reads as "no call".
+    const parsed = parseMeetingBody(
+      "Dial in via https://meet.example-corp.internal/room/7",
+    );
+    expect(parsed.conference).toBeNull();
+    expect(parsed.unrecognisedLink).toBe(true);
+  });
+
+  it("is false when the meeting simply has no links", () => {
+    expect(parseMeetingBody("Out of office").unrecognisedLink).toBe(false);
+  });
+
+  it("is false once a call IS recognised", () => {
+    expect(
+      parseMeetingBody("https://meet.google.com/abc-defg-hij").unrecognisedLink,
+    ).toBe(false);
+  });
+});
+
 describe("parseMeetingBody", () => {
   it("turns the wall into a button, two details and a short line", () => {
     const parsed = parseMeetingBody(TEAMS_INVITE);
@@ -201,6 +222,7 @@ describe("parseMeetingBody", () => {
       details: [],
       organizer: null,
       invitees: [],
+      unrecognisedLink: false,
       text: "Coffee",
     });
   });

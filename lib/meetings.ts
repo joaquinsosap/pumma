@@ -151,10 +151,19 @@ export function expandMeetings<T extends AgendaItem>(
       out.push({ item, date, recurring: item.recurrence != null });
     }
   }
+  // All-day first, then everything else by the clock, whatever calendar it
+  // came from. Two things were wrong before: an all-day item carries "all
+  // day" where a time goes, so parseTimeToMinutes returned NaN and its
+  // position was whatever the sort happened to do with a NaN comparison; and
+  // nothing kept mirrored meetings interleaved with your own, which is the
+  // point of merging them in the first place.
+  const rank = (time: string) => {
+    const mins = parseTimeToMinutes(time);
+    return Number.isFinite(mins) ? mins : -1;
+  };
   out.sort(
     (a, b) =>
-      a.date.localeCompare(b.date) ||
-      parseTimeToMinutes(a.item.time) - parseTimeToMinutes(b.item.time),
+      a.date.localeCompare(b.date) || rank(a.item.time) - rank(b.item.time),
   );
   return out;
 }

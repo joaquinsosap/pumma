@@ -31,6 +31,7 @@ export function MeetingBodyView({
   notes,
   compact = false,
   showCodes = false,
+  trailing,
   className,
 }: {
   notes: string;
@@ -38,6 +39,15 @@ export function MeetingBodyView({
   compact?: boolean;
   /** Meeting ID and passcode. Off unless asked for — see the setting. */
   showCodes?: boolean;
+  /**
+   * Sits on the SAME line as the join button, right-aligned.
+   *
+   * The chain marker used to be centred against the whole row, which grew
+   * once the body arrived underneath, so it drifted off the button it reads
+   * against. Handing it in here keeps the two on one line whatever the body
+   * turns out to be.
+   */
+  trailing?: React.ReactNode;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -46,24 +56,43 @@ export function MeetingBodyView({
 
   const details = showCodes ? body.details : [];
   const hasMore = Boolean(body.text || details.length || body.invitees.length);
-  if (!body.conference && !hasMore) return null;
+  // The trailing marker only earns a row of its own when there is something
+  // for it to sit BESIDE. On a meeting with no call — an all-day "Out of
+  // office", say — a row containing nothing but a chain reads as a second
+  // line of content, so the caller is told to place it itself instead.
+  const hasAction = Boolean(body.conference) || body.unrecognisedLink;
+  if (!hasAction && !hasMore) return null;
 
   const tint = body.conference ? KIND_TINT[body.conference.kind] : undefined;
 
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      {body.conference && (
-        <a
-          href={body.conference.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={(e) => e.stopPropagation()}
-          className="flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90"
-          style={{ background: tint }}
-        >
-          <Link2 className="h-3.5 w-3.5" />
-          {body.conference.label}
-        </a>
+      {hasAction && (
+        <div className="flex items-center gap-2">
+          {body.conference ? (
+            <a
+              href={body.conference.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="flex w-fit items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90"
+              style={{ background: tint }}
+            >
+              <Link2 className="h-3.5 w-3.5" />
+              {body.conference.label}
+            </a>
+          ) : body.unrecognisedLink ? (
+            // There are links in this invite and none of them is a call we
+            // know. Saying so beats an empty space, which reads as "no call"
+            // and sends somebody hunting through the original for a link that
+            // is right there.
+            <span className="flex w-fit items-center gap-1.5 rounded-lg border border-dashed border-border px-2.5 py-1.5 font-mono text-[11px] text-faint2">
+              <Link2 className="h-3.5 w-3.5" />
+              No join link found
+            </span>
+          ) : null}
+          {trailing && <span className="ml-auto shrink-0">{trailing}</span>}
+        </div>
       )}
 
       {details.length > 0 && (
@@ -129,4 +158,16 @@ export function MeetingBodyView({
       )}
     </div>
   );
+}
+
+/**
+ * Does this body give the chain somewhere to sit?
+ *
+ * Callers place the marker on the action row when there is one, and centre it
+ * against the whole row when there is not, so it never floats under a
+ * one-line meeting.
+ */
+export function hasJoinAction(notes: string): boolean {
+  const body = parseMeetingBody(notes ?? "");
+  return Boolean(body.conference) || body.unrecognisedLink;
 }

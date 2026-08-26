@@ -31,6 +31,13 @@ export type MeetingBody = {
   organizer: string | null;
   /** Everyone invited, names only. Often long; the UI folds it. */
   invitees: string[];
+  /**
+   * True when the body clearly meant to carry a call and we could not name
+   * it: there are links in there, none of which we recognise. That is worth
+   * saying out loud rather than showing nothing, because "no button" and
+   * "this meeting has no call" look identical and are not the same.
+   */
+  unrecognisedLink: boolean;
   /** What is left once the machinery is taken out, as readable paragraphs. */
   text: string;
 };
@@ -259,8 +266,10 @@ export function parseMeetingBody(text: string): MeetingBody {
   const inviteeLine =
     source.match(/^(?:invitees|attendees|required attendees):\s*(.+)$/im)?.[1] ??
     "";
+  const conference = findConferenceLink(source);
   return {
-    conference: findConferenceLink(source),
+    conference,
+    unrecognisedLink: !conference && urlsIn(source).length > 0,
     details: extractDetails(source),
     organizer: peopleFrom(organizerLine)[0] ?? null,
     invitees: peopleFrom(inviteeLine),

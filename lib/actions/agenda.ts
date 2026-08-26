@@ -12,10 +12,15 @@ import {
 } from "@/lib/db/agenda";
 import { requireUserId } from "@/lib/auth/session";
 import { entityId, isoDate, title } from "@/lib/validation";
+import { OWN_MEETING_COLOR } from "@/lib/calendar-colors";
 
+// One colour for everything PUMMA owns. Work vs personal is already carried
+// by the life filter; what this colour answers is "mine or mirrored", and it
+// used to answer nothing because the work shade matched a subscribed feed's
+// default exactly. See lib/calendar-colors.
 const MEETING_COLORS = {
-  work: "oklch(0.58 0.14 245)",
-  personal: "oklch(0.58 0.17 300)",
+  work: OWN_MEETING_COLOR,
+  personal: OWN_MEETING_COLOR,
 } as const;
 
 const timeField = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Invalid time");

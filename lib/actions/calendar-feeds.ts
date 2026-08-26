@@ -6,6 +6,7 @@ import type { CalendarFeed } from "@/lib/schemas";
 import { requireUserId } from "@/lib/auth/session";
 import { getSettings } from "@/lib/db/settings";
 import { vetFeedUrl } from "@/lib/calendar-feed-url";
+import { FEED_PALETTE, nextFeedColor } from "@/lib/calendar-colors";
 import { syncFeed, syncStaleFeeds } from "@/lib/ics-sync";
 import {
   deleteFeed,
@@ -50,7 +51,9 @@ export async function addCalendarFeedAction(
     label: "Calendar",
     url: vetted.url,
     lifeArea,
-    color: lifeArea === "work" ? "var(--projects)" : "var(--calendar)",
+    // Assigned rather than derived from life area: two work calendars
+    // would otherwise arrive identical, which is the whole problem.
+    color: nextFeedColor(existing.map((f) => f.color)),
     enabled: true,
     lastSyncedAt: null,
     lastError: "",
@@ -99,6 +102,20 @@ export async function renameCalendarFeedAction(
   if (!next) return { ok: false, error: "Give it a name." };
   const saved = await updateFeed(userId, id, { label: next });
   if (!saved) return { ok: false, error: "That calendar is gone." };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Recolour a subscription. Purely visual, and the point of the palette. */
+export async function setCalendarFeedColorAction(
+  id: string,
+  color: string,
+): Promise<ActionResult> {
+  const userId = await requireUserId();
+  if (!FEED_PALETTE.some((c) => c.value === color)) {
+    return { ok: false, error: "That is not one of the colours." };
+  }
+  await updateFeed(userId, id, { color });
   revalidatePath("/", "layout");
   return { ok: true };
 }

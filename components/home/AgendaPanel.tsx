@@ -21,7 +21,8 @@ import { MeetingDialog } from "@/components/agenda/MeetingDialog";
 import { WidgetHeader, WidgetHeaderLink } from "@/components/home/WidgetLink";
 import { AgendaTodayList } from "@/components/home/AgendaTodayList";
 import { AddMeetingButton } from "@/components/agenda/AddMeetingButton";
-import { ALL_DAY_LABEL } from "@/lib/linked-agenda";
+import { ALL_DAY_LABEL, type AgendaEntry } from "@/lib/linked-agenda";
+import { SyncCalendarsButton } from "@/components/agenda/SyncCalendarsButton";
 import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 import { taskDetailHref } from "@/lib/task-links";
@@ -102,13 +103,16 @@ function AgendaDayTasks({
 }
 
 type Props = {
-  agenda: AgendaItem[];
+  agenda: AgendaEntry[];
   tasks: Task[];
   lifeView: LifeView;
   weekStart?: WeekStart;
+  /** How many calendars are subscribed; zero hides the sync button. */
+  feedCount?: number;
 };
 
 export function AgendaPanel({
+  feedCount = 0,
   agenda,
   tasks,
   lifeView,
@@ -162,7 +166,7 @@ export function AgendaPanel({
   );
 
   return (
-    <section className="flex flex-col overflow-hidden rounded-[13px] border border-border bg-surface max-xl:max-h-[70vh] max-xl:shrink-0">
+    <section className="relative flex flex-col overflow-hidden rounded-[13px] border border-border bg-surface max-xl:max-h-[70vh] max-xl:shrink-0">
       <div className="px-4 pb-3 pt-[15px]">
         <WidgetHeader accent="primary" className="-mx-4 px-4">
           <div className="min-w-0 flex-1">
@@ -249,6 +253,13 @@ export function AgendaPanel({
           occurrenceDate={editing.date}
         />
       )}
+      {/* Bottom right, floating over the list rather than taking a row from
+          it: the widget is short and an always-visible toolbar would cost a
+          meeting's worth of height to hold one icon. */}
+      <SyncCalendarsButton
+        feedCount={feedCount}
+        className="absolute bottom-2.5 right-2.5 z-10 shadow-[0_2px_8px_var(--shadow)]"
+      />
     </section>
   );
 }

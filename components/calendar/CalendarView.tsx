@@ -13,7 +13,10 @@ import { iso, parseTimeToMinutes } from "@/lib/date";
 import { deleteMeetingAction } from "@/lib/actions/agenda";
 import { meetingsOnDay, meetingTimeRange } from "@/lib/meetings";
 import { MeetingDialog } from "@/components/agenda/MeetingDialog";
-import { MeetingBodyView } from "@/components/agenda/MeetingBodyView";
+import {
+  MeetingBodyView,
+  hasJoinAction,
+} from "@/components/agenda/MeetingBodyView";
 import { AddMeetingButton } from "@/components/agenda/AddMeetingButton";
 import {
   CALENDAR_PRIO,
@@ -440,28 +443,43 @@ export function CalendarView({
                       </div>
                     </button>
                     {/* Outside the button: a join link inside a button is a
-                        link you cannot click. */}
-                    {m.notes && (
-                      <MeetingBodyView
-                        notes={m.notes}
-                        compact
-                        showCodes={showMeetingCodes}
-                        className="ml-[52px] mt-1.5"
-                      />
-                    )}
-                    {isLinked(m) ? (
-                      // The chain sits exactly where delete would, so the row
-                      // keeps its shape while saying this one is a mirror. Not
-                      // a button: the only way to remove it is to stop reading
-                      // the calendar it comes from, which lives in Settings.
+                        link you cannot click.
+
+                        The chain rides on the body's own action row so it
+                        lines up with the join button rather than floating
+                        against the middle of a row whose height depends on
+                        how much invite there was. */}
+                    <MeetingBodyView
+                      notes={m.notes}
+                      compact
+                      showCodes={showMeetingCodes}
+                      className="ml-[52px] mt-1.5"
+                      trailing={
+                        isLinked(m) && hasJoinAction(m.notes) ? (
+                          // Beside the join button when there is one. Not a
+                          // button itself: the only way to remove it is to
+                          // stop reading the calendar it comes from, which
+                          // lives in Settings.
+                          <span
+                            title={`From ${m.linkedTo}`}
+                            className="flex h-6 w-6 items-center justify-center text-faint2"
+                          >
+                            <Link2 className="h-3.5 w-3.5" />
+                          </span>
+                        ) : undefined
+                      }
+                    />
+                    {/* No join button to sit beside, so it takes the middle of
+                        the row, exactly where a delete would be. */}
+                    {isLinked(m) && !hasJoinAction(m.notes) && (
                       <span
-                        aria-hidden
                         title={`From ${m.linkedTo}`}
                         className="absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center text-faint2"
                       >
                         <Link2 className="h-3.5 w-3.5" />
                       </span>
-                    ) : (
+                    )}
+                    {!isLinked(m) && (
                       <DeleteButton
                         onClick={() => deleteMeeting(m.id, selected)}
                         label={`Delete meeting ${m.title}`}

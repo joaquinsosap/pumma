@@ -9,8 +9,10 @@ import {
   refreshCalendarFeedsAction,
   removeCalendarFeedAction,
   renameCalendarFeedAction,
+  setCalendarFeedColorAction,
   setCalendarFeedEnabledAction,
 } from "@/lib/actions/calendar-feeds";
+import { FEED_PALETTE, OWN_MEETING_COLOR } from "@/lib/calendar-colors";
 import { cn } from "@/lib/utils";
 
 /**
@@ -158,11 +160,45 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
               key={f.id}
               className="flex items-center gap-2.5 rounded-lg border border-border bg-surface px-3 py-2.5"
             >
-              <span
-                aria-hidden
-                className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
-                style={{ background: f.color }}
-              />
+              {/* The swatch IS the picker. A colour you can see but not
+                  change is the worst of both: it teaches you to read the row
+                  by colour and then refuses when two calendars collide. */}
+              <details className="relative shrink-0">
+                <summary
+                  aria-label={`Colour for ${f.label}`}
+                  className="flex h-5 w-5 cursor-pointer list-none items-center justify-center rounded-md border border-border [&::-webkit-details-marker]:hidden"
+                >
+                  <span
+                    aria-hidden
+                    className="h-3 w-3 rounded-[3px]"
+                    style={{ background: f.color }}
+                  />
+                </summary>
+                <div className="pumma-floating absolute left-0 top-6 z-20 grid w-[132px] grid-cols-4 gap-1 rounded-lg border border-border bg-surface p-1.5 shadow-lg">
+                  {FEED_PALETTE.map((c) => (
+                    <button
+                      key={c.value}
+                      type="button"
+                      aria-label={c.name}
+                      title={c.name}
+                      onClick={(e) => {
+                        e.currentTarget.closest("details")?.removeAttribute("open");
+                        start(async () => {
+                          const res = await setCalendarFeedColorAction(f.id, c.value);
+                          if (!res.ok) toast.error(res.error);
+                        });
+                      }}
+                      className={cn(
+                        "h-6 w-6 rounded-md border transition-transform hover:scale-110",
+                        c.value === f.color
+                          ? "border-ink"
+                          : "border-transparent",
+                      )}
+                      style={{ background: c.value }}
+                    />
+                  ))}
+                </div>
+              </details>
               <div className="min-w-0 flex-1">
                 {/* Editable in place. Google names a feed after the account,
                     Outlook names every one of them "Calendar", so two work
@@ -244,6 +280,17 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
             Refresh now
           </button>
         </div>
+      )}
+
+      {feeds.length > 0 && (
+        <p className="m-0 flex items-center gap-1.5 font-mono text-[10.5px] text-faint2">
+          <span
+            aria-hidden
+            className="h-2.5 w-2.5 rounded-[3px]"
+            style={{ background: OWN_MEETING_COLOR }}
+          />
+          this colour is your own PUMMA meetings
+        </p>
       )}
 
       {feeds.length === 0 && (

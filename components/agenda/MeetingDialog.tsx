@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { Repeat, Trash2 } from "@/components/icons";
 import { toast } from "sonner";
@@ -435,7 +437,23 @@ export function MeetingDialog({
               disabled={pending}
               className={cn(fieldClass, "resize-none")}
             />
-          </div>
+          
+            {/* Said here because this is the moment somebody is typing a
+                meeting by hand and would want to know they might not have to.
+                A link to Settings rather than a pitch: whoever does not need
+                it reads eight words and moves on. */}
+            <p className="m-0 mt-1.5 font-mono text-[10.5px] leading-relaxed text-faint2">
+              Paste a Teams, Zoom or Meet link and it becomes a Join button.
+              Already keep this calendar elsewhere?{" "}
+              <Link
+                href="/settings#workspace"
+                className="underline underline-offset-2 hover:text-muted"
+              >
+                Link it in Settings
+              </Link>{" "}
+              and its meetings appear here on their own.
+            </p>
+</div>
         </div>
 
         <div className="flex items-center gap-2 border-t border-border2 bg-surface2/40 px-5 py-3.5">
