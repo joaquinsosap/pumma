@@ -40,6 +40,10 @@ accounts for hosting.
   OpenRouter, Groq, DeepSeek, Mistral, xAI, or a local Ollama (stored
   encrypted).
 - **Auto Personal/Work switch** — the sidebar view follows your working hours.
+- **MCP server** — connect PUMMA to an AI client (Claude and others) so it can
+  work with your tasks, projects, goals, habits, notes and agenda. OAuth 2.1,
+  with per-account switches for creating, editing and deleting that the server
+  enforces on every request. See [MCP](#mcp-connecting-an-ai-client).
 
 ## Quick start (zero config)
 
@@ -129,6 +133,63 @@ npm run db:migrate-auth-issuer              # write
 "Invalid email or password". Existing sessions keep working, so an unmigrated
 deploy looks completely healthy right up until people start signing in. The app
 also checks at boot and prints the fix if it finds affected rows.
+
+## MCP (connecting an AI client)
+
+PUMMA speaks the [Model Context Protocol](https://modelcontextprotocol.io), so
+an AI client can read and change your data through tools rather than by being
+handed a database.
+
+Turn it on in **Settings → Connections** (off by default), then give your
+client the server URL shown there:
+
+```
+https://<your-domain>/api/mcp
+```
+
+The client opens PUMMA in your browser, you sign in, and a consent screen shows
+which app is asking, what it wants, and where it will be sent back to. Nothing
+is granted until you approve it, and you can disconnect any app from the same
+panel.
+
+### What it can do
+
+Read your tasks, projects, goals, habits, notes and agenda; create and edit
+them; complete tasks; log habits; and delete things if you allow it.
+
+### What stops it
+
+Two independent checks run on every single request, both server-side:
+
+- **Scope** — what you granted that particular app when you connected it.
+  Deleting is a separate scope from editing, so approving "create and edit"
+  never implies removal.
+- **Your settings** — what you currently allow any app, from the switches in
+  Settings. These are enforced by PUMMA, not requested of the model, so a
+  model that ignores its instructions still cannot delete anything while the
+  delete switch is off. Changes take effect on the next request.
+
+Deleting is off by default. Deleting a project (which takes its tasks with it)
+always needs a second confirming call that names exactly what would be lost.
+
+### Data from elsewhere
+
+Meetings synced from a calendar you subscribe to are written by whoever
+publishes that feed, not by you. They are labelled as untrusted when served,
+their text is fenced so it reads as data rather than instructions, and the
+only link surfaced is a conference URL that passed a host allowlist. You can
+stop sharing them entirely from the same settings panel. They are read-only:
+PUMMA will not edit or delete something it is only mirroring.
+
+### Operator notes
+
+- `MCP_ENABLED=0` turns the endpoint off for the whole instance regardless of
+  any account's settings.
+- `MCP_RATE_LIMIT_PER_MINUTE` (default 120) caps requests per user, per client.
+- Requires `DATA_SOURCE=mongodb`. Run `npm run db:indexes` after upgrading, for
+  the audit, rate-limit and confirmation collections.
+- Every tool call is recorded (which tool, which client, what it touched, never
+  the arguments or the content) and shown in Settings for 90 days.
 
 ## License
 

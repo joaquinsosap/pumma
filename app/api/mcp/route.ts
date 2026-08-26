@@ -44,10 +44,23 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 function buildServer(caller: McpCaller): McpServer {
-  const server = new McpServer({
-    name: MCP_SERVER_NAME,
-    version: MCP_SERVER_VERSION,
-  });
+  const server = new McpServer(
+    { name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION },
+    {
+      // The 2026 revision lets a client cache list results. Our tool list is
+      // built from a static catalogue and does not vary by user or by
+      // settings, so re-sending it on every reconnect is pure overhead.
+      //
+      // `private` rather than `public` even though the list is currently the
+      // same for everyone: it costs nothing, and it means that if the
+      // catalogue ever does start varying per account, a shared cache is not
+      // already holding one user's version for another. Five minutes is short
+      // enough that adding a tool shows up quickly.
+      cacheHints: {
+        "tools/list": { ttlMs: 5 * 60 * 1000, cacheScope: "private" },
+      },
+    },
+  );
 
   for (const tool of MCP_TOOLS) {
     server.registerTool(
