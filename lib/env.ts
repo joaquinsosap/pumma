@@ -16,6 +16,13 @@ const envSchema = z
     // purpose: they protect different things and should be rotatable
     // independently. See lib/crypto/master-key.ts.
     DATA_ENCRYPTION_KEY: z.string().optional(),
+    // Web push. Optional: without them the app still notifies in-app, it just
+    // cannot reach a closed browser. Rotating them invalidates every existing
+    // subscription silently, so they belong in the password manager beside
+    // DATA_ENCRYPTION_KEY.
+    NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
+    VAPID_PRIVATE_KEY: z.string().optional(),
+    VAPID_SUBJECT: z.string().optional(),
     DATA_ENCRYPTION_PROVIDER: z.enum(["env", "kms"]).optional(),
     BETTER_AUTH_URL: z.string().optional(),
     // Hosted-mode seam — optional; the access gate only arms with
@@ -60,6 +67,22 @@ const envSchema = z
           "(generate: openssl rand -base64 32)",
         input: ctx.value,
         path: ["DATA_ENCRYPTION_KEY"],
+      });
+    }
+    // Half a keypair is worse than none: the client would offer to subscribe
+    // and every send would fail.
+    if (
+      Boolean(ctx.value.NEXT_PUBLIC_VAPID_PUBLIC_KEY) !==
+      Boolean(ctx.value.VAPID_PRIVATE_KEY)
+    ) {
+      ctx.issues.push({
+        code: "custom",
+        message:
+          "NEXT_PUBLIC_VAPID_PUBLIC_KEY and VAPID_PRIVATE_KEY must be set " +
+          "together (generate: npx web-push generate-vapid-keys). Back them " +
+          "up: rotating them silently unsubscribes every device.",
+        input: ctx.value,
+        path: ["VAPID_PRIVATE_KEY"],
       });
     }
     if (ctx.value.DATA_SOURCE === "mongodb" && !ctx.value.BETTER_AUTH_SECRET) {

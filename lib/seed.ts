@@ -13,6 +13,8 @@ import type {
   UserDoc,
   CalendarFeedDoc,
   ExternalEventDoc,
+  NotificationDoc,
+  PushSubscriptionDoc,
 } from "@/lib/schemas";
 import { taskSchema } from "@/lib/schemas";
 import { LIFE_SPAN_DEFAULT } from "@/lib/life-constants";
@@ -36,6 +38,8 @@ export type SeedData = {
    *  a demo account has nobody else's calendar to read. */
   calendarFeeds: CalendarFeedDoc[];
   externalEvents: ExternalEventDoc[];
+  notifications: NotificationDoc[];
+  pushSubscriptions: PushSubscriptionDoc[];
 };
 
 export function createSeedData(userId: string): SeedData {
@@ -618,6 +622,14 @@ export function createSeedData(userId: string): SeedData {
     showMeetingCodes: false,
     calendarLinkOffered: false,
     sortReversed: [],
+    notifications: {
+      meetingsEnabled: true,
+      meetingLeadMins: [10],
+      tasksEnabled: true,
+      taskLeadMins: 0,
+      digestEnabled: false,
+      digestTime: "09:00",
+    },
     habitVisibleDays: 30,
     habitVisibleWeeks: 8,
     habitVisibleMonths: 3,
@@ -661,5 +673,7 @@ export function createSeedData(userId: string): SeedData {
     lifeWeeks: [],
     calendarFeeds: [],
     externalEvents: [],
+    notifications: [],
+    pushSubscriptions: [],
   };
 }

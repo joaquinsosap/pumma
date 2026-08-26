@@ -39,6 +39,14 @@ export const SPECS = {
   // Somebody else's events, but sitting in our database and every bit as
   // readable as the user's own agenda.
   externalEvents: { fields: ["title", "location", "notes"] },
+  // A notification is a copy of the thing it is about — "Therapy in 10
+  // minutes" is the appointment's title with a clock bolted on. Same
+  // treatment as the row it was copied from, or the encryption of the
+  // original would be undone by its own reminder.
+  notifications: { fields: ["title", "body", "joinUrl"] },
+  // The endpoint is a capability: whoever holds it can push to that browser
+  // until it is revoked. Same reasoning as a calendar feed URL.
+  pushSubscriptions: { fields: ["endpoint", "p256dh", "auth"] },
 } as const satisfies Record<string, Spec>;
 
 // Deliberately absent:

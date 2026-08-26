@@ -193,22 +193,41 @@ export function fakeLocalFromTz(date: Date, timeZone: string): Date {
   return new Date(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
 }
 
-/** UTC instant for noon on a calendar day in a timezone (avoids DST midnight edges). */
-export function noonUtcForIsoDate(isoDate: string, timeZone: string): Date {
+/**
+ * The UTC instant at which a given wall-clock time happens in a timezone.
+ *
+ * Converges rather than calculates: guess the instant as if the wall clock
+ * were UTC, ask the timezone what wall time that actually is, and correct by
+ * the difference. Two passes settle it; the loop runs four because a DST
+ * boundary can need a second correction, and a wall time that does not exist
+ * at all (the hour the clocks skip) simply stops moving and lands on the
+ * boundary instead of oscillating.
+ */
+export function utcForLocalTime(
+  isoDate: string,
+  hour: number,
+  minute: number,
+  timeZone: string,
+): Date {
   const [y, m, d] = isoDate.slice(0, 10).split("-").map(Number);
-  let ms = Date.UTC(y, m - 1, d, 12, 0, 0);
+  let ms = Date.UTC(y, m - 1, d, hour, minute, 0);
   for (let i = 0; i < 4; i++) {
     const p = tzParts(new Date(ms), timeZone);
     const diffMin =
       (p.year - y) * 525600 +
       (p.month - m) * 43200 +
       (p.day - d) * 1440 +
-      (p.hour - 12) * 60 +
-      p.minute;
-    if (diffMin === 0) break; // already at local noon — no need to keep iterating
+      (p.hour - hour) * 60 +
+      (p.minute - minute);
+    if (diffMin === 0) break; // already there — no need to keep iterating
     ms -= diffMin * 60_000;
   }
   return new Date(ms);
+}
+
+/** UTC instant for noon on a calendar day in a timezone (avoids DST midnight edges). */
+export function noonUtcForIsoDate(isoDate: string, timeZone: string): Date {
+  return utcForLocalTime(isoDate, 12, 0, timeZone);
 }
 
 export function addDaysToIsoDate(

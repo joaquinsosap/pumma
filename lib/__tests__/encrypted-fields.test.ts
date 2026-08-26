@@ -119,6 +119,8 @@ describe("every collection in the spec", () => {
     tags: { name: "a" },
     calendarFeeds: { label: "a", url: "https://example.com/x.ics" },
     externalEvents: { title: "a", location: "b", notes: "c" },
+    notifications: { title: "a", body: "b", joinUrl: "https://example.com/j" },
+    pushSubscriptions: { endpoint: "https://example.com/p", p256dh: "a", auth: "b" },
   };
 
   it("has a sample here, so a new collection can't be added unnoticed", () => {

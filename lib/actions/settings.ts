@@ -83,6 +83,17 @@ const settingsPatchSchema = z
       .array(z.enum(["task", "projectTask", "project", "note", "tag"]))
       .max(5)
       .optional(),
+    notifications: z
+      .object({
+        meetingsEnabled: z.boolean(),
+        meetingLeadMins: z.array(z.number().int().min(0).max(1440)).max(6),
+        tasksEnabled: z.boolean(),
+        taskLeadMins: z.number().int().min(0).max(1440),
+        digestEnabled: z.boolean(),
+        digestTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+      })
+      .strict()
+      .optional(),
     projectTaskSort: z
       .enum(["priority", "custom", "created", "alpha"])
       .optional(),
@@ -122,6 +133,14 @@ export async function updateSettingsAction(patch: {
   projectsRailSortVisible?: boolean;
   taskSort?: "priority" | "due" | "created" | "alpha";
   sortReversed?: ("task" | "projectTask" | "project" | "note" | "tag")[];
+  notifications?: {
+    meetingsEnabled: boolean;
+    meetingLeadMins: number[];
+    tasksEnabled: boolean;
+    taskLeadMins: number;
+    digestEnabled: boolean;
+    digestTime: string;
+  };
   projectTaskSort?: "priority" | "custom" | "created" | "alpha";
   projectSort?: "created" | "alpha" | "progress";
   noteSort?: "edited" | "created" | "alpha";

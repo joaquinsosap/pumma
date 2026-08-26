@@ -161,6 +161,20 @@ export const settingsSchema = z.object({
   projectSort: z.enum(["created", "alpha", "progress"]).default("created"),
   noteSort: z.enum(["edited", "created", "alpha"]).default("edited"),
   tagSort: z.enum(["custom", "alpha", "usage", "created"]).default("custom"),
+  /** Reminders: what fires, and how long before. See lib/notifications. */
+  notifications: z
+    .object({
+      meetingsEnabled: z.boolean().default(true),
+      meetingLeadMins: z.array(z.number().int().min(0).max(1440)).default([10]),
+      tasksEnabled: z.boolean().default(true),
+      taskLeadMins: z.number().int().min(0).max(1440).default(0),
+      digestEnabled: z.boolean().default(false),
+      digestTime: z
+        .string()
+        .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+        .default("09:00"),
+    })
+    .default({}),
   /** Which sortable lists are currently running backwards. */
   sortReversed: z
     .array(z.enum(["task", "projectTask", "project", "note", "tag"]))
@@ -366,6 +380,63 @@ export const agendaItemSchema = z.object({
  * without signing in to anything. It is encrypted at rest like authored
  * content and must never be logged or returned to the client in full.
  */
+/**
+ * One notification, scheduled or already sent.
+ *
+ * Rows are MATERIALIZED ahead of time rather than worked out at delivery: the
+ * question "what should fire in the next minute" then costs one indexed query
+ * instead of expanding every recurrence rule the user owns, and a row that
+ * exists can be inspected, snoozed and read back in a tray.
+ *
+ * The id is derived, not random — see notificationId(). That is what makes
+ * re-materializing safe: the same meeting at the same lead time produces the
+ * same id, so the writer upserts instead of accumulating a duplicate every
+ * five minutes.
+ */
+export const notificationSchema = z.object({
+  _id: z.string(),
+  userId: z.string(),
+  kind: z.enum(["meeting", "task", "digest"]),
+  /** What it is about. `date` disambiguates one occurrence of a repeat. */
+  entityId: z.string().default(""),
+  entityDate: z.string().default(""),
+  /** Minutes before the event this row represents. 0 = at the moment. */
+  leadMins: z.number().int().default(0),
+  /** When it should fire, ISO UTC. The only field the delivery loop sorts on. */
+  fireAt: z.string(),
+  status: z
+    .enum(["scheduled", "sent", "read", "dismissed"])
+    .default("scheduled"),
+  title: z.string().max(200).default(""),
+  body: z.string().max(400).default(""),
+  /** Where clicking it should land in the app. */
+  url: z.string().max(300).default("/"),
+  /** A call to join, when the invite carried one. */
+  joinUrl: z.string().max(2048).default(""),
+  sentAt: z.string().nullable().default(null),
+  readAt: z.string().nullable().default(null),
+  createdAt: z.string(),
+});
+
+/**
+ * One browser, on one device, that agreed to receive push.
+ *
+ * The endpoint is a capability: anyone holding it can push a notification to
+ * that browser until it is revoked, so it is encrypted at rest with the keys
+ * beside it, exactly like a calendar feed URL.
+ */
+export const pushSubscriptionSchema = z.object({
+  _id: z.string(),
+  userId: z.string(),
+  endpoint: z.string().max(2048),
+  p256dh: z.string().max(300),
+  auth: z.string().max(300),
+  /** "Chrome on macOS" — so a device list is readable when revoking one. */
+  label: z.string().max(80).default("This device"),
+  createdAt: z.string(),
+  lastSeenAt: z.string(),
+});
+
 export const calendarFeedSchema = z.object({
   _id: z.string(),
   userId: z.string(),
@@ -431,6 +502,13 @@ export const lifeWeekSchema = z.object({
   mood: lifeMoodSchema.nullable().default(null),
   updatedAt: z.string(),
 });
+
+export type NotificationDoc = z.infer<typeof notificationSchema>;
+export type AppNotification = Omit<NotificationDoc, "_id"> & { id: string };
+export type PushSubscriptionDoc = z.infer<typeof pushSubscriptionSchema>;
+export type PushSubscriptionRow = Omit<PushSubscriptionDoc, "_id"> & {
+  id: string;
+};
 
 export type CalendarFeedDoc = z.infer<typeof calendarFeedSchema>;
 export type ExternalEventDoc = z.infer<typeof externalEventSchema>;
