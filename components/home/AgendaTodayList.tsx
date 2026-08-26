@@ -2,9 +2,9 @@
 import { DeleteButton } from "@/components/ui/delete-button";
 
 import { useEffect, useMemo, useState } from "react";
-import type { AgendaItem } from "@/lib/schemas";
 import { isLinked, type AgendaEntry } from "@/lib/linked-agenda";
-import { Link2 } from "@/components/icons";
+import { Link2, Video } from "@/components/icons";
+import { parseMeetingBody } from "@/lib/meeting-body";
 import { formatTimeHM, parseTimeToMinutes } from "@/lib/date";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import {
@@ -103,6 +103,9 @@ function AgendaEventRow({
   // chain takes the same spot so the row keeps its shape, and says where it
   // came from on hover.
   const linked = isLinked(ev);
+  // Only meetings carry an invite worth scanning for a call.
+  const join =
+    ev.kind === "meeting" ? parseMeetingBody(ev.notes ?? "").conference : null;
   const deletable = onDelete && ev.kind === "meeting" && !linked;
   return (
     <div className="group relative">
@@ -137,6 +140,28 @@ function AgendaEventRow({
           </div>
         </div>
       </WidgetRowLink>
+      {/* Icon only. This widget is a column of rows in the narrowest part of
+          the page, and a "Join Teams meeting" button would cost more width
+          than the meeting title it belongs to. */}
+      {join && (
+        <a
+          href={join.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={(e) => e.stopPropagation()}
+          title={join.label}
+          aria-label={join.label}
+          className={cn(
+            "absolute top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-white transition-opacity hover:opacity-90",
+            // Sits inboard of the chain when there is one, so the two never
+            // stack on the same pixel.
+            linked ? "right-[26px]" : "right-0",
+          )}
+          style={{ background: "var(--primary)" }}
+        >
+          <Video className="h-3 w-3" />
+        </a>
+      )}
       {linked && (
         <span
           aria-hidden

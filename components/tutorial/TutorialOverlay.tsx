@@ -15,6 +15,7 @@ import {
 import { markTutorialSeen } from "@/lib/actions/settings";
 import { ChevronRight } from "@/components/icons";
 import { setTutorialActive } from "@/lib/tutorial-lock";
+import { readTourOverride } from "@/lib/tutorial-dev";
 import { useVisualViewport } from "@/lib/use-visual-viewport";
 import { onTutorialReplay } from "@/lib/tutorial-replay";
 import { stallLimitMs, startTutorialClock } from "@/lib/tutorial-clock";
@@ -54,6 +55,9 @@ const OUTRO_MS = 900;
 
 export function TutorialOverlay({ seen }: { seen: boolean }) {
   const router = useRouter();
+  // `?tour=sync` in development opens the tour on that beat. Compiled out of
+  // production entirely — see lib/tutorial-dev for why that is safe.
+  const devTour = useRef<ReturnType<typeof readTourOverride>>(null);
   // The capture beat puts a real field on screen, so on a phone a real
   // keyboard comes up over it, and an overlay sized to the WINDOW centres
   // itself behind that keyboard.
@@ -99,6 +103,21 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
 
   // The button says so directly, without waiting for the server to agree.
   useEffect(() => onTutorialReplay(rearm), [rearm]);
+
+  // Development only, and only once: jump straight to the beat being worked
+  // on, skipping the intro and every mission before it.
+  useEffect(() => {
+    if (devTour.current) return;
+    const override = readTourOverride();
+    if (!override) return;
+    devTour.current = override;
+    setHidden(false);
+    setFinished(false);
+    setCleared(false);
+    setOutro(false);
+    setIndex(override.index);
+    setPlaying(true);
+  }, []);
 
   useEffect(() => {
     if (seen) return;
@@ -366,7 +385,9 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
               bottom: "auto",
               "--stage-h": `${Math.max(190, viewport.height - 270)}px`,
             } as React.CSSProperties)
-          : undefined
+          : beat.stage
+            ? ({ "--stage-h": `${beat.stage}px` } as React.CSSProperties)
+            : undefined
       }
     >
       {outro && (
@@ -413,21 +434,33 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
           so the wait is visible rather than indefinite, and pressing it early
           is the same as reaching the end. */}
       {!isMission && !outro && !cleared && (
-        <div className="flex shrink-0 justify-center px-4 pb-1">
+        <div className="-mt-2 flex shrink-0 justify-center px-4">
           <button
             type="button"
             onClick={() => {
               if (index + 1 >= beats.length) finish();
               else advance();
             }}
-            className="pumma-floating relative flex h-9 items-center gap-2 overflow-hidden rounded-full border border-white/20 bg-white/[0.08] px-4 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-white/80 transition-colors hover:border-white/40 hover:text-white"
+            // The app's own control, not a glass pill. bg-surface hands the
+            // face, rim and contact shadow to globals.css, which owns all
+            // three with !important — so this deliberately does NOT try to
+            // state a border or a shadow of its own. Same recipe as every
+            // other small button in PUMMA, which is the point: the previous
+            // translucent capsule was the only thing on screen that came
+            // from nowhere else in the app.
+            //
+            // (It also must not carry pumma-floating: that forces
+            // background-color from --floating with !important, which is
+            // white on the light theme, and white text on it made the label
+            // disappear entirely.)
+            className="relative flex h-9 items-center gap-2 overflow-hidden rounded-lg border border-border bg-surface px-4 font-mono text-[11px] font-bold uppercase tracking-[0.14em] text-ink transition-colors"
           >
             {/* The fill sits behind the label and is the same value the
                 beat's own clock reports, so it can never disagree with when
                 the scene actually ends. */}
             <span
               aria-hidden
-              className="absolute inset-y-0 left-0 bg-white/15"
+              className="absolute inset-y-0 left-0 bg-primary/20"
               style={{ width: `${Math.round(p * 100)}%` }}
             />
             <span className="relative">

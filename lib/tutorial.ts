@@ -40,6 +40,17 @@ export type Beat = {
   sub: string;
   /** Watch beats only — how long the scene runs. */
   ms?: number;
+  /**
+   * How tall this beat's card should be.
+   *
+   * Declared per beat rather than measured. One fixed height for all of them
+   * left the sparse scenes floating in a third of a card of nothing, and
+   * making it dynamic would put the stage back to resizing itself around
+   * content that changes mid-beat, which is what the fixed height was for.
+   * A number per scene is the middle: known before it renders, so the change
+   * between beats is one small animation rather than a negotiation.
+   */
+  stage?: number;
   /** Missions only — the confirmation once it lands. */
   done?: string;
 };
@@ -57,6 +68,7 @@ export const BEATS: Beat[] = [
     caption: "Just type. No clicking.",
     sub: "A day and a #tag, in the same line.",
     done: "One bar. Three places.",
+    stage: 430,
   },
   {
     id: "tab",
@@ -65,6 +77,7 @@ export const BEATS: Beat[] = [
     caption: "Tab changes what you're making.",
     sub: "One bar for everything.",
     done: "Task, habit, goal, note, assistant.",
+    stage: 320,
   },
   {
     id: "tag",
@@ -73,6 +86,7 @@ export const BEATS: Beat[] = [
     caption: "Tags are where things live.",
     sub: "Right-click to send it somewhere.",
     done: "It moved, and took its side of life with it.",
+    stage: 300,
   },
   {
     id: "bulk",
@@ -81,6 +95,7 @@ export const BEATS: Beat[] = [
     caption: "Pick many. Change them all.",
     sub: "Shift-click a range.",
     done: "They change together.",
+    stage: 360,
   },
   // A watch beat on purpose. The gesture it would ask for is "paste a secret
   // URL", which is a terrible thing to ask of somebody sixty seconds into an
@@ -96,6 +111,7 @@ export const BEATS: Beat[] = [
     // Six, not eight. The watch budget has a 30 second ceiling and it was
     // already at 24; this beat has three moves and does not need longer.
     ms: 9_000,
+    stage: 360,
   },
   // Two beats, because it was always two scenes. The assistant half asks a
   // question and gets an answer; the other half gives an instruction and gets
@@ -108,6 +124,7 @@ export const BEATS: Beat[] = [
     caption: "Ask about your own data.",
     sub: "It answers from what you have.",
     ms: 10_000,
+    stage: 330,
   },
   {
     id: "request",
@@ -116,6 +133,7 @@ export const BEATS: Beat[] = [
     caption: "Or tell it what to change.",
     sub: "Nothing saves until you say so.",
     ms: 11_000,
+    stage: 330,
   },
   {
     id: "life",
@@ -124,6 +142,7 @@ export const BEATS: Beat[] = [
     caption: "Your life in weeks.",
     sub: "1,521 down.",
     ms: 12_000,
+    stage: 390,
   },
 ];
 

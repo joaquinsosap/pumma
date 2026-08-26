@@ -67,6 +67,7 @@ export {
   KeyRound,
   Layers,
   Link2,
+  Video,
   LogOut,
   Minus,
   Moon,

@@ -332,16 +332,46 @@ const LANDING_STAGGER_MS = 620;
  * it reads as "that specific sentence works". Three with nothing in common
  * but the shape is what makes the shape the lesson.
  */
-const CAPTURE_ECHOES = [
-  { title: "gym", day: "monday", tag: "health", tagColor: HABIT_GREEN },
-  { title: "call mum", day: "today", tag: "family", tagColor: PROJECT_BLUE },
+const CAPTURE_ECHOES: {
+  title: string;
+  day: string;
+  tag: string;
+  tagColor: string;
+  section: keyof typeof NAV_COLOR;
+  kind: string;
+}[] = [
+  {
+    title: "read 20 min",
+    day: "daily",
+    tag: "health",
+    tagColor: HABIT_GREEN,
+    section: "habit",
+    kind: "habit",
+  },
+  {
+    title: "run a half marathon",
+    day: "june",
+    tag: "health",
+    tagColor: GOAL_PURPLE,
+    section: "goal",
+    kind: "goal",
+  },
 ];
 
 function LandedMany({
   items,
   revealed,
 }: {
-  items: { title: string; day: string; tag: string; tagColor: string }[];
+  items: {
+    title: string;
+    day: string;
+    tag: string;
+    tagColor: string;
+    /** Which sidebar row this one lights up. */
+    section: keyof typeof NAV_COLOR;
+    /** Said on the row, because the whole point is that they differ. */
+    kind: string;
+  }[];
   /**
    * How many rows have actually landed. The rest stay as outlines.
    *
@@ -354,7 +384,12 @@ function LandedMany({
    */
   revealed: number;
 }) {
-  const accent = NAV_COLOR.task;
+  // Every destination something has landed in, so the sidebar shows the
+  // spread rather than a single lit row. "One bar, three places" was the
+  // copy; three rows in ONE place was the picture, and the picture was wrong.
+  const landedSections = new Set(
+    items.slice(0, revealed).map((i) => i.section),
+  );
   return (
     <div className="tutorial-in">
       {/* The sidebar is 92px of a 375px phone, and it was spending them on
@@ -364,7 +399,8 @@ function LandedMany({
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-[92px_minmax(0,1fr)]">
         <div className="hidden flex-col gap-[3px] rounded-lg border border-border bg-surface2 p-1.5 sm:flex">
           {NAV.map((n) => {
-            const here = n.section === "task";
+            const here = landedSections.has(n.section);
+            const accent = NAV_COLOR[n.section];
             return (
               <span
                 key={n.label}
@@ -392,17 +428,13 @@ function LandedMany({
           })}
         </div>
 
-        <div
-          className="flex flex-col gap-1.5 rounded-lg border p-1.5"
-          style={
-            {
-              borderColor: `color-mix(in oklch, ${accent} 45%, transparent)`,
-              background: `color-mix(in oklch, ${accent} 7%, transparent)`,
-            } as React.CSSProperties
-          }
-        >
+        {/* Neutral now that the rows land in different places. Tinting the
+            panel with one destination's colour would say they all went
+            there, which is the thing this scene exists to disprove. */}
+        <div className="flex flex-col gap-1.5 rounded-lg border border-border2 bg-surface2/40 p-1.5">
           {items.map((it, i) => {
             const landed = i < revealed;
+            const accent = NAV_COLOR[it.section];
             return (
               <Row
                 key={i}
@@ -432,6 +464,17 @@ function LandedMany({
                 {/* Day and tag are the two tokens the bar pulled out, shown as
                     the two chips they became. This is the "where it goes". */}
                 <span className="order-last flex shrink-0 items-center gap-1">
+                  <span
+                    className="rounded-[5px] px-[6px] py-px font-mono text-[11.5px] font-semibold"
+                    style={{
+                      color: landed ? accent : "var(--faint2)",
+                      background: landed
+                        ? `color-mix(in oklch, ${accent} 15%, transparent)`
+                        : "var(--surface2)",
+                    }}
+                  >
+                    {it.kind}
+                  </span>
                   <span className="rounded-[5px] bg-surface2 px-[6px] py-px font-mono text-[11.5px] text-faint">
                     {it.day}
                   </span>
@@ -1131,6 +1174,8 @@ export function SceneType({
               day: dayOf(captured ?? text) ?? "day",
               tag: (captured ?? text).match(/#([a-z0-9-]+)/i)?.[1] ?? "tag",
               tagColor: FINANCE_AMBER,
+              section: "task",
+              kind: "task",
             },
             ...CAPTURE_ECHOES,
           ]}

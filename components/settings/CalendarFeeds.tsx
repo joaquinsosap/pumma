@@ -24,24 +24,99 @@ import { cn } from "@/lib/utils";
  * behind a tap on a Tuesday.
  */
 
-/** Said once, where somebody is standing when they need it. */
-const WHERE_TO_FIND_IT: { app: string; steps: string }[] = [
+/**
+ * Where the link lives, as clicks rather than prose.
+ *
+ * This is the only genuinely hard part of the whole feature: the app can do
+ * nothing until somebody finds a URL buried four menus deep in a different
+ * product. So it is written as the path itself, in the order you click it,
+ * with no sentence that is not a step.
+ */
+const WHERE_TO_FIND_IT: {
+  app: string;
+  steps: string[];
+  note?: string;
+}[] = [
   {
     app: "Google Calendar",
-    steps:
-      "Settings, pick the calendar, then Integrate calendar. Use the Secret address in iCal format.",
+    steps: [
+      "calendar.google.com, on a computer",
+      "Hover your calendar, ⋮, Settings and sharing",
+      "Scroll to Integrate calendar",
+      "Copy Secret address in iCal format",
+    ],
+    note: "Secret, not Public. Public makes the whole calendar world-readable.",
   },
   {
     app: "Outlook and Office 365",
-    steps:
-      "Settings, Calendar, Shared calendars. Publish the calendar, choose Can view all details, and copy the ICS link.",
+    steps: [
+      "outlook.com, or outlook.office.com for work",
+      "Settings ⚙, Calendar, Shared calendars",
+      "Publish a calendar, pick it, Can view all details",
+      "Publish, then copy the ICS link",
+    ],
+    note: "Greyed out at work? Your admin has disabled publishing.",
   },
   {
     app: "Apple iCloud",
-    steps:
-      "In Calendar on the Mac, right-click the calendar, Share Calendar, tick Public Calendar, then copy the link.",
+    steps: [
+      "Calendar on a Mac",
+      "Right-click the calendar, Share Calendar",
+      "Tick Public Calendar, copy the link",
+    ],
   },
 ];
+
+/**
+ * The deep link behind a host named in a step.
+ *
+ * A step that says "calendar.google.com" and cannot be clicked is a step that
+ * asks somebody to retype a hostname into a different tab, which is the exact
+ * friction this panel exists to remove. Where the provider has a stable route
+ * to the page the step is actually talking about, the link goes THERE rather
+ * than to the front door; anything not listed falls back to the bare host.
+ */
+const DEEP_LINK: Record<string, string> = {
+  "calendar.google.com": "https://calendar.google.com/calendar/r/settings",
+  "outlook.com": "https://outlook.live.com/calendar/",
+  "outlook.office.com": "https://outlook.office.com/calendar/",
+};
+
+/** A hostname sitting inside a sentence, e.g. `outlook.office.com for work`. */
+const HOST = /\b(?:[a-z0-9-]+\.)+(?:com|app|dev|io)\b/g;
+
+/**
+ * A step with its hostnames turned into links, and nothing else touched.
+ *
+ * Deliberately a link and not a button: it goes to another site, so it should
+ * look like it goes to another site, and it should support the things links
+ * support (middle-click, copy address, open in a new tab). It opens in a new
+ * tab because losing this Settings page halfway through a four-step recipe
+ * would mean starting the recipe again.
+ */
+function Step({ text }: { text: string }) {
+  const out: React.ReactNode[] = [];
+  let last = 0;
+  for (const m of text.matchAll(HOST)) {
+    const host = m[0];
+    const at = m.index ?? 0;
+    if (at > last) out.push(text.slice(last, at));
+    out.push(
+      <a
+        key={`${host}-${at}`}
+        href={DEEP_LINK[host] ?? `https://${host}`}
+        target="_blank"
+        rel="noreferrer noopener"
+        className="font-mono text-[11.5px] text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
+      >
+        {host}
+      </a>,
+    );
+    last = at + host.length;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return <>{out}</>;
+}
 
 function relative(iso: string | null): string {
   if (!iso) return "never";
@@ -126,21 +201,43 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
         </button>
       </div>
 
+      {/* Reads as a question, not a link, and carries a ? so it is findable
+          by shape rather than by reading the row. */}
       <button
         type="button"
         onClick={() => setHelp((v) => !v)}
-        className="self-start font-mono text-[11px] text-faint underline-offset-2 hover:text-ink hover:underline"
+        className="flex w-fit items-center gap-1.5 rounded-lg border border-border bg-surface2 px-2.5 py-1.5 text-[12px] font-semibold text-muted transition-colors hover:border-faint hover:text-ink"
       >
-        {help ? "Hide" : "Where do I find that link?"}
+        <span className="flex h-4 w-4 items-center justify-center rounded-full border border-current font-mono text-[9px] font-bold">
+          ?
+        </span>
+        {help ? "Hide" : "Where do I get the link?"}
       </button>
       {help && (
-        <ul className="m-0 flex list-none flex-col gap-2 rounded-lg border border-border bg-surface2 p-3">
+        <ul className="m-0 flex list-none flex-col gap-3 rounded-lg border border-border bg-surface2 p-3">
           {WHERE_TO_FIND_IT.map((h) => (
             <li key={h.app}>
               <p className="m-0 text-[12.5px] font-bold text-ink">{h.app}</p>
-              <p className="m-0 mt-0.5 text-[12px] leading-relaxed text-muted">
-                {h.steps}
-              </p>
+              <ol className="m-0 mt-1 flex list-none flex-col gap-0.5 p-0">
+                {h.steps.map((step, i) => (
+                  <li
+                    key={step}
+                    className="flex items-baseline gap-2 text-[12px] leading-relaxed text-muted"
+                  >
+                    <span className="shrink-0 font-mono text-[10px] text-faint2">
+                      {i + 1}
+                    </span>
+                    <span>
+                      <Step text={step} />
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              {h.note && (
+                <p className="m-0 mt-1 font-mono text-[10.5px] leading-relaxed text-faint2">
+                  {h.note}
+                </p>
+              )}
             </li>
           ))}
           <li className="border-t border-border2 pt-2">
