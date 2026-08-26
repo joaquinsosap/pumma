@@ -52,8 +52,13 @@ function daysInMonthUtc(year: number, monthIndex: number): number {
 }
 
 /** One concrete instance of a meeting on a specific day. */
-export type MeetingOccurrence = {
-  item: AgendaItem;
+/**
+ * Generic over the item so the expander does not launder the caller's type.
+ * An agenda entry that knows it is mirrored from another calendar has to come
+ * out of here still knowing it, or every surface has to look that up again.
+ */
+export type MeetingOccurrence<T extends AgendaItem = AgendaItem> = {
+  item: T;
   /** YYYY-MM-DD this instance falls on. */
   date: string;
   /** True when it came from a repeat rule (vs. a one-off meeting). */
@@ -134,12 +139,12 @@ export function occurrenceDates(
 }
 
 /** All meeting occurrences in a date range, sorted by date then start time. */
-export function expandMeetings(
-  items: AgendaItem[],
+export function expandMeetings<T extends AgendaItem>(
+  items: T[],
   rangeStart: string,
   rangeEnd: string,
-): MeetingOccurrence[] {
-  const out: MeetingOccurrence[] = [];
+): MeetingOccurrence<T>[] {
+  const out: MeetingOccurrence<T>[] = [];
   for (const item of items) {
     if (item.kind !== "meeting") continue;
     for (const date of occurrenceDates(item, rangeStart, rangeEnd)) {
@@ -155,10 +160,10 @@ export function expandMeetings(
 }
 
 /** Occurrences on a single day (the common case for Agenda / a calendar cell). */
-export function meetingsOnDay(
-  items: AgendaItem[],
+export function meetingsOnDay<T extends AgendaItem>(
+  items: T[],
   day: string,
-): MeetingOccurrence[] {
+): MeetingOccurrence<T>[] {
   return expandMeetings(items, day, day);
 }
 

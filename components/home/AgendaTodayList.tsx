@@ -3,6 +3,8 @@ import { DeleteButton } from "@/components/ui/delete-button";
 
 import { useEffect, useMemo, useState } from "react";
 import type { AgendaItem } from "@/lib/schemas";
+import { isLinked, type AgendaEntry } from "@/lib/linked-agenda";
+import { Link2 } from "@/components/icons";
 import { formatTimeHM, parseTimeToMinutes } from "@/lib/date";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import {
@@ -87,7 +89,7 @@ function AgendaEventRow({
   nowLabel,
   onDelete,
 }: {
-  ev: AgendaItem;
+  ev: AgendaEntry;
   href: string;
   active: boolean;
   showNowLine?: boolean;
@@ -95,7 +97,13 @@ function AgendaEventRow({
   nowLabel: string;
   onDelete?: (id: string) => void;
 }) {
-  const deletable = onDelete && ev.kind === "meeting";
+  // A mirrored event has no delete: it is a reflection of something owned in
+  // another calendar, and deleting the reflection would either lie (it comes
+  // back next sync) or overreach (we do not write to their calendar). The
+  // chain takes the same spot so the row keeps its shape, and says where it
+  // came from on hover.
+  const linked = isLinked(ev);
+  const deletable = onDelete && ev.kind === "meeting" && !linked;
   return (
     <div className="group relative">
       <WidgetRowLink href={href}>
@@ -129,6 +137,15 @@ function AgendaEventRow({
           </div>
         </div>
       </WidgetRowLink>
+      {linked && (
+        <span
+          aria-hidden
+          title={`From ${ev.linkedTo}`}
+          className="absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center text-faint2"
+        >
+          <Link2 className="h-3.5 w-3.5" />
+        </span>
+      )}
       {deletable && (
         <DeleteButton
           onClick={() => onDelete(ev.id)}
@@ -153,7 +170,7 @@ function AgendaEventRow({
 }
 
 type Props = {
-  agenda: AgendaItem[];
+  agenda: AgendaEntry[];
   href: string;
   live?: boolean;
   onDeleteItem?: (id: string) => void;

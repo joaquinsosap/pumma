@@ -9,8 +9,24 @@ import {
   type ExternalEventDoc,
 } from "@/lib/schemas";
 
+/**
+ * The store, with these two collections guaranteed to exist.
+ *
+ * getStore() caches on globalThis and survives hot reload, so a store built
+ * before these collections were added outlives the code that added them and
+ * every read here is on undefined. Seeding them on the way past is cheaper
+ * than making everyone restart, and it is also what an older persisted store
+ * would need.
+ */
+function store() {
+  const s = getStore();
+  s.calendarFeeds ??= [];
+  s.externalEvents ??= [];
+  return s;
+}
+
 export async function listFeeds(userId: string): Promise<CalendarFeed[]> {
-  return getStore()
+  return store()
     .calendarFeeds.filter((f) => f.userId === userId)
     .map((f) => toDto(calendarFeedSchema.parse(f)));
 }
@@ -19,7 +35,7 @@ export async function getFeed(
   userId: string,
   id: string,
 ): Promise<CalendarFeed | null> {
-  const doc = getStore().calendarFeeds.find(
+  const doc = store().calendarFeeds.find(
     (f) => f._id === id && f.userId === userId,
   );
   return doc ? toDto(calendarFeedSchema.parse(doc)) : null;
@@ -29,7 +45,7 @@ export async function insertFeed(
   doc: Omit<CalendarFeedDoc, "_id"> & { _id?: string },
 ): Promise<CalendarFeed> {
   const full = calendarFeedSchema.parse({ ...doc, _id: doc._id ?? newId() });
-  getStore().calendarFeeds.push(full);
+  store().calendarFeeds.push(full);
   return toDto(full);
 }
 
@@ -38,31 +54,31 @@ export async function updateFeed(
   id: string,
   patch: Partial<Omit<CalendarFeedDoc, "_id" | "userId">>,
 ): Promise<CalendarFeed | null> {
-  const store = getStore();
-  const i = store.calendarFeeds.findIndex(
+  const st = store();
+  const i = st.calendarFeeds.findIndex(
     (f) => f._id === id && f.userId === userId,
   );
   if (i < 0) return null;
-  const next = calendarFeedSchema.parse({ ...store.calendarFeeds[i], ...patch });
-  store.calendarFeeds[i] = next;
+  const next = calendarFeedSchema.parse({ ...st.calendarFeeds[i], ...patch });
+  st.calendarFeeds[i] = next;
   return toDto(next);
 }
 
 export async function deleteFeed(userId: string, id: string): Promise<boolean> {
-  const store = getStore();
-  const before = store.calendarFeeds.length;
-  store.calendarFeeds = store.calendarFeeds.filter(
+  const st = store();
+  const before = st.calendarFeeds.length;
+  st.calendarFeeds = st.calendarFeeds.filter(
     (f) => !(f._id === id && f.userId === userId),
   );
   // The events go with it. They are a cache of that feed and nothing else.
-  store.externalEvents = store.externalEvents.filter((e) => e.feedId !== id);
-  return store.calendarFeeds.length < before;
+  st.externalEvents = st.externalEvents.filter((e) => e.feedId !== id);
+  return st.calendarFeeds.length < before;
 }
 
 export async function listExternalEvents(
   userId: string,
 ): Promise<ExternalEvent[]> {
-  return getStore()
+  return store()
     .externalEvents.filter((e) => e.userId === userId)
     .map((e) => toDto(externalEventSchema.parse(e)));
 }
@@ -81,12 +97,12 @@ export async function replaceFeedEvents(
     _id?: string;
   })[],
 ): Promise<number> {
-  const store = getStore();
-  store.externalEvents = store.externalEvents.filter(
+  const st = store();
+  st.externalEvents = st.externalEvents.filter(
     (e) => !(e.feedId === feedId && e.userId === userId),
   );
   for (const e of events) {
-    store.externalEvents.push(
+    st.externalEvents.push(
       externalEventSchema.parse({ ...e, _id: e._id ?? newId(), userId, feedId }),
     );
   }

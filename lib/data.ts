@@ -5,6 +5,11 @@ import { listGoals } from "@/lib/db/goals";
 import { listProjects } from "@/lib/db/projects";
 import { listTags } from "@/lib/db/tags";
 import { listAgenda } from "@/lib/db/agenda";
+import {
+  listExternalEvents,
+  listFeeds,
+} from "@/lib/db/calendar-feeds";
+import { externalToAgenda, type AgendaEntry } from "@/lib/linked-agenda";
 import { listNotes } from "@/lib/db/notes";
 import { getUser } from "@/lib/db/users";
 import { getSettings } from "@/lib/db/settings";
@@ -41,7 +46,9 @@ type CoreCollections = {
   allProjects: Awaited<ReturnType<typeof listProjects>>;
   tags: Awaited<ReturnType<typeof listTags>>;
   allNotes: Awaited<ReturnType<typeof listNotes>>;
-  allAgenda: Awaited<ReturnType<typeof listAgenda>>;
+  /** Your meetings AND the ones mirrored from subscribed calendars. */
+  allAgenda: AgendaEntry[];
+  calendarFeeds: Awaited<ReturnType<typeof listFeeds>>;
   user: Awaited<ReturnType<typeof getUser>>;
   settings: Awaited<ReturnType<typeof getSettings>>;
 };
@@ -67,7 +74,9 @@ const fetchCoreCollections = cache(
       allProjects,
       tags,
       allNotes,
-      allAgenda,
+      ownAgenda,
+      externalEvents,
+      calendarFeeds,
       user,
       settings,
     ] = await Promise.all([
@@ -79,9 +88,19 @@ const fetchCoreCollections = cache(
       listTags(userId),
       listNotes(userId),
       listAgenda(userId),
+      listExternalEvents(userId),
+      listFeeds(userId),
       getUser(userId),
       getSettings(userId),
     ]);
+
+    // Merged here rather than per page. Every surface that already knows how
+    // to draw a meeting then draws these too, without being told they exist,
+    // which is the whole point of mirroring them into the same shape.
+    const allAgenda: AgendaEntry[] = [
+      ...ownAgenda,
+      ...externalToAgenda(externalEvents, calendarFeeds),
+    ];
     return {
       allTasks,
       allHabits,
@@ -91,6 +110,7 @@ const fetchCoreCollections = cache(
       tags,
       allNotes,
       allAgenda,
+      calendarFeeds,
       user,
       settings,
     };
@@ -121,6 +141,7 @@ function shellFromCore(
     notes,
     user: core.user,
     settings: core.settings,
+    calendarFeeds: core.calendarFeeds,
     lifeView,
     timezone,
     counts: {

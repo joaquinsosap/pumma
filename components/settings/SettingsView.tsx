@@ -4,7 +4,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { useTheme } from "next-themes";
-import type { Settings, Tag } from "@/lib/schemas";
+import type { CalendarFeed, Settings, Tag } from "@/lib/schemas";
 import {
   PRIORITY_LABELS,
   STATUS_LABELS,
@@ -67,6 +67,7 @@ import { ReplayTutorialButton } from "@/components/settings/ReplayTutorialButton
 import type { DeleteAccountBlock } from "@/lib/actions/account";
 import type { StarterStatus } from "@/lib/actions/starter";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
+import { CalendarFeeds } from "@/components/settings/CalendarFeeds";
 import { cn } from "@/lib/utils";
 import {
   SettingsGroupBlock,
@@ -89,6 +90,8 @@ type Props = {
   tagCounts?: Record<string, number>;
   tags: Tag[];
   stats: { dayPct: number; habitsLabel: string; topStreak: number };
+  /** Subscribed calendars, managed here and nowhere else. */
+  calendarFeeds?: CalendarFeed[];
 };
 
 function SettingRow({
@@ -159,6 +162,7 @@ export function SettingsView({
   tags,
   tagCounts = {},
   stats,
+  calendarFeeds = [],
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -565,6 +569,18 @@ export function SettingsView({
             </SettingsGroupBlock>
 
             <SettingsGroupBlock id="workspace" label="Workspace">
+            {/* Full width: a list of subscriptions plus the "where do I find
+                the link" answer needs the room, and it is the one panel here
+                somebody arrives at with a task in hand. */}
+            <div className="mb-6">
+              <SettingsSection
+                title="Linked calendars"
+                description="Read events from Google, Outlook, Office 365, Apple or anything else that publishes an .ics link."
+              >
+                <CalendarFeeds feeds={calendarFeeds} />
+              </SettingsSection>
+            </div>
+
             {/* Explicit columns, not a packer. CSS columns balance by
                 height, so it kept putting Habits beside Life calendar and
                 Life areas underneath. These three have an arrangement that

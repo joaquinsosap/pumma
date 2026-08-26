@@ -38,6 +38,7 @@ export default async function SettingsPage() {
       starter={starter}
       tags={data.tags}
       tagCounts={tagCounts}
+      calendarFeeds={data.calendarFeeds}
       stats={{ dayPct: 0, habitsLabel: "—", topStreak: 0 }}
     />
   );

@@ -158,6 +158,11 @@ export function TagMenuProvider({
     (target: TagTarget) => {
       // A long press that turned into a drag isn't a request for the menu.
       if (dragActiveRef.current) return;
+      // Drop whatever the press already selected. `select-none` stops a
+      // selection STARTING on these rows, but a press that began a fraction
+      // outside one, or on a child that re-enables selection, can still leave
+      // a live range behind — and it survives the menu opening on top of it.
+      window.getSelection?.()?.removeAllRanges();
       dirtyRef.current = false;
       setMenu(target);
       setTagIds(target.tagIds);
@@ -316,8 +321,14 @@ export function TagMenuProvider({
       {children}
       {menu && pos && (
         <>
+          {/* The backdrop and the menu both refuse selection.
+              A long press is the browser's own "select a word" gesture, so by
+              the time our timer fires a selection may already be forming. It
+              then extends across whatever the finger passes over, which is
+              this menu, and picking an item turns into dragging over its
+              text. The row was already select-none; these two were not. */}
           <div
-            className="fixed inset-0 z-[100]"
+            className="fixed inset-0 z-[100] select-none [-webkit-touch-callout:none]"
             onClick={close}
             onContextMenu={(e) => {
               e.preventDefault();
@@ -326,7 +337,7 @@ export function TagMenuProvider({
           />
           <div
             ref={menuRef}
-            className="pumma-floating fixed z-[101] w-[200px] overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-lg"
+            className="pumma-floating fixed z-[101] w-[200px] select-none overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-lg [-webkit-touch-callout:none]"
             style={{ left: pos.left, top: pos.top }}
             onContextMenu={(e) => e.preventDefault()}
           >

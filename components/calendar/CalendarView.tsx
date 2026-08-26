@@ -1,5 +1,7 @@
 "use client";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { isLinked, type AgendaEntry } from "@/lib/linked-agenda";
+import { Link2 } from "@/components/icons";
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -32,7 +34,7 @@ const PRIO = CALENDAR_PRIO;
 
 type Props = {
   tasks: Task[];
-  agenda: AgendaItem[];
+  agenda: AgendaEntry[];
   habitEntries: HabitEntry[];
   tags: Tag[];
   stats: { dayPct: number; habitsLabel: string; topStreak: number };
@@ -381,8 +383,13 @@ export function CalendarView({
                   >
                     <button
                       type="button"
-                      onClick={() => setEditingMeeting(m)}
-                      className="flex w-full gap-2 text-left"
+                      // A mirrored event has nothing to edit: it belongs to
+                      // another calendar and PUMMA only reads it.
+                      onClick={() => !isLinked(m) && setEditingMeeting(m)}
+                      className={cn(
+                        "flex w-full gap-2 text-left",
+                        isLinked(m) && "cursor-default",
+                      )}
                     >
                       <span className="w-10 shrink-0 pt-px font-mono text-[11px] text-faint2">
                         {m.time}
@@ -408,12 +415,26 @@ export function CalendarView({
                         </div>
                       </div>
                     </button>
-                    <DeleteButton
-                      onClick={() => deleteMeeting(m.id, selected)}
-                      label={`Delete meeting ${m.title}`}
-                      revealOnHover
-                      className="absolute right-0 top-1/2 -translate-y-1/2"
-                    />
+                    {isLinked(m) ? (
+                      // The chain sits exactly where delete would, so the row
+                      // keeps its shape while saying this one is a mirror. Not
+                      // a button: the only way to remove it is to stop reading
+                      // the calendar it comes from, which lives in Settings.
+                      <span
+                        aria-hidden
+                        title={`From ${m.linkedTo}`}
+                        className="absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center text-faint2"
+                      >
+                        <Link2 className="h-3.5 w-3.5" />
+                      </span>
+                    ) : (
+                      <DeleteButton
+                        onClick={() => deleteMeeting(m.id, selected)}
+                        label={`Delete meeting ${m.title}`}
+                        revealOnHover
+                        className="absolute right-0 top-1/2 -translate-y-1/2"
+                      />
+                    )}
                   </div>
                 ))}
               </div>

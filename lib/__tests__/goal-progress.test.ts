@@ -5,6 +5,7 @@
 import { describe, expect, it } from "vitest";
 import { computeGoalProgress, habitStreakProgress } from "@/lib/goal-sync";
 import type { Habit, HabitEntry, Project, Task } from "@/lib/schemas";
+import { addDays, iso } from "@/lib/date";
 
 // Complete literals spread with overrides, matching the house style in
 // task-filters.test.ts: a partial cast keeps compiling until someone adds a
@@ -68,16 +69,23 @@ const habit = (
   }) as Habit;
 
 /** N consecutive days of entries ending today, so streakOf sees a live run. */
+// Dated with the app's own helper, not toISOString().
+//
+// toISOString() is the UTC date. The code under test counts streaks from
+// iso(), which is the user's date. Those disagree for the hours between one
+// midnight and the other, so a helper built on UTC seeded a "tomorrow" entry
+// that the streak correctly refused to count, and the suite failed every
+// evening from 21:00 in a UTC-3 zone. The test was wrong, not the streak.
 const run = (habitId: string, days: number): HabitEntry[] =>
-  Array.from({ length: days }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    return {
-      id: `${habitId}-${i}`,
-      habitId,
-      date: d.toISOString().slice(0, 10),
-    } as HabitEntry;
-  });
+  Array.from(
+    { length: days },
+    (_, i) =>
+      ({
+        id: `${habitId}-${i}`,
+        habitId,
+        date: iso(addDays(-i)),
+      }) as HabitEntry,
+  );
 
 describe("computeGoalProgress", () => {
   it("is null with nothing linked — no links means no number, not zero", () => {
