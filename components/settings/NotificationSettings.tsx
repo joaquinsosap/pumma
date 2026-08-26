@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Bell, BellOff, Trash2 } from "@/components/icons";
+import { Bell, BellOff, Check, Trash2 } from "@/components/icons";
 import { Switch } from "@/components/ui/switch";
 import { LEAD_CHOICES } from "@/lib/notifications";
 import {
@@ -127,6 +127,47 @@ export function NotificationSettings({
     });
   };
 
+  /**
+   * Subscribe this browser to push, so reminders arrive with PUMMA closed.
+   *
+   * Separate from permission on purpose. Permission alone already buys the
+   * useful middle tier — banners while a tab is open behind something else —
+   * and it works with no VAPID keys, no subscription and no server push. Push
+   * is the extra step that survives closing the app, and it should not be a
+   * precondition for the thing that needs none of it.
+   */
+  const subscribeHere = async () => {
+    if (!pushPublicKey) return false;
+    const reg = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      // Required by every browser: a push must always be visible to the user.
+      // Silent background pushes are not on offer, which is fine — everything
+      // here is meant to be seen.
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToBuffer(pushPublicKey),
+    });
+    const res = await fetch("/api/notifications/subscribe", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ ...sub.toJSON(), label: labelForDevice() }),
+    });
+    if (!res.ok) throw new Error("register failed");
+    setSubscribedHere(true);
+    loadDevices();
+    return true;
+  };
+
+  /**
+   * One press, best available outcome.
+   *
+   * Asks for permission, and then goes as far as this server can: with push
+   * configured it also subscribes, and without it stops at permission, which
+   * still leaves reminders working in every case except the app being fully
+   * closed. Previously this button was DISABLED whenever push was
+   * unconfigured, which withheld the tier that needed nothing from the server
+   * at all.
+   */
   const enableHere = async () => {
     setBusy(true);
     try {
@@ -136,24 +177,20 @@ export function NotificationSettings({
         toast.error("Notifications were blocked for this site");
         return;
       }
-      const reg = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        // Required by every browser: a push must always be visible to the
-        // user. Silent background pushes are not on offer, which is fine —
-        // everything here is meant to be seen.
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToBuffer(pushPublicKey),
-      });
-      const res = await fetch("/api/notifications/subscribe", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...sub.toJSON(), label: labelForDevice() }),
-      });
-      if (!res.ok) throw new Error("register failed");
-      setSubscribedHere(true);
-      loadDevices();
-      toast.success("This device will get reminders");
+      let pushed = false;
+      try {
+        pushed = await subscribeHere();
+      } catch {
+        // Permission is granted either way, so the middle tier is live even
+        // when the push half fails. Saying "could not enable" here would be
+        // a lie about something that just started working.
+        pushed = false;
+      }
+      toast.success(
+        pushed
+          ? "Reminders on, even with PUMMA closed"
+          : "Reminders on while PUMMA is open",
+      );
     } catch {
       toast.error("Could not enable notifications here");
     } finally {
@@ -273,40 +310,63 @@ export function NotificationSettings({
           </p>
         ) : (
           <div className="flex flex-col gap-2">
-            <p className="m-0 text-[12px] leading-relaxed text-muted">
-              {subscribedHere
-                ? "Reminders reach you here even with PUMMA closed."
-                : "Turn this on to get reminders when PUMMA is closed. Without it they wait in the bell."}
-            </p>
+            {/* Says which of the three tiers is actually live, rather than
+                one sentence that is only true in some configurations. */}
+            <Reach
+              granted={permission === "granted"}
+              subscribed={subscribedHere}
+            />
             {permission === "denied" ? (
               <p className="m-0 font-mono text-[10.5px] leading-relaxed text-faint2">
                 Blocked for this site. Your browser has to unblock it: click
                 the padlock beside the address, then allow notifications.
               </p>
-            ) : (
+            ) : permission !== "granted" ? (
               <button
                 type="button"
-                disabled={busy || !pushPublicKey}
-                onClick={() => void (subscribedHere ? disableHere() : enableHere())}
-                className={cn(
-                  "flex w-fit items-center gap-1.5 rounded-lg border px-3 py-2 text-[12.5px] font-semibold transition-colors disabled:opacity-50",
-                  subscribedHere
-                    ? "border-border bg-surface text-muted hover:border-faint hover:text-ink"
-                    : "border-ink bg-ink text-background hover:bg-ink/90",
-                )}
+                // No longer gated on pushPublicKey. Permission alone earns
+                // banners while a tab is open behind something else, and that
+                // needs nothing from the server.
+                disabled={busy}
+                onClick={() => void enableHere()}
+                className="flex w-fit items-center gap-1.5 rounded-lg border border-ink bg-ink px-3 py-2 text-[12.5px] font-semibold text-background transition-colors hover:bg-ink/90 disabled:opacity-50"
               >
-                {subscribedHere ? (
-                  <BellOff className="h-3.5 w-3.5" />
-                ) : (
-                  <Bell className="h-3.5 w-3.5" />
-                )}
-                {subscribedHere ? "Turn off here" : "Enable on this device"}
+                <Bell className="h-3.5 w-3.5" />
+                Allow notifications here
               </button>
-            )}
-            {!pushPublicKey && (
+            ) : subscribedHere ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void disableHere()}
+                className="flex w-fit items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-[12.5px] font-semibold text-muted transition-colors hover:border-faint hover:text-ink disabled:opacity-50"
+              >
+                <BellOff className="h-3.5 w-3.5" />
+                Stop when PUMMA is closed
+              </button>
+            ) : pushPublicKey ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setBusy(true);
+                  void subscribeHere()
+                    .then((ok) => {
+                      if (ok) toast.success("Also when PUMMA is closed");
+                    })
+                    .catch(() => toast.error("Could not turn that on"))
+                    .finally(() => setBusy(false));
+                }}
+                className="flex w-fit items-center gap-1.5 rounded-lg border border-ink bg-ink px-3 py-2 text-[12.5px] font-semibold text-background transition-colors hover:bg-ink/90 disabled:opacity-50"
+              >
+                <Bell className="h-3.5 w-3.5" />
+                Also when PUMMA is closed
+              </button>
+            ) : null}
+            {!pushPublicKey && permission === "granted" && (
               <p className="m-0 font-mono text-[10.5px] leading-relaxed text-faint2">
-                Push is not configured on this server, so reminders stay in the
-                bell.
+                Delivery with PUMMA fully closed is not configured on this
+                server, so that last step is unavailable here.
               </p>
             )}
             {iosNeedsInstall && (
@@ -354,6 +414,51 @@ export function NotificationSettings({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * How far reminders currently reach on this device.
+ *
+ * Three tiers, and the honest answer is different in each. One sentence
+ * covering all of them ended up being wrong in two.
+ */
+function Reach({
+  granted,
+  subscribed,
+}: {
+  granted: boolean;
+  subscribed: boolean;
+}) {
+  const lines: [string, boolean][] = [
+    ["While you are looking at PUMMA", true],
+    ["While a PUMMA tab is open behind something else", granted],
+    ["With PUMMA closed", subscribed],
+  ];
+  return (
+    <ul className="m-0 flex list-none flex-col gap-1 p-0">
+      {lines.map(([label, on]) => (
+        <li
+          key={label}
+          className="flex items-center gap-2 text-[12px] leading-relaxed"
+        >
+          {on ? (
+            <Check
+              className="h-3.5 w-3.5 shrink-0 text-habits"
+              strokeWidth={2.5}
+            />
+          ) : (
+            <span
+              aria-hidden
+              className="h-3.5 w-3.5 shrink-0 text-center font-mono text-[11px] leading-[14px] text-faint2"
+            >
+              ·
+            </span>
+          )}
+          <span className={on ? "text-ink" : "text-faint2"}>{label}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 

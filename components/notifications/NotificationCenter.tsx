@@ -23,9 +23,10 @@ import {
   markNotificationReadAction,
 } from "@/lib/actions/notifications";
 import { NotificationSheet } from "@/components/notifications/NotificationSheet";
+import { showLocalNotification } from "@/lib/notify-local";
 import { cn } from "@/lib/utils";
 
-/** How often the tray refreshes itself while the tab is open and visible. */
+/** How often the tray refreshes itself while a tab is open. */
 const POLL_MS = 60_000;
 
 const KIND_DOT: Record<string, string> = {
@@ -65,17 +66,29 @@ export function NotificationCenter() {
     if (!res.ok || !res.data) return;
     const next = res.data.items;
 
-    // Anything unread we have not seen before is a candidate for the pill —
-    // except on the very first load, where every unread item would be "new"
-    // and opening the app would fire a pill about something from yesterday.
+    // Anything unread we have not seen before is new — except on the very
+    // first load, where every unread item would qualify and opening the app
+    // would announce something from yesterday.
     if (!first.current) {
-      const fresh = next.find(
+      const fresh = next.filter(
         (n) =>
           n.status === "sent" &&
           !known.current.has(n.id) &&
           !dismissed.current.has(n.id),
       );
-      if (fresh) setPillId(fresh.id);
+      if (fresh.length) {
+        if (document.visibilityState === "visible") {
+          // Somebody is looking at the page. The pill is enough, and an OS
+          // banner for a thing already on screen is just noise.
+          setPillId(fresh[0].id);
+        } else {
+          // The tab is open but nobody is looking at it — another tab, a
+          // minimised window, a different app in front. This is the case an
+          // in-app pill cannot serve and push should not have to: the page
+          // is still running, so it raises the banner itself.
+          for (const n of fresh) void showLocalNotification(n);
+        }
+      }
     }
     first.current = false;
     for (const n of next) known.current.add(n.id);
@@ -84,16 +97,23 @@ export function NotificationCenter() {
 
   useEffect(() => {
     void load();
-    const tick = () => {
-      // Never while hidden: a tab left open for a week must not poll for a
-      // week, and nothing it found could be seen anyway.
+    // Polls while hidden too, which is the opposite of what the calendar
+    // sync does — and deliberately so. A hidden tab finding a stale calendar
+    // is work nobody can see, but a hidden tab finding a due reminder is
+    // exactly when the OS banner is the only thing that can reach somebody.
+    // Browsers throttle background timers to about once a minute, which is
+    // this interval anyway, so the cost of leaving it running is a request a
+    // minute from a tab that is already open.
+    const timer = window.setInterval(() => void load(), POLL_MS);
+    // Coming back to the tab is worth an immediate check rather than waiting
+    // out the rest of the interval.
+    const onVisible = () => {
       if (document.visibilityState === "visible") void load();
     };
-    const timer = window.setInterval(tick, POLL_MS);
-    document.addEventListener("visibilitychange", tick);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", tick);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [load]);
 
