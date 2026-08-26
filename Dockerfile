@@ -10,7 +10,12 @@ RUN apk add --no-cache libc6-compat
 # --- Install dependencies (cached on lockfile) ---
 FROM base AS deps
 WORKDIR /app
-COPY package.json package-lock.json ./
+# .npmrc travels with the lockfile and is not optional. It carries
+# legacy-peer-deps, without which `npm ci` fails outright on better-auth's
+# optional @sveltejs/kit peer (see the file for why). Leave it out and this
+# stage dies before compiling anything, with an error about a framework the
+# project does not use.
+COPY package.json package-lock.json .npmrc ./
 RUN npm ci
 
 # --- Build the app ---
