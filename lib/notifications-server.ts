@@ -7,6 +7,7 @@ import { getSettings } from "@/lib/db/settings";
 import {
   deleteNotifications,
   dueNotifications,
+  pruneNotifications,
   markNotification,
   scheduledIds,
   upsertNotification,
@@ -16,6 +17,8 @@ import { normalizeTimezone } from "@/lib/timezone";
 import { addDaysToIsoDate, isoDateInTz } from "@/lib/timezone";
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
+  HISTORY_KEEP,
+  HISTORY_MAX_AGE_DAYS,
   HORIZON_DAYS,
   STALE_AFTER_MS,
   planNotifications,
@@ -112,6 +115,17 @@ export async function materializeFor(
   const keep = new Set(planned.map((p) => p.id));
   const stale = (await scheduledIds(userId)).filter((id) => !keep.has(id));
   await deleteNotifications(stale);
+
+  // History is trimmed on the same pass. Doing it here rather than on a
+  // schedule of its own means it happens whenever anything else does, and a
+  // tray that is never opened never accumulates in the first place.
+  await pruneNotifications(
+    userId,
+    HISTORY_KEEP,
+    new Date(
+      now.getTime() - HISTORY_MAX_AGE_DAYS * 24 * 60 * 60 * 1000,
+    ).toISOString(),
+  );
 
   return planned.length;
 }

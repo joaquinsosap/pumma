@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
+  HISTORY_KEEP,
+  HISTORY_MAX_AGE_DAYS,
   leadPhrase,
   notificationId,
   planNotifications,
@@ -249,5 +251,20 @@ describe("leadPhrase", () => {
     expect(leadPhrase(10)).toBe("in 10 min");
     expect(leadPhrase(60)).toBe("in 1h");
     expect(leadPhrase(90)).toBe("in 1h 30m");
+  });
+});
+
+describe("history retention", () => {
+  it("keeps a handful, not an archive", () => {
+    // The tray answers "what did I miss", which is about the last few things.
+    // If this number ever grows a lot, the divider and the delete button stop
+    // being enough to keep the list readable.
+    expect(HISTORY_KEEP).toBeLessThanOrEqual(10);
+    expect(HISTORY_KEEP).toBeGreaterThan(0);
+  });
+
+  it("also bounds by age, for the account with one reminder a week", () => {
+    expect(HISTORY_MAX_AGE_DAYS).toBeGreaterThan(0);
+    expect(HISTORY_MAX_AGE_DAYS).toBeLessThanOrEqual(30);
   });
 });

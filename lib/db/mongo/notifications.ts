@@ -132,6 +132,45 @@ export async function scheduledIds(userId: string): Promise<string[]> {
   return docs.map((d) => d._id);
 }
 
+export async function deleteNotification(
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  const res = await (await coll()).deleteOne({ _id: id, userId });
+  return res.deletedCount > 0;
+}
+
+/**
+ * Drop delivered history past the keep count or the age limit.
+ *
+ * Two deletes rather than one clever query: the age rule is expressible as a
+ * filter, the keep rule needs the rows ranked first. Both are indexed on
+ * (userId, fireAt) and run on a handful of rows.
+ */
+export async function pruneNotifications(
+  userId: string,
+  keep: number,
+  cutoffIso: string,
+): Promise<number> {
+  const c = await coll();
+  const byAge = await c.deleteMany({
+    userId,
+    status: { $ne: "scheduled" },
+    fireAt: { $lt: cutoffIso },
+  });
+
+  const survivors = await c
+    .find(
+      { userId, status: { $ne: "scheduled" } },
+      { projection: { _id: 1 }, sort: { fireAt: -1 } },
+    )
+    .toArray();
+  const doomed = survivors.slice(keep).map((d) => d._id);
+  if (!doomed.length) return byAge.deletedCount;
+  const byCount = await c.deleteMany({ _id: { $in: doomed } });
+  return byAge.deletedCount + byCount.deletedCount;
+}
+
 export async function deleteNotifications(ids: string[]): Promise<void> {
   if (!ids.length) return;
   await (await coll()).deleteMany({ _id: { $in: ids } });

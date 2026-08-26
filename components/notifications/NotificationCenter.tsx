@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   useCallback,
   useEffect,
   useMemo,
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui/popover";
 import type { AppNotification } from "@/lib/schemas";
 import {
+  deleteNotificationAction,
   loadNotificationsAction,
   markAllNotificationsReadAction,
   markNotificationReadAction,
@@ -161,7 +163,9 @@ export function NotificationCenter() {
         <PopoverTrigger asChild>
           <button
             type="button"
-            aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+            aria-label={
+              unread ? `Notifications, ${unread} unread` : "Notifications"
+            }
             className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-surface2 text-faint transition-colors hover:border-faint hover:text-ink"
           >
             <Bell className="h-3.5 w-3.5" />
@@ -205,45 +209,88 @@ export function NotificationCenter() {
             </p>
           ) : (
             <div className="flex flex-col p-1.5">
-              {items.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => openOne(n)}
-                  className={cn(
-                    "flex w-full items-start gap-2 rounded-md px-2 py-2 text-left transition-colors hover:bg-hover",
-                    n.status === "sent" ? "text-ink" : "text-muted",
-                  )}
-                >
-                  <span
-                    aria-hidden
-                    className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
-                    style={{
-                      background: KIND_DOT[n.kind] ?? "var(--faint2)",
-                      // Read ones keep the dot, drained. The colour is what
-                      // says "meeting" or "task" at a glance; losing it
-                      // entirely would make the read half of the tray
-                      // unreadable in a different sense.
-                      opacity: n.status === "sent" ? 1 : 0.35,
-                    }}
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span
+              {items.map((n, i) => (
+                <Fragment key={n.id}>
+                  {/* The line between what you have not seen and what you
+                      have. Only where the two actually meet, and only when
+                      there is something on both sides — a rule above the
+                      first row, or below the last, divides nothing. */}
+                  {i > 0 &&
+                    items[i - 1].status === "sent" &&
+                    n.status !== "sent" && (
+                      <div
+                        aria-hidden
+                        className="my-1 flex items-center gap-2 px-2"
+                      >
+                        <span className="h-px flex-1 border-t border-dashed border-border" />
+                        <span className="font-mono text-[9px] uppercase tracking-widest text-faint2">
+                          earlier
+                        </span>
+                        <span className="h-px flex-1 border-t border-dashed border-border" />
+                      </div>
+                    )}
+                  <div className="group/row relative">
+                    <button
+                      type="button"
+                      onClick={() => openOne(n)}
                       className={cn(
-                        "block truncate text-[12.5px]",
-                        n.status === "sent" && "font-semibold",
+                        "flex w-full items-start gap-2 rounded-md px-2 py-2 pr-7 text-left transition-colors hover:bg-hover",
+                        n.status === "sent" ? "text-ink" : "text-muted",
                       )}
                     >
-                      {n.title}
-                    </span>
-                    <span className="block truncate font-mono text-[10px] text-faint2">
-                      {n.body}
-                    </span>
-                  </span>
-                  {n.joinUrl && (
-                    <Link2 className="mt-1 h-3 w-3 shrink-0 text-faint2" />
-                  )}
-                </button>
+                      <span
+                        aria-hidden
+                        className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
+                        style={{
+                          background: KIND_DOT[n.kind] ?? "var(--faint2)",
+                          // Read ones keep the dot, drained. The colour is what
+                          // says "meeting" or "task" at a glance; losing it
+                          // entirely would make the read half of the tray
+                          // unreadable in a different sense.
+                          opacity: n.status === "sent" ? 1 : 0.35,
+                        }}
+                      />
+                      <span className="min-w-0 flex-1">
+                        <span
+                          className={cn(
+                            "block truncate text-[12.5px]",
+                            n.status === "sent" && "font-semibold",
+                          )}
+                        >
+                          {n.title}
+                        </span>
+                        <span className="block truncate font-mono text-[10px] text-faint2">
+                          {n.body}
+                        </span>
+                      </span>
+                      {n.joinUrl && (
+                        <Link2 className="mt-1 h-3 w-3 shrink-0 text-faint2" />
+                      )}
+                    </button>
+                    {/* Outside the row button, because a button inside a button
+                    is not a button. Revealed on hover like every other
+                    delete in the app. */}
+                    <button
+                      type="button"
+                      aria-label={`Delete notification ${n.title}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setItems((cur) => cur.filter((x) => x.id !== n.id));
+                        dismissed.current.add(n.id);
+                        if (pillId === n.id) setPillId(null);
+                        startTransition(async () => {
+                          const res = await deleteNotificationAction(n.id);
+                          // Put it back rather than lie: the row is gone from the
+                          // screen but still in the database.
+                          if (!res.ok) void load();
+                        });
+                      }}
+                      className="absolute right-1 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-faint2 opacity-0 transition-opacity hover:text-tasks focus-visible:opacity-100 group-hover/row:opacity-100"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </Fragment>
               ))}
             </div>
           )}

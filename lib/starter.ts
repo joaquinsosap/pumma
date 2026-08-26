@@ -51,7 +51,13 @@ export type StarterEntry = {
   hash: string;
 };
 
-export type StarterKind = "task" | "note" | "habit" | "goal" | "project";
+export type StarterKind =
+  | "task"
+  | "note"
+  | "habit"
+  | "goal"
+  | "project"
+  | "agenda";
 
 /**
  * The authored fields, per kind. Anything not listed here is either mechanical
@@ -66,6 +72,11 @@ const AUTHORED: Record<StarterKind, string[]> = {
   // habits and projects underneath it, so it moves on its own.
   goal: ["title", "category", "targetDate", "tagIds"],
   project: ["title", "description", "tagIds"],
+  // A meeting is authored the same way: somebody chose the words and the
+  // moment. `recurrence` is left out because editing a repeat rule rewrites
+  // the row's exceptions as a side effect, which is bookkeeping rather than
+  // a change to the meeting itself.
+  agenda: ["title", "time", "date", "durationMins"],
 };
 
 /**

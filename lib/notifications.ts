@@ -29,6 +29,25 @@ export const HORIZON_DAYS = 2;
  */
 export const STALE_AFTER_MS = 30 * 60 * 1000;
 
+/**
+ * How much delivered history to keep.
+ *
+ * A notification tray is not an archive. Its whole job is "what did I miss
+ * while I was away", and that question is about the last few things, not the
+ * last few hundred — a list nobody can reach the bottom of stops being read
+ * at all. Anything past this is dropped on the next pass, so the tray stays
+ * something you can take in at a glance and clearing it by hand is a choice
+ * rather than a chore.
+ */
+export const HISTORY_KEEP = 5;
+
+/**
+ * And an upper bound in time, for the account that gets one reminder a week.
+ * Five rows could otherwise sit there for a month, and a notification about a
+ * meeting from three weeks ago is not history, it is litter.
+ */
+export const HISTORY_MAX_AGE_DAYS = 7;
+
 /** The lead times offered in Settings. Minutes before the event. */
 export const LEAD_CHOICES = [0, 5, 10, 15, 30, 60] as const;
 

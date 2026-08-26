@@ -14,6 +14,8 @@ export const markAllRead = impl.markAllRead;
 export const deleteScheduledFor = impl.deleteScheduledFor;
 export const scheduledIds = impl.scheduledIds;
 export const deleteNotifications = impl.deleteNotifications;
+export const deleteNotification = impl.deleteNotification;
+export const pruneNotifications = impl.pruneNotifications;
 
 export const listPushSubscriptions = cache(impl.listPushSubscriptions);
 export const upsertPushSubscription = impl.upsertPushSubscription;

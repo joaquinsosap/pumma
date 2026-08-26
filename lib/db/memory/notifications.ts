@@ -120,6 +120,44 @@ export async function scheduledIds(userId: string): Promise<string[]> {
     .map((n) => n._id);
 }
 
+/** One row, thrown away by hand. Scoped to its owner. */
+export async function deleteNotification(
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  const s = store();
+  const before = s.notifications.length;
+  s.notifications = s.notifications.filter(
+    (n) => !(n._id === id && n.userId === userId),
+  );
+  return s.notifications.length < before;
+}
+
+/**
+ * Drop delivered history past the keep count or the age limit.
+ *
+ * Only DELIVERED rows. Scheduled ones are the future and are managed by the
+ * planner, which would simply recreate anything pruned here.
+ */
+export async function pruneNotifications(
+  userId: string,
+  keep: number,
+  cutoffIso: string,
+): Promise<number> {
+  const s = store();
+  const delivered = s.notifications
+    .filter((n) => n.userId === userId && n.status !== "scheduled")
+    .sort((a, b) => (a.fireAt < b.fireAt ? 1 : -1));
+  const doomed = new Set(
+    delivered
+      .filter((n, i) => i >= keep || n.fireAt < cutoffIso)
+      .map((n) => n._id),
+  );
+  if (!doomed.size) return 0;
+  s.notifications = s.notifications.filter((n) => !doomed.has(n._id));
+  return doomed.size;
+}
+
 export async function deleteNotifications(ids: string[]): Promise<void> {
   if (!ids.length) return;
   const drop = new Set(ids);

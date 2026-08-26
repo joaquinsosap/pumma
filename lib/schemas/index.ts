@@ -110,7 +110,7 @@ export const settingsSchema = z.object({
   starterManifest: z
     .array(
       z.object({
-        kind: z.enum(["task", "note", "habit", "goal", "project"]),
+        kind: z.enum(["task", "note", "habit", "goal", "project", "agenda"]),
         id: z.string(),
         hash: z.string(),
       }),

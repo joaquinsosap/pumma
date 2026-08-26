@@ -6,6 +6,7 @@ import type { ActionResult } from "@/lib/types";
 import type { AppNotification } from "@/lib/schemas";
 import { requireUserId } from "@/lib/auth/session";
 import {
+  deleteNotification,
   deletePushSubscription,
   getNotification,
   listNotifications,
@@ -48,6 +49,23 @@ export async function markNotificationReadAction(
     status: "read",
     readAt: new Date().toISOString(),
   });
+  return { ok: true };
+}
+
+/**
+ * Throw one away.
+ *
+ * Deleting a DELIVERED notification is final in the sense that matters: the
+ * planner only ever recreates scheduled rows, so nothing brings this back.
+ */
+export async function deleteNotificationAction(
+  id: string,
+): Promise<ActionResult> {
+  const parsed = z.string().max(200).safeParse(id);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const userId = await requireUserId();
+  const gone = await deleteNotification(userId, parsed.data);
+  if (!gone) return { ok: false, error: "Not found" };
   return { ok: true };
 }
 

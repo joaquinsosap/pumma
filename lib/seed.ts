@@ -593,6 +593,76 @@ export function createSeedData(userId: string): SeedData {
     },
   ];
 
+  /**
+   * A tray that is not empty on the first look.
+   *
+   * An empty notification list teaches nothing: you cannot tell whether the
+   * feature works, what a notification looks like, or that the rows can be
+   * opened and thrown away. These are built from the two seeded meetings
+   * above, so opening one lands on a meeting that genuinely exists rather
+   * than a dead link.
+   *
+   * Deliberately in the past and already delivered. A seeded row with a
+   * future fireAt would be a scheduled notification the planner does not know
+   * about, and it would fire a banner at somebody who never asked for one.
+   */
+  const notifyAt = (minutesAgo: number) =>
+    new Date(Date.now() - minutesAgo * 60_000).toISOString();
+
+  const notifications: NotificationDoc[] = [
+    {
+      _id: `${userId}:meeting:${agenda[1]._id}:${td}:10`,
+      userId,
+      kind: "meeting",
+      entityId: agenda[1]._id,
+      entityDate: td,
+      leadMins: 10,
+      fireAt: notifyAt(25),
+      status: "sent",
+      title: agenda[1].title,
+      body: `${agenda[1].time} · in 10 min`,
+      url: `/calendar?day=${td}`,
+      joinUrl: "",
+      sentAt: notifyAt(25),
+      readAt: null,
+      createdAt: notifyAt(40),
+    },
+    {
+      _id: `${userId}:meeting:${agenda[0]._id}:${td}:10`,
+      userId,
+      kind: "meeting",
+      entityId: agenda[0]._id,
+      entityDate: td,
+      leadMins: 10,
+      fireAt: notifyAt(200),
+      status: "read",
+      title: agenda[0].title,
+      body: `${agenda[0].time} · in 10 min`,
+      url: `/calendar?day=${td}`,
+      joinUrl: "",
+      sentAt: notifyAt(200),
+      readAt: notifyAt(195),
+      createdAt: notifyAt(220),
+    },
+    {
+      _id: `${userId}:digest::${td}:0`,
+      userId,
+      kind: "digest",
+      entityId: "",
+      entityDate: td,
+      leadMins: 0,
+      fireAt: notifyAt(400),
+      status: "read",
+      title: "3 tasks today",
+      body: "Your day, in one line.",
+      url: "/tasks?tab=today",
+      joinUrl: "",
+      sentAt: notifyAt(400),
+      readAt: notifyAt(390),
+      createdAt: notifyAt(410),
+    },
+  ];
+
   const user: UserDoc = {
     _id: userId,
     name: "Ignis",
@@ -674,7 +744,7 @@ export function createSeedData(userId: string): SeedData {
     lifeWeeks: [],
     calendarFeeds: [],
     externalEvents: [],
-    notifications: [],
+    notifications,
     pushSubscriptions: [],
   };
 }

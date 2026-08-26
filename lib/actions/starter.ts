@@ -9,6 +9,7 @@ import { listNotes, deleteNote } from "@/lib/db/notes";
 import { listHabits, deleteHabit } from "@/lib/db/habits";
 import { listGoals, deleteGoal } from "@/lib/db/goals";
 import { listProjects, deleteProject } from "@/lib/db/projects";
+import { listAgenda, deleteAgendaItem } from "@/lib/db/agenda";
 import { partitionStarters, type StarterKind } from "@/lib/starter";
 
 export type StarterStatus = {
@@ -66,10 +67,18 @@ export async function clearStarterContent(): Promise<
   // Children before parents: a task belongs to a project, and a habit points
   // at a goal. Removing the container first would orphan whatever is inside
   // it if a later delete failed.
-  const order: StarterKind[] = ["task", "note", "habit", "goal", "project"];
+  const order: StarterKind[] = [
+    "task",
+    "note",
+    "agenda",
+    "habit",
+    "goal",
+    "project",
+  ];
   const remove = {
     task: deleteTask,
     note: deleteNote,
+    agenda: deleteAgendaItem,
     habit: deleteHabit,
     goal: deleteGoal,
     project: deleteProject,
@@ -98,12 +107,13 @@ export async function clearStarterContent(): Promise<
 async function currentDocs(
   userId: string,
 ): Promise<Map<string, Record<string, unknown>>> {
-  const [tasks, notes, habits, goals, projects] = await Promise.all([
+  const [tasks, notes, habits, goals, projects, agenda] = await Promise.all([
     listTasks(userId),
     listNotes(userId),
     listHabits(userId),
     listGoals(userId),
     listProjects(userId),
+    listAgenda(userId),
   ]);
 
   const map = new Map<string, Record<string, unknown>>();
@@ -117,5 +127,6 @@ async function currentDocs(
   add("habit", habits);
   add("goal", goals);
   add("project", projects);
+  add("agenda", agenda);
   return map;
 }

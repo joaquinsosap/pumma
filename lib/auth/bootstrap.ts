@@ -12,6 +12,8 @@ import { insertProject } from "@/lib/db/projects";
 import { buildStarterContent } from "@/lib/starter-content";
 import { starterHash, type StarterEntry } from "@/lib/starter";
 import { createSeedData } from "@/lib/seed";
+import { insertAgendaItem } from "@/lib/db/agenda";
+import { upsertNotification } from "@/lib/db/notifications";
 import { LIFE_SPAN_DEFAULT } from "@/lib/life-constants";
 import { iso } from "@/lib/date";
 
@@ -161,6 +163,22 @@ async function plantSampleData(userId: string): Promise<StarterEntry[]> {
   for (const doc of seed.notes) {
     await insertNote(doc);
     record("note", doc);
+  }
+  for (const doc of seed.agenda) {
+    await insertAgendaItem(doc);
+    record("agenda", doc);
+  }
+  // Notifications are planted but NOT recorded. The manifest exists to offer
+  // "remove the starter content you have not made your own", which is a
+  // question about authored things — nobody writes a notification, and these
+  // expire on their own within days anyway. Tracking them would mean asking
+  // whether somebody had edited a record that is not editable.
+  //
+  // They are here at all so the bell is not empty on a first look: an empty
+  // tray teaches nothing about what a notification is or that rows can be
+  // opened and thrown away.
+  for (const doc of seed.notifications) {
+    await upsertNotification(doc);
   }
   return manifest;
 }
