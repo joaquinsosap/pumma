@@ -8,7 +8,7 @@ import { nextCookies } from "better-auth/next-js";
 import { jwt } from "better-auth/plugins";
 import { mcp } from "@better-auth/mcp";
 import { cimd } from "@better-auth/cimd";
-import { fetchClientMetadataResource } from "@better-auth/cimd/node";
+import { fetchClientMetadataResource } from "@/lib/mcp/cimd-fetch";
 import { MongoClient } from "mongodb";
 import { bootstrapNewUser } from "@/lib/auth/bootstrap";
 import { mcpResourceUrl, MCP_SCOPES } from "@/lib/mcp/config";
@@ -110,8 +110,12 @@ function buildAuth() {
       // Client ID Metadata Documents: the registration path MCP 2026-07-28
       // prefers over Dynamic Client Registration.
       //
-      // fetchClientMetadataResource is the library's own Node transport, and
-      // using it rather than plain fetch is not optional. This is the one
+      // fetchClientMetadataResource is ours rather than the library's, because
+      // the library's Node transport is broken on Node 20+ and made every
+      // attempt to connect a client fail with "invalid_client". Same
+      // guarantees, correct DNS callback shape. See lib/mcp/cimd-fetch.ts.
+      //
+      // Using a pinning transport rather than plain fetch is not optional. This is the one
       // place the server fetches a URL chosen by an unauthenticated stranger,
       // which is precisely the SSRF hole the spec calls out: it must resolve
       // DNS once, reject special-use addresses, pin the resolved address for
