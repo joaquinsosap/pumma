@@ -154,13 +154,15 @@ export function CalendarView({
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-6 animate-pumma-view lg:flex-row lg:gap-[18px]">
         <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[14px] border border-border bg-surface">
           <div className="flex items-center gap-3 px-5 py-4">
-            {/* No min-width. It was 190px, which parked the arrows a fixed
-                distance away from a label that is usually much shorter, so
-                "October 2026" and its own controls looked unrelated. */}
-            <h3 className="m-0 whitespace-nowrap text-lg font-extrabold tracking-tight">
+            {/* The label grows and shrinks with the month name, so anything
+                sitting immediately after it moves every time you navigate.
+                A 190px min-width used to hide that by parking the controls
+                far away; pinning them to the RIGHT fixes it properly, because
+                that edge does not depend on how long "September" is. */}
+            <h3 className="m-0 min-w-0 flex-1 truncate text-lg font-extrabold tracking-tight">
               {monthLabel}
             </h3>
-            <div className="flex gap-1">
+            <div className="flex shrink-0 gap-1">
               <button
                 type="button"
                 onClick={() => setOffset(offset - 1)}
