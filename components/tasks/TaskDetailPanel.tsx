@@ -357,9 +357,19 @@ export function TaskDetailPanel({
                   type="button"
                   onClick={() => setTaskPriority(value)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wide transition-all",
+                    // Border width is LAYOUT. Going 1px -> 2px on the active
+                    // chip grew the box, compacted the row for a frame and
+                    // made the outer edge pulse inward — the same flicker the
+                    // date chips had. The border stays 1px in both states and
+                    // the second pixel is painted INSIDE with a shadow, which
+                    // is not layout and cannot move anything.
+                    //
+                    // The transition names its properties too: transition-all
+                    // would try to animate the shadow appearing, which is the
+                    // other half of what the flicker looked like.
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wide transition-[color,background-color,border-color,box-shadow] duration-150",
                     active
-                      ? "border-2 text-ink shadow-[1px_1px_0_var(--shadow)]"
+                      ? "animate-chip-pick text-ink"
                       : "border-border bg-surface2 text-faint hover:border-faint",
                   )}
                   // color-mix rather than string-surgery on the colour: the
@@ -371,6 +381,7 @@ export function TaskDetailPanel({
                       ? {
                           borderColor: color,
                           background: `color-mix(in oklab, ${color} 14%, transparent)`,
+                          boxShadow: `inset 0 0 0 1px ${color}, 1px 1px 0 var(--shadow)`,
                         }
                       : undefined
                   }

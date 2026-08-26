@@ -70,13 +70,20 @@ function DeadTimeRow({
           <span className="ml-1.5 truncate font-mono text-[9px] text-faint">
             {label}
           </span>
-          {/* The size of the window, at the right edge where the eye lands
-              scanning for "do I have time for X before the next thing". The
-              times already say it, but only after arithmetic; this is the
-              answer pre-done. */}
-          <span className="ml-auto shrink-0 pl-2 font-mono text-[9px] text-faint">
-            {formatRemainingMinutes(endMins - startMins)}
-          </span>
+          {/* How big the window is, right beside the times rather than pinned
+              to the far edge — at the edge it read as a separate column of
+              data instead of the answer to the sentence next to it. Darker
+              than the range too: the times are reference, this is the number
+              you are actually looking for when you wonder whether something
+              fits.
+
+              Only on the idle form. The active row already counts down to
+              the next thing, and two durations on one line is a riddle. */}
+          {!showNowLine && (
+            <span className="ml-1 shrink-0 font-mono text-[9px] font-semibold text-muted">
+              ({formatRemainingMinutes(endMins - startMins)})
+            </span>
+          )}
         </div>
       </div>
       {showNowLine && (

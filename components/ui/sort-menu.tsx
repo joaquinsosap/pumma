@@ -82,18 +82,20 @@ export function SortMenu<T extends string>({
               key={option}
               type="button"
               onClick={() => {
+                // The menu never closes itself.
+                //
+                // Picking a sort used to close it, which hid the very thing
+                // that makes direction discoverable: the arrow appearing on
+                // the row you just chose. Staying open means you SEE it, and
+                // the second click that reverses it is right there. Radix
+                // still closes on an outside click or Escape, so nothing is
+                // trapped — and clicking a task, a row, anything else on the
+                // page dismisses it the way it always did.
                 if (!current) {
-                  setOpen(false);
                   onChange(option);
                   return;
                 }
-                if (flippable) {
-                  // Stays open: flipping is something you do to LOOK at the
-                  // result, and the very next click is often flipping back.
-                  onReversedChange?.(!reversed);
-                } else {
-                  setOpen(false);
-                }
+                onReversedChange?.(!reversed);
               }}
               className={cn(
                 "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] transition-colors hover:bg-hover",

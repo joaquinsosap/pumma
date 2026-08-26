@@ -15,13 +15,18 @@ import {
   Check,
   CheckSquare,
   ListChecks,
+  Minus,
   Plus,
   Square,
   Trash2,
 } from "@/components/icons";
 import type { Tag, Task, Note } from "@/lib/schemas";
 import type { EntityLifeArea } from "@/lib/types";
-import { toggleEntityTag, type TaggableEntity } from "@/lib/actions/tags";
+import {
+  bulkToggleEntityTag,
+  toggleEntityTag,
+  type TaggableEntity,
+} from "@/lib/actions/tags";
 import {
   bulkUpdateTasks,
   deleteTaskAction,
@@ -203,7 +208,72 @@ export function TagMenuProvider({
     [tags, tasks, notes],
   );
 
+  /**
+   * Tagging across a selection.
+   *
+   * The bulk rows above (priority, due) always respected the selection; the
+   * tag rows did not, because they called the single-target action with
+   * `menu.id` and never looked at it. Right-clicking four selected tasks and
+   * picking a tag quietly tagged one.
+   *
+   * Tri-state, because a selection is rarely uniform: the tick shows only
+   * when EVERY selected row already carries the tag. Clicking when some do
+   * adds it to the rest (the useful reading of a half-filled box), and only
+   * a full house removes it.
+   */
+  const selectionIds =
+    menu?.selection?.selected && menu.selection.ids.length > 1
+      ? menu.selection.ids
+      : null;
+
+  const selectionTagState = (tagId: string): "all" | "some" | "none" => {
+    if (!selectionIds) return tagIds.includes(tagId) ? "all" : "none";
+    const rows = selectionIds
+      .map((id) => tasks.find((t) => t.id === id))
+      .filter((t): t is Task => Boolean(t));
+    if (!rows.length) return "none";
+    const withTag = rows.filter((t) => t.tagIds.includes(tagId)).length;
+    if (withTag === 0) return "none";
+    return withTag === rows.length ? "all" : "some";
+  };
+
+  const toggleAcrossSelection = async (tagId: string) => {
+    if (!menu || !selectionIds || pending) return;
+    const apply = selectionTagState(tagId) !== "all";
+    setPending(true);
+    const res = await bulkToggleEntityTag({
+      entity: menu.entity,
+      ids: selectionIds,
+      tagId,
+      apply,
+    });
+    setPending(false);
+    if (!res.ok) {
+      toast.error(res.error);
+      return;
+    }
+    const { changed, failed, error } = res.data ?? { changed: 0, failed: 0 };
+    dirtyRef.current = true;
+    const name = tags.find((t) => t.id === tagId)?.name ?? "tag";
+    if (failed && error) {
+      toast.warning(`${changed} updated, ${failed} refused: ${error}`);
+    } else if (changed) {
+      toast.success(
+        `${apply ? "Tagged" : "Untagged"} #${name} · ${changed} ${
+          changed === 1 ? "item" : "items"
+        }`,
+      );
+    } else {
+      toast.info(`Already ${apply ? "tagged" : "untagged"}`);
+    }
+    // A project tag moves everything it touched, so the open menu is now
+    // pointing at rows that have gone elsewhere.
+    if (tags.find((t) => t.id === tagId)?.projectId) close();
+    router.refresh();
+  };
+
   const toggle = async (tagId: string) => {
+    if (selectionIds) return toggleAcrossSelection(tagId);
     if (!menu || pending) return;
     setPending(true);
     const applied = !tagIds.includes(tagId);
@@ -495,7 +565,7 @@ export function TagMenuProvider({
                   LIFE AREA
                 </div>
                 {lifeTags.map((tag) => {
-                  const active = tagIds.includes(tag.id);
+                  const state = selectionTagState(tag.id);
                   return (
                     <button
                       key={tag.id}
@@ -504,7 +574,7 @@ export function TagMenuProvider({
                       onClick={() => toggle(tag.id)}
                       className={cn(
                         "flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left text-[12px] transition-colors hover:bg-hover disabled:opacity-50",
-                        active ? "font-semibold text-ink" : "text-muted",
+                        state === "all" ? "font-semibold text-ink" : "text-muted",
                       )}
                     >
                       <span
@@ -514,12 +584,7 @@ export function TagMenuProvider({
                       <span className="min-w-0 flex-1 truncate">
                         {tag.name}
                       </span>
-                      {active && (
-                        <Check
-                          className="h-3.5 w-3.5 shrink-0 text-habits"
-                          strokeWidth={2.5}
-                        />
-                      )}
+                      <TagMark state={state} />
                     </button>
                   );
                 })}
@@ -535,7 +600,7 @@ export function TagMenuProvider({
                 </p>
               )}
               {ranked.map((tag) => {
-                const active = tagIds.includes(tag.id);
+                const state = selectionTagState(tag.id);
                 return (
                   <button
                     key={tag.id}
@@ -549,12 +614,7 @@ export function TagMenuProvider({
                       style={{ background: tag.color }}
                     />
                     <span className="min-w-0 flex-1 truncate">{tag.name}</span>
-                    {active && (
-                      <Check
-                        className="h-3.5 w-3.5 shrink-0 text-habits"
-                        strokeWidth={2.5}
-                      />
-                    )}
+                    <TagMark state={state} />
                   </button>
                 );
               })}
@@ -737,4 +797,27 @@ export function Taggable({
       {children}
     </div>
   );
+}
+
+/**
+ * All / some / none, as one glyph.
+ *
+ * A tick that means "at least one of these has it" is a lie you only catch
+ * after untagging four rows you meant to leave alone, so the half state gets
+ * its own mark: a dash, the same thing an indeterminate checkbox has always
+ * used. Nothing at all for none, which keeps the common case quiet.
+ */
+function TagMark({ state }: { state: "all" | "some" | "none" }) {
+  if (state === "none") return null;
+  if (state === "some") {
+    return (
+      <span
+        aria-label="Some selected"
+        className="h-3.5 w-3.5 shrink-0 text-habits"
+      >
+        <Minus className="h-3.5 w-3.5" strokeWidth={3} />
+      </span>
+    );
+  }
+  return <Check className="h-3.5 w-3.5 shrink-0 text-habits" strokeWidth={2.5} />;
 }

@@ -218,9 +218,12 @@ export function BulkEditPanel({
                   disabled={pending}
                   onClick={() => apply({ priority: value }, `set to ${label}`)}
                   className={cn(
-                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wide transition-all disabled:opacity-50",
+                    // Same non-flicker recipe as the detail panel: constant
+                    // 1px border, the second pixel painted inside as a
+                    // shadow, and a transition that names its properties.
+                    "flex flex-1 items-center justify-center gap-1.5 rounded-lg border px-2 py-1.5 font-mono text-[10px] font-bold uppercase tracking-wide transition-[color,background-color,border-color,box-shadow] duration-150 disabled:opacity-50",
                     active
-                      ? "border-2 text-ink shadow-[1px_1px_0_var(--shadow)]"
+                      ? "animate-chip-pick text-ink"
                       : "border-border bg-surface2 text-faint hover:border-faint",
                   )}
                   style={
@@ -230,6 +233,7 @@ export function BulkEditPanel({
                           // color-mix, not tagBg: that expects a literal
                           // colour and cannot see through a var().
                           background: `color-mix(in oklab, ${color} 14%, transparent)`,
+                          boxShadow: `inset 0 0 0 1px ${color}, 1px 1px 0 var(--shadow)`,
                         }
                       : undefined
                   }

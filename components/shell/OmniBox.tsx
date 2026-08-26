@@ -869,10 +869,14 @@ function TypeChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-[11px] transition-all",
+        // Constant border width. The active chip used to go 1px -> 2px,
+        // which is a layout change: the chip grew, its neighbours shuffled a
+        // pixel and the row flickered on every pick. The heavier edge is an
+        // inset shadow now, which paints inside the box and moves nothing.
+        "flex cursor-pointer items-center gap-1 rounded-lg border px-2 py-1 text-[11px] transition-[color,background-color,border-color,box-shadow,opacity] duration-150",
         active
-          ? "border-2 font-bold shadow-[2px_2px_0_var(--shadow)]"
-          : "border border-border bg-surface font-medium text-muted opacity-75 hover:border-faint hover:opacity-100",
+          ? "animate-chip-pick font-bold"
+          : "border-border bg-surface font-medium text-muted opacity-75 hover:border-faint hover:opacity-100",
       )}
       style={
         active
@@ -882,6 +886,7 @@ function TypeChip({
                 ? accent.replace(")", " / 0.28)")
                 : "var(--hover)",
               color: textColor,
+              boxShadow: `inset 0 0 0 1px ${accent}, 2px 2px 0 var(--shadow)`,
             }
           : undefined
       }

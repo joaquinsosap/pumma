@@ -37,22 +37,28 @@ const toggleSchema = z.object({
   tagId: entityId,
 });
 
-export async function toggleEntityTag(
+/**
+ * Flip one tag on one thing. The rules live here and nowhere else.
+ *
+ * Split out of the action so the bulk path can reuse every one of them —
+ * life tags that refuse to be the last one off, project tags that file a
+ * task and drag its life area along, goal categories that follow. A second
+ * implementation for "the same thing, four times" would drift from this one
+ * within a month.
+ *
+ * Deliberately does NOT revalidate: a caller doing forty of these should pay
+ * for one revalidation, not forty.
+ */
+async function toggleOneEntityTag(
+  userId: string,
+  tags: Tag[],
   entity: TaggableEntity,
-  targetId: string,
-  tagId: string,
+  id: string,
+  tag: string,
 ): Promise<ActionResult<{ applied: boolean }>> {
-  const parsed = toggleSchema.safeParse({ entity, entityId: targetId, tagId });
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
-  const { entityId: id, tagId: tag } = parsed.data;
-  const userId = await requireUserId();
-  const tags = await listTags(userId);
-  // A stale menu can reference a tag deleted since the client last rendered.
-  if (!tags.some((t) => t.id === tag)) {
-    return { ok: false, error: "Tag no longer exists" };
-  }
-
-  const tagRecord = tags.find((t) => t.id === tag)!;
+  const tagRecord = tags.find((t) => t.id === tag);
+  if (!tagRecord) return { ok: false, error: "Tag no longer exists" };
+  const parsed = { data: { entity } };
 
   if (parsed.data.entity === "task") {
     const task = await getTask(userId, id);
@@ -99,7 +105,6 @@ export async function toggleEntityTag(
       await syncGoalsForProject(userId, nextProjectId);
     }
 
-    revalidatePath("/", "layout");
     return { ok: true, data: { applied } };
   }
 
@@ -140,7 +145,6 @@ export async function toggleEntityTag(
       tagIds: flipped.tagIds,
       lifeArea: flipped.lifeArea,
     });
-    revalidatePath("/", "layout");
     return { ok: true, data: { applied: flipped.applied } };
   }
 
@@ -161,7 +165,6 @@ export async function toggleEntityTag(
         ? {}
         : { order: nextGoalOrder(goals, category) }),
     });
-    revalidatePath("/", "layout");
     return { ok: true, data: { applied: flipped.applied } };
   }
 
@@ -179,7 +182,6 @@ export async function toggleEntityTag(
         lifeArea: flipped.lifeArea,
       });
     }
-    revalidatePath("/", "layout");
     return { ok: true, data: { applied: flipped.applied } };
   }
 
@@ -199,8 +201,110 @@ export async function toggleEntityTag(
   const lifeArea = deriveLifeAreaFromTags(tagIds, tags);
   const { today: updatedAt } = await userToday();
   await updateNote(userId, id, { tagIds, lifeArea, updatedAt });
-  revalidatePath("/", "layout");
   return { ok: true, data: { applied } };
+}
+
+export async function toggleEntityTag(
+  entity: TaggableEntity,
+  targetId: string,
+  tagId: string,
+): Promise<ActionResult<{ applied: boolean }>> {
+  const parsed = toggleSchema.safeParse({ entity, entityId: targetId, tagId });
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const userId = await requireUserId();
+  const tags = await listTags(userId);
+  const res = await toggleOneEntityTag(
+    userId,
+    tags,
+    parsed.data.entity,
+    parsed.data.entityId,
+    parsed.data.tagId,
+  );
+  if (res.ok) revalidatePath("/", "layout");
+  return res;
+}
+
+const bulkTagSchema = z
+  .object({
+    entity: z.enum(["task", "note", "habit", "goal", "project"]),
+    ids: z.array(entityId).min(1).max(200),
+    tagId: entityId,
+    apply: z.boolean(),
+  })
+  .strict();
+
+/**
+ * The same tag, across a selection.
+ *
+ * SET, not toggle. A mixed selection — some tagged, some not — is the normal
+ * case, and toggling each row individually would take that mess and invert
+ * it: the tagged ones lose the tag, the others gain it, and nothing ends up
+ * in the state the click asked for. The caller says which way it wants them
+ * ALL to end up, and rows already there are skipped rather than flipped.
+ *
+ * Failures are counted, not fatal. Stripping a life tag off something that
+ * has no other one is refused per row (correctly), and one such row must not
+ * abandon the other thirty-nine halfway through.
+ */
+export async function bulkToggleEntityTag(input: {
+  entity: TaggableEntity;
+  ids: string[];
+  tagId: string;
+  apply: boolean;
+}): Promise<ActionResult<{ changed: number; failed: number; error?: string }>> {
+  const parsed = bulkTagSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const { entity, ids, tagId, apply } = parsed.data;
+
+  const userId = await requireUserId();
+  const tags = await listTags(userId);
+  if (!tags.some((t) => t.id === tagId)) {
+    return { ok: false, error: "Tag no longer exists" };
+  }
+
+  const current = await currentTagIds(userId, entity, ids);
+
+  let changed = 0;
+  let failed = 0;
+  let firstError: string | undefined;
+  for (const id of ids) {
+    const has = current.get(id);
+    // Unknown id (deleted since the client rendered) or already where the
+    // caller wants it: nothing to do either way.
+    if (!has || has.includes(tagId) === apply) continue;
+    const res = await toggleOneEntityTag(userId, tags, entity, id, tagId);
+    if (res.ok) {
+      changed += 1;
+    } else {
+      failed += 1;
+      firstError ??= res.error;
+    }
+  }
+
+  if (changed) revalidatePath("/", "layout");
+  return { ok: true, data: { changed, failed, error: firstError } };
+}
+
+/** What each of these things is tagged with right now, in one read. */
+async function currentTagIds(
+  userId: string,
+  entity: TaggableEntity,
+  ids: string[],
+): Promise<Map<string, string[]>> {
+  const wanted = new Set(ids);
+  const out = new Map<string, string[]>();
+  const collect = (rows: { id: string; tagIds: string[] }[]) => {
+    for (const row of rows) {
+      if (wanted.has(row.id)) out.set(row.id, row.tagIds);
+    }
+  };
+
+  if (entity === "task") collect(await listTasks(userId));
+  else if (entity === "habit") collect(await listHabits(userId));
+  else if (entity === "goal") collect(await listGoals(userId));
+  else if (entity === "project") collect(await listProjects(userId));
+  else collect(await listNotes(userId));
+  return out;
 }
 
 const updateTagSchema = z
