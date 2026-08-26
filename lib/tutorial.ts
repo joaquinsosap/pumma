@@ -276,3 +276,16 @@ export function checkCapture(text: string): CaptureCheck {
   const hasTitle = title.length >= 3;
   return { hasTitle, hasDay, hasTag, ok: hasTitle && hasDay && hasTag };
 }
+
+/**
+ * Whether the tour is switched off for this instance.
+ *
+ * Development and test only. The tour opens over whatever you are actually
+ * working on, and every fresh account starts it again, so anything that
+ * creates accounts (an automated run, a scratch database) spends its time
+ * dismissing a modal. Read at runtime, defaults to off, so a real install
+ * always gets the tour and this can never be enabled by accident at build.
+ */
+export function tutorialDisabled(): boolean {
+  return process.env.SKIP_TUTORIAL === "1";
+}

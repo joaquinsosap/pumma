@@ -15,6 +15,7 @@ import { CalendarAutoSync } from "@/components/agenda/CalendarAutoSync";
 import { ServiceWorkerBridge } from "@/components/notifications/ServiceWorkerBridge";
 import { InstallNudge } from "@/components/pwa/InstallNudge";
 import { loadShellData } from "@/lib/data";
+import { tutorialDisabled } from "@/lib/tutorial";
 import { displayName } from "@/lib/user-display";
 import { resolveLifeView } from "@/lib/life-view-server";
 import { isAuthEnabled } from "@/lib/auth/session";
@@ -131,7 +132,13 @@ async function AppShell({ children }: { children: React.ReactNode }) {
                     new, so that isn't a reason to show it either. */}
                 <TutorialOverlay
                   seen={
-                    data.settings ? data.settings.tutorialSeenAt != null : true
+                    // SKIP_TUTORIAL=1 treats every account as having seen it.
+                    // For development and automated testing, where the tour
+                    // sits on top of whatever is actually being worked on and
+                    // has to be dismissed by hand on every fresh account.
+                    // Off unless set, so a real install always gets the tour.
+                    tutorialDisabled() ||
+                    (data.settings ? data.settings.tutorialSeenAt != null : true)
                   }
                 />
               </main>
