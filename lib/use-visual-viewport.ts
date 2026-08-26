@@ -27,7 +27,13 @@ import { useEffect, useState } from "react";
  * Returns null until measured, and on anything without visualViewport, so
  * callers keep their normal layout rather than laying out against a guess.
  */
-export type ViewportBox = { top: number; height: number; keyboardOpen: boolean };
+export type ViewportBox = {
+  top: number;
+  height: number;
+  /** Window height not visible: keyboard and any chrome attached to it. */
+  inset: number;
+  keyboardOpen: boolean;
+};
 
 export function useVisualViewport(): ViewportBox | null {
   const [box, setBox] = useState<ViewportBox | null>(null);
@@ -41,6 +47,11 @@ export function useVisualViewport(): ViewportBox | null {
       setBox({
         top: Math.round(vv.offsetTop),
         height: Math.round(vv.height),
+        // How much of the WINDOW is hidden below the visible box — the
+        // keyboard plus whatever chrome rides on it. Used as padding under
+        // content rather than as a height for anything: see the note in
+        // TutorialOverlay about why a backdrop must never be sized from this.
+        inset: Math.max(0, Math.round(covered - vv.offsetTop)),
         // Only for deciding whether to bother, never for arithmetic. A few
         // pixels of browser chrome are normal; a keyboard is never this short.
         keyboardOpen: covered > 120,

@@ -1765,3 +1765,28 @@ select:hover:not(:disabled) {
     animation: none;
   }
 }
+
+/* iOS zooms into any field whose text is under 16px.
+ *
+ * Not a preference — Safari does it to make small text legible, and it takes
+ * the whole page with it: the layout scales up, the viewport no longer
+ * matches the window, and scrolling and every fixed element start fighting
+ * the user until they pinch back out. Tapping a field should not rearrange
+ * the app.
+ *
+ * The fix is to give it nothing to fix. 16px on the controls themselves, only
+ * where there is a touch screen, so the desktop keeps its denser type. This
+ * is also the platform norm: native iOS fields are 17px, and every web app
+ * that feels "off" on a phone is usually 13px inputs being zoomed.
+ *
+ * Deliberately NOT `maximum-scale=1` on the viewport, which is the other way
+ * people do this: that disables pinch-zoom for everything, which is a real
+ * accessibility loss to fix a layout annoyance.
+ */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

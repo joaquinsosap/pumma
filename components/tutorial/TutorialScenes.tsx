@@ -17,6 +17,7 @@ import {
   Tag as TagIcon,
 } from "@/components/icons";
 import { nextHold, typedChars } from "@/lib/tutorial";
+import { useVisualViewport } from "@/lib/use-visual-viewport";
 import { startTutorialClock } from "@/lib/tutorial-clock";
 import {
   DATE_COMPLETIONS,
@@ -889,6 +890,17 @@ export function SceneType({
     for (const ch of next.slice(current.length)) handleChar(ch);
   }
 
+  /**
+   * A whole word from a tap, fed in one character at a time.
+   *
+   * Same door as the keyboard, on purpose: the step machine judges
+   * keystrokes, and handing it a finished word would skip every decision it
+   * exists to make — including the ones that reject.
+   */
+  function typeWord(word: string) {
+    for (const ch of word) handleChar(ch);
+  }
+
   /** One character, judged against the step we're on. */
   function handleChar(ch: string) {
     if (done) return;
@@ -1181,7 +1193,91 @@ export function SceneType({
           ]}
         />
       </div>
+      {/* The same strip the real bar puts over the keyboard. On a phone the
+          tour was asking for "#" while the keyboard showing it was two
+          layers deep on most layouts, and offering nothing to tap. */}
+      <CaptureKeyBar
+        step={step}
+        done={done}
+        onChar={handleChar}
+        onWord={typeWord}
+      />
     </Frame>
+  );
+}
+
+/**
+ * The tour's version of the bar that rides on top of the keyboard.
+ *
+ * Not decoration: on a phone "#" is behind the 123 layer on most keyboards,
+ * and the first mission asks for it twice. The real capture bar solves that
+ * with a strip of its own, so the tour has to have the same one, or it
+ * teaches a gesture the app does not actually require.
+ *
+ * Held above the keyboard by visualViewport, the way MobileCapture does it —
+ * there is no way to put a button on the keyboard's own accessory bar from a
+ * web page, so every app that appears to have done it is really doing this.
+ *
+ * The suggestions are steered by the step, because a chip that types a word
+ * the current step would refuse is worse than no chip at all.
+ */
+function CaptureKeyBar({
+  step,
+  done,
+  onChar,
+  onWord,
+}: {
+  step: CaptureStep;
+  done: boolean;
+  onChar: (ch: string) => void;
+  onWord: (word: string) => void;
+}) {
+  const viewport = useVisualViewport();
+  if (!viewport?.keyboardOpen || done) return null;
+
+  const words =
+    step === "dayWord"
+      ? ["today", "tomorrow", "friday"]
+      : step === "tagWord"
+        ? ["work", "personal", "health"]
+        : [];
+
+  return (
+    <div
+      className="fixed inset-x-0 z-[210]"
+      style={{ bottom: viewport.inset }}
+      // Any press outside the field would blur it, the keyboard would start
+      // closing, and this bar would chase it down the screen mid-tap.
+      onPointerDown={(e) => e.preventDefault()}
+    >
+      <div className="capture-dock flex items-center gap-1.5 px-3 py-2.5">
+        <button
+          type="button"
+          onClick={() => onChar("#")}
+          aria-label="Type a hash"
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface2 font-mono text-[17px] font-bold leading-none text-ink"
+        >
+          #
+        </button>
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
+          {words.map((w) => (
+            <button
+              key={w}
+              type="button"
+              onClick={() => onWord(w)}
+              className="shrink-0 rounded-full border border-border bg-background px-3 py-1.5 text-[13px] font-medium text-ink"
+            >
+              {step === "tagWord" ? `#${w}` : w}
+            </button>
+          ))}
+          {words.length === 0 && (
+            <span className="shrink-0 px-1 font-mono text-[10px] uppercase tracking-widest text-faint2">
+              type # for tags
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

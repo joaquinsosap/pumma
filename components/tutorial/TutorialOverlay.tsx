@@ -369,20 +369,31 @@ export function TutorialOverlay({ seen }: { seen: boolean }) {
         "fixed inset-0 z-[200] flex flex-col bg-black/70 backdrop-blur-[3px]",
         outro && "tutorial-outro",
       )}
-      // The overlay BECOMES the visible box rather than covering the window
-      // and padding the difference. `inset-0` still applies when there is no
-      // keyboard, so nothing changes on a desktop.
+      // The backdrop always covers the whole window; only the CONTENT is
+      // moved out of the keyboard's way.
       //
-      // The stage is also told to be smaller while the keyboard is up: a
-      // fixed 430px stage plus a 175px banner does not fit in what a phone
-      // has left. The floor stops it collapsing on a short screen; below that
-      // the scene would rather clip than vanish.
+      // This was the other way round, sizing the overlay itself to the
+      // visible box, and it left a strip of the live app showing between the
+      // tour and the keyboard on iOS. Both directions of that arithmetic have
+      // now been wrong in production — subtracting over-reserved by about a
+      // hundred pixels, matching the visible box under-reserved — because the
+      // numbers iOS reports shift while the keyboard animates and while its
+      // accessory bars come and go.
+      //
+      // So the backdrop stops depending on them. `inset-0` is exact whatever
+      // the keyboard is doing, and if the padding below is a little off the
+      // worst case is content sitting slightly high, not a hole revealing the
+      // page underneath.
+      //
+      // The stage also shrinks while the keyboard is up: a 430px stage plus a
+      // 175px banner does not fit in what a phone has left. The floor stops
+      // it collapsing on a short screen; below that the scene would rather
+      // clip than vanish.
       style={
         viewport?.keyboardOpen
           ? ({
-              top: viewport.top,
-              height: viewport.height,
-              bottom: "auto",
+              paddingTop: viewport.top,
+              paddingBottom: viewport.inset,
               "--stage-h": `${Math.max(190, viewport.height - 270)}px`,
             } as React.CSSProperties)
           : beat.stage
