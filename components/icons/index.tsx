@@ -53,6 +53,8 @@ export {
 } from "./glyphs";
 
 export {
+  ArrowDown,
+  ArrowUp,
   ArrowUpDown,
   Briefcase,
   GripVertical,

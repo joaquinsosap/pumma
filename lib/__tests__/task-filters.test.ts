@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   applyTaskFilters,
   countActiveFilters,
+  isOverdue,
   hasActiveFilters,
   toggleFilterValue,
   NO_FILTERS,
@@ -119,8 +120,9 @@ describe("countActiveFilters", () => {
         status: ["todo", "doing"],
         priority: ["high"],
         tagIds: [],
+        due: ["overdue"],
       }),
-    ).toBe(3);
+    ).toBe(4);
   });
 });
 
@@ -140,5 +142,49 @@ describe("toggleFilterValue", () => {
     p = toggleFilterValue(p, "low", TASK_PRIORITIES);
     p = toggleFilterValue(p, "high", TASK_PRIORITIES);
     expect(p).toEqual(["high", "low"]);
+  });
+});
+
+describe("due facet", () => {
+  const today = "2026-08-25";
+  const late = task({ id: "late", due: "2026-08-20", status: "todo" });
+  const doneLate = task({ id: "done-late", due: "2026-08-20", status: "done" });
+  const todayTask = task({ id: "today", due: today });
+  const dateless = task({ id: "dateless", due: null });
+
+  it("overdue is past AND still open", () => {
+    expect(isOverdue(late, today)).toBe(true);
+    // Finishing late is history, not a debt.
+    expect(isOverdue(doneLate, today)).toBe(false);
+    // Due today is not overdue yet.
+    expect(isOverdue(todayTask, today)).toBe(false);
+    expect(isOverdue(dateless, today)).toBe(false);
+  });
+
+  it("filters to the overdue slice", () => {
+    const got = applyTaskFilters(
+      [late, doneLate, todayTask, dateless],
+      { ...NO_FILTERS, due: ["overdue"] },
+      today,
+    ).map((t) => t.id);
+    expect(got).toEqual(["late"]);
+  });
+
+  it("undated finds the tasks that can never become overdue", () => {
+    const got = applyTaskFilters(
+      [late, dateless],
+      { ...NO_FILTERS, due: ["undated"] },
+      today,
+    ).map((t) => t.id);
+    expect(got).toEqual(["dateless"]);
+  });
+
+  it("both together is a union within the facet", () => {
+    const got = applyTaskFilters(
+      [late, todayTask, dateless],
+      { ...NO_FILTERS, due: ["overdue", "undated"] },
+      today,
+    ).map((t) => t.id);
+    expect(got).toEqual(["late", "dateless"]);
   });
 });

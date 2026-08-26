@@ -58,8 +58,9 @@ type ItemsByColumn = Record<ColumnId, Task[]>;
 export function boardOrder(
   tasks: Task[],
   sort: ProjectTaskSort = "custom",
+  reversed = false,
 ): string[] {
-  const by = groupByStatus(tasks, sort);
+  const by = groupByStatus(tasks, sort, reversed);
   return [...by.todo, ...by.doing, ...by.done].map((t) => t.id);
 }
 
@@ -76,21 +77,24 @@ function column(
   tasks: Task[],
   status: Task["status"],
   sort: ProjectTaskSort,
+  reversed: boolean,
 ): Task[] {
   return sortTasks(
     tasks.filter((t) => t.status === status),
     sort,
+    reversed,
   );
 }
 
 function groupByStatus(
   tasks: Task[],
   sort: ProjectTaskSort = "custom",
+  reversed = false,
 ): ItemsByColumn {
   return {
-    todo: column(tasks, "todo", sort),
-    doing: column(tasks, "doing", sort),
-    done: column(tasks, "done", sort),
+    todo: column(tasks, "todo", sort, reversed),
+    doing: column(tasks, "doing", sort, reversed),
+    done: column(tasks, "done", sort, reversed),
   };
 }
 
@@ -175,6 +179,8 @@ type Props = {
   selection?: SelectionController;
   /** How the columns are ordered. Defaults to the hand-made order. */
   sort?: ProjectTaskSort;
+  /** Run the chosen sort the other way around. */
+  sortReversed?: boolean;
   /** A drag just arranged things by hand — the view's cue to flip to custom. */
   onArrange?: () => void;
 };
@@ -188,11 +194,12 @@ export function KanbanBoard({
   onMoveToProject,
   selection,
   sort = "custom",
+  sortReversed = false,
   onArrange,
 }: Props) {
   const [, startTransition] = useTransition();
   const [items, setItems] = useState<ItemsByColumn>(() =>
-    groupByStatus(tasks, sort),
+    groupByStatus(tasks, sort, sortReversed),
   );
   // The same arrangement, readable synchronously. A drag fires many moves per
   // render, and each one has to build on the one before it rather than on
@@ -236,11 +243,8 @@ export function KanbanBoard({
   }, []);
 
   useEffect(() => {
-    setBoard(groupByStatus(tasks, sort));
-    // setBoard is a stable local wrapper around setState; listing it would
-    // re-run this every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tasks, sort]);
+    setBoard(groupByStatus(tasks, sort, sortReversed));
+  }, [tasks, sort, sortReversed]);
 
   // Mouse drags start after a tiny move; touch needs a long-press first so
   // plain swipes keep scrolling the board instead of grabbing cards.
@@ -357,7 +361,7 @@ export function KanbanBoard({
       }
       // The card is leaving this board, so undo any column shuffling that the
       // drag did on the way over the rail.
-      setBoard(groupByStatus(tasks, sort));
+      setBoard(groupByStatus(tasks, sort, sortReversed));
       return;
     }
 
@@ -397,7 +401,7 @@ export function KanbanBoard({
     setActiveId(null);
     setDragActive(false);
     releaseClickSuppression();
-    setBoard(groupByStatus(tasks, sort));
+    setBoard(groupByStatus(tasks, sort, sortReversed));
   };
 
   const columnBody = (col: (typeof COLS)[number]) => (

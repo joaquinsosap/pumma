@@ -79,6 +79,10 @@ const settingsPatchSchema = z
     defaultHabitFrequency: z.enum(["daily", "weekly", "monthly"]).optional(),
     projectsRailSortVisible: z.boolean().optional(),
     taskSort: z.enum(["priority", "due", "created", "alpha"]).optional(),
+    sortReversed: z
+      .array(z.enum(["task", "projectTask", "project", "note", "tag"]))
+      .max(5)
+      .optional(),
     projectTaskSort: z
       .enum(["priority", "custom", "created", "alpha"])
       .optional(),
@@ -117,6 +121,7 @@ export async function updateSettingsAction(patch: {
   defaultHabitFrequency?: "daily" | "weekly" | "monthly";
   projectsRailSortVisible?: boolean;
   taskSort?: "priority" | "due" | "created" | "alpha";
+  sortReversed?: ("task" | "projectTask" | "project" | "note" | "tag")[];
   projectTaskSort?: "priority" | "custom" | "created" | "alpha";
   projectSort?: "created" | "alpha" | "progress";
   noteSort?: "edited" | "created" | "alpha";

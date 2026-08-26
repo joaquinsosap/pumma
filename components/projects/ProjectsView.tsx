@@ -10,6 +10,7 @@ import { parseLifeView } from "@/lib/life-area";
 import { Topbar } from "@/components/shell/Topbar";
 import { KanbanBoard, boardOrder } from "@/components/projects/KanbanBoard";
 import {
+  setReversedIn,
   sortProjects,
   PROJECT_SORTS,
   PROJECT_TASK_SORTS,
@@ -43,6 +44,7 @@ type Props = {
   /** Whether the rail rests on its sort control. See ProjectRail. */
   projectsRailSortVisible?: boolean;
   projectTaskSort?: ProjectTaskSort;
+  sortReversed?: string[];
 };
 
 export function ProjectsView({
@@ -55,6 +57,7 @@ export function ProjectsView({
   lifeSpanYears,
   projectSort = "created",
   projectTaskSort = "priority",
+  sortReversed: sortReversedSetting = [],
   projectsRailSortVisible = false,
 }: Props) {
   const searchParams = useSearchParams();
@@ -79,25 +82,57 @@ export function ProjectsView({
   useEffect(() => setRailSort(projectSort), [projectSort]);
   const changeRailSort = (next: ProjectSort) => {
     setRailSort(next);
-    void updateSettingsAction({ projectSort: next });
+    setRailReversed(false);
+    void updateSettingsAction({
+      projectSort: next,
+      sortReversed: setReversedIn(sortReversedSetting, "project", false),
+    });
+  };
+  const [railReversed, setRailReversed] = useState(
+    sortReversedSetting.includes("project"),
+  );
+  const changeRailReversed = (next: boolean) => {
+    setRailReversed(next);
+    void updateSettingsAction({
+      sortReversed: setReversedIn(sortReversedSetting, "project", next),
+    });
   };
   const [taskSort, setTaskSort] = useState<ProjectTaskSort>(projectTaskSort);
   useEffect(() => setTaskSort(projectTaskSort), [projectTaskSort]);
   const changeTaskSort = (next: ProjectTaskSort) => {
     setTaskSort(next);
-    void updateSettingsAction({ projectTaskSort: next });
+    setTaskReversed(false);
+    void updateSettingsAction({
+      projectTaskSort: next,
+      sortReversed: setReversedIn(sortReversedSetting, "projectTask", false),
+    });
+  };
+  const [taskReversed, setTaskReversed] = useState(
+    sortReversedSetting.includes("projectTask"),
+  );
+  const changeTaskReversed = (next: boolean) => {
+    setTaskReversed(next);
+    void updateSettingsAction({
+      sortReversed: setReversedIn(sortReversedSetting, "projectTask", next),
+    });
   };
   // Dragging a card IS choosing an order, so the choice follows the hand:
   // the board flips to custom and the menu says so, without a click.
   const arrangedByHand = () => {
-    if (taskSort === "custom") return;
+    if (taskSort === "custom" && !taskReversed) return;
     setTaskSort("custom");
-    void updateSettingsAction({ projectTaskSort: "custom" });
+    // Forwards again: the drop wrote the order the user just made, and
+    // showing it reversed would move the card away from where they put it.
+    setTaskReversed(false);
+    void updateSettingsAction({
+      projectTaskSort: "custom",
+      sortReversed: setReversedIn(sortReversedSetting, "projectTask", false),
+    });
   };
 
   const projects = useMemo(
-    () => sortProjects(rawProjects, railSort),
-    [rawProjects, railSort],
+    () => sortProjects(rawProjects, railSort, railReversed),
+    [rawProjects, railSort, railReversed],
   );
   const [projectId, setProjectId] = useQueryState("project", {
     defaultValue: projects[0]?.id ?? "",
@@ -126,7 +161,10 @@ export function ProjectsView({
 
   // Multi-select across the board's three columns, in the order they render.
   const selection = useTaskSelection(
-    useMemo(() => boardOrder(spTasks, taskSort), [spTasks, taskSort]),
+    useMemo(
+      () => boardOrder(spTasks, taskSort, taskReversed),
+      [spTasks, taskSort, taskReversed],
+    ),
   );
   const selectedTasks = useMemo(
     () =>
@@ -191,6 +229,8 @@ export function ProjectsView({
                   options={PROJECT_SORTS}
                   value={railSort}
                   onChange={changeRailSort}
+                  reversed={railReversed}
+                  onReversedChange={changeRailReversed}
                 />
               }
             />
@@ -230,6 +270,8 @@ export function ProjectsView({
                   options={PROJECT_TASK_SORTS}
                   value={taskSort}
                   onChange={changeTaskSort}
+                  reversed={taskReversed}
+                  onReversedChange={changeTaskReversed}
                 />
                 <span
                   className="font-mono text-[10px] font-bold lg:hidden"
@@ -263,6 +305,8 @@ export function ProjectsView({
                           options={PROJECT_SORTS}
                           value={railSort}
                           onChange={changeRailSort}
+                          reversed={railReversed}
+                          onReversedChange={changeRailReversed}
                         />
                       }
                     />
@@ -274,6 +318,7 @@ export function ProjectsView({
                   onEditTask={(id) => void setTaskId(id)}
                   selection={selection}
                   sort={taskSort}
+                  sortReversed={taskReversed}
                   onArrange={arrangedByHand}
                 />
               </div>

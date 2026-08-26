@@ -15,6 +15,7 @@ export default async function TasksPage({ searchParams }: Props) {
       birthDate={data.birthDate}
       lifeSpanYears={data.lifeSpanYears}
       taskSort={data.settings?.taskSort ?? "priority"}
+      sortReversed={data.settings?.sortReversed ?? []}
       defaults={
         data.settings
           ? {

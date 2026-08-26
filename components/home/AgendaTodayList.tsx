@@ -11,6 +11,7 @@ import {
   buildAgendaBlocks,
   findNowPlacement,
   formatDeadTimeLabel,
+  formatRemainingMinutes,
   type NowPlacement,
 } from "@/lib/agenda-timeline";
 import { WidgetRowLink } from "@/components/home/WidgetLink";
@@ -62,12 +63,19 @@ function DeadTimeRow({
         <span className="w-10 shrink-0 text-center font-mono text-[9px] text-faint2">
           ···
         </span>
-        <div className="min-w-0 flex-1 border-l border-dashed border-faint2/50 py-0.5 pl-3">
+        <div className="flex min-w-0 flex-1 items-baseline border-l border-dashed border-faint2/50 py-0.5 pl-3">
           <span className="font-mono text-[9px] font-medium uppercase tracking-widest text-faint2">
             dead time
           </span>
-          <span className="ml-1.5 font-mono text-[9px] text-faint">
+          <span className="ml-1.5 truncate font-mono text-[9px] text-faint">
             {label}
+          </span>
+          {/* The size of the window, at the right edge where the eye lands
+              scanning for "do I have time for X before the next thing". The
+              times already say it, but only after arithmetic; this is the
+              answer pre-done. */}
+          <span className="ml-auto shrink-0 pl-2 font-mono text-[9px] text-faint">
+            {formatRemainingMinutes(endMins - startMins)}
           </span>
         </div>
       </div>

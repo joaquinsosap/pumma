@@ -12,7 +12,12 @@ import {
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { useIsDesktop } from "@/lib/use-media-query";
 import { shortDate } from "@/lib/date";
-import { sortNotes, NOTE_SORTS, type NoteSort } from "@/lib/collection-sort";
+import {
+  setReversedIn,
+  sortNotes,
+  NOTE_SORTS,
+  type NoteSort,
+} from "@/lib/collection-sort";
 import { SortMenu } from "@/components/ui/sort-menu";
 import { updateSettingsAction } from "@/lib/actions/settings";
 import { Star } from "@/components/icons";
@@ -41,6 +46,7 @@ type Props = {
   birthDate?: string | null;
   lifeSpanYears?: number;
   noteSort?: NoteSort;
+  sortReversed?: string[];
 };
 
 function NotePinButton({
@@ -86,13 +92,29 @@ export function NotesView({
   birthDate = null,
   lifeSpanYears,
   noteSort = "edited",
+  sortReversed: sortReversedSetting = [],
 }: Props) {
   const router = useRouter();
   const [sort, setSortState] = useState<NoteSort>(noteSort);
   useEffect(() => setSortState(noteSort), [noteSort]);
+  const [reversed, setReversed] = useState(sortReversedSetting.includes("note"));
+  useEffect(
+    () => setReversed(sortReversedSetting.includes("note")),
+    [sortReversedSetting],
+  );
+  const changeReversed = (next: boolean) => {
+    setReversed(next);
+    void updateSettingsAction({
+      sortReversed: setReversedIn(sortReversedSetting, "note", next),
+    });
+  };
   const changeSort = (next: NoteSort) => {
     setSortState(next);
-    void updateSettingsAction({ noteSort: next });
+    setReversed(false);
+    void updateSettingsAction({
+      noteSort: next,
+      sortReversed: setReversedIn(sortReversedSetting, "note", false),
+    });
   };
   const [, startTransition] = useTransition();
   const isDesktop = useIsDesktop();
@@ -116,10 +138,10 @@ export function NotesView({
   // note being typed into should not climb the list under the cursor.
   const sorted = useMemo(
     () =>
-      sortNotes(notes, sort).map((n) =>
+      sortNotes(notes, sort, reversed).map((n) =>
         edits[n.id] ? { ...n, ...edits[n.id] } : n,
       ),
-    [notes, edits, sort],
+    [notes, edits, sort, reversed],
   );
 
   const selected = sorted.find((n) => n.id === openId) ?? sorted[0] ?? null;
@@ -179,7 +201,13 @@ export function NotesView({
             <span className="font-mono text-[10px] uppercase tracking-widest text-faint2">
               {sorted.length} {sorted.length === 1 ? "note" : "notes"}
             </span>
-            <SortMenu options={NOTE_SORTS} value={sort} onChange={changeSort} />
+            <SortMenu
+              options={NOTE_SORTS}
+              value={sort}
+              onChange={changeSort}
+              reversed={reversed}
+              onReversedChange={changeReversed}
+            />
           </div>
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto max-lg:pb-24">
             {sorted.map((n) => (

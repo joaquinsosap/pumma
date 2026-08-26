@@ -39,7 +39,12 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "@/components/icons";
-import { sortTags, TAG_SORTS, type TagSort } from "@/lib/collection-sort";
+import {
+  setReversedIn,
+  sortTags,
+  TAG_SORTS,
+  type TagSort,
+} from "@/lib/collection-sort";
 import { isBuiltInTag, tagDeleteBlock } from "@/lib/tag-protection";
 import { SortMenu } from "@/components/ui/sort-menu";
 import { CleanTagsButton } from "@/components/tags/CleanTagsButton";
@@ -210,14 +215,27 @@ export function SettingsView({
     setTagSortState(settings?.tagSort ?? "custom");
   }, [settings?.tagSort]);
   const [draggedIds, setDraggedIds] = useState<string[] | null>(null);
+  const [tagReversed, setTagReversed] = useState(
+    (settings?.sortReversed ?? []).includes("tag"),
+  );
   const changeTagSort = (next: TagSort) => {
     setTagSortState(next);
-    void updateSettingsAction({ tagSort: next });
+    setTagReversed(false);
+    void updateSettingsAction({
+      tagSort: next,
+      sortReversed: setReversedIn(settings?.sortReversed ?? [], "tag", false),
+    });
+  };
+  const changeTagReversed = (next: boolean) => {
+    setTagReversed(next);
+    void updateSettingsAction({
+      sortReversed: setReversedIn(settings?.sortReversed ?? [], "tag", next),
+    });
   };
 
   const countsMap = new Map(Object.entries(tagCounts));
   const sortedTags = (() => {
-    const base = sortTags(tags, tagSort, countsMap);
+    const base = sortTags(tags, tagSort, countsMap, tagReversed);
     if (tagSort !== "custom" || !draggedIds) return base;
     const rank = new Map(draggedIds.map((id, i) => [id, i]));
     return [...base].sort(
@@ -240,6 +258,9 @@ export function SettingsView({
     const next = arrayMove(ids, from, to);
     setDraggedIds(next);
     setTagSortState("custom");
+    // Forwards: the hand just wrote this exact order, and rendering it
+    // reversed would put the tag anywhere but where it was dropped.
+    setTagReversed(false);
     startTransition(async () => {
       const res = await reorderTagsAction(next);
       if (!res.ok) toast.error(res.error ?? "Could not save that order");
@@ -814,6 +835,8 @@ export function SettingsView({
                   options={TAG_SORTS}
                   value={tagSort}
                   onChange={changeTagSort}
+                  reversed={tagReversed}
+                  onReversedChange={changeTagReversed}
                 />
               </div>
             <DndContext

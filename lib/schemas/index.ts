@@ -161,6 +161,10 @@ export const settingsSchema = z.object({
   projectSort: z.enum(["created", "alpha", "progress"]).default("created"),
   noteSort: z.enum(["edited", "created", "alpha"]).default("edited"),
   tagSort: z.enum(["custom", "alpha", "usage", "created"]).default("custom"),
+  /** Which sortable lists are currently running backwards. */
+  sortReversed: z
+    .array(z.enum(["task", "projectTask", "project", "note", "tag"]))
+    .default([]),
 });
 
 export const tagSchema = z.object({

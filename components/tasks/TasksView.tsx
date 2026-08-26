@@ -12,11 +12,19 @@ import {
   useQueryState,
   parseAsStringLiteral,
   parseAsString,
-  parseAsArrayOf,
 } from "nuqs";
+import {
+  parseAsFilterIds,
+  parseAsFilterLiteral,
+} from "@/lib/query-filters";
 import { ListTodo, Search, X } from "@/components/icons";
 import { searchTasks } from "@/lib/task-search";
-import { sortTasks, TASK_SORTS, type TaskSort } from "@/lib/collection-sort";
+import {
+  setReversedIn,
+  sortTasks,
+  TASK_SORTS,
+  type TaskSort,
+} from "@/lib/collection-sort";
 import { SortMenu } from "@/components/ui/sort-menu";
 import { updateSettingsAction } from "@/lib/actions/settings";
 import { setTaskProject } from "@/lib/actions/tasks";
@@ -41,6 +49,7 @@ import {
   countActiveFilters,
   TASK_STATUSES,
   TASK_PRIORITIES,
+  TASK_DUE_FILTERS,
   type TaskFilters,
 } from "@/lib/task-filters";
 import {
@@ -89,6 +98,7 @@ type Props = {
   lifeSpanYears?: number;
   /** The saved ordering for this list. The view treats it as its own state. */
   taskSort?: TaskSort;
+  sortReversed?: string[];
   /**
    * Where this page opens when the URL does not say. URL params always win:
    * Home's "Today's tasks" navigates with ?tab=today and lands there
@@ -122,6 +132,7 @@ export function TasksView({
   birthDate = null,
   lifeSpanYears,
   taskSort = "priority",
+  sortReversed: sortReversedSetting = [],
   defaults,
 }: Props) {
   // The saved choice, applied locally the moment it changes. The server write
@@ -131,7 +142,25 @@ export function TasksView({
   useEffect(() => setSort(taskSort), [taskSort]);
   const changeSort = (next: TaskSort) => {
     setSort(next);
-    void updateSettingsAction({ taskSort: next });
+    // Choosing a different ordering also stands it back up: "reversed" was a
+    // statement about THAT sort, and carrying it to the next one turns
+    // "newest" into "oldest" as a surprise.
+    setReversed(false);
+    void updateSettingsAction({
+      taskSort: next,
+      sortReversed: setReversedIn(sortReversedSetting, "task", false),
+    });
+  };
+  const [reversed, setReversed] = useState(sortReversedSetting.includes("task"));
+  useEffect(
+    () => setReversed(sortReversedSetting.includes("task")),
+    [sortReversedSetting],
+  );
+  const changeReversed = (next: boolean) => {
+    setReversed(next);
+    void updateSettingsAction({
+      sortReversed: setReversedIn(sortReversedSetting, "task", next),
+    });
   };
   const [tab, setTab] = useQueryState(
     "tab",
@@ -149,21 +178,24 @@ export function TasksView({
     parseAsString,
   );
   const [query, setQuery] = useQueryState("q", parseAsString.withDefault(""));
+  // parseAsFilterArray, not parseAsArrayOf: an empty selection has to be
+  // sayable in the URL, or a saved default of "todo" makes "every status"
+  // unreachable. See lib/query-filters.
   const [statusFilter, setStatusFilter] = useQueryState(
     "status",
-    parseAsArrayOf(parseAsStringLiteral(TASK_STATUSES)).withDefault(
-      defaults?.status ?? [],
-    ),
+    parseAsFilterLiteral(TASK_STATUSES).withDefault(defaults?.status ?? []),
   );
   const [priorityFilter, setPriorityFilter] = useQueryState(
     "priority",
-    parseAsArrayOf(parseAsStringLiteral(TASK_PRIORITIES)).withDefault(
-      defaults?.priority ?? [],
-    ),
+    parseAsFilterLiteral(TASK_PRIORITIES).withDefault(defaults?.priority ?? []),
   );
   const [tagFilter, setTagFilter] = useQueryState(
     "tag",
-    parseAsArrayOf(parseAsString).withDefault([]),
+    parseAsFilterIds.withDefault([]),
+  );
+  const [dueFilter, setDueFilter] = useQueryState(
+    "due",
+    parseAsFilterLiteral(TASK_DUE_FILTERS).withDefault([]),
   );
   const listRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
@@ -243,20 +275,25 @@ export function TasksView({
       status: statusFilter,
       priority: priorityFilter,
       tagIds: tagFilter,
+      due: dueFilter,
     }),
-    [statusFilter, priorityFilter, tagFilter],
+    [statusFilter, priorityFilter, tagFilter, dueFilter],
   );
   const filtersActive = countActiveFilters(filters) > 0;
 
   const setFilters = useCallback(
     (next: TaskFilters) => {
-      // nuqs drops a param when it equals the default, so empty arrays become
-      // null rather than "?status=".
-      void setStatusFilter(next.status.length ? next.status : null);
-      void setPriorityFilter(next.priority.length ? next.priority : null);
-      void setTagFilter(next.tagIds.length ? next.tagIds : null);
+      // Passed straight through, empty included. The parser writes "none"
+      // for an empty selection, so clearing a filter that has a saved default
+      // stays cleared instead of the default reappearing on the next read.
+      // nuqs still drops the param when the value matches the default, which
+      // is what makes leaving and coming back restore it.
+      void setStatusFilter(next.status);
+      void setPriorityFilter(next.priority);
+      void setTagFilter(next.tagIds);
+      void setDueFilter(next.due);
     },
-    [setStatusFilter, setPriorityFilter, setTagFilter],
+    [setStatusFilter, setPriorityFilter, setTagFilter, setDueFilter],
   );
 
   const filtered = useMemo(() => {
@@ -281,7 +318,7 @@ export function TasksView({
     }
     // Priority by default — same order as the home widget — or whatever the
     // sort menu picked instead.
-    return sortTasks(applyTaskFilters(items, filters), sort);
+    return sortTasks(applyTaskFilters(items, filters, td), sort, reversed);
   }, [
     tasks,
     carryover,
@@ -531,7 +568,13 @@ export function TasksView({
               onChange={setFilters}
               tags={tags}
             />
-            <SortMenu options={TASK_SORTS} value={sort} onChange={changeSort} />
+            <SortMenu
+              options={TASK_SORTS}
+              value={sort}
+              onChange={changeSort}
+              reversed={reversed}
+              onReversedChange={changeReversed}
+            />
 
             <div className="flex shrink-0 items-center gap-0.5 max-lg:hidden">
               <TaskStat

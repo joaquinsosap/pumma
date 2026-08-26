@@ -552,7 +552,13 @@ export async function reorderTagsAction(ids: string[]): Promise<ActionResult> {
   for (const [index, id] of parsed.data.entries()) {
     await updateTag(userId, id, { order: index });
   }
-  await updateSettings(userId, { tagSort: "custom" });
+  // Custom AND forwards: this order was written by the user's hand, and a
+  // standing "reversed" would render the drop anywhere but where it landed.
+  const current = await getSettings(userId);
+  await updateSettings(userId, {
+    tagSort: "custom",
+    sortReversed: (current?.sortReversed ?? []).filter((k) => k !== "tag"),
+  });
   revalidatePath("/", "layout");
   return { ok: true };
 }

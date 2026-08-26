@@ -617,6 +617,7 @@ export function createSeedData(userId: string): SeedData {
     lifeCalendarFullView: false,
     showMeetingCodes: false,
     calendarLinkOffered: false,
+    sortReversed: [],
     habitVisibleDays: 30,
     habitVisibleWeeks: 8,
     habitVisibleMonths: 3,

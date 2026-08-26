@@ -50,6 +50,46 @@ describe("sortTasks", () => {
     ).map((t) => t.id);
     expect(got).toEqual(["x", "y"]);
   });
+
+  it("reversed due runs latest first but still sinks the undated", () => {
+    const got = sortTasks(
+      [
+        task({ id: "none", due: null }),
+        task({ id: "soon", due: "2026-08-14" }),
+        task({ id: "late", due: "2026-09-01" }),
+      ],
+      "due",
+      true,
+    ).map((t) => t.id);
+    expect(got).toEqual(["late", "soon", "none"]);
+  });
+
+  it("reversed priority swaps the bands, not the rows inside them", () => {
+    const got = sortTasks(
+      [
+        task({ id: "h1", priority: "high" }),
+        task({ id: "h2", priority: "high" }),
+        task({ id: "l", priority: "low" }),
+      ],
+      "priority",
+      true,
+    ).map((t) => t.id);
+    // low first now, but the two highs keep their order.
+    expect(got[0]).toBe("l");
+    expect(got.indexOf("h1")).toBeLessThan(got.indexOf("h2"));
+  });
+
+  it("reversed ties keep their incoming order too", () => {
+    const got = sortTasks(
+      [
+        task({ id: "x", due: "2026-08-14" }),
+        task({ id: "y", due: "2026-08-14" }),
+      ],
+      "due",
+      true,
+    ).map((t) => t.id);
+    expect(got).toEqual(["x", "y"]);
+  });
 });
 
 describe("sortProjects", () => {
@@ -99,6 +139,20 @@ describe("sortNotes", () => {
       "edited",
     ).map((x) => x.id);
     expect(got).toEqual(["pinned-old", "fresh"]);
+  });
+
+  it("a pin outranks a REVERSED ordering too", () => {
+    const got = sortNotes(
+      [
+        n({ id: "fresh", updatedAt: "2026-08-13" }),
+        n({ id: "old", updatedAt: "2026-08-01" }),
+        n({ id: "pinned", pinned: true, updatedAt: "2026-08-07" }),
+      ],
+      "edited",
+      true,
+    ).map((x) => x.id);
+    // Oldest touch first now, pin still on top.
+    expect(got).toEqual(["pinned", "old", "fresh"]);
   });
 
   it("edited is newest touch first", () => {

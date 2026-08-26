@@ -6,8 +6,11 @@ import type { TaskStatus, TaskPriority } from "@/lib/types";
 import {
   TASK_STATUSES,
   TASK_PRIORITIES,
+  TASK_DUE_FILTERS,
   STATUS_LABELS,
   PRIORITY_LABELS,
+  DUE_LABELS,
+  NO_FILTERS,
   countActiveFilters,
   toggleFilterValue,
   type TaskFilters,
@@ -77,7 +80,7 @@ export function TaskFilterMenu({
           {active > 0 && (
             <button
               type="button"
-              onClick={() => onChange({ status: [], priority: [], tagIds: [] })}
+              onClick={() => onChange(NO_FILTERS)}
               className="text-[11px] font-semibold text-faint transition-colors hover:text-ink"
             >
               Clear all
@@ -96,6 +99,29 @@ export function TaskFilterMenu({
                 onChange({
                   ...filters,
                   status: toggleFilterValue(filters.status, s, TASK_STATUSES),
+                })
+              }
+            />
+          ))}
+        </Section>
+
+        <Section label="Due">
+          {/* The one slice the tabs can't make: Today and Upcoming both
+              exclude the past by construction. */}
+          {TASK_DUE_FILTERS.map((d) => (
+            <Row
+              key={d}
+              label={DUE_LABELS[d]}
+              dot={d === "overdue" ? "oklch(0.64 0.18 25)" : "var(--faint2)"}
+              checked={(filters.due ?? []).includes(d)}
+              onToggle={() =>
+                onChange({
+                  ...filters,
+                  due: toggleFilterValue(
+                    filters.due ?? [],
+                    d,
+                    TASK_DUE_FILTERS,
+                  ),
                 })
               }
             />
@@ -178,6 +204,17 @@ export function TaskFilterChips({
       remove: () =>
         onChange({ ...filters, status: filters.status.filter((v) => v !== s) }),
     })),
+    ...(filters.due ?? []).map((d) => ({
+      key: `due:${d}`,
+      label: DUE_LABELS[d],
+      dot: d === "overdue" ? "oklch(0.64 0.18 25)" : "var(--faint2)",
+      capitalize: false,
+      remove: () =>
+        onChange({
+          ...filters,
+          due: (filters.due ?? []).filter((v) => v !== d),
+        }),
+    })),
     ...filters.priority.map((p) => ({
       key: `priority:${p}`,
       label: `${PRIORITY_LABELS[p]} priority`,
@@ -224,7 +261,7 @@ export function TaskFilterChips({
       ))}
       <button
         type="button"
-        onClick={() => onChange({ status: [], priority: [], tagIds: [] })}
+        onClick={() => onChange(NO_FILTERS)}
         className="ml-0.5 text-[11.5px] font-semibold text-faint transition-colors hover:text-ink"
       >
         Clear all
