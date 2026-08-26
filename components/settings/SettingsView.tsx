@@ -73,6 +73,8 @@ import type { DeleteAccountBlock } from "@/lib/actions/account";
 import type { StarterStatus } from "@/lib/actions/starter";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { CalendarFeeds } from "@/components/settings/CalendarFeeds";
+import { NotificationSettings } from "@/components/settings/NotificationSettings";
+import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
 import {
   SettingsGroupBlock,
@@ -97,6 +99,8 @@ type Props = {
   stats: { dayPct: number; habitsLabel: string; topStreak: number };
   /** Subscribed calendars, managed here and nowhere else. */
   calendarFeeds?: CalendarFeed[];
+  /** Empty when the server has no VAPID keys — push is then simply not offered. */
+  pushPublicKey?: string;
 };
 
 function SettingRow({
@@ -168,6 +172,7 @@ export function SettingsView({
   tagCounts = {},
   stats,
   calendarFeeds = [],
+  pushPublicKey = "",
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -183,22 +188,38 @@ export function SettingsView({
   useEffect(() => {
     const id = window.location.hash.slice(1);
     if (!id) return;
-    const el = document.getElementById(id);
-    if (!el) return;
-    // Deferred so the pane has been laid out to scroll within, but on a
-    // timeout rather than requestAnimationFrame: rAF is frozen while a tab is
-    // in the background, so opening this link in a new tab would have left
-    // the pane sitting at the top with no sign anything was meant to happen.
-    const timer = window.setTimeout(() => {
+
+    // Polled rather than looked up once. The panels are client-rendered from
+    // data that arrives after this effect runs, so a single lookup finds
+    // nothing and silently gives up — which is exactly what happened: the
+    // same code worked or did not depending on how fast the page had settled.
+    //
+    // On a timeout rather than requestAnimationFrame throughout: rAF is
+    // frozen while a tab is in the background, so opening one of these links
+    // in a new tab would leave the pane at the top having done nothing.
+    let timer = 0;
+    let el: HTMLElement | null = null;
+    let tries = 0;
+    const done = () => el?.classList.remove("settings-landed");
+
+    const attempt = () => {
+      el = document.getElementById(id);
+      if (!el) {
+        // ~2 seconds of trying. Past that the anchor is wrong, not late.
+        if (tries++ > 40) return;
+        timer = window.setTimeout(attempt, 50);
+        return;
+      }
       el.scrollIntoView({ behavior: "smooth", block: "start" });
       el.classList.add("settings-landed");
-    }, 0);
-    const done = () => el.classList.remove("settings-landed");
-    el.addEventListener("animationend", done);
+      el.addEventListener("animationend", done);
+    };
+    attempt();
+
     return () => {
       window.clearTimeout(timer);
-      el.removeEventListener("animationend", done);
-      el.classList.remove("settings-landed");
+      el?.removeEventListener("animationend", done);
+      done();
     };
   }, []);
   const [tagName, setTagName] = useState("");
@@ -618,6 +639,25 @@ export function SettingsView({
             </SettingsGroupBlock>
 
             <SettingsGroupBlock id="workspace" label="Workspace">
+            {/* Beside the calendars it reminds you about, because the two
+                questions arrive together: somebody who just linked a work
+                calendar is the same person wondering whether it will tell
+                them anything. */}
+            <div id="notifications" className="mb-6 scroll-mt-4">
+              <SettingsSection
+                title="Reminders"
+                description="Before a meeting starts, or a task falls due. They appear in the bell, and on this device too once you allow it."
+              >
+                <NotificationSettings
+                  prefs={{
+                    ...DEFAULT_NOTIFICATION_SETTINGS,
+                    ...(settings?.notifications ?? {}),
+                  }}
+                  pushPublicKey={pushPublicKey}
+                />
+              </SettingsSection>
+            </div>
+
             {/* Full width: a list of subscriptions plus the "where do I find
                 the link" answer needs the room, and it is the one panel here
                 somebody arrives at with a task in hand.

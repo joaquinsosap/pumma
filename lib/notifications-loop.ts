@@ -21,8 +21,9 @@ const DELIVER_MS = 60_000;
 const MATERIALIZE_MS = 5 * 60_000;
 
 declare global {
-  // eslint-disable-next-line no-var
-  var __pummaNotifyTimers: { deliver: NodeJS.Timeout; plan: NodeJS.Timeout } | undefined;
+  var __pummaNotifyTimers:
+    | { deliver: NodeJS.Timeout; plan: NodeJS.Timeout }
+    | undefined;
 }
 
 export function startNotificationLoops(): void {

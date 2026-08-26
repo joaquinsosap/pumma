@@ -426,3 +426,33 @@ export async function answerNudgeAction(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+/**
+ * Record the browser's timezone, once, if nothing has claimed the field.
+ *
+ * The cookie TimezoneSync writes is enough for every server READ, because
+ * those all happen inside a request. Background work has no request and no
+ * cookie: the notification planner runs on a timer, and planning in UTC for
+ * somebody in Montevideo puts every reminder three hours out. So the zone is
+ * also persisted here.
+ *
+ * Never overwrites a zone that differs from the default. Somebody who chose
+ * their timezone deliberately — travelling, or working across one — must not
+ * have that choice quietly reverted by the machine they happen to open next.
+ */
+export async function syncTimezoneAction(
+  timeZone: string,
+): Promise<ActionResult> {
+  const parsed = z.string().max(64).safeParse(timeZone);
+  if (!parsed.success || !isValidTimezone(parsed.data)) {
+    return { ok: false, error: "Invalid timezone" };
+  }
+  const userId = await requireUserId();
+  const settings = await getSettings(userId);
+  const stored = settings?.timezone ?? "UTC";
+  if (stored !== "UTC" && stored !== "") return { ok: true };
+  const next = normalizeTimezone(parsed.data);
+  if (next === stored) return { ok: true };
+  await updateSettings(userId, { timezone: next });
+  return { ok: true };
+}

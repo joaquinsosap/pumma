@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { refreshNotifications } from "@/lib/notifications-server";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
 import type { AgendaItem } from "@/lib/schemas";
@@ -95,6 +96,7 @@ export async function addMeetingAction(
     recurrence,
     exceptions: [],
   });
+  await refreshNotifications(userId);
   revalidatePath("/", "layout");
   return { ok: true, data: item };
 }
@@ -132,6 +134,7 @@ export async function updateMeetingAction(
     ...(patch.recurrence !== undefined ? { exceptions: [] } : {}),
   });
   if (!updated) return { ok: false, error: "Meeting not found" };
+  await refreshNotifications(userId);
   revalidatePath("/", "layout");
   return { ok: true, data: updated };
 }
@@ -170,12 +173,14 @@ export async function deleteMeetingAction(
         exceptions: [...existing.exceptions, date],
       });
     }
+    await refreshNotifications(userId);
     revalidatePath("/", "layout");
     return { ok: true };
   }
 
   const ok = await deleteAgendaItem(userId, id);
   if (!ok) return { ok: false, error: "Meeting not found" };
+  await refreshNotifications(userId);
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -189,6 +194,7 @@ export async function deleteAgendaItemAction(
   const userId = await requireUserId();
   const ok = await deleteAgendaItem(userId, parsed.data);
   if (!ok) return { ok: false, error: "Item not found" };
+  await refreshNotifications(userId);
   revalidatePath("/", "layout");
   return { ok: true };
 }

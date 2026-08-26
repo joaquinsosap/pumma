@@ -223,5 +223,12 @@ export async function syncStaleFeeds(
     if (res.ok) synced += 1;
     else failed += 1;
   }
+  // A sync that pulled in events changed what should be reminded about. Only
+  // when something actually moved: an unchanged poll is the common case and
+  // re-planning on every one of them would be work with no output.
+  if (synced > 0) {
+    const { refreshNotifications } = await import("@/lib/notifications-server");
+    await refreshNotifications(userId);
+  }
   return { synced, failed };
 }

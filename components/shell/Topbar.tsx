@@ -7,6 +7,7 @@ import { formatTopbarDateLine } from "@/lib/date-context";
 import { DEFAULT_USER_NAME } from "@/lib/user-display";
 import { ActiveTaskTimer } from "@/components/shell/ActiveTaskTimer";
 import { TopbarProjectPill } from "@/components/shell/TopbarProjectPill";
+import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
 import { hrefWithLife } from "@/lib/life-area";
@@ -100,6 +101,10 @@ export function Topbar({
         </div>
       </div>
       <div className="flex min-w-0 shrink items-center gap-1 self-stretch sm:self-auto">
+        {/* Before the stats, not after: the stats are a reading you glance
+            at, this is a thing that wants you. */}
+        <NotificationCenter />
+        <StatRule />
         <Stat
           value={`${dayPct}`}
           suffix="%"

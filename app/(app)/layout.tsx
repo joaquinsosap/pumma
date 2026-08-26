@@ -12,6 +12,7 @@ import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
 import { MobileCapture } from "@/components/shell/MobileCapture";
 import { TagAutoCleanRunner } from "@/components/tags/TagAutoCleanRunner";
 import { CalendarAutoSync } from "@/components/agenda/CalendarAutoSync";
+import { ServiceWorkerBridge } from "@/components/notifications/ServiceWorkerBridge";
 import { loadShellData } from "@/lib/data";
 import { displayName } from "@/lib/user-display";
 import { resolveLifeView } from "@/lib/life-view-server";
@@ -90,6 +91,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
                 <SpaceShortcuts enabled={s?.spaceShortcuts ?? true} />
                 <MobileShell demo={demo} />
                 <TagAutoCleanRunner enabled={s?.tagAutoClean ?? false} />
+                <ServiceWorkerBridge />
                 {/* Renders nothing. Refreshes subscribed calendars only
                     while somebody is looking at the app — see the component
                     for why that is not a cron. */}

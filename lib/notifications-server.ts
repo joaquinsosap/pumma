@@ -38,14 +38,32 @@ import { notificationSchema } from "@/lib/schemas";
  * after itself. Rows already DELIVERED are never touched — a notification you
  * have seen is history, not a promise we can withdraw.
  */
-export async function materializeFor(userId: string): Promise<number> {
+export async function materializeFor(
+  userId: string,
+  /**
+   * The caller's resolved timezone, when there is a request to resolve it
+   * from.
+   *
+   * This matters more than it looks. The app resolves timezone COOKIE-FIRST,
+   * and the browser's real zone is only ever written to that cookie — the
+   * stored setting keeps its "UTC" default until somebody changes it by hand
+   * in Settings. A background tick has no cookie, so planning from the stored
+   * setting alone would put every reminder hours out for anyone who never
+   * touched that field, which is nearly everyone.
+   *
+   * So: request paths pass what they resolved, and the client also persists
+   * its zone into settings once (see syncTimezoneAction) so the ticks that
+   * have no request left to ask still have something true to read.
+   */
+  timeZoneOverride?: string,
+): Promise<number> {
   const settings = await getSettings(userId);
   const prefs: NotificationSettings = {
     ...DEFAULT_NOTIFICATION_SETTINGS,
     ...(settings?.notifications ?? {}),
   };
 
-  const timeZone = normalizeTimezone(settings?.timezone);
+  const timeZone = normalizeTimezone(timeZoneOverride ?? settings?.timezone);
   const now = new Date();
   const today = isoDateInTz(now, timeZone);
   const horizonEnd = addDaysToIsoDate(today, HORIZON_DAYS, timeZone);
@@ -108,7 +126,12 @@ export async function materializeFor(userId: string): Promise<number> {
  */
 export async function refreshNotifications(userId: string): Promise<void> {
   try {
-    await materializeFor(userId);
+    // Inside a request, so the cookie-first resolver is available and is the
+    // only source that knows the browser's actual zone.
+    const { resolveTimezoneWithSettings } = await import(
+      "@/lib/timezone-server"
+    );
+    await materializeFor(userId, await resolveTimezoneWithSettings());
   } catch {
     /* the periodic pass will catch up */
   }

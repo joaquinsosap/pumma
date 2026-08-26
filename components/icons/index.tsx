@@ -54,6 +54,8 @@ export {
 
 export {
   ArrowDown,
+  Bell,
+  BellOff,
   ArrowUp,
   ArrowUpDown,
   Briefcase,
