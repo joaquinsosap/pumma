@@ -94,6 +94,7 @@ hosted-mode settings — all off by default for self-hosted installs.
 | `npm run test` | Unit tests (Vitest) |
 | `npm run db:setup` | Indexes + seed (MongoDB mode) |
 | `npm run db:repair-refs` | Report/unlink dangling references |
+| `npm run db:migrate-auth-issuer` | One-off, required when upgrading past Better Auth 1.7 (see Deploy) |
 
 ## Architecture
 
@@ -113,6 +114,21 @@ Next.js standalone image, and a GitHub Actions workflow that runs the full
 typecheck/lint/test/build gate before publishing to GHCR. Any reverse proxy
 (Traefik, Caddy, nginx) can sit in front — set `BETTER_AUTH_URL` to your public
 URL and `SERVER_ACTIONS_ALLOWED_ORIGINS` to your domain.
+
+### Upgrading an install created before Better Auth 1.7
+
+Run this once, against the same database, before the new image serves traffic:
+
+```bash
+npm run db:migrate-auth-issuer -- --check   # report
+npm run db:migrate-auth-issuer              # write
+```
+
+1.7 rekeyed accounts on `(issuer, accountId)`. Rows written by 1.6 have no
+`issuer`, so sign-in cannot find them and refuses a correct password with
+"Invalid email or password". Existing sessions keep working, so an unmigrated
+deploy looks completely healthy right up until people start signing in. The app
+also checks at boot and prints the fix if it finds affected rows.
 
 ## License
 

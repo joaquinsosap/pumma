@@ -16,6 +16,11 @@ export async function register() {
       await warmMongoConnection().catch(() => {
         /* Pages will surface a friendly DB error if Atlas is unreachable. */
       });
+
+      // The Better Auth 1.7 upgrade breaks sign-in for accounts created before
+      // it unless they are migrated, and does so silently. Say it out loud.
+      const { warnOnUnmigratedAccounts } = await import("@/lib/auth/issuer-guard");
+      await warnOnUnmigratedAccounts();
     }
   }
 }
