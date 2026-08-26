@@ -16,6 +16,7 @@ import {
   type ScopeFilters,
   type ScopeRow,
   type ScopeSort,
+  type AssumedKey,
 } from "@/lib/ai/scope-schema";
 import { resolveScopeAction } from "@/lib/actions/scope";
 import { cn } from "@/lib/utils";
@@ -103,7 +104,7 @@ export function ScopeScreen({
     () => new Set(initial.assumed ?? []),
     [initial.assumed],
   );
-  const [touched, setTouched] = useState<Set<string>>(new Set());
+  const [touched, setTouched] = useState<Set<AssumedKey>>(new Set());
 
   // Re-resolve on every change, so the right-hand column is never a promise
   // about rows — it IS the rows.
@@ -154,7 +155,7 @@ export function ScopeScreen({
 
   const shows = (key: keyof ScopeFilters) =>
     FILTERS_FOR[scope.entity].includes(key);
-  const guessed = (key: string) => assumed.has(key) && !touched.has(key);
+  const guessed = (key: AssumedKey) => assumed.has(key) && !touched.has(key);
 
   // What will actually happen, as opposed to what matched.
   const changing = resolved.rows.filter(willChange).length;

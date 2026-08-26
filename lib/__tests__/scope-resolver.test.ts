@@ -4,6 +4,7 @@ import {
   FILTERS_FOR,
   SORTS_FOR,
   SCOPE_ENTITIES,
+  scopeSchema,
   type Scope,
 } from "@/lib/ai/scope-schema";
 import type { Goal, Habit, Note, Project, Task } from "@/lib/schemas";
@@ -336,5 +337,37 @@ describe("every entity resolves", () => {
       expect(SORTS_FOR[entity].length).toBeGreaterThan(0);
       expect(FILTERS_FOR[entity].length).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("assumed is a closed vocabulary", () => {
+  it("accepts bare keys", () => {
+    const got = scopeSchema.parse({
+      ...scope(),
+      assumed: ["status", "sort"],
+    });
+    expect(got.assumed).toEqual(["status", "sort"]);
+  });
+
+  it("salvages the prose the model actually sent", () => {
+    // Observed in a real call: the same request returned ["status"] once and
+    // this the next time. The screen looks these up by key to decide which
+    // control to mark, so prose silently marked nothing.
+    const got = scopeSchema.parse({
+      ...scope(),
+      assumed: [
+        "status: open tasks only (todo and doing)",
+        "sort: oldest by created date",
+      ],
+    });
+    expect(got.assumed).toEqual(["status", "sort"]);
+  });
+
+  it("drops what it cannot place rather than showing a mystery", () => {
+    const got = scopeSchema.parse({
+      ...scope(),
+      assumed: ["status", "vibes", "status"],
+    });
+    expect(got.assumed).toEqual(["status"]);
   });
 });

@@ -219,6 +219,58 @@ export const FILTERS_FOR: Record<ScopeEntity, readonly (keyof ScopeFilters)[]> =
     note: ["pinned", "edited", "tagIds", "lifeArea", "contains", "created"],
   };
 
+/** Everything a scope can assume, by name. */
+export const ASSUMABLE = [
+  "entity",
+  "status",
+  "priority",
+  "due",
+  "frequency",
+  "archived",
+  "category",
+  "target",
+  "pinned",
+  "edited",
+  "tagIds",
+  "projectId",
+  "goalId",
+  "lifeArea",
+  "contains",
+  "created",
+  "progressBelow",
+  "progressAbove",
+  "sort",
+  "count",
+] as const;
+export const assumedKey = z.enum(ASSUMABLE);
+export type AssumedKey = z.infer<typeof assumedKey>;
+
+/**
+ * Salvage a prose entry into the key it is about.
+ *
+ * The enum above is the rule, but a rejected generation costs the user a whole
+ * request and gives them an error instead of a screen — and what came back in
+ * practice was "status: open tasks only (todo and doing)", which names its own
+ * key in the first word. Taking that leading token is strictly better than
+ * failing, and anything genuinely unrecognisable is dropped rather than shown
+ * as a mystery.
+ */
+export const assumedList = z.preprocess((raw) => {
+  if (!Array.isArray(raw)) return raw;
+  const out: string[] = [];
+  for (const entry of raw) {
+    if (typeof entry !== "string") continue;
+    const head = entry.split(/[:\s(]/)[0]?.trim();
+    const key = (ASSUMABLE as readonly string[]).includes(head)
+      ? head
+      : (ASSUMABLE as readonly string[]).find((k) =>
+          entry.toLowerCase().startsWith(k.toLowerCase()),
+        );
+    if (key && !out.includes(key)) out.push(key);
+  }
+  return out;
+}, z.array(assumedKey));
+
 export const scopeSchema = z.object({
   entity: scopeEntity,
   filters: scopeFiltersSchema,
@@ -242,12 +294,17 @@ export const scopeSchema = z.object({
    * decision was made on the user's behalf, and they get to see it before it
    * touches their data.
    *
-   * Keys of `filters`, plus "sort" and "count".
+   * A CLOSED list of field names, not free text. Left open, the same request
+   * came back as ["status"] one call and
+   * ["status: open tasks only (todo and doing)"] the next — and the screen
+   * looks these up by key to decide which control to mark, so the prose
+   * version silently marked nothing. This is the same rule the rest of the
+   * scope follows, applied to the one field that had escaped it: the model
+   * chooses from a vocabulary, never writes one.
    */
-  assumed: z
-    .array(z.string())
+  assumed: assumedList
     .describe(
-      "Every field you filled in that the user did not state. Be honest: this is what the user is shown and asked to confirm.",
+      "Field NAMES you filled in that the user did not state, from the allowed list. Exactly the name, no explanation. This is what the user is shown and asked to confirm.",
     ),
 });
 export type Scope = z.infer<typeof scopeSchema>;
