@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import {
   Bell,
   CalendarPlus,
-  Check,
   CheckSquare,
   ChevronDown,
   Link2,
@@ -64,11 +63,23 @@ export function NotificationSheet({
   notification,
   onClose,
   onChanged,
+  loading = false,
 }: {
   notification: AppNotification | null;
   onClose: () => void;
   /** Something happened that the tray needs to reload for. */
   onChanged?: () => void;
+  /**
+   * Show the frame before the notification itself has arrived.
+   *
+   * Opening a push notification on a phone is a cold start: the app has to
+   * download, hydrate, and then ask the server which notifications exist
+   * before it can know anything about the one that was tapped. Until all of
+   * that finished, this rendered nothing, so tapping a reminder put you on
+   * the home page for several seconds with no sign that anything had been
+   * understood. The frame costs nothing and says "yes, that tap landed".
+   */
+  loading?: boolean;
 }) {
   const router = useRouter();
   const [pending, start] = useTransition();
@@ -81,7 +92,7 @@ export function NotificationSheet({
     return () => window.clearInterval(t);
   }, []);
 
-  if (!notification) return null;
+  if (!notification) return loading ? <SheetSkeleton onClose={onClose} /> : null;
   const n = notification;
   const meta = KIND[n.kind] ?? KIND.digest;
   const Icon = meta.icon;
@@ -235,24 +246,52 @@ export function NotificationSheet({
                   <ChevronDown className="h-3 w-3" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="start" className="w-36 p-1.5">
-                <p className="px-2 pb-1 pt-0.5 font-mono text-[10px] uppercase tracking-widest text-faint2">
+              {/* Five short durations, laid out as a block of chips rather
+                  than a column of rows.
+                  
+                  As a list it was a tall thin strip that hung well below the
+                  dialog and over the page behind it, which read as a menu
+                  belonging to nothing. Every row also reserved space for a
+                  tick that is never shown, so each one was mostly empty. The
+                  durations are two or three characters; letting them sit side
+                  by side makes the whole thing about the size of the button
+                  that opens it.
+
+                  It opens UPWARD. The button sits on the sheet's bottom row,
+                  so downward put the menu over the page behind the dialog,
+                  attached to nothing. Upward it lands on the sheet itself,
+                  which is what it belongs to. Radix still flips it if there is
+                  no room. */}
+              <PopoverContent
+                side="top"
+                align="start"
+                collisionPadding={10}
+                // Above the dialog, which is z-80. The shared PopoverContent is
+                // z-70, fine everywhere else but behind this sheet: opening
+                // upward put the menu UNDER the card and it vanished. It only
+                // ever looked right pointing down because that landed it past
+                // the card's bottom edge, over the page, which is the detached
+                // look being fixed here.
+                className="z-[90] w-auto p-2"
+              >
+                <p className="px-0.5 pb-1.5 font-mono text-[10px] uppercase tracking-widest text-faint2">
                   Remind me in
                 </p>
-                {SNOOZE_CHOICES.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => {
-                      setSnoozeOpen(false);
-                      snooze(m);
-                    }}
-                    className="flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-[13px] text-muted transition-colors hover:bg-hover hover:text-ink"
-                  >
-                    {m < 60 ? `${m} minutes` : "1 hour"}
-                    <Check className="h-3.5 w-3.5 opacity-0" />
-                  </button>
-                ))}
+                <div className="flex gap-1">
+                  {SNOOZE_CHOICES.map((m) => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => {
+                        setSnoozeOpen(false);
+                        snooze(m);
+                      }}
+                      className="rounded-md border border-border bg-surface2 px-2.5 py-1.5 text-center font-mono text-[12px] font-semibold text-muted transition-colors hover:border-primary/40 hover:bg-primary/[0.06] hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+                    >
+                      {m < 60 ? `${m}m` : "1h"}
+                    </button>
+                  ))}
+                </div>
               </PopoverContent>
             </Popover>
 
@@ -266,6 +305,45 @@ export function NotificationSheet({
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * The sheet before its notification has loaded.
+ *
+ * Deliberately the same frame, the same size, and in the same place as the
+ * real thing, so it is replaced rather than swapped: nothing moves under the
+ * thumb when the content lands. No spinner. This is normally on screen for a
+ * moment, and a spinner that flashes for 300ms is noise, while a frame that
+ * is already the right shape just looks like the sheet arriving.
+ */
+function SheetSkeleton({ onClose }: { onClose: () => void }) {
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        className="max-w-[430px] gap-0 rounded-[13px] p-0"
+        style={{ boxShadow: "2px 2px 0 var(--shadow)" }}
+      >
+        <div className="border-b border-border2 bg-surface2/60 px-5 py-4">
+          <DialogHeader className="gap-2">
+            <DialogTitle className="sr-only">Opening notification</DialogTitle>
+            <div className="flex items-center gap-2">
+              <span className="h-5 w-5 shrink-0 animate-pulse rounded-md bg-border" />
+              <span className="h-2.5 w-16 animate-pulse rounded bg-border" />
+            </div>
+            <span className="h-4 w-2/3 animate-pulse rounded bg-border" />
+            <span className="h-3 w-2/5 animate-pulse rounded bg-border2" />
+          </DialogHeader>
+        </div>
+        <div className="flex flex-col gap-3 px-5 py-4">
+          <span className="h-10 w-full animate-pulse rounded-lg bg-border2" />
+          <div className="flex gap-2">
+            <span className="h-9 w-32 animate-pulse rounded-lg bg-border2" />
+            <span className="h-9 w-24 animate-pulse rounded-lg bg-border2" />
           </div>
         </div>
       </DialogContent>

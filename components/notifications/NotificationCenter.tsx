@@ -55,6 +55,8 @@ const KIND_DOT: Record<string, string> = {
 export function NotificationCenter() {
   const router = useRouter();
   const [items, setItems] = useState<AppNotification[]>([]);
+  // Whether the first load has come back, either way.
+  const [loaded, setLoaded] = useState(false);
   const [open, setOpen] = useState(false);
   const [, startTransition] = useTransition();
   // Which notification the sheet is showing, if any. In the URL so a cold
@@ -67,6 +69,9 @@ export function NotificationCenter() {
 
   const load = useCallback(async () => {
     const res = await loadNotificationsAction();
+    // Set even on failure: it records that the server has answered, which is
+    // what decides whether an unfound id is still loading or simply gone.
+    setLoaded(true);
     if (!res.ok || !res.data) return;
     const next = res.data.items;
 
@@ -134,6 +139,16 @@ export function NotificationCenter() {
     return () =>
       navigator.serviceWorker.removeEventListener("message", onMessage);
   }, [load, setFocusId]);
+
+  // An id in the URL that the server does not know about: the notification was
+  // deleted, or it belongs to somebody else. Clear it, or the skeleton's frame
+  // would be replaced by nothing and `?n=` would sit in the URL forever,
+  // reopening the same dead sheet on every reload.
+  useEffect(() => {
+    if (!focusId || !loaded) return;
+    if (items.some((n) => n.id === focusId)) return;
+    void setFocusId(null);
+  }, [focusId, loaded, items, setFocusId]);
 
   const unread = items.filter((n) => n.status === "sent").length;
   const focused = useMemo(
@@ -376,6 +391,11 @@ export function NotificationCenter() {
 
       <NotificationSheet
         notification={focused}
+        // A push tap arrives as `/?n=<id>`, so the id is known from the first
+        // render while the notification itself is a round trip away. Show the
+        // sheet on the id alone rather than leaving somebody looking at the
+        // home page wondering whether the tap did anything.
+        loading={!!focusId && !focused && !loaded}
         onClose={closeSheet}
         onChanged={() => void load()}
       />
