@@ -18,7 +18,10 @@ import { insertGoal, listGoals, nextGoalOrder } from "@/lib/db/goals";
 import { getSettings } from "@/lib/db/settings";
 import { userToday } from "@/lib/timezone-server";
 import type { Task } from "@/lib/schemas";
-import { syncGoalsForProject } from "@/lib/goal-sync-server";
+import {
+  syncGoalsForProject,
+  syncGoalsForProjects,
+} from "@/lib/goal-sync-server";
 import {
   deriveLifeAreaFromTags,
   withLifeTags,
@@ -448,13 +451,26 @@ export async function moveTaskOnBoard(input: {
 
   // Renumber. Ids the client sent that no longer exist are skipped rather than
   // refused: a stale card in the list shouldn't cost the user the whole move.
+  //
+  // One read for every id in both columns (up to 500 + 500), then one write
+  // for whichever of them actually moved — not a getTask/updateTask round
+  // trip per id, which is what made dragging a card in a long column cost as
+  // many round trips as the column had cards.
+  const { getTasksByIds, updateTasks } = await import("@/lib/db/tasks");
+  const touchedIds = [...columnIds, ...(fromColumnIds ?? [])];
+  const existingById = new Map(
+    (await getTasksByIds(userId, touchedIds)).map((t) => [t.id, t]),
+  );
+  const orderUpdates: { id: string; patch: Parameters<typeof updateTask>[2] }[] =
+    [];
   for (const ids of [columnIds, fromColumnIds ?? []]) {
     for (const [index, taskId] of ids.entries()) {
-      const existing = await getTask(userId, taskId);
+      const existing = existingById.get(taskId);
       if (!existing || existing.order === index) continue;
-      await updateTask(userId, taskId, { order: index });
+      orderUpdates.push({ id: taskId, patch: { order: index } });
     }
   }
+  if (orderUpdates.length) await updateTasks(userId, orderUpdates);
 
   if (task.projectId) await syncGoalsForProject(userId, task.projectId);
   revalidatePath("/", "layout");
@@ -555,7 +571,7 @@ export async function bulkUpdateTasks(
   if (!touchesSomething) return { ok: false, error: "Nothing to update" };
 
   const userId = await requireUserId();
-  const { getTask } = await import("@/lib/db/tasks");
+  const { getTasksByIds, updateTasks } = await import("@/lib/db/tasks");
   const tags = await listTags(userId);
 
   // A stale client can name a project deleted since it last rendered. Refuse
@@ -576,10 +592,16 @@ export async function bulkUpdateTasks(
   // Both ends of every move need their goal progress recomputed, but a project
   // that appears fifty times only needs it once.
   const projectsToSync = new Set<string>();
-  let updated = 0;
+
+  // One read for the whole selection (up to 200 ids), instead of a getTask
+  // per id — that loop was the round trip that scaled with selection size.
+  const tasksById = new Map(
+    (await getTasksByIds(userId, ids)).map((t) => [t.id, t]),
+  );
+  const patches: { id: string; patch: Parameters<typeof updateTask>[2] }[] = [];
 
   for (const id of ids) {
-    const task = await getTask(userId, id);
+    const task = tasksById.get(id);
     if (!task) continue;
 
     const patch: Parameters<typeof updateTask>[2] = {};
@@ -628,10 +650,14 @@ export async function bulkUpdateTasks(
       projectsToSync.add(task.projectId);
     }
 
-    if (await updateTask(userId, id, patch)) updated++;
+    patches.push({ id, patch });
   }
 
-  for (const pid of projectsToSync) await syncGoalsForProject(userId, pid);
+  const updated = await updateTasks(userId, patches);
+
+  // One fetch of projects/habits/habitEntries/tasks shared across every
+  // touched project, instead of that fetch repeated per project.
+  await syncGoalsForProjects(userId, [...projectsToSync]);
   revalidatePath("/", "layout");
   return { ok: true, data: { updated } };
 }
@@ -651,19 +677,29 @@ export async function bulkDeleteTasks(
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
   const userId = await requireUserId();
-  const { getTask } = await import("@/lib/db/tasks");
-  const snapshots: Task[] = [];
+  const { getTasksByIds, deleteTasks } = await import("@/lib/db/tasks");
   const projectsToSync = new Set<string>();
 
+  // One read for the whole selection, one delete for the whole selection —
+  // not a getTask + deleteOne round trip per id.
+  const tasksById = new Map(
+    (await getTasksByIds(userId, parsed.data.ids)).map((t) => [t.id, t]),
+  );
+  const snapshots: Task[] = [];
   for (const id of parsed.data.ids) {
-    const task = await getTask(userId, id);
+    const task = tasksById.get(id);
     if (!task) continue;
     snapshots.push(task);
     if (task.projectId) projectsToSync.add(task.projectId);
-    await removeTask(userId, id);
+  }
+  if (snapshots.length) {
+    await deleteTasks(
+      userId,
+      snapshots.map((t) => t.id),
+    );
   }
 
-  for (const pid of projectsToSync) await syncGoalsForProject(userId, pid);
+  await syncGoalsForProjects(userId, [...projectsToSync]);
   revalidatePath("/", "layout");
   return {
     ok: true,
@@ -693,26 +729,51 @@ export async function undoDeleteTasks(snapshot: string): Promise<ActionResult> {
     listTags(userId),
     listGoals(userId),
   ]);
+
+  const valid = batch.filter(
+    (task): task is Task => !!task && typeof task === "object" && !!task.id,
+  );
+  // One getProject per distinct project referenced (each already deduped by
+  // React's per-request cache for repeats), fetched in parallel instead of
+  // sequentially awaiting a getProject before every single insert.
+  const projectIds = [
+    ...new Set(
+      valid
+        .map((t) => t.projectId)
+        .filter((id): id is string => typeof id === "string" && id.length > 0),
+    ),
+  ];
+  const fetchedProjects = await Promise.all(
+    projectIds.map((id) => getProject(userId, id)),
+  );
+  const projectsById = new Map(
+    fetchedProjects
+      .filter((p): p is NonNullable<typeof p> => !!p)
+      .map((p) => [p.id, p] as const),
+  );
+
   const projectsToSync = new Set<string>();
-  for (const task of batch) {
-    if (!task || typeof task !== "object" || !task.id) continue;
+  const docs = valid.map((task) => {
     // Linked entities may have gone since the snapshot was taken — restore
     // without the dead links rather than resurrecting a dangling reference.
-    const project = task.projectId
-      ? await getProject(userId, task.projectId)
-      : null;
-    await insertTask({
+    const project = task.projectId ? projectsById.get(task.projectId) : null;
+    if (project) projectsToSync.add(project.id);
+    return {
       ...task,
       _id: task.id,
       userId,
       projectId: project ? task.projectId : null,
       goalId: goals.some((g) => g.id === task.goalId) ? task.goalId : null,
       tagIds: (task.tagIds ?? []).filter((id) => tags.some((t) => t.id === id)),
-    });
-    if (project) projectsToSync.add(project.id);
-  }
+    };
+  });
 
-  for (const pid of projectsToSync) await syncGoalsForProject(userId, pid);
+  // One insertMany for the whole batch instead of a getProject + insertTask
+  // round trip per task.
+  const { insertTasks } = await import("@/lib/db/tasks");
+  if (docs.length) await insertTasks(docs);
+
+  await syncGoalsForProjects(userId, [...projectsToSync]);
   revalidatePath("/", "layout");
   return { ok: true };
 }
