@@ -4,12 +4,7 @@ import { useCallback, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Plus, X } from "@/components/icons";
 import type { Project, Subtask, Tag, Task } from "@/lib/schemas";
-import {
-  dueDatePart,
-  mergeTaskDueDate,
-  oid,
-  taskDueDateInput,
-} from "@/lib/date";
+import { mergeTaskDueDate, oid, taskDueDateInput } from "@/lib/date";
 import {
   updateTaskDetail,
   moveTaskStatus,
@@ -72,6 +67,10 @@ export function TaskDetailPanel({
   const [priority, setPriority] = useSyncedDraft(task.priority, task.id);
   const [dueDate, setDueDate] = useSyncedDraft(
     taskDueDateInput(task.due),
+    task.id,
+  );
+  const [dueTime, setDueTime] = useSyncedDraft(
+    task.due?.includes("T") ? task.due.slice(11, 16) : "",
     task.id,
   );
   const [pending, startTransition] = useTransition();
@@ -218,7 +217,21 @@ export function TaskDetailPanel({
   const clearDueDate = () => {
     if (!task.due) return;
     setDueDate("");
+    setDueTime("");
     persist({ due: null });
+  };
+
+  // A time only means anything once there's a date it belongs to, and the
+  // omnibar deliberately never sets one (see lib/parse.ts). This is the only
+  // place a task picks up a time of day, and it can always be cleared back
+  // to a plain due date.
+  const setTaskTime = (next: string) => {
+    if (!dueDate) return;
+    setDueTime(next);
+    const nextDue = next ? `${dueDate}T${next}` : dueDate;
+    if (nextDue !== (task.due ?? null)) {
+      persist({ due: nextDue });
+    }
   };
 
   const doneSubtasks = subtasks.filter((s) => s.done).length;
@@ -337,9 +350,31 @@ export function TaskDetailPanel({
               }
             }}
           />
-          {task.due?.includes("T") && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="font-mono text-[10px] uppercase tracking-wide text-faint2">
+              Time
+            </span>
+            <input
+              type="time"
+              value={dueTime}
+              disabled={!dueDate}
+              onChange={(e) => setTaskTime(e.target.value)}
+              aria-label="Due time"
+              className="rounded-lg border border-border bg-surface px-2 py-1 font-mono text-[11px] text-ink outline-none transition-colors focus:border-faint disabled:opacity-50"
+            />
+            {dueTime && (
+              <button
+                type="button"
+                onClick={() => setTaskTime("")}
+                className="font-mono text-[10px] text-faint hover:text-ink"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {!dueDate && (
             <p className="mt-1.5 font-mono text-[10px] text-faint">
-              Time {dueDatePart(task.due)}
+              Set a due date to add a time
             </p>
           )}
         </section>

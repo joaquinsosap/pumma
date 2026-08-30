@@ -154,11 +154,12 @@ export function parseOmni(
     if (parsed.length > 0) {
       const result = parsed[0];
       const dd = result.start.date();
-      const hasTime = result.start.isCertain("hour");
+      // The omnibar sets a due DATE, never a time of day, even when chrono
+      // heard one ("standup at 3pm" still just lands on today). A task only
+      // carries a time when it was set explicitly on the task itself, in
+      // TaskDetailPanel's time field.
       const datePart = `${dd.getFullYear()}-${pad(dd.getMonth() + 1)}-${pad(dd.getDate())}`;
-      due =
-        datePart +
-        (hasTime ? `T${pad(dd.getHours())}:${pad(dd.getMinutes())}` : "");
+      due = datePart;
       const label = result.text.trim();
       dateLabel = label.charAt(0).toUpperCase() + label.slice(1);
       title = title.replace(result.text, "").replace(/\s+/g, " ").trim();
