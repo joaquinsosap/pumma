@@ -18,8 +18,10 @@ import { listHabits } from "@/lib/db/habits";
 import { listHabitEntries } from "@/lib/db/habitEntries";
 import { listNotes } from "@/lib/db/notes";
 import { listTags } from "@/lib/db/tags";
-import { streakOf } from "@/lib/date";
+import { getSettings } from "@/lib/db/settings";
 import { isoDateInTz } from "@/lib/timezone";
+import { projectProgress } from "@/lib/metrics";
+import { habitStreak, normalizeHabitFrequency } from "@/lib/habit-visibility";
 
 const MAX_LIMIT = 200;
 
@@ -121,9 +123,14 @@ export const listProjectsTool = defineTool({
       counts.set(t.projectId, c);
     }
 
+    // p.progress is a stored field that is only ever written as 0 at
+    // creation (lib/actions/projects.ts, lib/mutations/entities.ts); every
+    // other reader (the UI, goal-sync's rollup) derives live progress from
+    // task completion via projectProgress instead of trusting that field.
+    // This tool was the one place still reading the stale stored value.
     const lines = page.map((p) => {
       const c = counts.get(p.id) ?? { open: 0, total: 0 };
-      return `${p.id}  ${p.title} (${p.progress}%, ${c.open}/${c.total} tasks open)`;
+      return `${p.id}  ${p.title} (${projectProgress(p.id, tasks).progress}%, ${c.open}/${c.total} tasks open)`;
     });
 
     return {
@@ -134,7 +141,7 @@ export const listProjectsTool = defineTool({
           id: p.id,
           title: p.title,
           description: p.description,
-          progress: p.progress,
+          progress: projectProgress(p.id, tasks).progress,
           goalId: p.goalId,
           lifeArea: p.lifeArea,
           openTasks: counts.get(p.id)?.open ?? 0,
@@ -197,10 +204,12 @@ export const listHabitsTool = defineTool({
   }),
   handler: async (input, caller) => {
     const today = isoDateInTz(new Date(), caller.timeZone);
-    const [habits, entries] = await Promise.all([
+    const [habits, entries, settings] = await Promise.all([
       listHabits(caller.userId),
       listHabitEntries(caller.userId),
+      getSettings(caller.userId),
     ]);
+    const weekStart = settings?.weekStart ?? "mon";
 
     const byHabit = new Map<string, Set<string>>();
     for (const e of entries) {
@@ -214,6 +223,12 @@ export const listHabitsTool = defineTool({
     if (!input.includeArchived) rows = rows.filter((h) => !h.archived);
     const page = rows.slice(0, input.limit);
 
+    // streakOf counts consecutive calendar days, which only works for daily
+    // habits. A weekly or monthly habit kept up for months was reading as a
+    // streak of 0 or 1 because its logged dates are days apart, not
+    // adjacent. habitStreak (lib/habit-visibility.ts) counts in the habit's
+    // own period (day/week/month) and is what the UI (lib/data.ts) already
+    // uses; this tool had its own, narrower copy.
     const described = page.map((h) => {
       const dates = byHabit.get(h.id) ?? new Set<string>();
       return {
@@ -223,7 +238,13 @@ export const listHabitsTool = defineTool({
         target: h.frequency.target,
         archived: Boolean(h.archived),
         doneToday: dates.has(today),
-        streak: streakOf(dates, today, caller.timeZone),
+        streak: habitStreak(
+          normalizeHabitFrequency(h.frequency.type),
+          dates,
+          weekStart,
+          today,
+          h.frequency,
+        ),
       };
     });
 
