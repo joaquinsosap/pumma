@@ -38,6 +38,13 @@ async function main() {
       .createIndex({ userId: 1, habitId: 1, date: 1 }, { unique: true });
     await db.collection("habits").createIndex({ userId: 1 });
     await db.collection("goals").createIndex({ userId: 1, category: 1, order: 1 });
+    // listNotes filters on userId and sorts by createdAt desc. Without this,
+    // every notes read (and the shared page loader, which pulls notes on
+    // every route) is a full collection scan followed by an in-memory sort —
+    // the one collection here that had no userId index at all.
+    await db
+      .collection("notes")
+      .createIndex({ userId: 1, createdAt: -1 });
     // Tag names are encrypted, and every write produces different bytes — a
     // unique index on the name would constrain nothing. `nameKey` is the
     // deterministic stand-in that carries the constraint instead. Partial, so
