@@ -25,7 +25,11 @@ import "server-only";
 import * as z from "zod/v4";
 import { defineTool } from "@/lib/mcp/registry";
 import { listAgenda } from "@/lib/db/agenda";
-import { listExternalEvents, listFeeds } from "@/lib/db/calendar-feeds";
+import {
+  listExternalEventBodies,
+  listExternalEvents,
+  listFeeds,
+} from "@/lib/db/calendar-feeds";
 import { externalToAgenda, isLinked, type AgendaEntry } from "@/lib/linked-agenda";
 import { expandMeetings, meetingTimeRange } from "@/lib/meetings";
 import { parseMeetingBody } from "@/lib/meeting-body";
@@ -73,13 +77,20 @@ export const getAgenda = defineTool({
 
     const serveExternal = caller.settings.mcp?.serveExternal !== false;
 
-    const [own, events, feeds] = await Promise.all([
+    const [own, events, bodies, feeds] = await Promise.all([
       listAgenda(caller.userId),
       listExternalEvents(caller.userId),
+      // The reply quotes each meeting's join link, which is parsed out of the
+      // invite body — and bodies no longer travel with the events. Only the
+      // window being asked about needs them.
+      listExternalEventBodies(caller.userId, from, to),
       listFeeds(caller.userId),
     ]);
 
-    const mirrored = externalToAgenda(events, feeds);
+    const withBodies = events.map((e) =>
+      bodies[e.id] === undefined ? e : { ...e, notes: bodies[e.id] },
+    );
+    const mirrored = externalToAgenda(withBodies, feeds);
     const all: AgendaEntry[] = [...own, ...mirrored];
     const occurrences = expandMeetings(all, from, to);
 

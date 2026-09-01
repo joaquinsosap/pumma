@@ -1,4 +1,4 @@
-import { loadPageData } from "@/lib/page-data";
+import { loadAgendaPageData } from "@/lib/page-data";
 import { Topbar } from "@/components/shell/Topbar";
 import { AgendaPanel } from "@/components/home/AgendaPanel";
 import { HomeTasksProjects } from "@/components/home/HomeTasksProjects";
@@ -10,7 +10,7 @@ type Props = {
 };
 
 export default async function HomePage({ searchParams }: Props) {
-  const data = await loadPageData(searchParams);
+  const data = await loadAgendaPageData(searchParams);
   const { lifeView } = data;
   const weekStart = data.settings?.weekStart ?? "mon";
 
@@ -29,6 +29,7 @@ export default async function HomePage({ searchParams }: Props) {
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pb-5 max-lg:pb-28 animate-pumma-view md:grid md:grid-cols-2 md:[&>*]:min-w-0 md:[&>*:nth-child(3)]:col-span-2 xl:grid-cols-[304px_1fr_340px] xl:overflow-hidden xl:[&>*:nth-child(3)]:col-span-1">
         <AgendaPanel
           agenda={data.agenda}
+          meetingBodies={data.bodies}
           tasks={data.allTasks}
           lifeView={lifeView}
           weekStart={weekStart}

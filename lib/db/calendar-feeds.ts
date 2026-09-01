@@ -10,4 +10,5 @@ export const insertFeed = impl.insertFeed;
 export const updateFeed = impl.updateFeed;
 export const deleteFeed = impl.deleteFeed;
 export const listExternalEvents = cache(impl.listExternalEvents);
+export const listExternalEventBodies = cache(impl.listExternalEventBodies);
 export const replaceFeedEvents = impl.replaceFeedEvents;

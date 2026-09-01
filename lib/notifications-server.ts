@@ -2,7 +2,11 @@ import "server-only";
 
 import { listAgenda } from "@/lib/db/agenda";
 import { listTasks } from "@/lib/db/tasks";
-import { listFeeds, listExternalEvents } from "@/lib/db/calendar-feeds";
+import {
+  listFeeds,
+  listExternalEvents,
+  listExternalEventBodies,
+} from "@/lib/db/calendar-feeds";
 import { getSettings } from "@/lib/db/settings";
 import {
   deleteNotifications,
@@ -74,12 +78,19 @@ export async function materializeFor(
   const today = isoDateInTz(now, timeZone);
   const horizonEnd = addDaysToIsoDate(today, HORIZON_DAYS, timeZone);
 
-  const [ownAgenda, externalEvents, feeds, tasks] = await Promise.all([
+  const [ownAgenda, externalEvents, bodies, feeds, tasks] = await Promise.all([
     listAgenda(userId),
     listExternalEvents(userId),
+    // A reminder carries the join link, which is parsed out of the invite
+    // body — and bodies no longer travel with the events. Only the horizon
+    // can produce a reminder, so only the horizon needs them.
+    listExternalEventBodies(userId, today, horizonEnd),
     listFeeds(userId),
     listTasks(userId),
   ]);
+  const withBodies = externalEvents.map((e) =>
+    bodies[e.id] === undefined ? e : { ...e, notes: bodies[e.id] },
+  );
 
   const planned = planNotifications({
     userId,
@@ -88,7 +99,7 @@ export async function materializeFor(
     today,
     horizonEnd,
     settings: prefs,
-    agenda: [...ownAgenda, ...externalToAgenda(externalEvents, feeds)],
+    agenda: [...ownAgenda, ...externalToAgenda(withBodies, feeds)],
     tasks,
   });
 

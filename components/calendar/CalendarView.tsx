@@ -3,7 +3,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { ALL_DAY_LABEL, isLinked, type AgendaEntry } from "@/lib/linked-agenda";
 import { Link2 } from "@/components/icons";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryState, parseAsInteger } from "nuqs";
 import { Repeat } from "@/components/icons";
@@ -18,6 +18,7 @@ import {
   hasJoinAction,
 } from "@/components/agenda/MeetingBodyView";
 import { AddMeetingButton } from "@/components/agenda/AddMeetingButton";
+import { useMeetingBodies } from "@/components/agenda/useMeetingBodies";
 import {
   CALENDAR_PRIO,
   calendarPrioBg,
@@ -39,6 +40,12 @@ const PRIO = CALENDAR_PRIO;
 type Props = {
   tasks: Task[];
   agenda: AgendaEntry[];
+  /**
+   * Invite bodies for the day the page rendered for, keyed by event id. The
+   * rest arrive from useMeetingBodies as the user moves between days — see
+   * that hook for why they do not travel with the page.
+   */
+  meetingBodies: Record<string, string>;
   /** Settings toggle: meeting ID and passcode under each meeting. */
   showMeetingCodes?: boolean;
   /** Calendars already mirrored in, and whether the offer has been made. */
@@ -54,6 +61,7 @@ type Props = {
 export function CalendarView({
   tasks,
   agenda,
+  meetingBodies,
   showMeetingCodes = false,
   feedCount = 0,
   calendarLinkOffered = true,
@@ -68,8 +76,10 @@ export function CalendarView({
   const [, startTransition] = useTransition();
   const timeZone = useTimezone();
   // Expand repeat rules so a weekly standup lands on every matching day.
+  // Reads withBodies, defined below with the day it depends on: this is only
+  // ever called from the JSX, by which point every const here is initialised.
   const meetingsFor = (day: string) =>
-    meetingsOnDay(agenda, day).map((o) => o.item);
+    meetingsOnDay(withBodies, day).map((o) => o.item);
   // Removing from a day removes just that occurrence of a repeating meeting.
   const deleteMeeting = (id: string, date: string) => {
     startTransition(async () => {
@@ -95,6 +105,17 @@ export function CalendarView({
   const [selected, setSelected] = useQueryState("day", {
     defaultValue: td,
   });
+  // Mirrored events arrive without their invite body. Put the bodies we have
+  // back on the entries here, so everything below carries on reading m.notes
+  // and none of it needs to know the field is loaded separately.
+  const bodies = useMeetingBodies(meetingBodies, selected);
+  const withBodies = useMemo(
+    () =>
+      agenda.map((m) =>
+        bodies[m.id] === undefined ? m : { ...m, notes: bodies[m.id] },
+      ),
+    [agenda, bodies],
+  );
   const base = new Date();
   base.setDate(1);
   base.setMonth(base.getMonth() + offset);

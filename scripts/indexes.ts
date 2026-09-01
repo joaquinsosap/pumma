@@ -32,6 +32,10 @@ async function main() {
       { key: { userId: 1, due: 1 } },
       { key: { userId: 1, status: 1 } },
       { key: { projectId: 1 } },
+      // listTasks sorts by { createdAt: -1, order: 1 }. Without this the
+      // planner picks one of the above and then sorts in memory, which is
+      // free at a hundred tasks and is not at ten thousand.
+      { key: { userId: 1, createdAt: -1, order: 1 } },
     ]);
     await db
       .collection("habitEntries")
@@ -60,6 +64,20 @@ async function main() {
     // $text — and it cannot work against ciphertext. Search is a client-side
     // filter over already-loaded notes.
     await dropIfPresent(db, "notes", "title_text_body_text");
+    // Every collection the shared page loader reads needs a userId index, or
+    // the read is a full scan of everyone's rows. These four had none at all:
+    // correct output, and a cost that grows with the whole table rather than
+    // with one account.
+    await db.collection("projects").createIndex({ userId: 1, createdAt: -1 });
+    await db.collection("agenda").createIndex({ userId: 1 });
+    await db.collection("calendarFeeds").createIndex({ userId: 1 });
+    // externalEvents is read whole for the agenda and by date for the invite
+    // bodies of the day on screen — see listExternalEventBodies.
+    await db.collection("externalEvents").createIndex({ userId: 1, date: 1 });
+    // The unique index on tags is partial (it carries the nameKey
+    // constraint), and a partial index cannot serve a plain { userId } lookup.
+    // listTags was scanning the collection on every page load because of it.
+    await db.collection("tags").createIndex({ userId: 1, order: 1 });
     await db.collection("settings").createIndex({ userId: 1 }, { unique: true });
     await db
       .collection("lifeWeeks")

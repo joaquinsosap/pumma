@@ -2,9 +2,10 @@
 import { DeleteButton } from "@/components/ui/delete-button";
 
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
+import { useMeetingBodies } from "@/components/agenda/useMeetingBodies";
 import { Link2, Repeat } from "@/components/icons";
 import { toast } from "sonner";
 import {
@@ -108,6 +109,12 @@ function AgendaDayTasks({
 
 type Props = {
   agenda: AgendaEntry[];
+  /**
+   * Invite bodies for the day the page rendered for, keyed by event id. The
+   * rest arrive from useMeetingBodies as the user moves between days — see
+   * that hook for why they do not travel with the page.
+   */
+  meetingBodies: Record<string, string>;
   tasks: Task[];
   lifeView: LifeView;
   weekStart?: WeekStart;
@@ -124,6 +131,7 @@ export function AgendaPanel({
   showMeetingCodes = false,
   calendarLinkOffered = true,
   agenda,
+  meetingBodies,
   tasks,
   lifeView,
   weekStart = "mon",
@@ -136,9 +144,21 @@ export function AgendaPanel({
     defaultValue: td,
   });
 
+  // Mirrored events arrive without their invite body. Put the bodies we have
+  // back on the entries here, so everything below carries on reading m.notes
+  // and none of it needs to know the field is loaded separately.
+  const bodies = useMeetingBodies(meetingBodies, selectedDay);
+  const withBodies = useMemo(
+    () =>
+      agenda.map((m) =>
+        bodies[m.id] === undefined ? m : { ...m, notes: bodies[m.id] },
+      ),
+    [agenda, bodies],
+  );
+
   // Meetings are expanded from their repeat rules, so a weekly standup shows
   // up on every matching day without a row per occurrence in the database.
-  const occurrencesFor = (day: string) => meetingsOnDay(agenda, day);
+  const occurrencesFor = (day: string) => meetingsOnDay(withBodies, day);
   const agendaFor = (day: string) => occurrencesFor(day).map((o) => o.item);
 
   // Editing/removing always targets the clicked DAY, so "delete this one" on a

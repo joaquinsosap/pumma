@@ -11,6 +11,7 @@ import {
   updateAgendaItem,
   deleteAgendaItem,
 } from "@/lib/db/agenda";
+import { listExternalEventBodies } from "@/lib/db/calendar-feeds";
 import { requireUserId } from "@/lib/auth/session";
 import { entityId, isoDate, title } from "@/lib/validation";
 import { OWN_MEETING_COLOR } from "@/lib/calendar-colors";
@@ -197,4 +198,23 @@ export async function deleteAgendaItemAction(
   await refreshNotifications(userId);
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+/**
+ * The invite bodies for a few days, keyed by event id.
+ *
+ * Day selection is client-side (nuqs, shallow), so moving to another day does
+ * not re-render on the server and cannot pick these up from the page payload.
+ * They come through here instead.
+ *
+ * The alternative was shipping every body with the page, which is what this
+ * whole change exists to stop: a few hundred meetings is a megabyte of Teams
+ * boilerplate, and one day of it is about five kilobytes.
+ */
+export async function meetingBodiesAction(
+  day: string,
+): Promise<Record<string, string>> {
+  const userId = await requireUserId();
+  const wanted = isoDate.parse(day);
+  return listExternalEventBodies(userId, wanted, wanted);
 }

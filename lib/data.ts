@@ -6,6 +6,7 @@ import { listProjects } from "@/lib/db/projects";
 import { listTags } from "@/lib/db/tags";
 import { listAgenda } from "@/lib/db/agenda";
 import {
+  listExternalEventBodies,
   listExternalEvents,
   listFeeds,
 } from "@/lib/db/calendar-feeds";
@@ -46,8 +47,6 @@ type CoreCollections = {
   allProjects: Awaited<ReturnType<typeof listProjects>>;
   tags: Awaited<ReturnType<typeof listTags>>;
   allNotes: Awaited<ReturnType<typeof listNotes>>;
-  /** Your meetings AND the ones mirrored from subscribed calendars. */
-  allAgenda: AgendaEntry[];
   calendarFeeds: Awaited<ReturnType<typeof listFeeds>>;
   user: Awaited<ReturnType<typeof getUser>>;
   settings: Awaited<ReturnType<typeof getSettings>>;
@@ -55,9 +54,12 @@ type CoreCollections = {
 
 /**
  * Shared DB reads — deduped (React cache) across the layout shell + the page in
- * one request, and issued as a SINGLE parallel batch. Everything a page needs
- * (incl. habit entries + agenda) is fetched here so the page itself does no extra
- * round-trip after the layout — important over high-latency links / VPNs.
+ * one request, and issued as a SINGLE parallel batch, so the page does no extra
+ * round-trip after the layout. That matters over a high-latency link.
+ *
+ * Meetings are deliberately NOT here. Two of the ten pages render an agenda,
+ * and the events are by far the heaviest thing we store, so the other eight
+ * were paying for a megabyte they threw away. See fetchAgenda.
  */
 const fetchCoreCollections = cache(
   async (userId: string): Promise<CoreCollections> => {
@@ -74,8 +76,6 @@ const fetchCoreCollections = cache(
       allProjects,
       tags,
       allNotes,
-      ownAgenda,
-      externalEvents,
       calendarFeeds,
       user,
       settings,
@@ -87,20 +87,11 @@ const fetchCoreCollections = cache(
       listProjects(userId),
       listTags(userId),
       listNotes(userId),
-      listAgenda(userId),
-      listExternalEvents(userId),
       listFeeds(userId),
       getUser(userId),
       getSettings(userId),
     ]);
 
-    // Merged here rather than per page. Every surface that already knows how
-    // to draw a meeting then draws these too, without being told they exist,
-    // which is the whole point of mirroring them into the same shape.
-    const allAgenda: AgendaEntry[] = [
-      ...ownAgenda,
-      ...externalToAgenda(externalEvents, calendarFeeds),
-    ];
     return {
       allTasks,
       allHabits,
@@ -109,13 +100,36 @@ const fetchCoreCollections = cache(
       allProjects,
       tags,
       allNotes,
-      allAgenda,
       calendarFeeds,
       user,
       settings,
     };
   },
 );
+
+/**
+ * Your meetings AND the ones mirrored from subscribed calendars.
+ *
+ * Merged here rather than per page: every surface that already knows how to
+ * draw a meeting then draws these too without being told they exist, which is
+ * the whole point of mirroring them into the same shape.
+ *
+ * Separate from the core batch because it is the expensive read and almost
+ * nothing needs it. `calendarFeeds` comes from the core batch, which is
+ * already in flight by the time this runs, so asking for it again costs
+ * nothing — React's cache hands back the same promise.
+ */
+const fetchAgenda = cache(async (userId: string): Promise<AgendaEntry[]> => {
+  const [ownAgenda, externalEvents, core] = await Promise.all([
+    listAgenda(userId),
+    listExternalEvents(userId),
+    fetchCoreCollections(userId),
+  ]);
+  return [
+    ...ownAgenda,
+    ...externalToAgenda(externalEvents, core.calendarFeeds),
+  ];
+});
 
 function shellFromCore(
   core: CoreCollections,
@@ -168,7 +182,6 @@ const loadAppDataForView = cache(async (lifeView: LifeView) => {
   const userId = await requireUserId();
   const core = await fetchCoreCollections(userId);
   const allHabitEntries = core.allHabitEntries;
-  const allAgenda = core.allAgenda;
   const timezone = await resolveTimezoneFromSettings(core.settings);
 
   const shell = shellFromCore(core, lifeView, timezone);
@@ -191,7 +204,6 @@ const loadAppDataForView = cache(async (lifeView: LifeView) => {
 
   const habitIds = new Set(habits.map((h) => h.id));
   const habitEntries = allHabitEntries.filter((e) => habitIds.has(e.habitId));
-  const agenda = filterByLifeView(allAgenda, lifeView);
 
   const td = iso(new Date(), timezone);
   const carryover = filterByLifeView(
@@ -208,7 +220,6 @@ const loadAppDataForView = cache(async (lifeView: LifeView) => {
     ...shell,
     goals: goalsWithProgress,
     habitEntries,
-    agenda,
     today: td,
     todayTasks: tasks.filter((t) => (t.due ?? "").slice(0, 10) === td),
     carryover,
@@ -229,6 +240,31 @@ const loadAppDataForView = cache(async (lifeView: LifeView) => {
   };
 });
 
+/**
+ * Everything loadAppData has, plus the meetings — for the two surfaces that
+ * draw an agenda.
+ *
+ * `bodies` holds the invite text for `bodyDate` only, keyed by event id: a
+ * body is two or three kilobytes and only the day on screen ever renders one.
+ * The rest arrive from meetingBodiesAction as the user moves between days.
+ */
+const loadAgendaDataForView = cache(
+  async (lifeView: LifeView, bodyDate: string) => {
+    const base = await loadAppDataForView(lifeView);
+    const userId = await requireUserId();
+    const day = bodyDate || base.today;
+    const [all, bodies] = await Promise.all([
+      fetchAgenda(userId),
+      listExternalEventBodies(userId, day, day),
+    ]);
+    return {
+      ...base,
+      agenda: filterByLifeView(all, lifeView),
+      bodies,
+    };
+  },
+);
+
 export async function loadShellData(options: LoadAppDataOptions = {}) {
   return loadShellDataForView(options.lifeView ?? DEFAULT_LIFE_VIEW);
 }
@@ -237,6 +273,16 @@ export async function loadAppData(options: LoadAppDataOptions = {}) {
   return loadAppDataForView(options.lifeView ?? DEFAULT_LIFE_VIEW);
 }
 
+export async function loadAgendaData(
+  options: LoadAppDataOptions & { bodyDate?: string } = {},
+) {
+  return loadAgendaDataForView(
+    options.lifeView ?? DEFAULT_LIFE_VIEW,
+    options.bodyDate ?? "",
+  );
+}
+
 export type ShellData = Awaited<ReturnType<typeof loadShellData>>;
 export type AppData = Awaited<ReturnType<typeof loadAppData>>;
+export type AgendaData = Awaited<ReturnType<typeof loadAgendaData>>;
 export type AppSettings = Settings | null;

@@ -70,12 +70,58 @@ export async function deleteFeed(userId: string, id: string): Promise<boolean> {
   return res.deletedCount > 0;
 }
 
+/**
+ * Every event, without the invite body.
+ *
+ * `notes` is 85% of this collection's bytes. A Teams or Zoom invite is two or
+ * three kilobytes of join links, dial-in numbers and legal boilerplate, and
+ * there are hundreds of them; only the day being looked at ever renders one.
+ * The bodies are fetched separately, by listExternalEventBodies.
+ *
+ * Leaving it in made every page load pull a megabyte it did not use, which
+ * over a link that moves ~90KB/s per socket is eleven seconds. That is not a
+ * Mongo problem: the server executes this query in under a millisecond and
+ * spends all the rest of it on the wire.
+ */
 export async function listExternalEvents(
   userId: string,
 ): Promise<ExternalEvent[]> {
-  const docs = await (await events()).find({ userId }).toArray();
+  const docs = await (await events())
+    .find({ userId })
+    .project<Omit<ExternalEventDoc, "notes" | "key">>({ notes: 0, key: 0 })
+    .toArray();
   const plain = await decryptAllFor("externalEvents", userId, docs);
-  return plain.map((e) => toDto(externalEventSchema.parse(e)));
+  // `notes` defaults to "" in the schema, so a body-less row parses cleanly.
+  //
+  // `key` is put back as "" rather than fetched: it is the VEVENT UID plus a
+  // start time, it averages 131 bytes across hundreds of rows, and it exists
+  // only so ics.ts can collapse duplicate occurrences while parsing a feed.
+  // Nothing reads it back out of the database. If something ever needs to,
+  // fetch it there rather than making every agenda load carry it.
+  return plain.map((e) => toDto(externalEventSchema.parse({ ...e, key: "" })));
+}
+
+/**
+ * The invite bodies for a span of days, keyed by event id.
+ *
+ * A date range rather than ids because a range is what every caller already
+ * knows: the agenda renders a day, a reminder looks a day or two ahead, the
+ * MCP tool is handed a window. It also keeps this to one indexed query
+ * however many meetings the span turns out to hold.
+ *
+ * Inclusive at both ends, and `to` may equal `from` for a single day.
+ */
+export async function listExternalEventBodies(
+  userId: string,
+  from: string,
+  to: string,
+): Promise<Record<string, string>> {
+  const docs = await (await events())
+    .find({ userId, date: { $gte: from, $lte: to } })
+    .project<{ _id: string; notes?: string }>({ notes: 1 })
+    .toArray();
+  const plain = await decryptAllFor("externalEvents", userId, docs);
+  return Object.fromEntries(plain.map((d) => [d._id, d.notes ?? ""]));
 }
 
 /** See the memory implementation for why this replaces rather than diffs. */

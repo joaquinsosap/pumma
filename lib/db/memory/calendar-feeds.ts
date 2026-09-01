@@ -75,12 +75,34 @@ export async function deleteFeed(userId: string, id: string): Promise<boolean> {
   return st.calendarFeeds.length < before;
 }
 
+/**
+ * Every event, without the invite body — see the Mongo implementation for why
+ * the bodies travel separately. Nothing here is on a wire, so dropping the
+ * field buys no speed; it is dropped anyway so that a surface which forgets
+ * to ask for bodies looks identical in both backends instead of working in
+ * the demo and emptying out against Atlas.
+ */
 export async function listExternalEvents(
   userId: string,
 ): Promise<ExternalEvent[]> {
   return store()
     .externalEvents.filter((e) => e.userId === userId)
-    .map((e) => toDto(externalEventSchema.parse(e)));
+    .map((e) => toDto(externalEventSchema.parse({ ...e, notes: "" })));
+}
+
+/** The invite bodies for a span of days, keyed by event id. Ends inclusive. */
+export async function listExternalEventBodies(
+  userId: string,
+  from: string,
+  to: string,
+): Promise<Record<string, string>> {
+  return Object.fromEntries(
+    store()
+      .externalEvents.filter(
+        (e) => e.userId === userId && e.date >= from && e.date <= to,
+      )
+      .map((e) => [e._id, e.notes ?? ""]),
+  );
 }
 
 /**
