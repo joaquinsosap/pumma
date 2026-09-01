@@ -14,6 +14,7 @@
     "test:watch": "vitest",
     "db:seed": "tsx scripts/seed.ts",
     "db:indexes": "tsx scripts/indexes.ts",
+    "db:latency": "tsx scripts/db-latency.ts",
     "db:setup": "npm run db:indexes && npm run db:seed",
     "db:migrate-wave2": "tsx scripts/migrate-wave2.ts",
     "db:migrate-auth-issuer": "tsx scripts/migrate-auth-issuer.ts",
