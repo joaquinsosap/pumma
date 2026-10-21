@@ -40,7 +40,7 @@ export async function GET() {
     // The AI key is stored encrypted and stays server-side; it isn't yours to
     // restore from a file anyway, and a plaintext copy in Downloads is a
     // liability.
-    note: "Your stored AI API key, this account's encryption key material and the addresses of your subscribed calendars are deliberately excluded.",
+    note: "Your stored AI API key, this account's encryption key material, the addresses of your subscribed calendars and your browsers' push subscriptions are deliberately excluded.",
     data: Object.fromEntries(
       Object.entries(data).map(([name, rows]) => [name, redact(name, rows)]),
     ),

@@ -41,5 +41,6 @@ export const PROFILE_COLLECTIONS = ["users", "user"] as const;
 export const NOT_ACCOUNT_DATA: Record<string, string> = {
   counters: "running totals, such as how many demos were ever handed out",
   rateLimits: "per-IP counters, pruned on their own",
-  webhookEvents: "Gumroad's delivery log, kept for billing disputes",
+  webhookEvents: "Gumroad delivery ids, kept so a retried webhook is not applied twice; no account data",
+  verification: "Better Auth's short-lived codes, keyed by value not userId; they expire in minutes and fail once the account is gone",
 };

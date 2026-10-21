@@ -181,7 +181,7 @@ describe("account deletion reaches the newer collections", () => {
       externalEventSchema.parse({ _id: `ev-${tag}`, userId, feedId: `feed-${tag}`, key: `k-${tag}`, title: "Standup", date: "2026-10-22" }),
     );
     store.notifications.push(
-      notificationSchema.parse({ _id: `n-${tag}`, userId, kind: "task", fireAt: now, createdAt: now }),
+      notificationSchema.parse({ _id: `n-${tag}`, userId, kind: "task", fireAt: now, createdAt: now, url: "/tasks?task=t1" }),
     );
     store.pushSubscriptions.push(
       pushSubscriptionSchema.parse({ _id: `p-${tag}`, userId, endpoint: `https://push.example.com/${tag}`, p256dh: "key", auth: "secret", createdAt: now, lastSeenAt: now }),
@@ -217,6 +217,9 @@ describe("account deletion reaches the newer collections", () => {
     const feed = (data.calendarFeeds as Record<string, unknown>[]).find((f) => f._id === "feed-mine");
     expect(feed).toBeDefined();
     expect(feed!.url).toBeUndefined();
+    // Only the feed's url is secret; a reminder's url is an in-app path and stays.
+    const reminder = (data.notifications as Record<string, unknown>[]).find((n) => n._id === "n-mine");
+    expect(reminder!.url).toBe("/tasks?task=t1");
     expect(data).not.toHaveProperty("pushSubscriptions");
   });
 });

@@ -10,6 +10,7 @@ type Call = { name: string; op: "find" | "deleteMany" | "deleteOne"; filter: Rec
 const state = vi.hoisted(() => ({
   calls: [] as Call[],
   rows: {} as Record<string, Record<string, unknown>[]>,
+  decrypted: [] as { name: string; userId: string }[],
 }));
 
 vi.mock("@/lib/mongodb", () => ({
@@ -32,8 +33,16 @@ vi.mock("@/lib/mongodb", () => ({
 }));
 
 vi.mock("@/lib/db/mongo/encrypted", () => ({
-  SPECS: {},
-  decryptAllFor: async (_name: string, _userId: string, rows: unknown[]) => rows,
+  // The three collections this change started exporting are encrypted at rest.
+  SPECS: {
+    calendarFeeds: { fields: ["label", "url"] },
+    externalEvents: { fields: ["title", "location", "notes"] },
+    notifications: { fields: ["title", "body", "joinUrl"] },
+  },
+  decryptAllFor: async (name: string, userId: string, rows: Record<string, unknown>[]) => {
+    state.decrypted.push({ name, userId });
+    return rows.map((r) => ({ ...r, decrypted: true }));
+  },
 }));
 
 const { deleteAllUserData, exportUserData } = await import("@/lib/db/mongo/account");
@@ -43,6 +52,7 @@ const ME = "6a531654eee9c6861753ffae";
 beforeEach(() => {
   state.calls = [];
   state.rows = {};
+  state.decrypted = [];
 });
 
 describe("deleting an account in Mongo", () => {
@@ -91,5 +101,21 @@ describe("exporting an account from Mongo", () => {
     const feed = (data.calendarFeeds as Record<string, unknown>[])[0];
     expect(feed.url).toBeUndefined();
     expect(feed.label).toBe("Work");
+  });
+
+  it("asks only for this account's rows", async () => {
+    await exportUserData(ME);
+    for (const call of state.calls.filter((c) => c.op === "find")) {
+      expect(call.filter, call.name).toEqual(call.name === "users" ? { _id: ME } : { userId: ME });
+    }
+  });
+
+  it("decrypts the encrypted collections with the account's own key", async () => {
+    state.rows.notifications = [{ _id: "n1", userId: ME, title: "v1:ciphertext" }];
+    const data = await exportUserData(ME);
+    expect((data.notifications as Record<string, unknown>[])[0].decrypted).toBe(true);
+    for (const name of ["calendarFeeds", "externalEvents", "notifications"]) {
+      expect(state.decrypted, name).toContainEqual({ name, userId: ME });
+    }
   });
 });
