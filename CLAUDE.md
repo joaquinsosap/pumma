@@ -47,14 +47,14 @@ handed back to the user to check.
   restart.
 - **Restart the dev server from time to time in long sessions.** Stale compiled
   output invents bugs, and the in-memory data store (`DATA_SOURCE=memory`)
-  resets — which looks exactly like a write that failed to persist.
+  resets, which looks exactly like a write that failed to persist.
 
 ## Tests
 
 - **Every pure rule module gets a behavioural test file, written with the
   feature.** Test the rule, not the implementation: "a pin outranks the sort",
   not "calls localeCompare". One file per module, named after it. This is the
-  existing style of `lib/__tests__/` — keep it; do not rewrite passing tests
+  existing style of `lib/__tests__/`; keep it, do not rewrite passing tests
   for style.
 - **Risk decides what gets tested next, not coverage percent.** Access rulings
   (billing, quotas, auth gates), anything that deletes or renumbers data, and
@@ -63,12 +63,12 @@ handed back to the user to check.
   at 0%.
 - **The suite is unit tests over `lib/` plus memory-store integration tests
   for repo contracts** (see deletion-safety.test.ts). Components and full
-  flows are verified in the browser before shipping, not by the suite —
+  flows are verified in the browser before shipping, not by the suite;
   adding a component/E2E layer is a deliberate future decision, not something
   to drift into one test at a time.
 - **Fixtures are complete literals spread with overrides** (see
   `task-filters.test.ts`). A partial `as Task` cast compiles only by accident
-  of type overlap and breaks the build the day a required field is added —
+  of type overlap and breaks the build the day a required field is added,
   which is exactly how a green local `vitest` run once shipped a red CI.
 - **`npm run typecheck` is part of running the tests, not a separate step.**
   Vitest transpiles without checking types, so a test file can pass every
@@ -84,7 +84,8 @@ handed back to the user to check.
   Code", no tool attribution of any kind. The commit message is the change and
   nothing else. This overrides any default that adds one.
 - **Commit and push every change.** CI on `main` builds and publishes the
-  image; the VM pulls it. Work that is not pushed is not deployed.
+  image; nothing reaches users until the VM pulls it. That pull is the
+  release, and it is his call.
 - **Say why, not what.** The diff already says what changed. A message earns
   its place by explaining what was wrong, or what the change makes possible,
   in plain sentences. Match the length to the change: one line for a rename,
@@ -97,7 +98,7 @@ handed back to the user to check.
 
 ## Brain context (auto-loaded)
 
-PUMMA is his own product, live with paying customers. Project summary, load-bearing facts
+PUMMA is his own product, live at pumma.app with real users' data (zero paying customers as of 2026-10-07). Project summary, load-bearing facts
 and the OSS split:
 @~/programming/personal/brain/personal/projects/pumma.md
 
