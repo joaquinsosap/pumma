@@ -191,7 +191,7 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
         {def.structured !== "strict" && def.structured !== "native" && (
           <span className="text-[12px] text-faint">
             This provider can&apos;t be strictly held to a schema, so smaller
-            models may fail on the planner. Ask usually still works.
+            models may fail on the assistant&apos;s bigger requests. Questions usually still work.
           </span>
         )}
       </label>
