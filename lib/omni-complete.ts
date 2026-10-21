@@ -13,6 +13,8 @@ export type OmniCompletion = {
   completion: string;
   /** True when one candidate remained and the token is finished. */
   exact: boolean;
+  /** Which candidate a cycling press wrote, so the next press steps from it. */
+  index?: number;
 };
 
 /**
@@ -195,5 +197,6 @@ export function completeOmniToken(
     const at = candidates.indexOf(token.word);
     index = at === -1 ? 0 : at + 1;
   }
-  return finish(candidates[index % candidates.length], false);
+  const slot = index % candidates.length;
+  return { ...finish(candidates[slot], false), index: slot };
 }

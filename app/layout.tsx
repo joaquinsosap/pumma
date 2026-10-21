@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
+import { IBM_Plex_Sans, IBM_Plex_Mono, Pixelify_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Providers } from "@/components/providers/nuqs-provider";
@@ -26,6 +26,14 @@ const plexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   variable: "--font-plex-mono",
   weight: ["400", "500", "600"],
+});
+
+/** Only for the capture bar's scrambled Tab hint, so it is fetched when used. */
+const pixelify = Pixelify_Sans({
+  subsets: ["latin"],
+  variable: "--font-pixelify",
+  weight: ["400"],
+  preload: false,
 });
 
 /** The canonical origin. Overridable so a preview deploy links to itself. */
@@ -66,7 +74,7 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${plex.variable} ${plexMono.variable}`}
+      className={`${plex.variable} ${plexMono.variable} ${pixelify.variable}`}
     >
       <body className="antialiased">
         <Providers>

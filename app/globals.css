@@ -47,6 +47,15 @@
   --prio-high-ink: oklch(0.52 0.2 25);
   --prio-med-ink: oklch(0.55 0.12 92);
   --prio-low-ink: oklch(0.54 0.13 245);
+
+  /* Minecraft's §b §6 §d and the shadow the game draws under each; the Tab hint's scramble only, every theme. */
+  --mc-aqua: #55ffff;
+  --mc-aqua-shadow: #153f3f;
+  --mc-gold: #ffaa00;
+  --mc-gold-shadow: #3f2a00;
+  --mc-purple: #ff55ff;
+  --mc-purple-shadow: #3f153f;
+  --font-pixel: var(--font-pixelify), var(--font-plex-mono), monospace;
 }
 
 [data-theme="dark"] {
@@ -403,6 +412,24 @@ body {
   background: color-mix(in oklch, var(--primary) 28%, transparent);
   color: var(--ink);
   -webkit-text-fill-color: var(--ink);
+}
+
+/* The Tab hint's undecided part, drawn like Minecraft's §k text. */
+.omni-scramble {
+  font-family: var(--font-pixel);
+  font-weight: 400;
+}
+.omni-scramble-0 {
+  color: var(--mc-aqua);
+  text-shadow: 1.5px 1.5px 0 var(--mc-aqua-shadow);
+}
+.omni-scramble-1 {
+  color: var(--mc-gold);
+  text-shadow: 1.5px 1.5px 0 var(--mc-gold-shadow);
+}
+.omni-scramble-2 {
+  color: var(--mc-purple);
+  text-shadow: 1.5px 1.5px 0 var(--mc-purple-shadow);
 }
 
 /* The halo breathes with opacity and nothing else.

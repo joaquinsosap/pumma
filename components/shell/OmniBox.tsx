@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import type { EntityLifeArea, OmniType } from "@/lib/types";
@@ -32,6 +40,7 @@ import {
   tokenAtCaret,
 } from "@/lib/omni-complete";
 import { RESERVED_TYPE_WORDS, RESERVED_WORDS } from "@/lib/omni-reserved";
+import { omniHint } from "@/lib/omni-hint";
 import { classifyDue } from "@/lib/nudge";
 import { NudgeOffer, useNudgeOffer } from "@/components/shell/NudgeOffer";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
@@ -246,6 +255,35 @@ export function OmniBox({
     base: string;
   } | null>(null);
 
+  // Tab's caret or guess, applied after React writes the text and before paint, so the hint never lags a frame.
+  const pendingSelectionRef = useRef<[number, number] | null>(null);
+  const [selectionTick, setSelectionTick] = useState(0);
+  useLayoutEffect(() => {
+    const want = pendingSelectionRef.current;
+    const el = inputRef.current;
+    if (!want || !el) return;
+    pendingSelectionRef.current = null;
+    el.setSelectionRange(want[0], want[1]);
+    setSelectionTick((n) => n + 1);
+  }, [text]);
+
+  // What Tab would do at the caret, from the same pool and cycle as the Tab handler below.
+  const hintFor = useCallback(
+    (value: string, start: number, end: number) => {
+      const cycle = rotateRef.current;
+      return omniHint(value, start, end, {
+        pool: [...tags.map((t) => t.name), ...RESERVED_WORDS],
+        typeWords: RESERVED_TYPE_WORDS,
+        // Matches the handler's "again" test: the text before the caret is what Tab left.
+        cycle:
+          cycle && value.slice(0, start) === cycle.from
+            ? { base: cycle.base, index: cycle.index }
+            : null,
+      });
+    },
+    [tags],
+  );
+
   useEffect(() => {
     if (!wantFocusRef.current) return;
     wantFocusRef.current = false;
@@ -285,6 +323,17 @@ export function OmniBox({
         return;
       }
 
+      // Same text means React skips the render, so select at once; otherwise after the write.
+      const selectAfterWrite = (
+        el: HTMLInputElement,
+        next: string,
+        start: number,
+        end: number,
+      ) => {
+        if (el.value === next) el.setSelectionRange(start, end);
+        else pendingSelectionRef.current = [start, end];
+      };
+
       // Half-typed "#gam" or "!hi"? Tab finishes the word rather than
       // switching type — completing what you're writing is the more specific
       // intent, and there's nothing to complete the rest of the time.
@@ -321,9 +370,7 @@ export function OmniBox({
             // Nothing to remember: the next press re-reads the token, finds
             // another type word, and steps on from there.
             rotateRef.current = null;
-            requestAnimationFrame(() =>
-              el.setSelectionRange(cycled.caret, cycled.caret),
-            );
+            selectAfterWrite(el, cycled.text, cycled.caret, cycled.caret);
             return;
           }
         }
@@ -352,14 +399,15 @@ export function OmniBox({
                   0,
                   done.caret - (done.completion.length - typedWord.length),
                 ),
-                index: again ? rotateRef.current!.index + 1 : 0,
+                // The option this press wrote, -1 after a shared-part fill.
+                index: done.index ?? -1,
                 // The partial as first typed — the cycle is over that set, not
                 // over whatever the last press wrote in.
                 base: typedWord,
               };
-          requestAnimationFrame(() => {
+          {
             if (done.exact) {
-              el.setSelectionRange(done.caret, done.caret);
+              selectAfterWrite(el, done.text, done.caret, done.caret);
               return;
             }
             // Still cycling: leave the caret after what you typed and SELECT
@@ -370,8 +418,8 @@ export function OmniBox({
             // unless it guessed right first time.
             const typedEnd =
               done.caret - (done.completion.length - typedWord.length);
-            el.setSelectionRange(typedEnd, done.caret);
-          });
+            selectAfterWrite(el, done.text, typedEnd, done.caret);
+          }
           return;
         }
       }
@@ -625,6 +673,8 @@ export function OmniBox({
               tags={tags}
               showTags
               showPriority={isTask}
+              hintFor={hintFor}
+              selectionTick={selectionTick}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {

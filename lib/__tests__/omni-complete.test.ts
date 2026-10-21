@@ -202,3 +202,47 @@ describe("an exact match does not end the cycle", () => {
     expect(out?.exact).toBe(true);
   });
 });
+
+describe("stepping from the option a press wrote", () => {
+  // The bar steps on from the index each press reports. Counting presses
+  // instead showed "website" twice in a row for "#web".
+  function presses(text: string, pool: string[], times: number): string[] {
+    const shown: string[] = [];
+    const base = text.slice(text.lastIndexOf("#") + 1);
+    let last: number | undefined;
+    for (let n = 0; n < times; n++) {
+      const out = completeOmniToken(
+        text,
+        text.length,
+        pool,
+        n === 0 ? undefined : (last ?? -1) + 1,
+        n === 0 ? undefined : base,
+      );
+      shown.push(out!.completion);
+      last = out!.index;
+    }
+    return shown;
+  }
+
+  it("never shows the same option twice in a row", () => {
+    expect(presses("x #web", ["web", "website", "webhook"], 3)).toEqual([
+      "website",
+      "webhook",
+      "web",
+    ]);
+  });
+
+  it("starts the list at the first option after a shared-part fill", () => {
+    expect(presses("x #web", tags, 4)).toEqual([
+      "website-",
+      "website-app",
+      "website-site",
+      "website-store",
+    ]);
+  });
+
+  it("reports no index for a shared-part fill or a settled tag", () => {
+    expect(completeOmniToken("x #web", 6, tags)?.index).toBeUndefined();
+    expect(completeOmniToken("x #ar", 5, tags)?.index).toBeUndefined();
+  });
+});
