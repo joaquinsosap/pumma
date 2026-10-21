@@ -18,8 +18,9 @@ export type ProviderId =
 /**
  * How reliably a provider can be held to a JSON schema.
  *
- * Below "strict" the model can return valid JSON that doesn't match the schema,
- * so the call is validated and retried once — see lib/ai/generate.ts.
+ * Below "strict" the model is more likely to return valid JSON that doesn't
+ * match the schema. Every call is validated and retried once on a mismatch,
+ * whatever the mode; see lib/ai/generate.ts.
  */
 export type StructuredMode = "native" | "strict" | "schema" | "json";
 
