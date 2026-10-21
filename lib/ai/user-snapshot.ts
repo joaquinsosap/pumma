@@ -99,8 +99,9 @@ export async function buildUserSnapshot(
   userId: string,
 ): Promise<SnapshotResult> {
   // Every list*() below is scoped to `userId` (the authenticated caller, passed
-  // down from askAssistant → requireUserId). The Ask assistant therefore only
-  // ever sees the requesting user's own data — never another account's.
+  // down from the assistant route and actions via requireUserId). The assistant
+  // therefore only ever sees the requesting user's own data, never another
+  // account's.
   const [
     tasks,
     habits,

@@ -48,9 +48,9 @@ export type GenerateStructuredOptions<T> = {
 /**
  * Ask the user's chosen model for an object matching `schema`.
  *
- * Providers below "strict" structured output can return valid JSON that doesn't
- * match the schema, so a failure to parse is retried once with a blunt reminder
- * appended. One retry converts most of those; looping would just spend the
+ * Any provider can return valid JSON that doesn't match the schema (even the
+ * native ones run in jsonTool mode here), so a failure to parse is retried once
+ * with a blunt reminder appended. One retry converts most of those; looping would just spend the
  * user's money on a model that can't do it.
  */
 export async function generateStructured<T>(

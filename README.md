@@ -34,9 +34,9 @@ accounts for hosting.
 - **Agenda** — a live day timeline with routines, meetings, and honest "dead
   time" between them.
 - **Life calendar** — every week of your life on one screen.
-- **AI planner & assistant** — describe an ambition and review the generated
-  plan graph before anything is created; ask questions about your own data.
-  Bring your own key from any of nine providers — Anthropic, OpenAI, Google,
+- **AI assistant**: describe a change and review every proposed create, edit
+  and delete before anything is written, or ask questions about your own data.
+  Bring your own key from any of nine providers: Anthropic, OpenAI, Google,
   OpenRouter, Groq, DeepSeek, Mistral, xAI, or a local Ollama (stored
   encrypted).
 - **Auto Personal/Work switch** — the sidebar view follows your working hours.
@@ -78,10 +78,10 @@ npm run dev
   call. For a self-hosted instance, `AI_PROVIDER`, `AI_MODEL` and `AI_API_KEY`
   set the default for everyone. Per-user daily quotas prevent runaway spend.
 
-  Endpoints come from a fixed list in [`lib/ai/providers.ts`](lib/ai/providers.ts) —
-  no user-supplied URLs, so the server can only reach hosts the repo names.
-  Providers that can't be strictly held to a JSON schema get one automatic
-  retry; small local models may still fail on the planner's larger schema.
+  Endpoints come from a fixed list in [`lib/ai/providers.ts`](lib/ai/providers.ts),
+  with no user-supplied URLs, so the server can only reach hosts the repo names.
+  A reply that doesn't match the schema gets one automatic retry on every
+  provider; small local models may still fail on the assistant's larger schemas.
 
 See [`.env.example`](.env.example) for every variable, including the optional
 hosted-mode settings — all off by default for self-hosted installs.
