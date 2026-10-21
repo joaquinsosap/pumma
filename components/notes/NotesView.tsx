@@ -151,6 +151,12 @@ export function NotesView({
   const explicit = Boolean(openId && sorted.some((n) => n.id === openId));
   const tagMap = new Map(tags.map((t) => [t.id, t]));
 
+  // Every way of picking a note keeps the address in step: ?note= drives the selection, so a stale one would snap the editor back on the next save.
+  const pickNote = (id: string) => {
+    setOpenId(id);
+    window.history.replaceState(null, "", hrefWithLife(noteHref(id), lifeView));
+  };
+
   const openNote = (e: React.MouseEvent, id: string) => {
     // A phone genuinely changes page here: the list and the editor are never
     // on screen together, so the back button has to mean something. On a
@@ -159,15 +165,10 @@ export function NotesView({
     // changed. Modified clicks are left alone so "open in new tab" still works.
     if (!isDesktop || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     e.preventDefault();
-    setOpenId(id);
     // replaceState rather than push: the address stays copyable and reloadable
     // without burying wherever you came from under a note-sized history entry
     // for every note you glanced at.
-    window.history.replaceState(
-      null,
-      "",
-      hrefWithLife(noteHref(id), lifeView),
-    );
+    pickNote(id);
   };
 
   const togglePin = (noteId: string) => {
@@ -221,7 +222,7 @@ export function NotesView({
                 // No multi-select here, so a right-click simply opens the
                 // note it lands on. Otherwise the menu would be about a note
                 // while a different one sat highlighted beside it.
-                onContextSelect={() => setOpenId(n.id)}
+                onContextSelect={() => pickNote(n.id)}
                 className={cn(
                   "flex items-start gap-1 rounded-[10px] border p-3 hover:bg-hover",
                   selected?.id === n.id

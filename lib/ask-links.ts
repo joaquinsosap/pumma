@@ -92,7 +92,8 @@ export function entityFocusHref(
   }
 }
 
-const FOCUS_PARAM = /[?&](task|project|goal|habit)=/;
+const FOCUS_PARAM = /[?&](task|project|goal|habit|note)=/;
+// The old note address, which still resolves through a redirect.
 const NOTE_PATH = /^\/notes\/[^/?#]+/;
 
 export function hrefHasEntityFocus(href: string): boolean {

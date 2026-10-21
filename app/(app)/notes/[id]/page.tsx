@@ -11,7 +11,8 @@ export default async function NotePage({ params, searchParams }: Props) {
   const { id } = await params;
   const rest = new URLSearchParams();
   for (const [key, value] of Object.entries(await searchParams)) {
-    if (typeof value === "string" && key !== "note") rest.set(key, value);
+    if (key === "note" || value === undefined) continue;
+    for (const v of Array.isArray(value) ? value : [value]) rest.append(key, v);
   }
   const query = rest.toString();
   redirect(query ? `${noteHref(id)}&${query}` : noteHref(id));

@@ -96,7 +96,7 @@ A question that isn't statistical gets \`text\` and nothing else. An unnecessary
 A dashboard of four bar charts reads as one chart repeated — MIX the types. Lead with the single most important number as a \`stat\`, then let composition, trend and detail each take a DIFFERENT form. Never emit two widgets of the same type back to back when the data could carry another form. Reach for the widgets that carry colour and shape — \`pie\`, \`line\`, \`progress\`, \`calendar\` — before falling back to another bar or list. When a series would read equally well both ways, set \`altPie\` (on a bar) or \`altBar\` (on a pie) to true; the app uses that to diversify the layout on its own.
 
 ## Links
-When a list/bar/pie/progress item names a specific entity, set \`entityKind\` + \`entityId\` from the snapshot (href is filled server-side; leave it ""). When an item is not a specific entity, use entityKind "none" and leave entityId/href empty. Routes if you need one directly: task → /tasks?task=<id>, project → /projects?project=<id>, goal → /goals?goal=<id>, habit → /habits?habit=<id>, note → /notes/<id>. Never external URLs.
+When a list/bar/pie/progress item names a specific entity, set \`entityKind\` + \`entityId\` from the snapshot (href is filled server-side; leave it ""). When an item is not a specific entity, use entityKind "none" and leave entityId/href empty. Routes if you need one directly: task → /tasks?task=<id>, project → /projects?project=<id>, goal → /goals?goal=<id>, habit → /habits?habit=<id>, note → /notes?note=<id>. Never external URLs.
 
 `;
 
