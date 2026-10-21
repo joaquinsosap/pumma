@@ -5,8 +5,12 @@ import "server-only";
 import type * as z from "zod/v4";
 import {
   generateObject,
+  generateText,
+  tool,
   NoObjectGeneratedError,
+  type FinishReason,
   type LanguageModel,
+  type LanguageModelUsage,
   type SystemModelMessage,
 } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
@@ -19,10 +23,21 @@ import {
   NO_API_KEY_MESSAGE,
   type AiCredentials,
 } from "@/lib/ai/api-key";
-import { providerDef } from "@/lib/ai/providers";
+import { providerDef, refusesForcedTool } from "@/lib/ai/providers";
 
 /** Bounded latency: a stuck request should fail in ~1 min, not hang a page. */
 const TIMEOUT_MS = 60_000;
+
+/** Told to models that get the json tool unforced (see generateViaTool). */
+const JSON_TOOL_RULE =
+  "Answer only by calling the json tool, exactly once, with the complete answer as its input.";
+
+/** One model call's outcome, whichever path made it. */
+type Attempt<T> = {
+  object: T | undefined;
+  usage: LanguageModelUsage;
+  finishReason: FinishReason;
+};
 
 export type StructuredMessages = {
   /** Static instructions — cached by providers that can. */
@@ -48,8 +63,8 @@ export type GenerateStructuredOptions<T> = {
 /**
  * Ask the user's chosen model for an object matching `schema`.
  *
- * Any provider can return valid JSON that doesn't match the schema (even
- * Anthropic runs in jsonTool mode here), so a failure to parse is retried once
+ * Any provider can return valid JSON that doesn't match the schema (Anthropic
+ * answers through a tool here, forced or not), so a failure to parse is retried once
  * with a blunt reminder appended. One retry converts most of those; looping
  * would just spend the user's money on a model that can't do it.
  */
@@ -63,32 +78,33 @@ export async function generateStructured<T>(
   if (!creds) throw new Error(NO_API_KEY_MESSAGE);
 
   const model = buildModel(creds);
-  // Every provider gets the schema-mismatch retry: even Anthropic runs in
-  // jsonTool mode here (see providerOptions below), where adherence is very
-  // good but not grammar-guaranteed.
+  // Every provider gets the schema-mismatch retry: Anthropic's tool modes are not grammar-guaranteed either.
   const canRetry = true;
+  const unforced = refusesForcedTool(creds.provider, creds.model);
 
-  const run = (extra?: string) =>
-    generateObject({
-      model,
-      schema: opts.schema,
-      // An array of system messages so the static block can carry Anthropic's
-      // cache_control while the volatile block stays outside the cached prefix.
-      instructions: systemMessages(creds, opts.system, extra),
-      prompt: opts.prompt,
-      maxOutputTokens: opts.maxTokens,
-      abortSignal: AbortSignal.timeout(TIMEOUT_MS),
-      maxRetries: 1,
-      providerOptions: {
-        // Tool-calling mode instead of grammar-compiled structured outputs.
-        // The grammar compiler enforces hard caps (24 optionals, 16 unions,
-        // total size) that a nine-widget × three-op union can never fit;
-        // jsonTool has no such limits.
-        anthropic: { structuredOutputMode: "jsonTool" },
-      },
-    });
+  const run = (extra?: string): Promise<Attempt<T>> =>
+    unforced
+      ? generateViaTool(model, creds, opts, extra)
+      : generateObject({
+          model,
+          schema: opts.schema,
+          // An array of system messages so the static block can carry Anthropic's
+          // cache_control while the volatile block stays outside the cached prefix.
+          instructions: systemMessages(creds, opts.system, extra),
+          prompt: opts.prompt,
+          maxOutputTokens: opts.maxTokens,
+          abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+          maxRetries: 1,
+          providerOptions: {
+            // Tool-calling mode instead of grammar-compiled structured outputs.
+            // The grammar compiler enforces hard caps (24 optionals, 16 unions,
+            // total size) that a nine-widget × three-op union can never fit;
+            // jsonTool has no such limits.
+            anthropic: { structuredOutputMode: "jsonTool" },
+          },
+        });
 
-  let result;
+  let result: Attempt<T>;
   try {
     result = await run();
   } catch (error) {
@@ -128,6 +144,59 @@ export async function generateStructured<T>(
   return { object: result.object, usage };
 }
 
+/** For Claude models that refuse a forced tool call: the same json tool, unforced, checked against the schema here. */
+async function generateViaTool<T>(
+  model: LanguageModel,
+  creds: AiCredentials,
+  opts: GenerateStructuredOptions<T>,
+  extra?: string,
+): Promise<Attempt<T>> {
+  const result = await generateText({
+    model,
+    tools: {
+      json: tool({
+        description: "Respond with a JSON object.",
+        inputSchema: opts.schema,
+      }),
+    },
+    toolChoice: "auto",
+    instructions: systemMessages(
+      creds,
+      opts.system,
+      extra ? `${extra}\n\n${JSON_TOOL_RULE}` : JSON_TOOL_RULE,
+    ),
+    prompt: opts.prompt,
+    maxOutputTokens: opts.maxTokens,
+    abortSignal: AbortSignal.timeout(TIMEOUT_MS),
+    maxRetries: 1,
+    providerOptions: { anthropic: { disableParallelToolUse: true } },
+  });
+  const usage = result.totalUsage;
+  const { finishReason } = result;
+  if (finishReason === "length" || finishReason === "content-filter") {
+    return { object: undefined, usage, finishReason };
+  }
+  const call = result.toolCalls.find((c) => c.toolName === "json");
+  const parsed = call ? opts.schema.safeParse(call.input) : undefined;
+  if (parsed?.success) return { object: parsed.data, usage, finishReason };
+  // Same error as generateObject's, so the retry hands the model its own mistake.
+  throw new NoObjectGeneratedError({
+    message:
+      "No object generated: the json tool was not called with valid input.",
+    cause: new Error(
+      `Error message: ${
+        parsed
+          ? JSON.stringify(parsed.error.issues)
+          : "the reply did not call the json tool"
+      }`,
+    ),
+    text: call ? JSON.stringify(call.input) : result.text,
+    response: result.response,
+    usage,
+    finishReason,
+  });
+}
+
 function systemMessages(
   creds: AiCredentials,
   system: StructuredMessages,
@@ -148,7 +217,10 @@ function systemMessages(
           }
         : {}),
     },
-    { role: "system", content: system.volatile },
+    // Anthropic refuses an empty text block, which the key test's empty data would send.
+    ...(system.volatile
+      ? [{ role: "system" as const, content: system.volatile }]
+      : []),
   ];
   if (extra) messages.push({ role: "system", content: extra });
   return messages;

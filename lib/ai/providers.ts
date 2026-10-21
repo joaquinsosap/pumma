@@ -57,9 +57,16 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     label: "Anthropic",
     sdk: "anthropic",
     defaultModel: "claude-haiku-5-5",
-    // Sonnet 5.5, Opus 5.5 and Fable 5.1 refuse the forced tool call jsonTool
-    // mode sends, so they stay off this list until generate.ts has a path for them.
-    models: ["claude-haiku-5-5", "claude-sonnet-4-6", "claude-opus-4-8", "claude-haiku-4-5"],
+    // Sonnet 5.5, Opus 5.5 and Fable 5.1 refuse a forced tool call; generate.ts gives them one unforced.
+    models: [
+      "claude-haiku-5-5",
+      "claude-sonnet-5-5",
+      "claude-opus-5-5",
+      "claude-fable-5-1",
+      "claude-sonnet-4-6",
+      "claude-opus-4-8",
+      "claude-haiku-4-5",
+    ],
     keyPattern: /^sk-ant-[A-Za-z0-9_-]{16,200}$/,
     keyHint: "sk-ant-…",
     docsUrl: "https://console.anthropic.com/settings/keys",
@@ -118,7 +125,11 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     sdk: "openai-compatible",
     baseUrl: "https://api.groq.com/openai/v1",
     defaultModel: "openai/gpt-oss-20b",
-    models: ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "llama-3.3-70b-versatile"],
+    models: [
+      "openai/gpt-oss-20b",
+      "openai/gpt-oss-120b",
+      "llama-3.3-70b-versatile",
+    ],
     keyPattern: /^gsk_[A-Za-z0-9_-]{16,200}$/,
     keyHint: "gsk_…",
     docsUrl: "https://console.groq.com/keys",
@@ -145,7 +156,12 @@ export const PROVIDERS: Record<ProviderId, ProviderDef> = {
     sdk: "openai-compatible",
     baseUrl: "https://api.mistral.ai/v1",
     defaultModel: "mistral-small-latest",
-    models: ["mistral-small-latest", "mistral-medium-latest", "mistral-large-latest", "ministral-8b-latest"],
+    models: [
+      "mistral-small-latest",
+      "mistral-medium-latest",
+      "mistral-large-latest",
+      "ministral-8b-latest",
+    ],
     keyPattern: GENERIC_KEY,
     keyHint: "your Mistral key",
     docsUrl: "https://console.mistral.ai/api-keys",
@@ -229,4 +245,29 @@ export function isPlausibleKey(provider: ProviderId, key: string): boolean {
   const trimmed = key.trim();
   if (!trimmed) return Boolean(def.keyOptional);
   return def.keyPattern.test(trimmed);
+}
+
+/** First version of each Claude family that rejects a forced tool call (tool_choice "any" or "tool"). */
+const FORCED_TOOL_CUTOFF: Record<string, readonly [number, number]> = {
+  sonnet: [5, 5],
+  opus: [5, 5],
+  fable: [5, 1],
+  mythos: [5, 1],
+};
+
+/** Claude models that answer a forced tool call with a 400, so structured output has to use an unforced one. */
+export function refusesForcedTool(
+  provider: ProviderId,
+  model: string,
+): boolean {
+  if (provider !== "anthropic") return false;
+  // claude-<family>-<major>[-<minor>]; a dated suffix is not a minor version.
+  const m = /^claude-([a-z]+)-(\d+)(?:-(\d{1,2}))?(?![\d.])/.exec(
+    model.trim().toLowerCase(),
+  );
+  const cutoff = m && FORCED_TOOL_CUTOFF[m[1]];
+  if (!m || !cutoff) return false;
+  const major = Number(m[2]);
+  const minor = m[3] === undefined ? 0 : Number(m[3]);
+  return major > cutoff[0] || (major === cutoff[0] && minor >= cutoff[1]);
 }

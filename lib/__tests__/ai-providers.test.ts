@@ -8,6 +8,7 @@ import {
   resolveModel,
   providerBaseUrl,
   isPlausibleKey,
+  refusesForcedTool,
 } from "@/lib/ai/providers";
 
 describe("the provider registry", () => {
@@ -109,5 +110,44 @@ describe("isPlausibleKey", () => {
 
   it("lets a local server through with nothing", () => {
     expect(isPlausibleKey("ollama", "")).toBe(true);
+  });
+});
+
+describe("refusesForcedTool", () => {
+  it("names the Claude models that 400 on a forced tool call", () => {
+    for (const model of ["claude-sonnet-5-5", "claude-opus-5-5", "claude-fable-5-1"]) {
+      expect(refusesForcedTool("anthropic", model), model).toBe(true);
+    }
+  });
+
+  it("leaves the models that take a forced tool call alone", () => {
+    for (const model of [
+      "claude-haiku-5-5",
+      "claude-sonnet-4-6",
+      "claude-opus-4-8",
+      "claude-opus-5",
+      "claude-sonnet-5",
+      "claude-fable-5",
+    ]) {
+      expect(refusesForcedTool("anthropic", model), model).toBe(false);
+    }
+  });
+
+  it("covers later versions of the same families", () => {
+    expect(refusesForcedTool("anthropic", "claude-sonnet-5-6")).toBe(true);
+    expect(refusesForcedTool("anthropic", "claude-opus-6")).toBe(true);
+    expect(refusesForcedTool("anthropic", "claude-fable-5-2")).toBe(true);
+  });
+
+  it("does not read a date suffix as a minor version", () => {
+    expect(refusesForcedTool("anthropic", "claude-opus-5-20260101")).toBe(false);
+  });
+
+  it("tolerates case and padding in a custom model", () => {
+    expect(refusesForcedTool("anthropic", "  Claude-Opus-5-5 ")).toBe(true);
+  });
+
+  it("only applies to the Anthropic API", () => {
+    expect(refusesForcedTool("openrouter", "claude-opus-5-5")).toBe(false);
   });
 });
