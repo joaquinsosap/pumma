@@ -102,6 +102,25 @@ export function ProjectRail({
     onSortVisibleChange?.(false);
   }, [selectedId, sortVisible, onSortVisibleChange]);
 
+  // Keep the selected card on screen. A project created from the end of the
+  // rail lands first under "Newest", scrolled out of view, so it read as a card
+  // that could not be clicked. Runs again when the list grows, since the new
+  // card can arrive after the selection does.
+  useEffect(() => {
+    const rail = railRef.current;
+    if (!rail || !selectedId) return;
+    const card = rail.querySelector<HTMLElement>(
+      `[data-project-id="${CSS.escape(selectedId)}"]`,
+    );
+    if (!card) return;
+    const c = card.getBoundingClientRect();
+    const r = rail.getBoundingClientRect();
+    if (c.left >= r.left && c.right <= r.right) return;
+    // Always to the card's start edge: the cards snap by their start, so
+    // lining up the right edge would get snapped somewhere else.
+    rail.scrollBy({ left: c.left - r.left, behavior: "smooth" });
+  }, [selectedId, projects.length]);
+
   return (
     <div className="relative mb-4">
       <div
@@ -164,6 +183,7 @@ function ProjectRailCard({
     <button
       ref={droppable ? setNodeRef : undefined}
       type="button"
+      data-project-id={p.id}
       onClick={onSelect}
       className={cn(
         "min-w-[160px] max-w-[240px] shrink-0 snap-start cursor-pointer rounded-[11px] border-[1.5px] p-[11px_14px] text-left transition-all hover:border-faint2",
