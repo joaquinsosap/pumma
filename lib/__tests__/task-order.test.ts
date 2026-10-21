@@ -83,6 +83,33 @@ describe("sortTasksByPriority", () => {
     expect(ids(out)).toEqual(["timed", "untimed"]);
   });
 
+  it("orders a band by day before hour", () => {
+    // The clock time alone used to decide, so tomorrow 09:00 beat today 14:00
+    // and untimed tasks stayed in the order they were added.
+    const out = sortTasksByPriority([
+      task({ id: "tomorrowMorning", priority: "high", due: "2026-08-02T09:00" }),
+      task({ id: "todayUntimed", priority: "high", due: "2026-08-01" }),
+      task({ id: "undated", priority: "high" }),
+      task({ id: "yesterday", priority: "high", due: "2026-07-31" }),
+      task({ id: "todayAfternoon", priority: "high", due: "2026-08-01T14:00" }),
+    ]);
+    expect(ids(out)).toEqual([
+      "yesterday",
+      "todayAfternoon",
+      "todayUntimed",
+      "tomorrowMorning",
+      "undated",
+    ]);
+  });
+
+  it("still lets priority lead over the hour", () => {
+    const out = sortTasksByPriority([
+      task({ id: "medMorning", priority: "med", due: "2026-08-01T09:00" }),
+      task({ id: "highAfternoon", priority: "high", due: "2026-08-01T14:00" }),
+    ]);
+    expect(ids(out)).toEqual(["highAfternoon", "medMorning"]);
+  });
+
   it("is stable — equal tasks keep their original order", () => {
     const out = sortTasksByPriority([
       task({ id: "a", priority: "med" }),
