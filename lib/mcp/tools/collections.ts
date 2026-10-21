@@ -21,6 +21,7 @@ import { listTags } from "@/lib/db/tags";
 import { getSettings } from "@/lib/db/settings";
 import { isoDateInTz } from "@/lib/timezone";
 import { projectProgress } from "@/lib/metrics";
+import { filterByLifeView, filterGoalsByLifeView } from "@/lib/life-area";
 import { habitStreak, normalizeHabitFrequency } from "@/lib/habit-visibility";
 
 const MAX_LIMIT = 200;
@@ -111,7 +112,8 @@ export const listProjectsTool = defineTool({
       listTasks(caller.userId),
     ]);
     let rows = projects;
-    if (input.lifeArea) rows = rows.filter((p) => p.lifeArea === input.lifeArea);
+    // Same rule as the app's life toggle: "both" is everything.
+    if (input.lifeArea) rows = filterByLifeView(rows, input.lifeArea);
     const page = rows.slice(0, input.limit);
 
     const counts = new Map<string, { open: number; total: number }>();
@@ -165,7 +167,9 @@ export const listGoalsTool = defineTool({
   }),
   handler: async (input, caller) => {
     let rows = await listGoals(caller.userId);
-    if (input.category) rows = rows.filter((g) => g.category === input.category);
+    // By lifeArea, like the app's Work and Personal views: a goal tagged both
+    // stores category "personal" but belongs in either view.
+    if (input.category) rows = filterGoalsByLifeView(rows, input.category);
     const page = rows.slice(0, input.limit);
 
     return {
