@@ -18,3 +18,20 @@
  * from a file anyway.
  */
 export const NEVER_EXPORT = ["dekWrapped", "dekKeyId", "aiApiKeyEnc"] as const;
+
+/** Fields secret only in one collection: a calendar feed's address reads the whole calendar to anyone holding it. */
+export const NEVER_EXPORT_IN: Partial<Record<string, readonly string[]>> = {
+  calendarFeeds: ["url"],
+};
+
+/** A copy of `rows` with every never-export field removed, for the collection they came from. */
+export function redactForExport<T>(collection: string, rows: T[]): T[] {
+  const scoped = NEVER_EXPORT_IN[collection] ?? [];
+  return rows.map((row) => {
+    if (!row || typeof row !== "object") return row;
+    const copy = { ...(row as Record<string, unknown>) };
+    for (const field of NEVER_EXPORT) delete copy[field];
+    for (const field of scoped) delete copy[field];
+    return copy as T;
+  });
+}

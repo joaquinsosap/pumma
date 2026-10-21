@@ -1,48 +1,18 @@
-import { ObjectId } from "mongodb";
+import type { ObjectId } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import { decryptAllFor, SPECS } from "@/lib/db/mongo/encrypted";
-import { NEVER_EXPORT } from "@/lib/export-redaction";
+import { redactForExport } from "@/lib/export-redaction";
 import { userIdCandidates } from "@/lib/db/mongo/user-id";
-
-function stripSecrets<T>(rows: T[]): T[] {
-  return rows.map((row) => {
-    if (!row || typeof row !== "object") return row;
-    const copy = { ...(row as Record<string, unknown>) };
-    for (const field of NEVER_EXPORT) delete copy[field];
-    return copy as T;
-  });
-}
-
-/**
- * Every collection that holds something belonging to a user, keyed by userId.
- *
- * If you add a collection, add it here — an export that quietly omits a
- * collection is a broken promise, and a delete that does is worse.
- */
-export const USER_COLLECTIONS = [
-  "agenda",
-  "goals",
-  "habitEntries",
-  "habits",
-  "lifeDays",
-  "lifeWeeks",
-  "notes",
-  "projects",
-  "settings",
-  "subscriptions",
-  "tags",
-  "tasks",
-] as const;
-
-export type UserCollection = (typeof USER_COLLECTIONS)[number];
+import {
+  DELETE_ONLY_COLLECTIONS,
+  EXPORTED_COLLECTIONS,
+} from "@/lib/account-collections";
 
 /**
  * The app writes string `_id`s while the driver's default Document type
  * assumes ObjectId, so collections are opened with a loose row type.
  */
-type AnyRow = { _id: string | ObjectId; userId?: string };
-
-
+type AnyRow = { _id: string | ObjectId; userId?: string | ObjectId };
 
 /**
  * Everything this account owns, readable.
@@ -64,14 +34,14 @@ export async function exportUserData(
   const db = await getDb();
   const out: Record<string, unknown[]> = {};
 
-  for (const name of USER_COLLECTIONS) {
+  for (const name of EXPORTED_COLLECTIONS) {
     const rows = await db.collection<AnyRow>(name).find({ userId }).toArray();
     // Collections absent from SPECS hold nothing encrypted and pass through.
     const readable =
       name in SPECS
         ? await decryptAllFor(name as keyof typeof SPECS, userId, rows)
         : rows;
-    out[name] = stripSecrets(readable);
+    out[name] = redactForExport(name, readable);
   }
 
   // The app-side profile row is keyed by _id, not userId.
@@ -79,7 +49,7 @@ export async function exportUserData(
     .collection<AnyRow>("users")
     .find({ _id: userId })
     .toArray();
-  out.profile = stripSecrets(profile);
+  out.profile = redactForExport("users", profile);
 
   return out;
 }
@@ -99,30 +69,18 @@ export async function deleteAllUserData(
   const removed: Record<string, number> = {};
   const ids = userIdCandidates(userId);
 
-  // Sessions and credentials first, then every other way back in.
-  //
-  // The OAuth rows matter as much as the password does. A refresh token is a
-  // thirty-day credential living in some other application, and deleting the
-  // account without revoking it would leave a key to a door that no longer
-  // exists. mcpAudit and mcpRate are not credentials but they are this
-  // person's records, and "delete everything" has to mean it.
-  for (const name of [
-    "session",
-    "account",
-    "oauthAccessToken",
-    "oauthRefreshToken",
-    "oauthConsent",
-    "mcpAudit",
-    "mcpRate",
-  ]) {
+  // Sign-in material first, then everything else this account owns.
+  for (const name of DELETE_ONLY_COLLECTIONS) {
     const res = await db
       .collection<AnyRow>(name)
-      .deleteMany({ userId: { $in: ids as string[] } });
+      .deleteMany({ userId: { $in: ids } });
     removed[name] = res.deletedCount ?? 0;
   }
 
-  for (const name of USER_COLLECTIONS) {
-    const res = await db.collection<AnyRow>(name).deleteMany({ userId });
+  for (const name of EXPORTED_COLLECTIONS) {
+    const res = await db
+      .collection<AnyRow>(name)
+      .deleteMany({ userId: { $in: ids } });
     removed[name] = res.deletedCount ?? 0;
   }
 

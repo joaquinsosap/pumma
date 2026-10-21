@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { exportUserData } from "@/lib/db/account";
-import { NEVER_EXPORT } from "@/lib/export-redaction";
+import { redactForExport } from "@/lib/export-redaction";
 
 export const dynamic = "force-dynamic";
 
@@ -12,13 +12,8 @@ export const dynamic = "force-dynamic";
  * before they leave the building, and a new collection added to the export
  * without thinking about redaction fails safe here.
  */
-function redact(rows: unknown[]): unknown[] {
-  return rows.map((row) => {
-    if (!row || typeof row !== "object") return row;
-    const copy = { ...(row as Record<string, unknown>) };
-    for (const field of NEVER_EXPORT) delete copy[field];
-    return copy;
-  });
+function redact(collection: string, rows: unknown[]): unknown[] {
+  return redactForExport(collection === "profile" ? "users" : collection, rows);
 }
 
 /**
@@ -45,9 +40,9 @@ export async function GET() {
     // The AI key is stored encrypted and stays server-side; it isn't yours to
     // restore from a file anyway, and a plaintext copy in Downloads is a
     // liability.
-    note: "Your stored AI API key and this account's encryption key material are deliberately excluded.",
+    note: "Your stored AI API key, this account's encryption key material and the addresses of your subscribed calendars are deliberately excluded.",
     data: Object.fromEntries(
-      Object.entries(data).map(([name, rows]) => [name, redact(rows)]),
+      Object.entries(data).map(([name, rows]) => [name, redact(name, rows)]),
     ),
   };
 

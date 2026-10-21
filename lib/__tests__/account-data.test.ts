@@ -2,6 +2,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 import { exportUserData, deleteAllUserData } from "@/lib/db/memory/account";
 import { getStore, resetStore } from "@/lib/store/memory";
 import { NEVER_EXPORT } from "@/lib/export-redaction";
+import {
+  calendarFeedSchema,
+  externalEventSchema,
+  notificationSchema,
+  pushSubscriptionSchema,
+} from "@/lib/schemas";
 
 const OTHER = "someone-else";
 
@@ -159,5 +165,58 @@ describe("what an export must never carry", () => {
         }
       }
     }
+  });
+});
+
+describe("account deletion reaches the newer collections", () => {
+  beforeEach(() => resetStore());
+
+  function seedNewer(userId: string, tag: string) {
+    const store = getStore();
+    const now = "2026-10-21T12:00:00.000Z";
+    store.calendarFeeds.push(
+      calendarFeedSchema.parse({ _id: `feed-${tag}`, userId, url: `https://cal.example.com/${tag}.ics`, createdAt: now }),
+    );
+    store.externalEvents.push(
+      externalEventSchema.parse({ _id: `ev-${tag}`, userId, feedId: `feed-${tag}`, key: `k-${tag}`, title: "Standup", date: "2026-10-22" }),
+    );
+    store.notifications.push(
+      notificationSchema.parse({ _id: `n-${tag}`, userId, kind: "task", fireAt: now, createdAt: now }),
+    );
+    store.pushSubscriptions.push(
+      pushSubscriptionSchema.parse({ _id: `p-${tag}`, userId, endpoint: `https://push.example.com/${tag}`, p256dh: "key", auth: "secret", createdAt: now, lastSeenAt: now }),
+    );
+  }
+
+  it("leaves no row of the account anywhere in the store", async () => {
+    const store = getStore();
+    const me = store.users[0]._id;
+    seedNewer(me, "mine");
+    seedNewer(OTHER, "theirs");
+
+    await deleteAllUserData(me);
+
+    for (const [name, rows] of Object.entries(store)) {
+      if (!Array.isArray(rows)) continue;
+      const mine = (rows as { userId?: string }[]).filter((r) => r.userId === me);
+      expect({ name, left: mine.length }).toEqual({ name, left: 0 });
+    }
+    expect(store.calendarFeeds.map((f) => f.userId)).toEqual([OTHER]);
+    expect(store.pushSubscriptions.map((p) => p.userId)).toEqual([OTHER]);
+  });
+
+  it("exports calendars and reminders, without the feed address or push keys", async () => {
+    const store = getStore();
+    const me = store.users[0]._id;
+    seedNewer(me, "mine");
+
+    const data = await exportUserData(me);
+    const ids = (rows: unknown[]) => (rows as { _id: string }[]).map((r) => r._id);
+    expect(ids(data.notifications)).toContain("n-mine");
+    expect(ids(data.externalEvents)).toContain("ev-mine");
+    const feed = (data.calendarFeeds as Record<string, unknown>[]).find((f) => f._id === "feed-mine");
+    expect(feed).toBeDefined();
+    expect(feed!.url).toBeUndefined();
+    expect(data).not.toHaveProperty("pushSubscriptions");
   });
 });
