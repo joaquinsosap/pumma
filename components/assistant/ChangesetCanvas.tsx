@@ -52,6 +52,7 @@ import {
   type OpProblem,
 } from "@/lib/actions/changeset";
 import { cn } from "@/lib/utils";
+import { noteHref } from "@/lib/note-href";
 
 // ---------------------------------------------------------------------------
 // Draft model: ops with stable client keys, so exclusion and edits survive
@@ -1251,7 +1252,7 @@ const ENTITY_HREF: Record<ChangeEntity, (id: string) => string> = {
   project: (id) => `/projects?project=${id}`,
   goal: (id) => `/goals?goal=${id}`,
   habit: (id) => `/habits?habit=${id}`,
-  note: (id) => `/notes/${id}`,
+  note: (id) => noteHref(id),
   // A meeting has no page of its own; the calendar is where it lives, and the
   // day it is on is the useful place to land.
   meeting: () => `/calendar`,

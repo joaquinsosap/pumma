@@ -35,6 +35,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { EditableTitle } from "@/components/ui/editable-title";
 import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
+import { noteHref } from "@/lib/note-href";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 
 type Props = {
@@ -165,7 +166,7 @@ export function NotesView({
     window.history.replaceState(
       null,
       "",
-      hrefWithLife(`/notes/${id}`, lifeView),
+      hrefWithLife(noteHref(id), lifeView),
     );
   };
 
@@ -229,7 +230,7 @@ export function NotesView({
                 )}
               >
                 <Link
-                  href={hrefWithLife(`/notes/${n.id}`, lifeView)}
+                  href={hrefWithLife(noteHref(n.id), lifeView)}
                   className="min-w-0 flex-1"
                   onClick={(e) => openNote(e, n.id)}
                 >

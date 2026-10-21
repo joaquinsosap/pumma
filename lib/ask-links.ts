@@ -1,6 +1,7 @@
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 import { taskDetailHref } from "@/lib/task-links";
 import type { EntityLifeArea } from "@/lib/types";
+import { noteHref } from "@/lib/note-href";
 
 export type EntityKind = "task" | "project" | "goal" | "habit" | "note";
 
@@ -77,7 +78,7 @@ export function entityFocusHref(
     case "note": {
       const n = data.notes.find((x) => x.id === id);
       if (!n) return null;
-      return hrefWithLife(`/notes/${id}`, lifeViewFromArea(n.lifeArea));
+      return hrefWithLife(noteHref(id), lifeViewFromArea(n.lifeArea));
     }
     case "task": {
       const t = data.tasks.find((x) => x.id === id);
