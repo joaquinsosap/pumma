@@ -163,6 +163,8 @@ export function TagQuickPick({
                     style={{ background: tag.color }}
                   />
                   {tag.name}
+                  {/* A border alone doesn't say a second click takes it off. */}
+                  {active && <X className="h-2.5 w-2.5" strokeWidth={2.5} />}
                 </button>
               );
             })}

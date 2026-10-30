@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "@/components/icons";
 import type { Project, Tag } from "@/lib/schemas";
 import { tagBg } from "@/lib/parse";
 import { isLifeTag, SPECIAL_LIFE_TAGS } from "@/lib/life-area-sync";
@@ -72,6 +73,7 @@ export function TagGridPicker({
               style={{ background: tag.color }}
             />
             <span className="truncate">{tag.name}</span>
+            {active && <X className="ml-auto h-3 w-3 shrink-0" />}
           </button>
         );
       })}

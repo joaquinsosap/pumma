@@ -753,7 +753,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                             type="button"
                             onClick={() => toggleTag(tg.id)}
                             className={cn(
-                              "rounded-xl border px-3.5 py-2 font-mono text-[13px] font-medium transition-all",
+                              "flex items-center gap-1.5 rounded-xl border px-3.5 py-2 font-mono text-[13px] font-medium transition-all",
                               active
                                 ? "border-2 font-semibold"
                                 : "border-border bg-surface text-muted",
@@ -769,6 +769,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                             }
                           >
                             {tg.name}
+                            {active && <X className="h-3 w-3" />}
                           </button>
                         );
                       })}
