@@ -45,6 +45,8 @@ export type ParseResult = {
   typeToken: OmniType | null;
   /** "#plan" / "#ask" — switches the bar out of capture mode. */
   modeToken: "plan" | "ask" | null;
+  /** Raw-text spans the title lost: the # tokens, the !priority and the date chrono heard. */
+  lifted: [number, number][];
 };
 
 export type NoteParseResult = {
@@ -86,6 +88,10 @@ export function parseOmni(
   let dateToken: string | null = null;
 
   const tagMatches = [...text.matchAll(new RegExp(OMNI_TOKEN_RE.source, "gi"))];
+  const lifted: [number, number][] = tagMatches.map((m) => [
+    m.index ?? 0,
+    (m.index ?? 0) + m[0].length,
+  ]);
   for (const m of tagMatches) {
     const name = m[1].toLowerCase();
 
@@ -131,6 +137,7 @@ export function parseOmni(
   if (!options?.forNote) {
     const pm = text.match(/!(high|med|low|h|m|l)\b/i);
     if (pm) {
+      lifted.push([pm.index ?? 0, (pm.index ?? 0) + pm[0].length]);
       const x = pm[1].toLowerCase();
       priority = x[0] === "h" ? "high" : x[0] === "l" ? "low" : "med";
       title = title
@@ -153,6 +160,7 @@ export function parseOmni(
     const parsed = chrono.parse(text, ref, { forwardDate: true });
     if (parsed.length > 0) {
       const result = parsed[0];
+      lifted.push([result.index, result.index + result.text.length]);
       const dd = result.start.date();
       // The omnibar sets a due DATE, never a time of day, even when chrono
       // heard one ("standup at 3pm" still just lands on today). A task only
@@ -213,6 +221,7 @@ export function parseOmni(
     description,
     typeToken,
     modeToken,
+    lifted,
   };
 }
 
@@ -280,20 +289,22 @@ export function autoTaskTitle(
   return { title: noteTitleFromBody(title), description: title };
 }
 
-/** Where autoTaskTitle's title ends in the raw text, matching its words in order past the lifted #tags and dates; null when nothing is cut. */
-export function autoTitleEnd(text: string, title: string): number | null {
-  const opening = openingWords(title);
-  if (!opening.cut) return null;
-  const words = opening.title.split(" ");
-  let next = 0;
-  for (const m of text.matchAll(/\S+/g)) {
-    const want = words[next];
-    // The 72-character clip can end the title partway through a word.
-    const last = next === words.length - 1;
-    if (m[0] === want || (last && m[0].startsWith(want))) {
-      next++;
-      if (next === words.length) return (m.index ?? 0) + want.length;
-    }
+/** Where a task capture's stored title ends in the raw text, or null when it keeps no description: the bar dims exactly what the description holds. */
+export function taskTitleEnd(
+  text: string,
+  parsed: Pick<ParseResult, "title" | "description" | "lifted">,
+): number | null {
+  const stored = autoTaskTitle(parsed.title, parsed.description);
+  if (!stored.description) return null;
+  // The cleaned title is the raw text minus the lifted spans, with whitespace collapsed.
+  const want = stored.title.replace(/…$/, "").replace(/\s+/g, "");
+  let matched = 0;
+  for (let at = 0; at < text.length && matched < want.length; at++) {
+    if (parsed.lifted.some(([start, end]) => at >= start && at < end)) continue;
+    if (/\s/.test(text[at])) continue;
+    if (text[at] !== want[matched]) return null;
+    matched++;
+    if (matched === want.length) return at + 1;
   }
   return null;
 }
@@ -382,7 +393,7 @@ export function tokenizeOmniInput(
   options?: {
     showTags?: boolean;
     showPriority?: boolean;
-    /** Where an auto title ends (autoTitleEnd); a colon still wins. */
+    /** Where the stored title ends (taskTitleEnd), in place of the raw colon rule; null dims nothing. */
     dimFrom?: number | null;
   },
 ): OmniInputToken[] {
@@ -460,7 +471,9 @@ export function tokenizeOmniInput(
       : [];
   return dimDescription(
     built,
-    descriptionColonIndex(text) ?? options?.dimFrom ?? null,
+    options?.dimFrom !== undefined
+      ? options.dimFrom
+      : descriptionColonIndex(text),
   );
 }
 

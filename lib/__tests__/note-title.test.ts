@@ -1,9 +1,9 @@
 import { describe, it, expect } from "vitest";
 import {
   autoTaskTitle,
-  autoTitleEnd,
   noteTitleFromBody,
   parseOmni,
+  taskTitleEnd,
   tokenizeOmniInput,
 } from "@/lib/parse";
 
@@ -82,26 +82,54 @@ describe("autoTaskTitle", () => {
   });
 });
 
-describe("autoTitleEnd", () => {
+describe("taskTitleEnd", () => {
+  const ref = new Date(2026, 9, 29);
+  // What the bar dims from: everything before it is what gets stored as the title.
+  const kept = (text: string) => {
+    const parsed = parseOmni(text, [], ref);
+    const end = taskTitleEnd(text, parsed);
+    return end === null ? null : text.slice(0, end);
+  };
+
   it("lands after the eighth word, past the tag and date the parser lifted out", () => {
-    const text =
-      "call the #home plumber tomorrow about the leak in the kitchen sink";
-    const { title } = parseOmni(text, [], new Date(2026, 9, 29));
-    expect(title).toBe("call the plumber about the leak in the kitchen sink");
-    expect(text.slice(0, autoTitleEnd(text, title) ?? undefined)).toBe(
-      "call the #home plumber tomorrow about the leak in the",
-    );
+    expect(
+      kept("call the #home plumber tomorrow about the leak in the kitchen sink"),
+    ).toBe("call the #home plumber tomorrow about the leak in the");
   });
 
-  it("is null when the title is short enough to keep", () => {
-    expect(autoTitleEnd("groceries for sunday", "groceries for sunday")).toBe(
-      null,
-    );
+  it("keeps up when punctuation is left behind by a lifted date or tag", () => {
+    expect(
+      kept("Call mom tomorrow, then book the flights and the hotel for the trip"),
+    ).toBe("Call mom tomorrow, then book the flights and");
+    expect(
+      kept("fix login #bug, then deploy the new build to staging and prod"),
+    ).toBe("fix login #bug, then deploy the new build");
+    expect(
+      kept("Prepare the slides (#work) for the board meeting with the investors"),
+    ).toBe("Prepare the slides (#work) for the board meeting");
+  });
+
+  it("follows the stored split when only tokens come after a colon", () => {
+    expect(
+      kept("Write the quarterly report for the finance team and send it: #work"),
+    ).toBe("Write the quarterly report for the finance team");
+    expect(
+      kept("#bug: the login page is broken on mobile after the latest deploy"),
+    ).toBe("#bug: the login page is broken on mobile");
+  });
+
+  it("ends at the colon of a title: description capture", () => {
+    expect(kept("Pay rent: transfer to the landlord")).toBe("Pay rent");
+  });
+
+  it("is null when the task keeps no description", () => {
+    expect(kept("groceries for sunday")).toBe(null);
+    expect(kept("Pay rent: #work")).toBe(null);
   });
 
   it("can end partway through a word the 72-character clip cut", () => {
     const wall = "x".repeat(90);
-    expect(autoTitleEnd(wall, wall)).toBe(72);
+    expect(kept(wall)).toBe("x".repeat(72));
   });
 });
 
@@ -120,8 +148,13 @@ describe("tokenizeOmniInput dimFrom", () => {
     ]);
   });
 
-  it("lets a colon win over the cut", () => {
-    const tokens = tokenizeOmniInput("title: one two", [], { dimFrom: 2 });
+  it("replaces the raw colon rule when given, so null dims nothing", () => {
+    const tokens = tokenizeOmniInput("send it: #work", [], { dimFrom: null });
+    expect(tokens.some((t) => t.kind === "text" && t.dim)).toBe(false);
+  });
+
+  it("falls back to the raw colon rule when not given", () => {
+    const tokens = tokenizeOmniInput("title: one two", []);
     expect(
       tokens.map((t) => [t.text, t.kind === "text" && Boolean(t.dim)]),
     ).toEqual([
