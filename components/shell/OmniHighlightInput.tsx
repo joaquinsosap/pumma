@@ -10,6 +10,7 @@ import {
   useState,
   type ComponentPropsWithoutRef,
 } from "react";
+import { flushSync } from "react-dom";
 import type { Tag } from "@/lib/schemas";
 import type { OmniHint } from "@/lib/omni-hint";
 import { ScrambleText } from "@/components/shell/ScrambleText";
@@ -86,6 +87,7 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
       hintFor,
       selectionTick,
       className,
+      style,
       onScroll,
       onFocus,
       onBlur,
@@ -95,6 +97,8 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
   ) {
     const [scrollLeft, setScrollLeft] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
+    const hintRef = useRef<HTMLSpanElement>(null);
+    const [hintWidth, setHintWidth] = useState(0);
     useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
 
     // The caret moves without the value changing (arrows, clicks, Tab's guess), so it is tracked.
@@ -132,6 +136,25 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
       () => tokenizeOmniInput(value, tags, { showTags, showPriority }),
       [value, tags, showTags, showPriority],
     );
+
+    // Room for the hint: a full bar never scrolls past its own text, so padding as wide as the hint makes the gap.
+    useLayoutEffect(() => {
+      const w = Math.ceil(hintRef.current?.getBoundingClientRect().width ?? 0);
+      setHintWidth((prev) => (prev === w ? prev : w));
+    });
+    // The hint's padding or the due chip narrows the box without the browser scrolling; an observer runs after Tab has put the caret back.
+    useEffect(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      const observer = new ResizeObserver(() => {
+        if (document.activeElement !== el) return;
+        if (el.selectionStart !== el.value.length) return;
+        el.scrollLeft = el.scrollWidth;
+        flushSync(() => setScrollLeft(el.scrollLeft));
+      });
+      observer.observe(el);
+      return () => observer.disconnect();
+    }, []);
 
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2">
@@ -194,26 +217,28 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
                 );
               })}
               {/* After everything typed, so no glyph before it can shift. */}
-              {hint?.kind === "certain" && (
-                <span className="text-faint2">
-                  {hint.replace ? ` → ${hint.text}` : hint.text}
-                </span>
-              )}
-              {hint?.kind === "open" && (
-                <>
-                  {hint.replace ? (
-                    <span className="text-faint2">{" → "}</span>
-                  ) : (
-                    hint.known && (
-                      <span className="text-faint2">{hint.known}</span>
-                    )
-                  )}
-                  <ScrambleText
-                    text={hint.unknown}
-                    className={`omni-scramble omni-scramble-${hint.slot % 3}`}
-                  />
-                </>
-              )}
+              <span ref={hintRef}>
+                {hint?.kind === "certain" && (
+                  <span className="text-faint2">
+                    {hint.replace ? ` → ${hint.text}` : hint.text}
+                  </span>
+                )}
+                {hint?.kind === "open" && (
+                  <>
+                    {hint.replace ? (
+                      <span className="text-faint2">{" → "}</span>
+                    ) : (
+                      hint.known && (
+                        <span className="text-faint2">{hint.known}</span>
+                      )
+                    )}
+                    <ScrambleText
+                      text={hint.unknown}
+                      className={`omni-scramble omni-scramble-${hint.slot % 3}`}
+                    />
+                  </>
+                )}
+              </span>
             </div>
           </div>
           <input
@@ -223,6 +248,7 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
               "omni-highlight-input relative text-transparent caret-ink outline-none [-webkit-text-fill-color:transparent] placeholder:text-faint placeholder:[-webkit-text-fill-color:var(--faint)] placeholder:transition-colors group-focus-within:placeholder:text-faint2 group-focus-within:placeholder:[-webkit-text-fill-color:var(--faint2)]",
               className,
             )}
+            style={hintWidth ? { ...style, paddingRight: hintWidth } : style}
             onScroll={(e) => {
               setScrollLeft(e.currentTarget.scrollLeft);
               onScroll?.(e);
