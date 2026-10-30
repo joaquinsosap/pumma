@@ -126,11 +126,6 @@ export function parseOmni(
       pills.push({ name, color: NEW_TAG_PREVIEW_COLOR, isNew: true });
     }
   }
-  title = title
-    .replace(new RegExp(OMNI_TOKEN_RE.source, "gi"), "")
-    .replace(/\s+/g, " ")
-    .trim();
-
   let priority: "low" | "med" | "high" = priorityToken ?? "med";
   // TODO: the "!high" form predates "#high" and is kept only so existing
   // muscle memory keeps working. Drop it once "#" is the only prefix.
@@ -140,10 +135,6 @@ export function parseOmni(
       lifted.push([pm.index ?? 0, (pm.index ?? 0) + pm[0].length]);
       const x = pm[1].toLowerCase();
       priority = x[0] === "h" ? "high" : x[0] === "l" ? "low" : "med";
-      title = title
-        .replace(/!(high|med|low|h|m|l)\b/i, "")
-        .replace(/\s+/g, " ")
-        .trim();
     }
   }
 
@@ -170,9 +161,10 @@ export function parseOmni(
       due = datePart;
       const label = result.text.trim();
       dateLabel = label.charAt(0).toUpperCase() + label.slice(1);
-      title = title.replace(result.text, "").replace(/\s+/g, " ").trim();
     }
   }
+  // Cut by position: a string replace took the first copy, so "todays plan ... today" lost the "today" in "todays".
+  title = withoutSpans(text, lifted).replace(/\s+/g, " ").trim();
 
   const newTagNames = pills.filter((p) => p.isNew).map((p) => p.name);
 
@@ -223,6 +215,15 @@ export function parseOmni(
     modeToken,
     lifted,
   };
+}
+
+/** The text with the given spans cut out; overlapping spans are fine. */
+function withoutSpans(text: string, spans: [number, number][]): string {
+  let out = "";
+  for (let i = 0; i < text.length; i++) {
+    if (!spans.some(([start, end]) => i >= start && i < end)) out += text[i];
+  }
+  return out;
 }
 
 /**
@@ -289,22 +290,28 @@ export function autoTaskTitle(
   return { title: noteTitleFromBody(title), description: title };
 }
 
-/** Where a task capture's stored title ends in the raw text, or null when it keeps no description: the bar dims exactly what the description holds. */
+/** Where a task capture's description starts in the raw text, or null when it keeps none, so the bar dims from there. */
 export function taskTitleEnd(
   text: string,
   parsed: Pick<ParseResult, "title" | "description" | "lifted">,
 ): number | null {
   const stored = autoTaskTitle(parsed.title, parsed.description);
   if (!stored.description) return null;
-  // The cleaned title is the raw text minus the lifted spans, with whitespace collapsed.
-  const want = stored.title.replace(/…$/, "").replace(/\s+/g, "");
+  // Only a cut adds the ellipsis; one typed into a title stays part of it.
+  const cut = stored.title !== parsed.title;
+  const want = (cut ? stored.title.slice(0, -1) : stored.title).replace(
+    /\s+/g,
+    "",
+  );
+  // The title is the raw text minus the lifted spans, so its characters line up with the ones kept.
   let matched = 0;
-  for (let at = 0; at < text.length && matched < want.length; at++) {
-    if (parsed.lifted.some(([start, end]) => at >= start && at < end)) continue;
+  for (let at = 0; at < text.length; at++) {
     if (/\s/.test(text[at])) continue;
+    if (parsed.lifted.some(([start, end]) => at >= start && at < end)) continue;
+    // The first kept character past the title starts the description: the colon, or the next word.
+    if (matched === want.length) return at;
     if (text[at] !== want[matched]) return null;
     matched++;
-    if (matched === want.length) return at + 1;
   }
   return null;
 }
@@ -393,7 +400,7 @@ export function tokenizeOmniInput(
   options?: {
     showTags?: boolean;
     showPriority?: boolean;
-    /** Where the stored title ends (taskTitleEnd), in place of the raw colon rule; null dims nothing. */
+    /** Where the description starts (taskTitleEnd), in place of the raw colon rule; null dims nothing. */
     dimFrom?: number | null;
   },
 ): OmniInputToken[] {

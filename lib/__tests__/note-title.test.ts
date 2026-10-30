@@ -84,11 +84,11 @@ describe("autoTaskTitle", () => {
 
 describe("taskTitleEnd", () => {
   const ref = new Date(2026, 9, 29);
-  // What the bar dims from: everything before it is what gets stored as the title.
+  // What stays bright: the stored title, and any lifted date or tag before the description starts.
   const kept = (text: string) => {
     const parsed = parseOmni(text, [], ref);
     const end = taskTitleEnd(text, parsed);
-    return end === null ? null : text.slice(0, end);
+    return end === null ? null : text.slice(0, end).trimEnd();
   };
 
   it("lands after the eighth word, past the tag and date the parser lifted out", () => {
@@ -116,6 +116,29 @@ describe("taskTitleEnd", () => {
     expect(
       kept("#bug: the login page is broken on mobile after the latest deploy"),
     ).toBe("#bug: the login page is broken on mobile");
+  });
+
+  it("keeps up with a date the parser lifts by position, not by its first copy", () => {
+    expect(
+      kept(
+        "Call the bank next  friday about the mortgage refinance paperwork and the fees",
+      ),
+    ).toBe("Call the bank next  friday about the mortgage refinance paperwork");
+    expect(
+      kept(
+        "#march-release prep the notes, then ship it early march with the team and QA",
+      ),
+    ).toBe("#march-release prep the notes, then ship it early march");
+  });
+
+  it("leaves a date between the title and its colon bright", () => {
+    expect(
+      kept("Dentist friday 9:00: bring the insurance card and the forms"),
+    ).toBe("Dentist friday 9:00");
+  });
+
+  it("keeps an ellipsis typed into the title", () => {
+    expect(kept("Wait for it…: then go")).toBe("Wait for it…");
   });
 
   it("ends at the colon of a title: description capture", () => {
@@ -161,5 +184,21 @@ describe("tokenizeOmniInput dimFrom", () => {
       ["title", false],
       [": one two", true],
     ]);
+  });
+});
+
+describe("parseOmni title", () => {
+  const ref = new Date(2026, 9, 29);
+
+  it("loses the date it heard even when it was typed with two spaces", () => {
+    expect(
+      parseOmni("Call the bank next  friday about the mortgage", [], ref).title,
+    ).toBe("Call the bank about the mortgage");
+  });
+
+  it("never cuts a date word out of a longer word", () => {
+    expect(
+      parseOmni("todays plan, then ship it today", [], ref).title,
+    ).toBe("todays plan, then ship it");
   });
 });

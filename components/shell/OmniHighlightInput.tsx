@@ -27,7 +27,7 @@ type Props = Omit<ComponentPropsWithoutRef<"input">, "value"> & {
   hintFor?: (value: string, start: number, end: number) => OmniHint | null;
   /** Bumped when the parent sets the selection itself, so the hint re-reads it before paint. */
   selectionTick?: number;
-  /** Where a long task's auto title ends; what follows dims, like text after a colon. */
+  /** Where the description starts, in place of the colon rule: null dims nothing, undefined keeps the colon rule. */
   dimFrom?: number | null;
 };
 
