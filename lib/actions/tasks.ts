@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { ActionResult } from "@/lib/types";
+import type { ActionResult, EntityLifeArea } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
 import {
   parseOmni,
@@ -58,7 +58,9 @@ const omniSchema = z.object({
 
 export async function createFromOmni(
   input: z.infer<typeof omniSchema>,
-): Promise<ActionResult<{ id: string; label: string }>> {
+): Promise<
+  ActionResult<{ id: string; label: string; lifeArea: EntityLifeArea }>
+> {
   const parsed = omniSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
@@ -163,7 +165,7 @@ export async function createFromOmni(
         : "Task added";
     return {
       ok: true,
-      data: { id: created[0].id, label },
+      data: { id: created[0].id, label, lifeArea: created[0].lifeArea },
       // Undo removes every copy the capture made, not just the first.
       undo: {
         type: "create",
@@ -193,7 +195,7 @@ export async function createFromOmni(
     revalidatePath("/", "layout");
     return {
       ok: true,
-      data: { id: note.id, label: "Note saved" },
+      data: { id: note.id, label: "Note saved", lifeArea: note.lifeArea },
       undo: { type: "create", entity: "note", snapshot: note.id },
     };
   }
@@ -215,7 +217,7 @@ export async function createFromOmni(
     revalidatePath("/", "layout");
     return {
       ok: true,
-      data: { id: habit.id, label: "Habit created" },
+      data: { id: habit.id, label: "Habit created", lifeArea: habit.lifeArea },
       undo: { type: "create", entity: "habit", snapshot: habit.id },
     };
   }
@@ -254,7 +256,7 @@ export async function createFromOmni(
   revalidatePath("/", "layout");
   return {
     ok: true,
-    data: { id: goal.id, label: "Goal set" },
+    data: { id: goal.id, label: "Goal set", lifeArea: goal.lifeArea },
     undo: { type: "create", entity: "goal", snapshot: goal.id },
   };
 }

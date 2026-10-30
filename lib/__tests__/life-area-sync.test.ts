@@ -7,7 +7,11 @@ import {
   setLifeTags,
   goalCategoryForLifeArea,
 } from "@/lib/life-area-sync";
-import { filterByLifeView, filterGoalsByLifeView } from "@/lib/life-area";
+import {
+  filterByLifeView,
+  filterGoalsByLifeView,
+  viewShowing,
+} from "@/lib/life-area";
 
 const tags = [
   { id: "t-work", name: "work" },
@@ -120,6 +124,32 @@ describe("filterByLifeView", () => {
       "2",
       "3",
     ]);
+  });
+});
+
+describe("viewShowing", () => {
+  const areas = ["personal", "work", "both"] as const;
+
+  it("lands on a view whose filter keeps the item, from any view", () => {
+    for (const lifeArea of areas) {
+      for (const view of areas) {
+        const item = { id: "x", lifeArea };
+        expect(filterByLifeView([item], viewShowing(lifeArea, view))).toEqual([
+          item,
+        ]);
+      }
+    }
+  });
+
+  it("stays on the current view when it already shows the item", () => {
+    expect(viewShowing("personal", "personal")).toBe("personal");
+    expect(viewShowing("both", "work")).toBe("work");
+    expect(viewShowing("work", "both")).toBe("both");
+  });
+
+  it("switches to the item's own side when the current view hides it", () => {
+    expect(viewShowing("work", "personal")).toBe("work");
+    expect(viewShowing("personal", "work")).toBe("personal");
   });
 });
 

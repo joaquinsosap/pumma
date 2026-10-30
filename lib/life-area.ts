@@ -41,6 +41,14 @@ export function filterGoalsByLifeView<
   return filterByLifeView(goals, view);
 }
 
+/** The view that shows an item: the current one when filterByLifeView already keeps it, else the item's own side. */
+export function viewShowing(
+  item: LifeArea | "both",
+  view: LifeView,
+): LifeView {
+  return view === "both" || item === "both" || item === view ? view : item;
+}
+
 export function lifeAreaForCreate(view: LifeView): LifeArea {
   return view === "work" ? "work" : "personal";
 }

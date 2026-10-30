@@ -18,6 +18,7 @@ import { parseOmni, tagBg } from "@/lib/parse";
 import { getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { entityHref } from "@/lib/entity-href";
+import { hrefWithLife, viewShowing } from "@/lib/life-area";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
 import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import {
@@ -322,9 +323,13 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
         nudge.record("captureDue", classifyDue(pickedDue ?? null, td, tomorrow));
       }
       const created = res.undo?.entity;
+      // In a view that shows it, or a #work capture made in Personal opens on an empty panel.
       const seeHref =
         res.data && created && created !== "tag"
-          ? entityHref(created, res.data.id)
+          ? hrefWithLife(
+              entityHref(created, res.data.id),
+              viewShowing(res.data.lifeArea, life),
+            )
           : null;
       toast.success(res.data?.label ?? "Added", {
         // Drawn before the action ("SEE → UNDO"); closes the sheet, which stays open between captures.

@@ -20,7 +20,11 @@ import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { entityHref } from "@/lib/entity-href";
 import { cn } from "@/lib/utils";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
-import { lifeAreaForCreate } from "@/lib/life-area";
+import {
+  hrefWithLife,
+  lifeAreaForCreate,
+  viewShowing,
+} from "@/lib/life-area";
 import {
   deriveLifeAreaFromTags,
   withLifeTags,
@@ -577,9 +581,13 @@ export function OmniBox({
         );
       }
       const created = res.undo?.entity;
+      // In a view that shows it, or a #work capture made in Personal opens on an empty panel.
       const seeHref =
         res.data && created && created !== "tag"
-          ? entityHref(created, res.data.id)
+          ? hrefWithLife(
+              entityHref(created, res.data.id),
+              viewShowing(res.data.lifeArea, life),
+            )
           : null;
       toast.success(res.data?.label ?? "Added", {
         // Drawn before the action, so the toast reads "SEE → UNDO".
