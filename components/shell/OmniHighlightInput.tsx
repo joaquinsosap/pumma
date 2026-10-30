@@ -90,7 +90,6 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
       selectionTick,
       dimFrom,
       className,
-      style,
       onScroll,
       onFocus,
       onBlur,
@@ -101,7 +100,6 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
     const [scrollLeft, setScrollLeft] = useState(0);
     const inputRef = useRef<HTMLInputElement>(null);
     const hintRef = useRef<HTMLSpanElement>(null);
-    const [hintWidth, setHintWidth] = useState(0);
     useImperativeHandle(ref, () => inputRef.current as HTMLInputElement);
 
     // The caret moves without the value changing (arrows, clicks, Tab's guess), so it is tracked.
@@ -142,8 +140,10 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
 
     // Room for the hint: a full bar never scrolls past its own text, so padding as wide as the hint makes the gap.
     useLayoutEffect(() => {
+      const el = inputRef.current;
+      if (!el) return;
       const w = Math.ceil(hintRef.current?.getBoundingClientRect().width ?? 0);
-      setHintWidth((prev) => (prev === w ? prev : w));
+      el.style.paddingRight = w ? `${w}px` : "";
     });
     // The hint's padding or the due chip narrows the box without the browser scrolling; an observer runs after Tab has put the caret back.
     useEffect(() => {
@@ -251,7 +251,6 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
               "omni-highlight-input relative text-transparent caret-ink outline-none [-webkit-text-fill-color:transparent] placeholder:text-faint placeholder:[-webkit-text-fill-color:var(--faint)] placeholder:transition-colors group-focus-within:placeholder:text-faint2 group-focus-within:placeholder:[-webkit-text-fill-color:var(--faint2)]",
               className,
             )}
-            style={hintWidth ? { ...style, paddingRight: hintWidth } : style}
             onScroll={(e) => {
               setScrollLeft(e.currentTarget.scrollLeft);
               onScroll?.(e);
