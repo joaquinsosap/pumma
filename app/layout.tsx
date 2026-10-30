@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Sans, IBM_Plex_Mono, Pixelify_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Providers } from "@/components/providers/nuqs-provider";
@@ -16,23 +16,27 @@ import "./globals.css";
  * because roughly half this app's labels are monospace and they used to come
  * from somewhere unrelated.
  */
-const plex = IBM_Plex_Sans({
-  subsets: ["latin"],
+// Latin files in ./fonts, not next/font/google: Google's extensionless font URLs crash its loader mid-build (vercel/next.js#99114).
+const plex = localFont({
+  src: "./fonts/ibm-plex-sans-latin.woff2",
   variable: "--font-plex",
-  weight: ["400", "500", "600", "700"],
+  weight: "400 700",
 });
 
-const plexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
+const plexMono = localFont({
+  src: [
+    { path: "./fonts/ibm-plex-mono-latin-400.woff2", weight: "400" },
+    { path: "./fonts/ibm-plex-mono-latin-500.woff2", weight: "500" },
+    { path: "./fonts/ibm-plex-mono-latin-600.woff2", weight: "600" },
+  ],
   variable: "--font-plex-mono",
-  weight: ["400", "500", "600"],
 });
 
 /** Only for the capture bar's scrambled Tab hint, so it is fetched when used. */
-const pixelify = Pixelify_Sans({
-  subsets: ["latin"],
+const pixelify = localFont({
+  src: "./fonts/pixelify-sans-latin-400.woff2",
   variable: "--font-pixelify",
-  weight: ["400"],
+  weight: "400",
   preload: false,
 });
 
