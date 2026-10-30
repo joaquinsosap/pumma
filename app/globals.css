@@ -313,6 +313,11 @@ body {
   animation: pummaToast 0.2s ease;
 }
 
+/* Sonner's auto margin on every toast button parks UNDO 60px from SEE. */
+[data-sonner-toast][data-styled="true"] [data-cancel] + [data-action] {
+  margin-left: 6px;
+}
+
 .animate-pumma-view {
   animation: pummaView 0.2s ease;
 }

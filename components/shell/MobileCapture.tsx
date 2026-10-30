@@ -17,6 +17,7 @@ import { addDays, iso } from "@/lib/date";
 import { parseOmni, tagBg } from "@/lib/parse";
 import { getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
+import { entityHref } from "@/lib/entity-href";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
 import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import {
@@ -320,7 +321,22 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
         // from UTC here would misfile a late-evening capture.
         nudge.record("captureDue", classifyDue(pickedDue ?? null, td, tomorrow));
       }
+      const created = res.undo?.entity;
+      const seeHref =
+        res.data && created && created !== "tag"
+          ? entityHref(created, res.data.id)
+          : null;
       toast.success(res.data?.label ?? "Added", {
+        // Drawn before the action ("SEE → UNDO"); closes the sheet, which stays open between captures.
+        cancel: seeHref
+          ? {
+              label: "SEE →",
+              onClick: () => {
+                close();
+                router.push(seeHref);
+              },
+            }
+          : undefined,
         action: res.undo
           ? {
               label: "UNDO",

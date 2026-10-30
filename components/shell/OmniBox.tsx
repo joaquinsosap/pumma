@@ -17,6 +17,7 @@ import { iso } from "@/lib/date";
 import { parseOmni } from "@/lib/parse";
 import { getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
+import { entityHref } from "@/lib/entity-href";
 import { cn } from "@/lib/utils";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
 import { lifeAreaForCreate } from "@/lib/life-area";
@@ -575,7 +576,16 @@ export function OmniBox({
           classifyDue(taskDue, today, iso(tmr, timeZone)),
         );
       }
+      const created = res.undo?.entity;
+      const seeHref =
+        res.data && created && created !== "tag"
+          ? entityHref(created, res.data.id)
+          : null;
       toast.success(res.data?.label ?? "Added", {
+        // Drawn before the action, so the toast reads "SEE → UNDO".
+        cancel: seeHref
+          ? { label: "SEE →", onClick: () => router.push(seeHref) }
+          : undefined,
         action: res.undo
           ? {
               label: "UNDO",

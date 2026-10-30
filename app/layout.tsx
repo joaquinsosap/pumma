@@ -91,6 +91,12 @@ export default async function RootLayout({
                   toast:
                     "animate-pumma-toast bg-ink text-background font-semibold border-none",
                   actionButton: "font-mono text-[11px] text-faint2",
+                  cancelButton: "font-mono text-[11px] text-faint2",
+                },
+                // Sonner's cancel style vanishes on the toast; these are the action button's own variables.
+                cancelButtonStyle: {
+                  background: "var(--normal-text)",
+                  color: "var(--normal-bg)",
                 },
               }}
             />

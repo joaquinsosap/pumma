@@ -52,7 +52,7 @@ import {
   type OpProblem,
 } from "@/lib/actions/changeset";
 import { cn } from "@/lib/utils";
-import { noteHref } from "@/lib/note-href";
+import { entityHref } from "@/lib/entity-href";
 
 // ---------------------------------------------------------------------------
 // Draft model: ops with stable client keys, so exclusion and edits survive
@@ -1247,17 +1247,6 @@ function ConfirmDeletes({
   );
 }
 
-const ENTITY_HREF: Record<ChangeEntity, (id: string) => string> = {
-  task: (id) => `/tasks?task=${id}`,
-  project: (id) => `/projects?project=${id}`,
-  goal: (id) => `/goals?goal=${id}`,
-  habit: (id) => `/habits?habit=${id}`,
-  note: (id) => noteHref(id),
-  // A meeting has no page of its own; the calendar is where it lives, and the
-  // day it is on is the useful place to land.
-  meeting: () => `/calendar`,
-};
-
 function AppliedView({
   result,
   undone,
@@ -1292,7 +1281,7 @@ function AppliedView({
           {result.created.map((c) => (
             <Link
               key={c.id}
-              href={ENTITY_HREF[c.entity](c.id)}
+              href={entityHref(c.entity, c.id)}
               className="flex items-center gap-2.5 rounded-[10px] border border-border bg-surface px-3 py-2.5 hover:border-faint2"
               style={{ borderLeft: `2px solid ${ENTITY_COLOR[c.entity]}` }}
             >
