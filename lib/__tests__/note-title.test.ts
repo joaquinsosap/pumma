@@ -93,29 +93,37 @@ describe("taskTitleEnd", () => {
 
   it("lands after the eighth word, past the tag and date the parser lifted out", () => {
     expect(
-      kept("call the #home plumber tomorrow about the leak in the kitchen sink"),
+      kept(
+        "call the #home plumber tomorrow about the leak in the kitchen sink",
+      ),
     ).toBe("call the #home plumber tomorrow about the leak in the");
   });
 
-  it("keeps up when punctuation is left behind by a lifted date or tag", () => {
+  it("keeps up when a lifted date or tag sat next to punctuation", () => {
     expect(
-      kept("Call mom tomorrow, then book the flights and the hotel for the trip"),
-    ).toBe("Call mom tomorrow, then book the flights and");
+      kept(
+        "Call mom tomorrow, then book the flights and the hotel for the trip",
+      ),
+    ).toBe("Call mom tomorrow, then book the flights and the");
     expect(
       kept("fix login #bug, then deploy the new build to staging and prod"),
-    ).toBe("fix login #bug, then deploy the new build");
+    ).toBe("fix login #bug, then deploy the new build to");
     expect(
-      kept("Prepare the slides (#work) for the board meeting with the investors"),
-    ).toBe("Prepare the slides (#work) for the board meeting");
+      kept(
+        "Prepare the slides (#work) for the board meeting with the investors",
+      ),
+    ).toBe("Prepare the slides (#work) for the board meeting with");
   });
 
   it("follows the stored split when only tokens come after a colon", () => {
     expect(
-      kept("Write the quarterly report for the finance team and send it: #work"),
+      kept(
+        "Write the quarterly report for the finance team and send it: #work",
+      ),
     ).toBe("Write the quarterly report for the finance team");
     expect(
       kept("#bug: the login page is broken on mobile after the latest deploy"),
-    ).toBe("#bug: the login page is broken on mobile");
+    ).toBe("#bug: the login page is broken on mobile after");
   });
 
   it("keeps up with a date the parser lifts by position, not by its first copy", () => {
@@ -197,8 +205,46 @@ describe("parseOmni title", () => {
   });
 
   it("never cuts a date word out of a longer word", () => {
+    expect(parseOmni("todays plan, then ship it today", [], ref).title).toBe(
+      "todays plan, then ship it",
+    );
+  });
+
+  it("takes the punctuation a lifted date or tag would strand", () => {
+    const title = (text: string) => parseOmni(text, [], ref).title;
+    expect(title("Call mom tomorrow, then book the flights")).toBe(
+      "Call mom, then book the flights",
+    );
+    expect(title("Prepare the slides (#work) for the board")).toBe(
+      "Prepare the slides for the board",
+    );
+    expect(title("Review the deck (with #design) and ship")).toBe(
+      "Review the deck (with) and ship",
+    );
+    expect(title("#bug: the login page is broken")).toBe(
+      "the login page is broken",
+    );
+    expect(title("Write the report and send it: #work")).toBe(
+      "Write the report and send it",
+    );
+    expect(title("Buy milk, tomorrow, and eggs")).toBe("Buy milk, and eggs");
+    expect(title("call mom tomorrow!")).toBe("call mom!");
+  });
+
+  it("leaves punctuation alone when nothing was lifted beside it", () => {
+    expect(parseOmni("Ship it! #work", [], ref).title).toBe("Ship it!");
+    expect(parseOmni("a :b", [], ref)).toMatchObject({
+      title: "a",
+      description: "b",
+    });
+  });
+
+  it("still splits at a colon a lifted date sat before", () => {
     expect(
-      parseOmni("todays plan, then ship it today", [], ref).title,
-    ).toBe("todays plan, then ship it");
+      parseOmni("Pay rent tomorrow: transfer to the landlord", [], ref),
+    ).toMatchObject({
+      title: "Pay rent",
+      description: "transfer to the landlord",
+    });
   });
 });

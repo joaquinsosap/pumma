@@ -164,6 +164,7 @@ export function parseOmni(
     }
   }
   // Cut by position: a string replace took the first copy, so "todays plan ... today" lost the "today" in "todays".
+  lifted.push(...strandedAround(text, lifted));
   title = withoutSpans(text, lifted).replace(/\s+/g, " ").trim();
 
   const newTagNames = pills.filter((p) => p.isNew).map((p) => p.name);
@@ -215,6 +216,40 @@ export function parseOmni(
     modeToken,
     lifted,
   };
+}
+
+const BRACKET_PAIRS: Record<string, string> = { "(": ")", "[": "]", "{": "}" };
+
+/** Punctuation a lifted token leaves stranded, as more spans to lift, so the title stays the raw text minus spans. */
+function strandedAround(
+  text: string,
+  lifted: [number, number][],
+): [number, number][] {
+  const gone = (i: number) =>
+    /\s/.test(text[i]) || lifted.some(([start, end]) => i >= start && i < end);
+  const stranded: [number, number][] = [];
+  for (const [start, end] of lifted) {
+    let before = start - 1;
+    while (before >= 0 && gone(before)) before--;
+    let after = end;
+    while (after < text.length && gone(after)) after++;
+    const prev = text[before] ?? "";
+    const next = text[after] ?? "";
+    if (BRACKET_PAIRS[prev] && BRACKET_PAIRS[prev] === next) {
+      // "slides (#work) for" would keep "()".
+      stranded.push([before, before + 1], [after, after + 1]);
+    } else if (/[,;:.]/.test(next) && (!prev || /[,;:]/.test(prev))) {
+      // "#bug: the login page" and "milk, tomorrow, and eggs": a separator after nothing, or after another one.
+      stranded.push([after, after + 1]);
+    } else if (/[,;:]/.test(prev) && !next) {
+      // "send it: #work": a separator that would end the title.
+      stranded.push([before, before + 1]);
+    } else if (/[,.;:!?)\]}]/.test(next)) {
+      // "mom tomorrow, then" would read "mom , then".
+      stranded.push([before + 1, after]);
+    }
+  }
+  return stranded;
 }
 
 /** The text with the given spans cut out; overlapping spans are fine. */
