@@ -8,6 +8,7 @@ import {
   tagsForProject,
   isProjectTag,
   splitTagsByProject,
+  tagsUsedInProject,
 } from "@/lib/project-tags";
 
 const tags = [
@@ -189,5 +190,64 @@ describe("withProjectPrimaryTag", () => {
     expect(withProjectPrimaryTag(["t-work"], "p-none", tags)).toEqual([
       "t-work",
     ]);
+  });
+});
+
+describe("tagsUsedInProject", () => {
+  const labels = [
+    ...tags,
+    { id: "t-feature", name: "feature" },
+    { id: "t-bug", name: "bug" },
+    { id: "t-personal", name: "personal" },
+  ];
+  const task = (projectId: string | null, ...tagIds: string[]) => ({
+    projectId,
+    tagIds,
+  });
+  const names = (list: { name: string }[]) => list.map((t) => t.name);
+
+  it("ranks the labels on this project's tasks by use, ties by name", () => {
+    const tasks = [
+      task("p-ai", "t-ai", "t-bug"),
+      task("p-ai", "t-ai", "t-idea", "t-bug"),
+      task("p-ai", "t-ai", "t-feature"),
+    ];
+    expect(names(tagsUsedInProject(labels, tasks, "p-ai"))).toEqual([
+      "bug",
+      "feature",
+      "idea",
+    ]);
+  });
+
+  it("counts only this project's tasks", () => {
+    const tasks = [
+      task("p-ai", "t-ai", "t-feature"),
+      task("p-web", "t-web", "t-bug"),
+      task("p-web", "t-web", "t-bug"),
+      task(null, "t-bug"),
+    ];
+    expect(names(tagsUsedInProject(labels, tasks, "p-ai"))).toEqual([
+      "feature",
+    ]);
+  });
+
+  it("leaves out project tags and life tags", () => {
+    const tasks = [
+      task("p-ai", "t-ai", "t-ml", "t-work", "t-personal", "t-feature"),
+    ];
+    expect(names(tagsUsedInProject(labels, tasks, "p-ai"))).toEqual([
+      "feature",
+    ]);
+  });
+
+  it("stops at the limit", () => {
+    const tasks = [task("p-ai", "t-feature", "t-bug", "t-idea")];
+    expect(tagsUsedInProject(labels, tasks, "p-ai", 2)).toHaveLength(2);
+  });
+
+  it("is empty for a project whose tasks carry no labels", () => {
+    expect(tagsUsedInProject(labels, [task("p-ai", "t-ai")], "p-ai")).toEqual(
+      [],
+    );
   });
 });

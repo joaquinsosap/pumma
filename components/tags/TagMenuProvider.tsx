@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -40,7 +41,11 @@ import { isLifeTag, SPECIAL_LIFE_TAGS } from "@/lib/life-area-sync";
 import { toast } from "sonner";
 import { isTutorialActive } from "@/lib/tutorial-lock";
 import { cn } from "@/lib/utils";
-import { withSingleProjectTag, projectIdFromTags } from "@/lib/project-tags";
+import {
+  withSingleProjectTag,
+  projectIdFromTags,
+  tagsUsedInProject,
+} from "@/lib/project-tags";
 
 /**
  * Multi-select, offered by whoever opened the menu. On a phone this menu IS
@@ -77,6 +82,8 @@ type TagTarget = {
   id: string;
   tagIds: string[];
   lifeArea: EntityLifeArea;
+  /** Set by surfaces that want the project's usual tags offered first. */
+  projectId?: string | null;
   x: number;
   y: number;
   selection?: MenuSelection;
@@ -128,6 +135,7 @@ export function TagMenuProvider({
   const dirtyRef = useRef(false);
   const [menu, setMenu] = useState<TagTarget | null>(null);
   const [menuTags, setMenuTags] = useState<Tag[]>([]);
+  const [projectTags, setProjectTags] = useState<Tag[]>([]);
   const [tagIds, setTagIds] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
   const [newTag, setNewTag] = useState("");
@@ -144,6 +152,7 @@ export function TagMenuProvider({
   const close = useCallback(() => {
     setMenu(null);
     setMenuTags([]);
+    setProjectTags([]);
     setAdding(false);
     setNewTag("");
     if (dirtyRef.current) {
@@ -202,6 +211,11 @@ export function TagMenuProvider({
       setMenu(target);
       setTagIds(target.tagIds);
       setMenuTags(tagsByUsage(tags, tasks, notes));
+      setProjectTags(
+        target.projectId
+          ? tagsUsedInProject(tags, tasks, target.projectId)
+          : [],
+      );
       setAdding(false);
       setNewTag("");
     },
@@ -382,20 +396,54 @@ export function TagMenuProvider({
         menuTags.find((t) => t.name.toLowerCase() === name),
       ).filter((t): t is NonNullable<typeof t> => Boolean(t))
     : [];
-  const ranked = menu ? menuTags.filter((t) => !isLifeTag(t.name)) : [];
+  // The project's usual tags sit above the full list, so they leave it.
+  const ranked = menu
+    ? menuTags.filter(
+        (t) => !isLifeTag(t.name) && !projectTags.some((p) => p.id === t.id),
+      )
+    : [];
+  const tagRow = (tag: Tag) => {
+    const state = selectionTagState(tag.id);
+    return (
+      <button
+        key={tag.id}
+        type="button"
+        disabled={pending}
+        onClick={() => toggle(tag.id)}
+        className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-ink hover:bg-hover disabled:opacity-50"
+      >
+        <span
+          className="h-2 w-2 shrink-0 rounded-full"
+          style={{ background: tag.color }}
+        />
+        <span className="min-w-0 flex-1 truncate">{tag.name}</span>
+        <TagMark state={state} />
+      </button>
+    );
+  };
+
+  // Once drawn, the menu's real height places it: a task menu outgrew the estimate's 400 cap and ran off the bottom.
+  const [drawnHeight, setDrawnHeight] = useState(0);
+  useLayoutEffect(() => {
+    const h = menuRef.current?.offsetHeight ?? 0;
+    setDrawnHeight((prev) => (prev === h ? prev : h));
+  });
 
   const pos = menu
     ? (() => {
         const w = 200;
-        const h = Math.min(
-          400,
-          56 +
-            ranked.length * 32 +
-            lifeTags.length * 30 +
-            (adding ? 44 : 28) +
-            (menu.selection ? 66 : 0) +
-            72,
-        );
+        const h =
+          drawnHeight ||
+          Math.min(
+            400,
+            56 +
+              (projectTags.length ? 28 + projectTags.length * 32 : 0) +
+              ranked.length * 32 +
+              lifeTags.length * 30 +
+              (adding ? 44 : 28) +
+              (menu.selection ? 66 : 0) +
+              72,
+          );
         const x = Math.min(menu.x, window.innerWidth - w - 8);
         // Prefer opening at the point you pressed. When the menu will not fit
         // below it, put it ABOVE the point rather than sliding it down the
@@ -590,34 +638,24 @@ export function TagMenuProvider({
                 })}
               </div>
             )}
+            {projectTags.length > 0 && (
+              <>
+                <div className="px-2 py-1.5 font-mono text-[9px] font-medium tracking-widest text-faint2">
+                  USED IN THIS PROJECT
+                </div>
+                {projectTags.map(tagRow)}
+              </>
+            )}
             <div className="px-2 py-1.5 font-mono text-[9px] font-medium tracking-widest text-faint2">
               TAG
             </div>
             <div className="max-h-[220px] overflow-y-auto [-ms-overflow-style:none] [scrollbar-width:none]">
-              {ranked.length === 0 && !adding && (
+              {ranked.length === 0 && projectTags.length === 0 && !adding && (
                 <p className="px-2 py-1.5 text-[11px] text-faint">
                   No tags yet
                 </p>
               )}
-              {ranked.map((tag) => {
-                const state = selectionTagState(tag.id);
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    disabled={pending}
-                    onClick={() => toggle(tag.id)}
-                    className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[12px] text-ink hover:bg-hover disabled:opacity-50"
-                  >
-                    <span
-                      className="h-2 w-2 shrink-0 rounded-full"
-                      style={{ background: tag.color }}
-                    />
-                    <span className="min-w-0 flex-1 truncate">{tag.name}</span>
-                    <TagMark state={state} />
-                  </button>
-                );
-              })}
+              {ranked.map(tagRow)}
             </div>
             <div className="mt-1 border-t border-border2 pt-1">
               {adding ? (

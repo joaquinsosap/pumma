@@ -707,6 +707,7 @@ function KanbanCardShell({
           id: task.id,
           tagIds: task.tagIds,
           lifeArea: task.lifeArea,
+          projectId: task.projectId,
           x: e.clientX,
           y: e.clientY,
           selection: selection

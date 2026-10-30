@@ -1,6 +1,8 @@
 // Pure rules for the tag <-> project link. No server-only import, so the
 // invariants can be unit-tested without a database.
 
+import { isLifeTag } from "@/lib/life-area-sync";
+
 /** The shape both backends and the UI share for this. */
 export type ProjectTagLike = {
   id: string;
@@ -122,6 +124,27 @@ export function tagsForProject<T extends ProjectTagLike>(
   return tags
     .filter((t) => t.projectId === projectId)
     .sort((a, b) => Number(b.isProjectPrimary) - Number(a.isProjectPrimary));
+}
+
+/** Labels this project's tasks already carry, most used first; project tags (picking one files the task) and life tags left out. */
+export function tagsUsedInProject<T extends ProjectTagLike>(
+  tags: T[],
+  tasks: { projectId: string | null; tagIds: string[] }[],
+  projectId: string,
+  limit = 5,
+): T[] {
+  const uses = new Map<string, number>();
+  for (const task of tasks) {
+    if (task.projectId !== projectId) continue;
+    for (const id of task.tagIds) uses.set(id, (uses.get(id) ?? 0) + 1);
+  }
+  return tags
+    .filter((t) => uses.has(t.id) && !isProjectTag(t) && !isLifeTag(t.name))
+    .sort(
+      (a, b) =>
+        uses.get(b.id)! - uses.get(a.id)! || a.name.localeCompare(b.name),
+    )
+    .slice(0, limit);
 }
 
 /**
