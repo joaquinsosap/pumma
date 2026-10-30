@@ -27,6 +27,8 @@ type Props = Omit<ComponentPropsWithoutRef<"input">, "value"> & {
   hintFor?: (value: string, start: number, end: number) => OmniHint | null;
   /** Bumped when the parent sets the selection itself, so the hint re-reads it before paint. */
   selectionTick?: number;
+  /** Where a long task's auto title ends; what follows dims, like text after a colon. */
+  dimFrom?: number | null;
 };
 
 function InlineTagToken({
@@ -86,6 +88,7 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
       showPriority = true,
       hintFor,
       selectionTick,
+      dimFrom,
       className,
       style,
       onScroll,
@@ -133,8 +136,8 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
           ? `${hint.position}/${hint.count}`
           : null;
     const tokens = useMemo(
-      () => tokenizeOmniInput(value, tags, { showTags, showPriority }),
-      [value, tags, showTags, showPriority],
+      () => tokenizeOmniInput(value, tags, { showTags, showPriority, dimFrom }),
+      [value, tags, showTags, showPriority, dimFrom],
     );
 
     // Room for the hint: a full bar never scrolls past its own text, so padding as wide as the hint makes the gap.

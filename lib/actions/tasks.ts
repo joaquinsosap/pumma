@@ -4,7 +4,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
-import { parseOmni, defaultDue, parseNoteCapture } from "@/lib/parse";
+import {
+  parseOmni,
+  defaultDue,
+  parseNoteCapture,
+  autoTaskTitle,
+} from "@/lib/parse";
 import { listTags, ensureTags } from "@/lib/db/tags";
 import {
   insertTask,
@@ -99,6 +104,7 @@ export async function createFromOmni(
       p.due ??
       dueOverride ??
       defaultDue(null, settings?.defaultDueToday ?? true, td);
+    const named = autoTaskTitle(title, p.description);
 
     // Tags from two projects mean two pieces of work. Rather than pick a
     // winner, the capture becomes one task per project, each carrying only
@@ -126,8 +132,8 @@ export async function createFromOmni(
       created.push(
         await insertTask({
           userId,
-          title,
-          description: p.description,
+          title: named.title,
+          description: named.description,
           tagIds: bucketTags,
           // A "!high" in the text is the more specific instruction, so it wins
           // over whatever the picker is showing — the picker hides itself then.
@@ -295,10 +301,11 @@ export async function addTask(
   // Same rule as quick capture: a task filed under a project carries that
   // project's tag, whether the project came from the text or from the view.
   const finalTagIds = withProjectPrimaryTag(tagIds, project?.id ?? null, tags);
+  const named = autoTaskTitle(p.title, p.description);
   const task = await insertTask({
     userId,
-    title: p.title,
-    description: p.description,
+    title: named.title,
+    description: named.description,
     tagIds: finalTagIds,
     // A "!high" in the text is the more specific instruction, so it wins over
     // whatever the picker is showing — the picker hides itself in that case.

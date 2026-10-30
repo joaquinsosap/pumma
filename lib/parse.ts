@@ -249,8 +249,17 @@ export function splitDescription(text: string): {
  * Returns "" for an empty body — the caller decides what to fall back to.
  */
 export function noteTitleFromBody(body: string, maxWords = 8): string {
+  const { title, cut } = openingWords(body, maxWords);
+  return cut ? `${title.replace(/[.,;:!?—-]+$/, "")}…` : title;
+}
+
+/** The first line's opening words, and whether that cut anything off. */
+function openingWords(
+  body: string,
+  maxWords = 8,
+): { title: string; cut: boolean } {
   const firstLine = body.trim().split(/\r?\n/)[0]?.trim() ?? "";
-  if (!firstLine) return "";
+  if (!firstLine) return { title: "", cut: false };
 
   const words = firstLine.split(/\s+/);
   let title = words.slice(0, maxWords).join(" ");
@@ -259,9 +268,34 @@ export function noteTitleFromBody(body: string, maxWords = 8): string {
   const clipped = title.length > 72;
   if (clipped) title = title.slice(0, 72).trimEnd();
 
-  return words.length > maxWords || clipped
-    ? `${title.replace(/[.,;:!?—-]+$/, "")}…`
-    : title;
+  return { title, cut: words.length > maxWords || clipped };
+}
+
+/** A long task with no colon gets the note rule: its opening words as the title, the whole text as the description. */
+export function autoTaskTitle(
+  title: string,
+  description: string,
+): { title: string; description: string } {
+  if (description || !openingWords(title).cut) return { title, description };
+  return { title: noteTitleFromBody(title), description: title };
+}
+
+/** Where autoTaskTitle's title ends in the raw text, matching its words in order past the lifted #tags and dates; null when nothing is cut. */
+export function autoTitleEnd(text: string, title: string): number | null {
+  const opening = openingWords(title);
+  if (!opening.cut) return null;
+  const words = opening.title.split(" ");
+  let next = 0;
+  for (const m of text.matchAll(/\S+/g)) {
+    const want = words[next];
+    // The 72-character clip can end the title partway through a word.
+    const last = next === words.length - 1;
+    if (m[0] === want || (last && m[0].startsWith(want))) {
+      next++;
+      if (next === words.length) return (m.index ?? 0) + want.length;
+    }
+  }
+  return null;
 }
 
 /**
@@ -345,7 +379,12 @@ export type OmniInputToken =
 export function tokenizeOmniInput(
   text: string,
   tags: Tag[],
-  options?: { showTags?: boolean; showPriority?: boolean },
+  options?: {
+    showTags?: boolean;
+    showPriority?: boolean;
+    /** Where an auto title ends (autoTitleEnd); a colon still wins. */
+    dimFrom?: number | null;
+  },
 ): OmniInputToken[] {
   const showTags = options?.showTags !== false;
   const showPriority = options?.showPriority !== false;
@@ -419,7 +458,10 @@ export function tokenizeOmniInput(
     : text
       ? [{ kind: "text", text }]
       : [];
-  return dimDescriptionAfterColon(built, text);
+  return dimDescription(
+    built,
+    descriptionColonIndex(text) ?? options?.dimFrom ?? null,
+  );
 }
 
 /**
@@ -449,8 +491,8 @@ export function descriptionColonIndex(text: string): number | null {
 }
 
 /**
- * Set the description half of a "title: description" capture back from the
- * title.
+ * Set the description half of a capture back from the title: after the colon
+ * of "title: description", or past where a long task's auto title stops.
  *
  * By colour, never by weight. This styling is painted on a layer sitting over
  * a transparent <input>, and the browser draws the caret and handles the
@@ -463,12 +505,11 @@ export function descriptionColonIndex(text: string): number | null {
  * Only plain text is dimmed; a tag or priority after the colon keeps its own
  * styling, which is fine — those aren't prose.
  */
-function dimDescriptionAfterColon(
+function dimDescription(
   segments: OmniInputToken[],
-  text: string,
+  from: number | null,
 ): OmniInputToken[] {
-  const colon = descriptionColonIndex(text);
-  if (colon === null) return segments;
+  if (from === null) return segments;
 
   const out: OmniInputToken[] = [];
   let offset = 0;
@@ -477,16 +518,16 @@ function dimDescriptionAfterColon(
     const end = offset + token.text.length;
     offset = end;
 
-    if (token.kind !== "text" || end <= colon) {
+    if (token.kind !== "text" || end <= from) {
       out.push(token);
       continue;
     }
-    if (start >= colon) {
+    if (start >= from) {
       out.push({ ...token, dim: true });
       continue;
     }
-    // The colon lands inside this run — split it so only the tail dims.
-    const cut = colon - start;
+    // The cut lands inside this run, so split it and dim only the tail.
+    const cut = from - start;
     out.push({ kind: "text", text: token.text.slice(0, cut) });
     out.push({ kind: "text", text: token.text.slice(cut), dim: true });
   }

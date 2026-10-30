@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import type { EntityLifeArea, OmniType } from "@/lib/types";
 import type { Project, Tag, Task, Note } from "@/lib/schemas";
 import { iso } from "@/lib/date";
-import { parseOmni } from "@/lib/parse";
+import { autoTitleEnd, parseOmni } from "@/lib/parse";
 import { getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { entityHref } from "@/lib/entity-href";
@@ -685,6 +685,7 @@ export function OmniBox({
               showPriority={isTask}
               hintFor={hintFor}
               selectionTick={selectionTick}
+              dimFrom={isTask ? autoTitleEnd(text, parsed.title) : null}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {
