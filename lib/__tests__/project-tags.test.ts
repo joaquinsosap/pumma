@@ -245,6 +245,24 @@ describe("tagsUsedInProject", () => {
     expect(tagsUsedInProject(labels, tasks, "p-ai", 2)).toHaveLength(2);
   });
 
+  it("offers five by default, the most used", () => {
+    const many = ["a", "b", "c", "d", "e", "f"].map((n) => ({
+      id: `t-${n}`,
+      name: n,
+    }));
+    const tasks = [
+      task("p-ai", "t-a", "t-b", "t-c", "t-d", "t-e", "t-f"),
+      task("p-ai", "t-a", "t-b", "t-c", "t-d", "t-e"),
+    ];
+    expect(names(tagsUsedInProject(many, tasks, "p-ai"))).toEqual([
+      "a",
+      "b",
+      "c",
+      "d",
+      "e",
+    ]);
+  });
+
   it("is empty for a project whose tasks carry no labels", () => {
     expect(tagsUsedInProject(labels, [task("p-ai", "t-ai")], "p-ai")).toEqual(
       [],

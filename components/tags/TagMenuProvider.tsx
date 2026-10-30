@@ -422,41 +422,26 @@ export function TagMenuProvider({
     );
   };
 
-  // Once drawn, the menu's real height places it: a task menu outgrew the estimate's 400 cap and ran off the bottom.
-  const [drawnHeight, setDrawnHeight] = useState(0);
+  // Placed once drawn, by its real height: an estimate of the rows ran a task menu off the bottom of the screen.
   useLayoutEffect(() => {
-    const h = menuRef.current?.offsetHeight ?? 0;
-    setDrawnHeight((prev) => (prev === h ? prev : h));
+    const el = menuRef.current;
+    if (!el || !menu) return;
+    const h = el.offsetHeight;
+    // Prefer opening at the point you pressed. When the menu will not fit
+    // below it, put it ABOVE the point rather than sliding it down the
+    // screen: pressing something near the bottom used to throw the menu
+    // to a fixed spot far from the row it belongs to, which reads as the
+    // menu having nothing to do with what you pressed.
+    const top = menu.y + h + 8 <= window.innerHeight ? menu.y : menu.y - h - 8;
+    el.style.top = `${Math.max(8, top)}px`;
   });
 
   const pos = menu
-    ? (() => {
-        const w = 200;
-        const h =
-          drawnHeight ||
-          Math.min(
-            400,
-            56 +
-              (projectTags.length ? 28 + projectTags.length * 32 : 0) +
-              ranked.length * 32 +
-              lifeTags.length * 30 +
-              (adding ? 44 : 28) +
-              (menu.selection ? 66 : 0) +
-              72,
-          );
-        const x = Math.min(menu.x, window.innerWidth - w - 8);
-        // Prefer opening at the point you pressed. When the menu will not fit
-        // below it, put it ABOVE the point rather than sliding it down the
-        // screen: pressing something near the bottom used to throw the menu
-        // to a fixed spot far from the row it belongs to, which reads as the
-        // menu having nothing to do with what you pressed.
-        const below = menu.y;
-        const y =
-          below + h + 8 <= window.innerHeight
-            ? below
-            : Math.max(8, menu.y - h - 8);
-        return { left: Math.max(8, x), top: Math.max(8, y) };
-      })()
+    ? {
+        left: Math.max(8, Math.min(menu.x, window.innerWidth - 200 - 8)),
+        // A menu taller than the screen scrolls instead of hiding New tag and Delete.
+        maxHeight: window.innerHeight - 16,
+      }
     : null;
 
   /**
@@ -518,8 +503,8 @@ export function TagMenuProvider({
           />
           <div
             ref={menuRef}
-            className="pumma-floating fixed z-[101] w-[200px] select-none overflow-hidden rounded-lg border border-border bg-surface p-1 shadow-lg [-webkit-touch-callout:none]"
-            style={{ left: pos.left, top: pos.top }}
+            className="pumma-floating fixed z-[101] w-[200px] select-none overflow-y-auto rounded-lg border border-border bg-surface p-1 shadow-lg [-ms-overflow-style:none] [-webkit-touch-callout:none] [scrollbar-width:none]"
+            style={{ left: pos.left, maxHeight: pos.maxHeight }}
             onContextMenu={(e) => e.preventDefault()}
           >
             {/* Priority and due, at the top, because they are the two things
