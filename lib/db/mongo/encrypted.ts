@@ -7,12 +7,7 @@
 // if a field is in a spec below, it is encrypted at rest, and there is exactly
 // one file to read to know that.
 import { getDb } from "@/lib/mongodb";
-import {
-  blindIndex,
-  decryptField,
-  encryptField,
-  isCiphertext,
-} from "@/lib/crypto/fields";
+import { blindIndex, decryptField, sealField } from "@/lib/crypto/fields";
 import { getUserDek } from "@/lib/crypto/user-key";
 import {
   mapContent,
@@ -44,7 +39,7 @@ export async function encryptFor<T extends object>(
 ): Promise<T> {
   const dek = await dekFor(userId);
   return mapContent(doc as Record<string, unknown>, SPECS[collection], (v) =>
-    isCiphertext(v) ? v : encryptField(v, dek),
+    sealField(v, dek),
   ) as T;
 }
 

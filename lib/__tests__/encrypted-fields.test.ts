@@ -1,12 +1,21 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { randomBytes } from "crypto";
-import { decryptField, encryptField, isCiphertext } from "@/lib/crypto/fields";
+import {
+  decryptField,
+  encryptField,
+  isCiphertext,
+  sealField,
+} from "@/lib/crypto/fields";
 import {
   mapContent,
   SPECS,
   specFor,
   type EncryptedCollection,
 } from "@/lib/crypto/specs";
+import { decryptAllFor, encryptFor } from "@/lib/db/mongo/encrypted";
+
+vi.mock("@/lib/mongodb", () => ({ getDb: async () => ({}) }));
+vi.mock("@/lib/crypto/user-key", () => ({ getUserDek: async () => DEK }));
 
 // The repository helpers need a database to fetch a key, so these exercise the
 // same field-walking rules against the same specs without one. What is being
@@ -22,7 +31,7 @@ const walk = (
 ) => mapContent(doc, specFor(collection), fn);
 
 const enc = (d: Record<string, unknown>, c: EncryptedCollection) =>
-  walk(d, c, (v) => (isCiphertext(v) ? v : encryptField(v, DEK)));
+  walk(d, c, (v) => sealField(v, DEK));
 const dec = (d: Record<string, unknown>, c: EncryptedCollection) =>
   walk(d, c, (v) => decryptField(v, DEK));
 
@@ -139,5 +148,45 @@ describe("every collection in the spec", () => {
         );
       }
     }
+  });
+});
+
+describe("text that starts with the envelope's prefix", () => {
+  const typed = {
+    title: "v1: ship it",
+    description: "v1:beta",
+    subtasks: [{ id: "s", title: "v1:mvp", done: false }],
+  };
+
+  it("is encrypted on the way in and reads back as typed", async () => {
+    const stored = await encryptFor("tasks", "u", typed);
+    for (const value of [
+      stored.title,
+      stored.description,
+      stored.subtasks[0].title,
+    ]) {
+      expect(isCiphertext(value), value).toBe(true);
+    }
+    expect(await decryptAllFor("tasks", "u", [stored])).toEqual([typed]);
+  });
+
+  it("encrypts text with the exact shape of an envelope, which would otherwise stick", async () => {
+    const shaped = { title: "v1:" + "A".repeat(40) };
+    const stored = await encryptFor("tasks", "u", shaped);
+    expect(stored.title).not.toBe(shaped.title);
+    expect(await decryptAllFor("tasks", "u", [stored])).toEqual([shaped]);
+  });
+
+  it("leaves what it already encrypted alone on a second pass", async () => {
+    const stored = await encryptFor("tasks", "u", typed);
+    expect(await encryptFor("tasks", "u", stored)).toEqual(stored);
+  });
+
+  it("no longer takes the whole list down when already stored as typed", async () => {
+    const fine = await encryptFor("tasks", "u", { title: "fine" });
+    expect(await decryptAllFor("tasks", "u", [typed, fine])).toEqual([
+      typed,
+      { title: "fine" },
+    ]);
   });
 });

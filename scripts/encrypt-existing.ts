@@ -4,9 +4,9 @@
  *   npm run db:encrypt            # do it
  *   npm run db:encrypt -- --dry   # say what it would do
  *
- * Safe to re-run and safe to interrupt. Every value is checked for the "v1:"
- * prefix first, so a second pass is a no-op and a half-finished run just
- * continues where it stopped.
+ * Safe to re-run and safe to interrupt. Every value is checked for the shape
+ * of our envelope first, so a second pass is a no-op and a half-finished run
+ * just continues where it stopped.
  *
  * Safe to run while the app is serving, too: reads tolerate plaintext (see
  * lib/crypto/fields.ts), so a document with an encrypted title and a plaintext

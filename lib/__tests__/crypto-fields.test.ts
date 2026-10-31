@@ -5,6 +5,7 @@ import {
   decryptField,
   encryptField,
   isCiphertext,
+  sealField,
 } from "@/lib/crypto/fields";
 
 const KEY = randomBytes(32);
@@ -38,8 +39,10 @@ describe("round trip", () => {
 });
 
 describe("telling ciphertext from plaintext", () => {
-  it("marks its own output", () => {
-    expect(isCiphertext(encryptField("x", KEY))).toBe(true);
+  it("marks its own output, at every length", () => {
+    for (let n = 0; n < 64; n++) {
+      expect(isCiphertext(encryptField("x".repeat(n), KEY)), `${n}`).toBe(true);
+    }
   });
 
   it("leaves values written before encryption alone", () => {
@@ -49,11 +52,62 @@ describe("telling ciphertext from plaintext", () => {
     expect(isCiphertext("a plain old title")).toBe(false);
   });
 
-  it("is not fooled by a user typing the prefix", () => {
-    const typed = "v1:my great idea";
-    expect(isCiphertext(typed)).toBe(true);
-    // It claims to be ours and cannot be opened — which must not be silent.
-    expect(() => decryptField(typed, KEY)).toThrow();
+  it("reads text a person typed with the prefix as that text", () => {
+    // One such row used to fail every list read for the account.
+    for (const typed of [
+      "v1:",
+      "v1: ship it",
+      "v1:beta",
+      "v1:mvp",
+      "v1:my great idea",
+      // Valid base64, but shorter than any envelope.
+      "v1:roadmaps",
+      "v1:" + "a".repeat(36),
+      "v1:" + "a".repeat(39),
+      "v1:" + "a".repeat(41),
+      "v1:" + "A".repeat(37) + "===",
+      "v1:" + "a b".repeat(20),
+      "v1:" + "=".repeat(40),
+    ]) {
+      expect(isCiphertext(typed), typed).toBe(false);
+      expect(decryptField(typed, KEY), typed).toBe(typed);
+    }
+  });
+});
+
+describe("sealing a value on its way into storage", () => {
+  const TYPED = [
+    "v1: ship it",
+    "v1:beta",
+    "v1:mvp",
+    "v1:",
+    // Exactly the shape of our envelope, typed by hand.
+    "v1:" + "A".repeat(40),
+    "v1:" + Buffer.from("x".repeat(60)).toString("base64"),
+  ];
+
+  it("encrypts plain text", () => {
+    const sealed = sealField("a plain old title", KEY);
+    expect(sealed).not.toContain("plain");
+    expect(decryptField(sealed, KEY)).toBe("a plain old title");
+  });
+
+  it("stores typed text as real ciphertext that reads back as typed", () => {
+    for (const typed of TYPED) {
+      const sealed = sealField(typed, KEY);
+      expect(sealed, typed).not.toBe(typed);
+      expect(isCiphertext(sealed), typed).toBe(true);
+      expect(decryptField(sealed, KEY), typed).toBe(typed);
+    }
+  });
+
+  it("does not encrypt real ciphertext twice, so a second pass is safe", () => {
+    const ct = encryptField("private", KEY);
+    expect(sealField(ct, KEY)).toBe(ct);
+    for (const typed of TYPED) {
+      const once = sealField(typed, KEY);
+      expect(sealField(once, KEY), typed).toBe(once);
+    }
   });
 });
 
@@ -71,10 +125,11 @@ describe("refusing to open what it shouldn't", () => {
     expect(() => decryptField("v1:" + raw.toString("base64"), KEY)).toThrow();
   });
 
-  it("throws on a truncated payload", () => {
-    expect(() =>
-      decryptField("v1:" + Buffer.from("short").toString("base64"), KEY),
-    ).toThrow();
+  it("throws on a payload cut short that still has the shape", () => {
+    const ct = encryptField("a private title long enough to cut", KEY);
+    const cut = ct.slice(0, -4);
+    expect(isCiphertext(cut)).toBe(true);
+    expect(() => decryptField(cut, KEY)).toThrow();
   });
 
   it("would rather error than show an empty account", () => {

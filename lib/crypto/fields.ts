@@ -1,10 +1,11 @@
 // Field-level encryption: the bit that actually touches user content.
 //
 // Format: "v1:" + base64(iv | tag | ciphertext), AES-256-GCM, fresh 12-byte
-// IV per value. The version prefix does two jobs — it makes a future format
-// change possible, and it is how a read tells ciphertext from a value written
-// before encryption existed. That second job is what allows the migration to
-// run against a live database instead of during a maintenance window.
+// IV per value. The version prefix does two jobs: it makes a future format
+// change possible, and with the shape check below it is how a read tells
+// ciphertext from a value written before encryption existed. That second job
+// is what allows the migration to run against a live database instead of
+// during a maintenance window.
 //
 // No "server-only" import here on purpose: the migration script and the unit
 // tests both run outside Next's module graph. The key never reaches this
@@ -20,15 +21,17 @@ const PREFIX = "v1:";
 const IV_BYTES = 12;
 const TAG_BYTES = 16;
 
-/**
- * Does this value already carry our envelope?
- *
- * A user could of course type "v1:" at the start of a task title. That costs
- * them nothing: decryptField tries and fails to open it, and falls back to
- * returning the string untouched.
- */
+// Smallest body encryptField can write: the iv and tag of an empty string, as base64.
+const MIN_BODY_CHARS = Math.ceil((IV_BYTES + TAG_BYTES) / 3) * 4;
+const BASE64 = /^[A-Za-z0-9+/]+={0,2}$/;
+
+/** Does this value have the shape of our envelope? Text like "v1: ship it" does not, and reads back as typed. */
 export function isCiphertext(value: unknown): value is string {
-  return typeof value === "string" && value.startsWith(PREFIX);
+  if (typeof value !== "string" || !value.startsWith(PREFIX)) return false;
+  const body = value.slice(PREFIX.length);
+  return (
+    body.length >= MIN_BODY_CHARS && body.length % 4 === 0 && BASE64.test(body)
+  );
 }
 
 export function encryptField(plaintext: string, dek: Buffer): string {
@@ -36,6 +39,19 @@ export function encryptField(plaintext: string, dek: Buffer): string {
   const c = createCipheriv("aes-256-gcm", dek, iv);
   const ct = Buffer.concat([c.update(plaintext, "utf8"), c.final()]);
   return PREFIX + Buffer.concat([iv, c.getAuthTag(), ct]).toString("base64");
+}
+
+/** For a write: only a value that opens under this key stays as is, so typed text with our shape still gets encrypted. */
+export function sealField(value: string, dek: Buffer): string {
+  if (isCiphertext(value)) {
+    try {
+      decryptField(value, dek);
+      return value;
+    } catch {
+      // Has our shape but isn't ours: it is text, encrypted below like any other.
+    }
+  }
+  return encryptField(value, dek);
 }
 
 /**
@@ -46,18 +62,14 @@ export function encryptField(plaintext: string, dek: Buffer): string {
  * legitimately hold an encrypted title and a plaintext description, and both
  * render correctly.
  *
- * A value that IS ours but will not open (wrong key, truncated, tampered) is
- * a different matter, and this throws: silently showing a user an empty task
+ * A value with our shape that will not open (wrong key, tampered) is a
+ * different matter, and this throws: silently showing a user an empty task
  * list because the key changed would be far worse than an error.
  */
 export function decryptField(value: string, dek: Buffer): string {
   if (!isCiphertext(value)) return value;
 
   const buf = Buffer.from(value.slice(PREFIX.length), "base64");
-  if (buf.length < IV_BYTES + TAG_BYTES) {
-    throw new Error("Encrypted field is too short to be valid");
-  }
-
   const d = createDecipheriv("aes-256-gcm", dek, buf.subarray(0, IV_BYTES));
   d.setAuthTag(buf.subarray(IV_BYTES, IV_BYTES + TAG_BYTES));
   return Buffer.concat([
