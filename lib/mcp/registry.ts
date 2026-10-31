@@ -87,10 +87,16 @@ function errorResult(message: string) {
   };
 }
 
+/** Clients that prefer structure never see the text, so a write's reply carries it too: why it failed, what to do next. */
+function structured({ text, data }: ToolOutcome): unknown {
+  const isWrite = typeof data === "object" && data !== null && "ok" in data;
+  return isWrite ? { ...data, message: text } : data;
+}
+
 function okResult(outcome: ToolOutcome) {
   return {
     content: [{ type: "text" as const, text: outcome.text }],
-    ...(outcome.data === undefined ? {} : { structuredContent: { result: outcome.data } }),
+    ...(outcome.data === undefined ? {} : { structuredContent: { result: structured(outcome) } }),
   };
 }
 

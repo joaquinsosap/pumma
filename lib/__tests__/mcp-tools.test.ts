@@ -7,11 +7,17 @@
 // read. The gating is driven entirely by `opClass`, so a wrong one is not a
 // cosmetic problem: it is the difference between a delete being refused and a
 // delete going through.
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { getSettings } from "@/lib/db/memory/settings";
+import { insertTask } from "@/lib/db/memory/tasks";
 import { MCP_TOOLS } from "@/lib/mcp/tools";
-import { annotationsFor, type McpToolDef } from "@/lib/mcp/registry";
+import { annotationsFor, runTool, type McpToolDef } from "@/lib/mcp/registry";
 import { SCOPE_FOR } from "@/lib/mcp/policy";
 import { MCP_SCOPE } from "@/lib/mcp/config";
+import type { McpCaller } from "@/lib/mcp/context";
+import { listTasksTool } from "@/lib/mcp/tools/read";
+import { moveTask } from "@/lib/mcp/tools/write";
+import { getCurrentUserId, resetStore } from "@/lib/store/memory";
 
 type AnyTool = McpToolDef<never>;
 const tools = MCP_TOOLS as unknown as AnyTool[];
@@ -87,5 +93,76 @@ describe("tool catalogue", () => {
     ]) {
       expect(names).toContain(expected);
     }
+  });
+});
+
+describe("what a client that only reads structure gets", () => {
+  const userId = getCurrentUserId();
+
+  async function caller(): Promise<McpCaller> {
+    const settings = (await getSettings(userId))!;
+    return {
+      userId,
+      clientId: "test-client",
+      scopes: new Set([MCP_SCOPE.read, MCP_SCOPE.write]),
+      settings: {
+        ...settings,
+        projectTaskSort: "priority",
+        mcp: { ...settings.mcp, enabled: true },
+      },
+      timeZone: "UTC",
+    };
+  }
+
+  const seed = (title: string, order: number) =>
+    insertTask({
+      userId,
+      title,
+      description: "",
+      subtasks: [],
+      tagIds: [],
+      priority: "med",
+      status: "todo",
+      due: null,
+      projectId: "p",
+      goalId: null,
+      lifeArea: "personal",
+      order,
+      createdAt: "2026-10-01",
+      completedAt: null,
+    });
+
+  const reply = (result: unknown) =>
+    (result as { structuredContent: { result: Record<string, unknown> } })
+      .structuredContent.result;
+
+  const move = async (input: unknown) =>
+    reply(await runTool(moveTask, await caller())(moveTask.inputSchema.parse(input)));
+
+  beforeEach(() => {
+    resetStore();
+  });
+
+  it("gets a write's note along with its data", async () => {
+    const a = await seed("a", 0);
+    const b = await seed("b", 1);
+    const out = await move({ id: a.id, after: b.id });
+    expect(out.ok).toBe(true);
+    expect(out.position).toBeTypeOf("number");
+    expect(out.message).toContain("sorted by Priority");
+  });
+
+  it("gets the reason a write was turned down", async () => {
+    const out = await move({ id: "nope", after: null });
+    expect(out.ok).toBe(false);
+    expect(out.message).toContain("No task with id nope");
+  });
+
+  it("gets a read as it is, with no copy of the text", async () => {
+    const out = reply(
+      await runTool(listTasksTool, await caller())(listTasksTool.inputSchema.parse({})),
+    );
+    expect(out).toHaveProperty("tasks");
+    expect(out).not.toHaveProperty("message");
   });
 });
