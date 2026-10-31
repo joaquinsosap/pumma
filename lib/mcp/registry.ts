@@ -126,8 +126,9 @@ export function runTool<S extends z.ZodType>(
       if (err instanceof McpScopeError) {
         errorCode = "insufficient_scope";
         return errorResult(
-          `This connection was not granted permission to do that (missing ${err.missing.join(", ")}). ` +
-            `Reconnect PUMMA and approve the missing permission.`,
+          err.advice ??
+            `This connection was not granted permission to do that (missing ${err.missing.join(", ")}). ` +
+              `Reconnect PUMMA and approve the missing permission.`,
         );
       }
       if (err instanceof McpPolicyError) {

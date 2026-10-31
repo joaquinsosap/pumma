@@ -1,8 +1,9 @@
 /**
  * Create and update tools.
  *
- * These do not write rows themselves. They build the same op the assistant's
- * changeset builds and hand it to `lib/mutations/entities`, which is also what
+ * Apart from a task's subtask list, the habit log and goal progress, these do
+ * not write rows themselves. They build the same op the assistant's changeset
+ * builds and hand it to `lib/mutations/entities`, which is also what
  * the UI's server actions go through. That is the whole point of the
  * extraction: creating a project mints its flagship tag, filing a task under
  * one moves its project tag and adds that flagship, every entity carries a
@@ -29,8 +30,22 @@ import { listTags } from "@/lib/db/tags";
 import { listHabits } from "@/lib/db/habits";
 import { markHabitEntry } from "@/lib/db/habitEntries";
 import { listGoals, updateGoal as updateGoalRow } from "@/lib/db/goals";
+import { getTask, updateTask as updateTaskRow } from "@/lib/db/tasks";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 import { isoDateInTz } from "@/lib/timezone";
+import {
+  assertMcpAllowed,
+  assertScope,
+  McpPolicyError,
+  McpScopeError,
+} from "@/lib/mcp/policy";
+import {
+  sameSubtasks,
+  subtaskChanges,
+  subtasksFromInput,
+  tickedSubtasks,
+  type SubtaskInput,
+} from "@/lib/mcp/subtasks";
 import type { McpCaller } from "@/lib/mcp/context";
 import type { CreateOp, UpdateOp } from "@/lib/ai/changeset-schema";
 
@@ -38,6 +53,21 @@ const isoDate = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
   .describe("YYYY-MM-DD");
+
+// Same limits as the app's own task editor, which also trims and keeps a title to one line.
+const subtasksField = z
+  .array(
+    z.strictObject({
+      title: z
+        .string()
+        .trim()
+        .min(1)
+        .max(500)
+        .regex(/^[^\r\n]+$/, "Keep a subtask title to one line"),
+      done: z.boolean().optional(),
+    }),
+  )
+  .max(200);
 
 const lifeArea = z.enum(["personal", "work"]);
 
@@ -96,6 +126,9 @@ export const createTask = defineTool({
       .max(10)
       .optional()
       .describe("Tag names. Created if they do not exist."),
+    subtasks: subtasksField
+      .optional()
+      .describe("The task's checklist. done defaults to false."),
   }),
   handler: async (input, caller) => {
     const ctx = await contextFor(caller);
@@ -113,14 +146,25 @@ export const createTask = defineTool({
         tagNames: input.tags,
       }),
     } as CreateOp;
-    const made = await applyCreate(caller.userId, op, ctx);
-    await settle(caller, ctx);
+    const made = await applyCreate(caller.userId, op, ctx, {
+      subtasks: subtasksFromInput(input.subtasks ?? [], []),
+    });
     if (!made) return { text: "Could not create that task.", data: { ok: false } };
-    return {
-      text: `Created task "${made.title}" (id ${made.id}).`,
-      data: { ok: true, id: made.id, title: made.title },
-      entityIds: [made.id],
-    };
+
+    const text = `Created task "${made.title}" (id ${made.id}).`;
+    const data = { ok: true, id: made.id, title: made.title };
+    try {
+      await settle(caller, ctx);
+    } catch (err) {
+      // The row is in: an error here would read as failed, and a retry would make a second task.
+      console.error("[mcp] create_task: goal sync failed", err);
+      return {
+        text: `${text} If its project has a goal, that goal did not update, and catches up the next time a task in that project changes status. Do not create this task again.`,
+        data: { ...data, goalSynced: false },
+        entityIds: [made.id],
+      };
+    }
+    return { text, data, entityIds: [made.id] };
   },
 });
 
@@ -367,11 +411,96 @@ async function runUpdate(
   };
 }
 
+/** Dropping a row is a delete, whichever tool asks for it. Usually it is a list sent short by mistake, so the refusal says how to keep them. */
+function assertMayDropSubtasks(caller: McpCaller, removed: number): void {
+  const keep =
+    `This list leaves out ${removed} subtask${removed === 1 ? "" : "s"} already on the task, which would delete ${removed === 1 ? "it" : "them"}. ` +
+    `To add, reorder or tick subtasks, send the whole list, including the ones to keep. ` +
+    `A different title counts as a new subtask, so renaming one deletes the old one.`;
+  try {
+    assertScope({ scope: [...caller.scopes].join(" ") }, "delete");
+    assertMcpAllowed(caller.settings, "delete");
+  } catch (err) {
+    if (err instanceof McpScopeError) {
+      throw new McpScopeError(
+        err.missing,
+        `${keep} Really deleting needs this connection reconnected with the delete permission.`,
+      );
+    }
+    throw new McpPolicyError(
+      `${keep} Really deleting needs the account owner to allow it in PUMMA under Settings, Connections.`,
+      "delete",
+    );
+  }
+}
+
+/** runUpdate plus the subtask list the call implies: the one given, or every box ticked when the task closes. */
+async function runTaskUpdate(
+  caller: McpCaller,
+  id: string,
+  patch: Record<string, unknown>,
+  given?: SubtaskInput[],
+) {
+  const closing = patch.status === "done";
+  if (!given && !closing) return runUpdate(caller, "task", id, patch, "task");
+
+  const current = await getTask(caller.userId, id);
+  if (!current) {
+    return {
+      text: `No task with id ${id}, or nothing changed.`,
+      data: { ok: false },
+    };
+  }
+
+  const list = given
+    ? subtasksFromInput(given, current.subtasks)
+    : tickedSubtasks(current.subtasks);
+  const { added, removed } = subtaskChanges(current.subtasks, list);
+  // Before anything is written.
+  if (removed) assertMayDropSubtasks(caller, removed);
+
+  // Straight to the row, since no metric reads subtasks; first, so nothing slow sits between that read and this write.
+  const listChanged = !sameSubtasks(list, current.subtasks);
+  if (listChanged) {
+    const saved = await updateTaskRow(caller.userId, id, { subtasks: list });
+    if (!saved) {
+      return {
+        text: `Could not save the subtasks on task ${id}.`,
+        data: { ok: false },
+        entityIds: [id],
+      };
+    }
+  }
+
+  // Already closed: done again would restamp the date, but a retry still has to repair the goal above it.
+  const rest = { ...patch };
+  if (closing && current.status === "done" && current.completedAt) {
+    delete rest.status;
+    if (current.projectId) {
+      await syncGoalsForProject(caller.userId, current.projectId);
+    }
+  }
+  if (Object.keys(rest).length) {
+    const updated = await runUpdate(caller, "task", id, rest, "task");
+    if (!updated.data.ok) return updated;
+  }
+
+  const changed = [...Object.keys(rest), ...(listChanged ? ["subtasks"] : [])];
+  const counts = added || removed ? ` (${added} added, ${removed} removed)` : "";
+  return {
+    text: changed.length
+      ? `Updated task ${id}. Changed: ${changed.join(", ")}${listChanged ? counts : ""}.`
+      : `Task ${id} is already like that. Nothing changed.`,
+    data: { ok: true, id, changed },
+    entityIds: [id],
+  };
+}
+
 export const updateTask = defineTool({
   name: "update_task",
   title: "Update a task",
   description:
-    "Change a task. Only the fields you pass are touched. Setting status to done also stamps the completion date and updates the project's progress.",
+    "Change a task. Only the fields you pass are touched. Setting status to done stamps the completion date unless the task is already closed, ticks its subtasks unless you send a list, and updates the project's progress.",
   opClass: "update",
   inputSchema: z.object({
     id: z.string(),
@@ -382,15 +511,19 @@ export const updateTask = defineTool({
     due: isoDate.optional(),
     projectId: z.string().optional(),
     lifeArea: lifeArea.optional(),
+    subtasks: subtasksField
+      .optional()
+      .describe(
+        "Replaces the whole checklist, so send the items to keep too; get_task returns the current list. A title already on the task keeps its tick unless done says otherwise, ignoring case and outer spaces. Any other title is new and starts unticked. Leaving a subtask out removes it, which needs delete permission.",
+      ),
   }),
   handler: async (input, caller) => {
-    const { id, due, ...rest } = input;
-    return runUpdate(
+    const { id, due, subtasks, ...rest } = input;
+    return runTaskUpdate(
       caller,
-      "task",
       id,
       fields({ ...rest, date: due }),
-      "task",
+      subtasks,
     );
   },
 });
@@ -399,11 +532,11 @@ export const completeTask = defineTool({
   name: "complete_task",
   title: "Complete a task",
   description:
-    "Mark a task done. Sugar over update_task, and safe to call twice: a task that is already done stays done.",
+    "Mark a task done and tick its subtasks. Safe to call twice: a task that is already closed keeps its completion date.",
   opClass: "update",
   inputSchema: z.object({ id: z.string() }),
   handler: async (input, caller) =>
-    runUpdate(caller, "task", input.id, { status: "done" }, "task"),
+    runTaskUpdate(caller, input.id, { status: "done" }),
 });
 
 export const updateNote = defineTool({

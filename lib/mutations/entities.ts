@@ -27,6 +27,7 @@ import {
   listAgenda,
   updateAgendaItem,
 } from "@/lib/db/agenda";
+import type { Subtask } from "@/lib/schemas";
 import type {
   ChangeEntity,
   CreateOp,
@@ -91,6 +92,8 @@ export async function applyCreate(
   userId: string,
   op: CreateOp,
   ctx: Ctx,
+  // A task's checklist, for callers beyond the assistant's schema; part of the one insert.
+  extras?: { subtasks?: Subtask[] },
 ): Promise<{ id: string; title: string } | null> {
   const { td, tags, resolve } = ctx;
   const f = op.fields;
@@ -182,7 +185,7 @@ export async function applyCreate(
         userId,
         title: val(f.title) ?? "Untitled task",
         description: f.description ?? "",
-        subtasks: [],
+        subtasks: extras?.subtasks ?? [],
         tagIds,
         priority: (val(f.priority) ?? "med") as "low" | "med" | "high",
         status: "todo",

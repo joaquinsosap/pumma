@@ -52,7 +52,11 @@ export class McpPolicyError extends Error {
 
 /** Refusal because the token was never granted this much. */
 export class McpScopeError extends Error {
-  constructor(readonly missing: string[]) {
+  constructor(
+    readonly missing: string[],
+    /** Said to the client instead of "reconnect", when something else usually gets it there. */
+    readonly advice?: string,
+  ) {
     super(`Missing required scope: ${missing.join(", ")}`);
     this.name = "McpScopeError";
   }
