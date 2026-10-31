@@ -16,7 +16,7 @@ import {
 import { getAgenda } from "@/lib/mcp/tools/agenda";
 import {
   createTask, createNote, createProject, createGoal, createHabit, createMeeting,
-  updateTask, completeTask, updateNote, updateProject, updateGoal, updateHabit,
+  updateTask, completeTask, moveTask, updateNote, updateProject, updateGoal, updateHabit,
   updateMeeting, logHabit, setGoalProgress,
 } from "@/lib/mcp/tools/write";
 import {
@@ -40,6 +40,7 @@ export const MCP_TOOLS = [
   createMeeting,
   updateTask,
   completeTask,
+  moveTask,
   updateNote,
   updateProject,
   updateGoal,

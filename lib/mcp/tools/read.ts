@@ -21,6 +21,7 @@ import { listProjects } from "@/lib/db/projects";
 import { listGoals } from "@/lib/db/goals";
 import { listHabits } from "@/lib/db/habits";
 import { listNotes } from "@/lib/db/notes";
+import { columnPositions } from "@/lib/mcp/task-position";
 import { isOverdue } from "@/lib/task-filters";
 import { isoDateInTz } from "@/lib/timezone";
 import type { Task } from "@/lib/schemas";
@@ -110,6 +111,7 @@ export const listTasksTool = defineTool({
   description:
     "List the user's tasks, with optional filters. " +
     "Ids returned here are what every other task tool expects. " +
+    "A project task's position is its place in its project and status column under the board's Custom sort, 1 at the top, counted across life areas, whatever sort or view the board is showing; move_task changes it. " +
     "Note that 'overdue' means past its due date AND not done: a finished task with an old date is history, not a debt.",
   opClass: "read",
   inputSchema: z.object({
@@ -133,6 +135,8 @@ export const listTasksTool = defineTool({
   handler: async (input, caller) => {
     const today = isoDateInTz(new Date(), caller.timeZone);
     let rows = await listTasks(caller.userId);
+    // Before the filters, so it stays the task's real place in its column.
+    const positions = columnPositions(rows);
 
     if (input.status?.length) rows = rows.filter((t) => input.status!.includes(t.status));
     if (input.priority?.length) {
@@ -159,7 +163,13 @@ export const listTasksTool = defineTool({
         : `${total} matching task${total === 1 ? "" : "s"}:`;
 
     return {
-      text: [header, ...page.map((t) => `  ${taskLine(t, today)}`)].join("\n"),
+      text: [
+        header,
+        ...page.map((t) => {
+          const at = positions.get(t.id);
+          return `  ${taskLine(t, today)}${at ? ` (position ${at})` : ""}`;
+        }),
+      ].join("\n"),
       data: {
         total,
         returned: page.length,
@@ -170,6 +180,7 @@ export const listTasksTool = defineTool({
           priority: t.priority,
           due: t.due ?? null,
           projectId: t.projectId ?? null,
+          position: positions.get(t.id) ?? null,
           overdue: isOverdue(t, today),
         })),
       },

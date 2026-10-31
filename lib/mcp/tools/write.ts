@@ -1,8 +1,8 @@
 /**
  * Create and update tools.
  *
- * Apart from a task's subtask list, the habit log and goal progress, these do
- * not write rows themselves. They build the same op the assistant's changeset
+ * Apart from a task's subtask list and order, the habit log and goal progress,
+ * these do not write rows themselves. They build the same op the assistant's changeset
  * builds and hand it to `lib/mutations/entities`, which is also what
  * the UI's server actions go through. That is the whole point of the
  * extraction: creating a project mints its flagship tag, filing a task under
@@ -30,7 +30,12 @@ import { listTags } from "@/lib/db/tags";
 import { listHabits } from "@/lib/db/habits";
 import { markHabitEntry } from "@/lib/db/habitEntries";
 import { listGoals, updateGoal as updateGoalRow } from "@/lib/db/goals";
-import { getTask, updateTask as updateTaskRow } from "@/lib/db/tasks";
+import {
+  getTask,
+  listTasks,
+  updateTask as updateTaskRow,
+  updateTasks,
+} from "@/lib/db/tasks";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 import { isoDateInTz } from "@/lib/timezone";
 import {
@@ -46,6 +51,12 @@ import {
   tickedSubtasks,
   type SubtaskInput,
 } from "@/lib/mcp/subtasks";
+import {
+  boardNote,
+  columnOf,
+  orderPatches,
+  placeAfter,
+} from "@/lib/mcp/task-position";
 import type { McpCaller } from "@/lib/mcp/context";
 import type { CreateOp, UpdateOp } from "@/lib/ai/changeset-schema";
 
@@ -112,7 +123,8 @@ export const createTask = defineTool({
   name: "create_task",
   title: "Create a task",
   description:
-    "Add a task. Returns its id. To put it in a project, pass a projectId from list_projects.",
+    "Add a task. Returns its id. To put it in a project, pass a projectId from list_projects. " +
+    "A new task lands on top of its column; move_task places it elsewhere.",
   opClass: "create",
   inputSchema: z.object({
     title: z.string().min(1).max(200),
@@ -537,6 +549,63 @@ export const completeTask = defineTool({
   inputSchema: z.object({ id: z.string() }),
   handler: async (input, caller) =>
     runTaskUpdate(caller, input.id, { status: "done" }),
+});
+
+export const moveTask = defineTool({
+  name: "move_task",
+  title: "Move a task in its column",
+  description:
+    "Put a project task right below another one in the same project and status, or on top with after: null, as dragging a card on the board does. " +
+    "Never changes a status: to move a task to another column, change its status with update_task first. " +
+    "A task with no project has no order to change. list_tasks gives each project task its current position.",
+  opClass: "update",
+  inputSchema: z.object({
+    id: z.string(),
+    after: z
+      .string()
+      .nullable()
+      .describe("Id of the task to go right below, or null for the top of the column."),
+  }),
+  handler: async ({ id, after }, caller) => {
+    const refuse = (text: string) => ({ text, data: { ok: false } });
+    const tasks = await listTasks(caller.userId);
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return refuse(`No task with id ${id}.`);
+    if (!task.projectId) {
+      return refuse(`Task ${id} has no project, so it has no order to change.`);
+    }
+    if (after === id) return refuse(`Task ${id} can't go below itself.`);
+
+    const column = columnOf(tasks, task.projectId, task.status);
+    const ids = placeAfter(column.map((t) => t.id), id, after);
+    if (!ids) {
+      return refuse(
+        `Task ${after} is not in the same project and status as task ${id}. A move never changes a status: change it with update_task first if that is what you want.`,
+      );
+    }
+
+    const position = ids.indexOf(id) + 1;
+    const note = boardNote(caller.settings);
+    const reply = (text: string, changed: string[], touched = [id]) => ({
+      text: note ? `${text} ${note}` : text,
+      data: { ok: true, id, position, changed },
+      entityIds: touched,
+    });
+
+    if (ids.every((rowId, i) => rowId === column[i].id)) {
+      return reply(`Task ${id} is already there. Nothing changed.`, []);
+    }
+    // No goal sync: order feeds no metric.
+    const patches = orderPatches(column, ids);
+    await updateTasks(caller.userId, patches);
+    return reply(
+      after
+        ? `Moved task ${id} below ${after}, to position ${position} in its column.`
+        : `Moved task ${id} to the top of its column.`,
+      ["order"],
+      [...new Set([id, ...patches.map((p) => p.id)])],
+    );
+  },
 });
 
 export const updateNote = defineTool({
