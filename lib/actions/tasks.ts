@@ -22,7 +22,7 @@ import { insertHabit } from "@/lib/db/habits";
 import { insertGoal, listGoals, nextGoalOrder } from "@/lib/db/goals";
 import { getSettings } from "@/lib/db/settings";
 import { userToday } from "@/lib/timezone-server";
-import type { Task } from "@/lib/schemas";
+import type { Subtask, Task } from "@/lib/schemas";
 import {
   syncGoalsForProject,
   syncGoalsForProjects,
@@ -41,7 +41,13 @@ import {
   splitTagsByProject,
   projectIdFromTags,
 } from "@/lib/project-tags";
-import { entityId, title as titleField, noteBody } from "@/lib/validation";
+import {
+  entityId,
+  title as titleField,
+  noteBody,
+  shortText,
+} from "@/lib/validation";
+import { MAX_SUBTASKS, type SubtaskChange } from "@/lib/subtask-changes";
 
 const omniSchema = z.object({
   text: z.string().min(1),
@@ -849,17 +855,10 @@ export async function setTaskProject(
   return { ok: true, data: updated };
 }
 
-const subtaskSchema = z.object({
-  id: z.string().max(64),
-  title: z.string().max(500),
-  done: z.boolean(),
-});
-
 const updateTaskDetailSchema = z.object({
   id: entityId,
   title: titleField.optional(),
   description: noteBody.optional(),
-  subtasks: z.array(subtaskSchema).max(200).optional(),
   tagIds: z.array(z.string()).max(50).optional(),
   priority: z.enum(["low", "med", "high"]).optional(),
   due: z.string().max(40).nullable().optional(),
@@ -911,4 +910,39 @@ export async function updateTaskDetail(
   // stale, and a stale number is a worse bug than an extra fetch.
   revalidatePath("/", "layout");
   return { ok: true, data: updated };
+}
+
+const subtaskId = z.string().min(1).max(64);
+const subtaskTitle = shortText.min(1, "Required");
+const changeTaskSubtaskSchema = z.object({
+  id: entityId,
+  change: z.discriminatedUnion("kind", [
+    z.object({ kind: z.literal("add"), id: subtaskId, title: subtaskTitle }),
+    z.object({ kind: z.literal("setDone"), id: subtaskId, done: z.boolean() }),
+    z.object({ kind: z.literal("rename"), id: subtaskId, title: subtaskTitle }),
+    z.object({ kind: z.literal("remove"), id: subtaskId }),
+  ]),
+});
+
+/** One change to a task's checklist. One that no longer applies, because another tab or a chat got there first, is not an error. */
+export async function changeTaskSubtask(input: {
+  id: string;
+  change: SubtaskChange;
+}): Promise<ActionResult<Subtask[]>> {
+  const parsed = changeTaskSubtaskSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const { id, change } = parsed.data;
+
+  const userId = await requireUserId();
+  const { changeSubtask, getTask } = await import("@/lib/db/tasks");
+  const task =
+    (await changeSubtask(userId, id, change)) ?? (await getTask(userId, id));
+  if (!task) return { ok: false, error: "Not found" };
+  // An add that isn't there didn't land, and a full list is the only reason it wouldn't.
+  if (change.kind === "add" && !task.subtasks.some((s) => s.id === change.id)) {
+    return { ok: false, error: `A task can hold ${MAX_SUBTASKS} subtasks.` };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true, data: task.subtasks };
 }

@@ -1,3 +1,4 @@
+import type { Filter, UpdateFilter } from "mongodb";
 import { getDb } from "@/lib/mongodb";
 import {
   decryptAllFor,
@@ -7,6 +8,7 @@ import {
 import { newId } from "@/lib/store/memory";
 import { toDto, type Task, taskSchema } from "@/lib/schemas";
 import type { Subtask, TaskDoc } from "@/lib/schemas";
+import { MAX_SUBTASKS, type SubtaskChange } from "@/lib/subtask-changes";
 
 async function col() {
   const db = await getDb();
@@ -139,6 +141,58 @@ export async function updateTask(
     { $set: await encryptFor("tasks", userId, patch) },
     { returnDocument: "after" },
   );
+  if (!doc) return null;
+  return toDto(taskSchema.parse(await decryptFor("tasks", userId, doc)));
+}
+
+/** One change to a task's checklist, applied by the database to the list as it is now. Null when the task is missing or the change doesn't apply. */
+export async function changeSubtask(
+  userId: string,
+  id: string,
+  change: SubtaskChange,
+): Promise<Task | null> {
+  const c = await col();
+  const task = { _id: id, userId };
+  const row = { ...task, "subtasks.id": change.id };
+  const seal = async (title: string) =>
+    (await encryptFor("tasks", userId, { title })).title;
+
+  let filter: Filter<TaskDoc>;
+  let update: UpdateFilter<TaskDoc>;
+  switch (change.kind) {
+    case "add":
+      filter = {
+        ...task,
+        "subtasks.id": { $ne: change.id },
+        [`subtasks.${MAX_SUBTASKS - 1}`]: { $exists: false },
+      };
+      update = {
+        $push: {
+          subtasks: {
+            id: change.id,
+            title: await seal(change.title),
+            done: false,
+          },
+        },
+      };
+      break;
+    case "setDone":
+      filter = row;
+      update = { $set: { "subtasks.$.done": change.done } };
+      break;
+    case "rename":
+      filter = row;
+      update = { $set: { "subtasks.$.title": await seal(change.title) } };
+      break;
+    case "remove":
+      filter = task;
+      update = { $pull: { subtasks: { id: change.id } } };
+      break;
+  }
+
+  const doc = await c.findOneAndUpdate(filter, update, {
+    returnDocument: "after",
+  });
   if (!doc) return null;
   return toDto(taskSchema.parse(await decryptFor("tasks", userId, doc)));
 }

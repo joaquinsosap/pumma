@@ -2,6 +2,8 @@
 import { oid } from "@/lib/date";
 import type { Subtask } from "@/lib/schemas";
 
+export { sameSubtasks } from "@/lib/subtask-changes";
+
 export type SubtaskInput = { title: string; done?: boolean };
 
 /** How two titles count as one subtask: "Water ", "water" and "Water" are the same row. */
@@ -37,16 +39,6 @@ export function subtasksFromInput(
 /** Every box ticked, for a task that just closed. */
 export function tickedSubtasks(subtasks: Subtask[]): Subtask[] {
   return subtasks.map((s) => ({ ...s, done: true }));
-}
-
-export function sameSubtasks(a: Subtask[], b: Subtask[]): boolean {
-  return (
-    a.length === b.length &&
-    a.every(
-      (s, i) =>
-        s.id === b[i].id && s.title === b[i].title && s.done === b[i].done,
-    )
-  );
 }
 
 /** Rows a new list adds and drops, by id. */

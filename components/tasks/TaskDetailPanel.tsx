@@ -1,11 +1,19 @@
 "use client";
 
-import { useCallback, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import {
+  useCallback,
+  useEffect,
+  useOptimistic,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { unstable_rethrow, useRouter } from "next/navigation";
 import { ArrowLeft, Check, Plus, X } from "@/components/icons";
 import type { Project, Subtask, Tag, Task } from "@/lib/schemas";
 import { mergeTaskDueDate, oid, taskDueDateInput } from "@/lib/date";
 import {
+  changeTaskSubtask,
   updateTaskDetail,
   moveTaskStatus,
   setTaskProject,
@@ -20,6 +28,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import {
+  applySubtaskChange,
+  sameSubtasks,
+  type SubtaskChange,
+} from "@/lib/subtask-changes";
 
 const STATUS_OPTIONS = [
   ["todo", "To do"],
@@ -49,6 +62,68 @@ type Props = {
   onBack?: { label: string; action: () => void };
 };
 
+/** One checklist row. Its title draft lives only while the input has focus, so a title changed elsewhere still shows. */
+function SubtaskRow({
+  sub,
+  onChange,
+}: {
+  sub: Subtask;
+  onChange: (change: SubtaskChange) => void;
+}) {
+  const [draft, setDraft] = useState<{ from: string; value: string } | null>(
+    null,
+  );
+
+  const commitTitle = (value: string) => {
+    const from = draft?.from ?? sub.title;
+    setDraft(null);
+    if (value === from) return;
+    const title = value.trim();
+    if (!title) onChange({ kind: "remove", id: sub.id });
+    else if (title !== from) onChange({ kind: "rename", id: sub.id, title });
+  };
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-surface2/70">
+      <button
+        type="button"
+        onClick={() =>
+          onChange({ kind: "setDone", id: sub.id, done: !sub.done })
+        }
+        className={cn(
+          "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.8px]",
+          sub.done
+            ? "border-none bg-habits"
+            : "border-border bg-transparent",
+        )}
+      >
+        {sub.done && (
+          <Check
+            className="h-[10px] w-[10px] text-white"
+            strokeWidth={3.2}
+          />
+        )}
+      </button>
+      <input
+        value={draft?.value ?? sub.title}
+        onFocus={() => setDraft({ from: sub.title, value: sub.title })}
+        onChange={(e) =>
+          setDraft({ from: draft?.from ?? sub.title, value: e.target.value })
+        }
+        onBlur={(e) => commitTitle(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") e.currentTarget.blur();
+        }}
+        className={cn(
+          // Same tell as the titles above, minus the pencil.
+          "-mx-1 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[13px] outline-none transition-colors hover:border-border focus:border-faint focus:bg-background/50",
+          sub.done ? "text-faint2 line-through" : "text-ink",
+        )}
+      />
+    </div>
+  );
+}
+
 export function TaskDetailPanel({
   task,
   tags,
@@ -60,7 +135,11 @@ export function TaskDetailPanel({
   const router = useRouter();
   const bodyRef = useRef<HTMLDivElement>(null);
   const [title, setTitle] = useSyncedDraft(task.title, task.id);
-  const [subtasks, setSubtasks] = useSyncedDraft(task.subtasks, task.id);
+  const [subtasks, applyLocally] = useOptimistic(
+    task.subtasks,
+    (list: Subtask[], change: SubtaskChange) =>
+      applySubtaskChange(list, change) ?? list,
+  );
   const [tagIds, setTagIds] = useSyncedDraft(task.tagIds, task.id);
   const [newSubtask, setNewSubtask] = useState("");
   const [status, setStatus] = useSyncedDraft(task.status, task.id);
@@ -74,6 +153,15 @@ export function TaskDetailPanel({
     task.id,
   );
   const [pending, startTransition] = useTransition();
+
+  // What the last save left stored, to check against the page that comes back.
+  const saved = useRef<Subtask[] | null>(null);
+  useEffect(() => {
+    if (pending || !saved.current) return;
+    // Any URL write during a save makes Next throw that page away, which would flip the box back with the tick stored.
+    if (!sameSubtasks(saved.current, task.subtasks)) router.refresh();
+    saved.current = null;
+  }, [pending, task.subtasks, router]);
 
   const project = projects.find((p) => p.id === task.projectId);
 
@@ -92,7 +180,6 @@ export function TaskDetailPanel({
     (patch: {
       title?: string;
       description?: string;
-      subtasks?: Subtask[];
       tagIds?: string[];
       priority?: Task["priority"];
       due?: string | null;
@@ -141,44 +228,33 @@ export function TaskDetailPanel({
     persist({ title: next });
   };
 
-  const saveSubtasks = (next: Subtask[]) => {
-    setSubtasks(next);
-    persist({ subtasks: next });
-  };
-
-  const toggleSubtask = (id: string) => {
-    saveSubtasks(
-      subtasks.map((s) => (s.id === id ? { ...s, done: !s.done } : s)),
-    );
-  };
-
-  const updateSubtaskTitle = (id: string, value: string) => {
-    setSubtasks((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, title: value } : s)),
-    );
-  };
-
-  const commitSubtaskTitle = (id: string) => {
-    const item = subtasks.find((s) => s.id === id);
-    if (!item) return;
-    const nextTitle = item.title.trim();
-    if (!nextTitle) {
-      saveSubtasks(subtasks.filter((s) => s.id !== id));
-      return;
-    }
-    if (nextTitle !== task.subtasks.find((s) => s.id === id)?.title) {
-      saveSubtasks(
-        subtasks.map((s) => (s.id === id ? { ...s, title: nextTitle } : s)),
-      );
-    }
+  const changeSubtask = (change: SubtaskChange, onFail?: () => void) => {
+    startTransition(async () => {
+      applyLocally(change);
+      try {
+        const res = await changeTaskSubtask({ id: task.id, change });
+        if (res.ok) {
+          saved.current = res.data ?? null;
+        } else {
+          toast.error(res.error);
+          onFail?.();
+        }
+      } catch (err) {
+        // A redirect passes through; anything else would reach the error boundary and take the page with it.
+        unstable_rethrow(err);
+        toast.error("Could not save that change. Check your connection.");
+        onFail?.();
+      }
+    });
   };
 
   const addSubtask = () => {
-    const text = newSubtask.trim();
-    if (!text) return;
-    const next = [...subtasks, { id: oid(), title: text, done: false }];
+    const title = newSubtask.trim();
+    if (!title) return;
     setNewSubtask("");
-    saveSubtasks(next);
+    changeSubtask({ kind: "add", id: oid(), title }, () =>
+      setNewSubtask((typed) => typed || title),
+    );
   };
 
   const toggleTag = (tagId: string) => {
@@ -498,43 +574,11 @@ export function TaskDetailPanel({
           )}
           <div className="flex flex-col gap-1">
             {subtasks.map((sub) => (
-              <div
+              <SubtaskRow
                 key={sub.id}
-                className="flex items-center gap-2 rounded-lg px-1 py-1 hover:bg-surface2/70"
-              >
-                <button
-                  type="button"
-                  onClick={() => toggleSubtask(sub.id)}
-                  className={cn(
-                    "flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border-[1.8px]",
-                    sub.done
-                      ? "border-none bg-habits"
-                      : "border-border bg-transparent",
-                  )}
-                >
-                  {sub.done && (
-                    <Check
-                      className="h-[10px] w-[10px] text-white"
-                      strokeWidth={3.2}
-                    />
-                  )}
-                </button>
-                <input
-                  value={sub.title}
-                  onChange={(e) => updateSubtaskTitle(sub.id, e.target.value)}
-                  onBlur={() => commitSubtaskTitle(sub.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") e.currentTarget.blur();
-                  }}
-                  className={cn(
-                    // Same tell as the titles above, minus the pencil: one
-                    // icon per subtask row would be noise, but the row still
-                    // has to look like something you can type in.
-                    "-mx-1 min-w-0 flex-1 rounded-md border border-transparent bg-transparent px-1 py-0.5 text-[13px] outline-none transition-colors hover:border-border focus:border-faint focus:bg-background/50",
-                    sub.done ? "text-faint2 line-through" : "text-ink",
-                  )}
-                />
-              </div>
+                sub={sub}
+                onChange={(change) => changeSubtask(change)}
+              />
             ))}
             <div className="mt-1 flex items-center gap-2 rounded-lg border border-dashed border-border px-2 py-1.5">
               <Plus className="h-3.5 w-3.5 shrink-0 text-faint2" />

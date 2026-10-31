@@ -1,6 +1,7 @@
 import { getStore, newId } from "@/lib/store/memory";
 import { toDto, type Task, taskSchema } from "@/lib/schemas";
 import type { Subtask, TaskDoc } from "@/lib/schemas";
+import { applySubtaskChange, type SubtaskChange } from "@/lib/subtask-changes";
 
 /** Mirrors the mongo layer's NewTaskDoc — see lib/db/mongo/tasks.ts. */
 type NewTaskDoc = Omit<
@@ -114,6 +115,21 @@ export async function updateTask(
   const idx = store.tasks.findIndex((t) => t._id === id && t.userId === userId);
   if (idx < 0) return null;
   store.tasks[idx] = { ...store.tasks[idx], ...patch };
+  return toDto(taskSchema.parse(store.tasks[idx]));
+}
+
+/** Mirrors the mongo layer's changeSubtask. */
+export async function changeSubtask(
+  userId: string,
+  id: string,
+  change: SubtaskChange,
+): Promise<Task | null> {
+  const store = getStore();
+  const idx = store.tasks.findIndex((t) => t._id === id && t.userId === userId);
+  if (idx < 0) return null;
+  const subtasks = applySubtaskChange(store.tasks[idx].subtasks, change);
+  if (!subtasks) return null;
+  store.tasks[idx] = { ...store.tasks[idx], subtasks };
   return toDto(taskSchema.parse(store.tasks[idx]));
 }
 
