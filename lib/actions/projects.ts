@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import {
   listTags,
   insertTag,
-  deleteTag,
   detachTagFromProject,
   setTagProject,
 } from "@/lib/db/tags";
@@ -28,6 +27,7 @@ import { syncGoalProgress, syncGoalsForProject } from "@/lib/goal-sync-server";
 import { setProjectLifeArea } from "@/lib/project-life-server";
 import { fileTaggedTasksIntoProject } from "@/lib/project-filing-server";
 import { requireUserId } from "@/lib/auth/session";
+import { releaseProjectTags } from "@/lib/mutations/entities";
 import { userToday } from "@/lib/timezone-server";
 import { pickProjectColor } from "@/lib/project-colors";
 
@@ -243,19 +243,7 @@ export async function deleteProjectAction(
   });
   if (!deleted) return { ok: false, error: "Not found" };
 
-  // The project's own tags go with it — a flagship pointing at nothing would
-  // be undeletable dead weight. Any other tag that had joined the project is
-  // released back to being ordinary, since the user chose to create it.
-  const projectTags = (await listTags(userId)).filter(
-    (t) => t.projectId === id,
-  );
-  for (const tag of projectTags) {
-    if (tag.isProjectPrimary) {
-      await deleteTag(userId, tag.id);
-    } else {
-      await detachTagFromProject(userId, tag.id);
-    }
-  }
+  await releaseProjectTags(userId, id);
 
   if (goalId) await syncGoalProgress(userId, goalId);
   revalidatePath("/", "layout");

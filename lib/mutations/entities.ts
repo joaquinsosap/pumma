@@ -54,7 +54,13 @@ import {
 } from "@/lib/db/habits";
 import { listTasks, insertTask, updateTask, deleteTask } from "@/lib/db/tasks";
 import { listNotes, insertNote, updateNote, deleteNote } from "@/lib/db/notes";
-import { ensureTags, insertTag, listTags } from "@/lib/db/tags";
+import {
+  deleteTag,
+  detachTagFromProject,
+  ensureTags,
+  insertTag,
+  listTags,
+} from "@/lib/db/tags";
 import { pickProjectColor } from "@/lib/project-colors";
 import {
   deriveLifeAreaFromTags,
@@ -438,6 +444,27 @@ export async function applyUpdate(
   }
 }
 
+/**
+ * After a project is deleted. Its own tags go with it, since a flagship pointing
+ * at nothing can't be deleted by hand. Any other tag that had joined the project
+ * is released back to being ordinary, since the user chose to create it.
+ */
+export async function releaseProjectTags(
+  userId: string,
+  projectId: string,
+): Promise<void> {
+  const projectTags = (await listTags(userId)).filter(
+    (t) => t.projectId === projectId,
+  );
+  for (const tag of projectTags) {
+    if (tag.isProjectPrimary) {
+      await deleteTag(userId, tag.id);
+    } else {
+      await detachTagFromProject(userId, tag.id);
+    }
+  }
+}
+
 export async function applyDelete(
   userId: string,
   entity: ChangeEntity,
@@ -450,6 +477,7 @@ export async function applyDelete(
       return;
     case "project":
       await deleteProject(userId, id, { deleteTasks: true });
+      await releaseProjectTags(userId, id);
       touchedProjects.delete(id);
       return;
     case "habit":

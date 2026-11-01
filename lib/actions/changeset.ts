@@ -32,6 +32,7 @@ import {
   applyCreate,
   applyUpdate,
   applyDelete,
+  releaseProjectTags,
 } from "@/lib/mutations/entities";
 
 // ---------------------------------------------------------------------------
@@ -307,8 +308,11 @@ export async function undoChangesetAction(
   for (const c of [...undo.created].reverse()) {
     const ok = await {
       goal: deleteGoal,
-      project: (uid: string, id: string) =>
-        deleteProject(uid, id, { deleteTasks: false }),
+      project: async (uid: string, id: string) => {
+        const deleted = await deleteProject(uid, id, { deleteTasks: false });
+        if (deleted) await releaseProjectTags(uid, id);
+        return deleted;
+      },
       habit: deleteHabit,
       task: deleteTask,
       note: deleteNote,

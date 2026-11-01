@@ -10,6 +10,7 @@ import { listHabits, deleteHabit } from "@/lib/db/habits";
 import { listGoals, deleteGoal } from "@/lib/db/goals";
 import { listProjects, deleteProject } from "@/lib/db/projects";
 import { listAgenda, deleteAgendaItem } from "@/lib/db/agenda";
+import { releaseProjectTags } from "@/lib/mutations/entities";
 import { partitionStarters, type StarterKind } from "@/lib/starter";
 
 export type StarterStatus = {
@@ -81,7 +82,10 @@ export async function clearStarterContent(): Promise<
     agenda: deleteAgendaItem,
     habit: deleteHabit,
     goal: deleteGoal,
-    project: deleteProject,
+    project: async (uid: string, id: string) => {
+      await deleteProject(uid, id);
+      await releaseProjectTags(uid, id);
+    },
   } as const;
 
   let removed = 0;

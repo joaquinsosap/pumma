@@ -1,6 +1,15 @@
 // The SAMPLE_DATA switch on a real first login, against the memory store.
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("@/lib/auth/session", async (actual) => ({
+  ...(await actual<typeof import("@/lib/auth/session")>()),
+  requireUserId: async () => "sample-user",
+}));
+
+import { clearStarterContent } from "@/lib/actions/starter";
 import { bootstrapNewUser } from "@/lib/auth/bootstrap";
+import { createSeedData } from "@/lib/seed";
 import { getStore, resetStore } from "@/lib/store/memory";
 
 const userId = "sample-user";
@@ -35,6 +44,36 @@ describe("a new account with sample data", () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).toContain("personal");
     expect(names).toContain("work");
+  });
+
+  it("gives each record the tags the seed gives it, life tags included", () => {
+    const seed = createSeedData(userId);
+    const store = getStore();
+    const seedName = new Map(seed.tags.map((t) => [t._id, t.name]));
+    const myName = new Map(mine(store.tags).map((t) => [t._id, t.name]));
+    const names = (ids: string[], from: Map<string, string>) =>
+      ids.map((id) => from.get(id)).sort();
+    for (const task of mine(store.tasks)) {
+      const from = seed.tasks.find((t) => t.title === task.title)!;
+      expect(names(task.tagIds, myName), task.title).toEqual(
+        names(from.tagIds, seedName),
+      );
+    }
+    for (const habit of mine(store.habits)) {
+      const from = seed.habits.find((h) => h.name === habit.name)!;
+      expect(names(habit.tagIds, myName), habit.name).toEqual(
+        names(from.tagIds, seedName),
+      );
+    }
+  });
+
+  it("clears without leaving a tag that points at a project that's gone", async () => {
+    const res = await clearStarterContent();
+    expect(res.ok).toBe(true);
+    const store = getStore();
+    expect(mine(store.projects)).toEqual([]);
+    expect(mine(store.tags).filter((t) => t.projectId)).toEqual([]);
+    expect(mine(store.tags).map((t) => t.name)).toContain("personal");
   });
 
   it("files every project task under its project's flagship tag", () => {
