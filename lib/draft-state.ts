@@ -1,0 +1,75 @@
+// What a text box holds against what the server holds. Only typing makes text unsaved, so text that came from the server can never be saved back.
+
+export type DraftState = {
+  shown: string;
+  unsaved: boolean;
+  /** What the server holds once everything sent has landed. Null after a failed save, when nobody knows. */
+  stored: string | null;
+  /** The last value the server sent. */
+  server: string;
+  /** Text sent whose page can still come back, oldest first. */
+  sent: string[];
+};
+
+export function draftFrom(server: string): DraftState {
+  return { shown: server, unsaved: false, stored: server, server, sent: [] };
+}
+
+export function typed(state: DraftState, value: string): DraftState {
+  return { ...state, shown: value, unsaved: value !== state.stored };
+}
+
+/** The text to send and the state once it has gone, or null when nothing typed is waiting. */
+export function send(
+  state: DraftState,
+): { value: string; state: DraftState } | null {
+  if (!state.unsaved) return null;
+  const value = state.shown;
+  return {
+    value,
+    state: {
+      ...state,
+      unsaved: false,
+      stored: value,
+      sent: [...state.sent, value],
+    },
+  };
+}
+
+/** A page arrived carrying a different value. */
+export function fromServer(state: DraftState, value: string): DraftState {
+  // Our own page, maybe trimmed by the server. An older one can't move the box: newer text has gone since.
+  for (let i = state.sent.length - 1; i >= 0; i--) {
+    if (state.sent[i] === value || state.sent[i].trim() === value) {
+      return { ...state, server: value, sent: state.sent.slice(i + 1) };
+    }
+  }
+  if (!state.unsaved) return draftFrom(value);
+  return {
+    ...state,
+    server: value,
+    stored: value,
+    sent: [],
+    unsaved: state.shown !== value,
+  };
+}
+
+/** A save failed: the words stay, and go again the next time the box saves. */
+export function sendFailed(state: DraftState, value: string): DraftState {
+  const at = state.sent.lastIndexOf(value);
+  const sent = state.sent.filter((_, i) => i !== at);
+  // Something newer went out or came in, and that is what counts now.
+  if (state.stored !== value) return { ...state, sent };
+  return { ...state, sent, stored: null, unsaved: true };
+}
+
+/** Back to what is stored, dropping anything typed. */
+export function reverted(state: DraftState): DraftState {
+  return typed(state, state.stored ?? state.server);
+}
+
+/** Leaving a box that can't be blank: trims it, and blank goes back to what is stored. */
+export function committedRequired(state: DraftState): DraftState {
+  const next = state.shown.trim() || (state.stored ?? state.server);
+  return next === state.shown ? state : typed(state, next);
+}

@@ -15,7 +15,10 @@ export async function startTaskTimer(taskId: string): Promise<ActionResult> {
   const userId = await requireUserId();
   const task = await getTask(userId, taskId);
   if (!task) return { ok: false, error: "Not found" };
-  if (task.timerStartedAt) return { ok: true };
+  if (task.timerStartedAt) {
+    revalidatePath("/", "layout");
+    return { ok: true };
+  }
 
   await stopRunningTimers(userId, taskId);
   const now = new Date().toISOString();
@@ -31,20 +34,15 @@ export async function stopTaskTimer(taskId: string): Promise<ActionResult> {
   const userId = await requireUserId();
   const task = await getTask(userId, taskId);
   if (!task) return { ok: false, error: "Not found" };
-  if (!task.timerStartedAt) return { ok: true };
+  if (!task.timerStartedAt) {
+    revalidatePath("/", "layout");
+    return { ok: true };
+  }
 
   const timeSpentSec = await accumulateRunningTime(task);
   await updateTask(userId, taskId, { timeSpentSec, timerStartedAt: null });
   revalidatePath("/", "layout");
   return { ok: true };
-}
-
-export async function toggleTaskTimer(taskId: string): Promise<ActionResult> {
-  const userId = await requireUserId();
-  const task = await getTask(userId, taskId);
-  if (!task) return { ok: false, error: "Not found" };
-  if (task.timerStartedAt) return stopTaskTimer(taskId);
-  return startTaskTimer(taskId);
 }
 
 const setTimeSchema = z.object({

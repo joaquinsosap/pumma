@@ -10,6 +10,8 @@ import {
   useMemo,
 } from "react";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import { useSyncedDraft } from "@/lib/use-synced-draft";
+import { trySave } from "@/lib/try-save";
 import { useIsDesktop } from "@/lib/use-media-query";
 import { shortDate } from "@/lib/date";
 import {
@@ -126,23 +128,9 @@ export function NotesView({
   const [openId, setOpenId] = useState<string | null>(selectedId);
   useEffect(() => setOpenId(selectedId), [selectedId]);
 
-  // Text saved during this session, laid over what the server last sent.
-  // Every autosave used to end in router.refresh(), so half a second of typing
-  // re-fetched and re-rendered the entire page to be told what we had just
-  // typed. The save still happens; only the round trip is gone.
-  const [edits, setEdits] = useState<Record<string, Partial<Note>>>({});
-  const applyEdit = useCallback((id: string, patch: Partial<Note>) => {
-    setEdits((prev) => ({ ...prev, [id]: { ...prev[id], ...patch } }));
-  }, []);
-
-  // Ordered by what the server sent, and only then merged with local edits: a
-  // note being typed into should not climb the list under the cursor.
   const sorted = useMemo(
-    () =>
-      sortNotes(notes, sort, reversed).map((n) =>
-        edits[n.id] ? { ...n, ...edits[n.id] } : n,
-      ),
-    [notes, edits, sort, reversed],
+    () => sortNotes(notes, sort, reversed),
+    [notes, sort, reversed],
   );
 
   const selected = sorted.find((n) => n.id === openId) ?? sorted[0] ?? null;
@@ -171,14 +159,10 @@ export function NotesView({
     pickNote(id);
   };
 
-  const togglePin = (noteId: string) => {
+  const togglePin = (noteId: string, pinned: boolean, onFail?: () => void) => {
     startTransition(async () => {
-      const res = await toggleNotePin(noteId);
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not update favorite");
-        return;
-      }
-      router.refresh();
+      const res = await trySave(() => toggleNotePin(noteId, pinned), onFail);
+      if (res) router.refresh();
     });
   };
 
@@ -267,7 +251,7 @@ export function NotesView({
                 </Link>
                 <NotePinButton
                   pinned={n.pinned}
-                  onToggle={() => togglePin(n.id)}
+                  onToggle={() => togglePin(n.id, !n.pinned)}
                 />
               </Taggable>
             ))}
@@ -293,8 +277,9 @@ export function NotesView({
               key={selected.id}
               note={selected}
               onRefresh={() => router.refresh()}
-              onSaved={applyEdit}
-              onTogglePin={() => togglePin(selected.id)}
+              onTogglePin={(pinned, onFail) =>
+                togglePin(selected.id, pinned, onFail)
+              }
             />
           </div>
         )}
@@ -306,56 +291,40 @@ export function NotesView({
 function NoteEditor({
   note,
   onRefresh,
-  onSaved,
   onTogglePin,
 }: {
   note: Note;
   /** Re-read from the server. For changes that alter the list, not the text. */
   onRefresh: () => void;
-  /** Text that has just been saved, so the list can show it without a refetch. */
-  onSaved: (id: string, patch: Partial<Note>) => void;
-  onTogglePin: () => void;
+  onTogglePin: (pinned: boolean, onFail: () => void) => void;
 }) {
-  const [pinned, setPinned] = useState(note.pinned);
+  const [pinned, setPinned] = useSyncedDraft(note.pinned, note.id);
   const [, startTransition] = useTransition();
 
-  useEffect(() => {
-    setPinned(note.pinned);
-  }, [note.id, note.pinned]);
-
-  const save = useCallback(
-    (field: "title" | "body", noteId: string, value: string) => {
-      // Show it at once, persist in the background. Nothing here needs an
-      // answer from the server: we already know what was typed. A failure is
-      // the one case that does, and that is what falls back to a refetch.
-      onSaved(noteId, { [field]: value });
-      startTransition(async () => {
-        const res = await updateNoteAction(noteId, field, value);
-        if (!res.ok) {
-          toast.error(res.error ?? "Could not save that");
-          onRefresh();
-        }
-      });
-    },
-    [onSaved, onRefresh, startTransition],
-  );
-
-  // The editor advertises "autosaves" — so it must actually survive closing the
+  // The editor advertises "autosaves", so it must actually survive closing the
   // note or switching to another one mid-sentence, not just blur.
   const [title, setTitle, flushTitle] = useAutosaveDraft(
     note.title,
     note.id,
-    useCallback((id, value) => save("title", id, value), [save]),
+    useCallback(
+      (id: string, value: string) => updateNoteAction(id, "title", value),
+      [],
+    ),
+    { required: true },
   );
   const [body, setBody, flushBody] = useAutosaveDraft(
     note.body,
     note.id,
-    useCallback((id, value) => save("body", id, value), [save]),
+    useCallback(
+      (id: string, value: string) => updateNoteAction(id, "body", value),
+      [],
+    ),
   );
 
   const handleTogglePin = () => {
-    setPinned((p) => !p);
-    onTogglePin();
+    const next = !pinned;
+    setPinned(next);
+    onTogglePin(next, () => setPinned(note.pinned));
   };
 
   return (

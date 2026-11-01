@@ -19,9 +19,10 @@ import {
 import { dueDatePart } from "@/lib/date";
 import {
   toggleTask,
-  cycleTaskPriority,
+  updateTaskDetail,
   deleteTaskAction,
 } from "@/lib/actions/tasks";
+import { trySave } from "@/lib/try-save";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -238,32 +239,29 @@ export function TaskList({
   const listed = isCalendar ? sortCalendarDayTasks(optimistic) : optimistic;
 
   const handleToggle = (id: string) => {
+    const done = optimistic.find((t) => t.id === id)?.status !== "done";
     startTransition(async () => {
       setOptimistic(
         optimistic.map((t) =>
-          t.id === id
-            ? {
-                ...t,
-                status: t.status === "done" ? "todo" : "done",
-              }
-            : t,
+          t.id === id ? { ...t, status: done ? "done" : "todo" } : t,
         ),
       );
       // The action's revalidatePath already re-renders the current route in the
       // same response, so no explicit router.refresh() round-trip is needed.
-      await toggleTask(id);
+      await trySave(() => toggleTask(id, done));
     });
   };
 
   const PRIO_NEXT = { low: "med", med: "high", high: "low" } as const;
   const handlePrio = (id: string) => {
+    const shown = optimistic.find((t) => t.id === id);
+    if (!shown) return;
+    const priority = PRIO_NEXT[shown.priority];
     startTransition(async () => {
       setOptimistic(
-        optimistic.map((t) =>
-          t.id === id ? { ...t, priority: PRIO_NEXT[t.priority] } : t,
-        ),
+        optimistic.map((t) => (t.id === id ? { ...t, priority } : t)),
       );
-      await cycleTaskPriority(id);
+      await trySave(() => updateTaskDetail({ id, priority }));
     });
   };
 

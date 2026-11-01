@@ -49,6 +49,7 @@ const togglePeriodSchema = z.object({
   start: isoDate,
   end: isoDate,
   markDate: isoDate,
+  done: z.boolean().optional(),
 });
 
 /**
@@ -63,10 +64,12 @@ export async function toggleHabitPeriod(input: {
   start: string;
   end: string;
   markDate: string;
+  /** Which way the click wanted it, so a box already there stays. Left out: flip. */
+  done?: boolean;
 }): Promise<ActionResult<{ done: boolean }>> {
   const parsed = togglePeriodSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
-  const { habitId, start, end, markDate } = parsed.data;
+  const { habitId, start, end, markDate, done } = parsed.data;
   if (end < start) return { ok: false, error: "Invalid range" };
 
   const userId = await requireUserId();
@@ -74,6 +77,10 @@ export async function toggleHabitPeriod(input: {
     return { ok: false, error: "Not found" };
 
   const existing = await habitEntriesInRange(userId, habitId, start, end);
+  if (done !== undefined && done === existing.length > 0) {
+    revalidatePath("/", "layout");
+    return { ok: true, data: { done } };
+  }
   if (existing.length) {
     await clearHabitEntriesInRange(userId, habitId, start, end);
     revalidatePath("/", "layout");

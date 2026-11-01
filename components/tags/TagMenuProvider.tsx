@@ -303,7 +303,7 @@ export function TagMenuProvider({
       tags,
     );
     setTagIds(nextTagIds);
-    const res = await toggleEntityTag(menu.entity, menu.id, tagId);
+    const res = await toggleEntityTag(menu.entity, menu.id, tagId, applied);
     setPending(false);
     if (!res.ok) {
       setTagIds(menu.tagIds);
@@ -361,7 +361,7 @@ export function TagMenuProvider({
     const existing = tags.find((t) => t.name === name);
     if (existing) {
       if (!tagIds.includes(existing.id)) {
-        await toggleEntityTag(menu.entity, menu.id, existing.id);
+        await toggleEntityTag(menu.entity, menu.id, existing.id, true);
         const nextTagIds = [...tagIds, existing.id];
         setTagIds(nextTagIds);
       }
@@ -377,7 +377,7 @@ export function TagMenuProvider({
       setPending(false);
       return;
     }
-    await toggleEntityTag(menu.entity, menu.id, res.data!.id);
+    await toggleEntityTag(menu.entity, menu.id, res.data!.id, true);
     const nextTagIds = [...tagIds, res.data!.id];
     setTagIds(nextTagIds);
     setMenuTags((prev) => [...prev, res.data!]);

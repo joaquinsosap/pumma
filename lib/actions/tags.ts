@@ -35,6 +35,7 @@ const toggleSchema = z.object({
   entity: z.enum(["task", "note", "habit", "goal", "project"]),
   entityId,
   tagId: entityId,
+  apply: z.boolean().optional(),
 });
 
 /**
@@ -55,14 +56,20 @@ async function toggleOneEntityTag(
   entity: TaggableEntity,
   id: string,
   tag: string,
+  apply?: boolean,
 ): Promise<ActionResult<{ applied: boolean }>> {
   const tagRecord = tags.find((t) => t.id === tag);
   if (!tagRecord) return { ok: false, error: "Tag no longer exists" };
   const parsed = { data: { entity } };
+  // A click on an old screen says which way it wanted the tag, so a tag that is already there stays.
+  const alreadyThere = (current: string[]) =>
+    apply !== undefined && apply === current.includes(tag);
+  const unchanged = { ok: true as const, data: { applied: apply as boolean } };
 
   if (parsed.data.entity === "task") {
     const task = await getTask(userId, id);
     if (!task) return { ok: false, error: "Not found" };
+    if (alreadyThere(task.tagIds)) return unchanged;
     const applied = !task.tagIds.includes(tag);
     let tagIds = applied
       ? [...task.tagIds, tag]
@@ -139,6 +146,7 @@ async function toggleOneEntityTag(
   if (parsed.data.entity === "habit") {
     const habit = (await listHabits(userId)).find((h) => h.id === id);
     if (!habit) return { ok: false, error: "Not found" };
+    if (alreadyThere(habit.tagIds)) return unchanged;
     const flipped = flip(habit.tagIds);
     if (!flipped.ok) return { ok: false, error: flipped.error };
     await updateHabit(userId, id, {
@@ -152,6 +160,7 @@ async function toggleOneEntityTag(
     const goals = await listGoals(userId);
     const goal = goals.find((g) => g.id === id);
     if (!goal) return { ok: false, error: "Not found" };
+    if (alreadyThere(goal.tagIds)) return unchanged;
     const flipped = flip(goal.tagIds);
     if (!flipped.ok) return { ok: false, error: flipped.error };
     // The Personal/Work column is the life tag under another name, so
@@ -171,6 +180,7 @@ async function toggleOneEntityTag(
   if (parsed.data.entity === "project") {
     const project = await getProject(userId, id);
     if (!project) return { ok: false, error: "Not found" };
+    if (alreadyThere(project.tagIds)) return unchanged;
     const flipped = flip(project.tagIds);
     if (!flipped.ok) return { ok: false, error: flipped.error };
     if (isLifeTag(tagRecord.name)) {
@@ -187,6 +197,7 @@ async function toggleOneEntityTag(
 
   const note = await getNote(userId, id);
   if (!note) return { ok: false, error: "Not found" };
+  if (alreadyThere(note.tagIds)) return unchanged;
   const applied = !note.tagIds.includes(tag);
   const tagIds = applied
     ? [...note.tagIds, tag]
@@ -208,8 +219,14 @@ export async function toggleEntityTag(
   entity: TaggableEntity,
   targetId: string,
   tagId: string,
+  apply?: boolean,
 ): Promise<ActionResult<{ applied: boolean }>> {
-  const parsed = toggleSchema.safeParse({ entity, entityId: targetId, tagId });
+  const parsed = toggleSchema.safeParse({
+    entity,
+    entityId: targetId,
+    tagId,
+    apply,
+  });
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   const userId = await requireUserId();
   const tags = await listTags(userId);
@@ -219,6 +236,7 @@ export async function toggleEntityTag(
     parsed.data.entity,
     parsed.data.entityId,
     parsed.data.tagId,
+    parsed.data.apply,
   );
   if (res.ok) revalidatePath("/", "layout");
   return res;

@@ -15,14 +15,21 @@ import { getStore, resetStore, getCurrentUserId } from "@/lib/store/memory";
 import { insertGoal, deleteGoal } from "@/lib/db/memory/goals";
 import { insertProject, deleteProject } from "@/lib/db/memory/projects";
 import { insertTag, deleteTag } from "@/lib/db/memory/tags";
+import { insertHabit } from "@/lib/db/memory/habits";
+import { markHabitEntry } from "@/lib/db/memory/habitEntries";
+import { insertNote } from "@/lib/db/memory/notes";
 import { insertTask } from "@/lib/db/memory/tasks";
 import { linkProjectToGoal, attachHabitToGoal } from "@/lib/actions/links";
 import {
   addTask,
   changeTaskSubtask,
+  toggleTask,
   updateTaskDetail,
 } from "@/lib/actions/tasks";
 import { toggleEntityTag } from "@/lib/actions/tags";
+import { toggleHabitPeriod } from "@/lib/actions/habits";
+import { toggleNotePin } from "@/lib/actions/notes";
+import { startTaskTimer, stopTaskTimer } from "@/lib/actions/task-timer";
 import { MAX_SUBTASKS } from "@/lib/subtask-changes";
 import type { Subtask } from "@/lib/schemas";
 
@@ -310,5 +317,327 @@ describe("a stale task panel", () => {
     } as never);
     expect(res).toEqual({ ok: false, error: "Nothing to update" });
     expect(stored(id)).toBe(before);
+  });
+});
+
+describe("a due date set in an old panel", () => {
+  const seedDue = (due: string | null) =>
+    insertTask({
+      userId,
+      title: "Greenhouse",
+      description: "",
+      subtasks: [],
+      tagIds: [],
+      priority: "med",
+      status: "todo",
+      due,
+      projectId: null,
+      goalId: null,
+      lifeArea: "personal",
+      order: 0,
+      createdAt: "2026-10-01",
+      completedAt: null,
+    });
+  const due = (id: string) => getStore().tasks.find((t) => t._id === id)!.due;
+
+  it("keeps the date stored now when it sets a time", async () => {
+    const { id } = await seedDue("2026-11-05");
+    await updateTaskDetail({ id, dueTime: "09:30" });
+    expect(due(id)).toBe("2026-11-05T09:30");
+  });
+
+  it("keeps the time stored now when it picks a date", async () => {
+    const { id } = await seedDue("2026-11-05T09:30");
+    await updateTaskDetail({ id, dueDate: "2026-12-01" });
+    expect(due(id)).toBe("2026-12-01T09:30");
+  });
+
+  it("clears only the time", async () => {
+    const { id } = await seedDue("2026-11-05T09:30");
+    await updateTaskDetail({ id, dueTime: null });
+    expect(due(id)).toBe("2026-11-05");
+  });
+
+  it("says so when the date it wanted a time on is gone", async () => {
+    const { id } = await seedDue(null);
+    expect(await updateTaskDetail({ id, dueTime: "09:30" })).toEqual({
+      ok: false,
+      error: "Set a due date first",
+    });
+    expect(due(id)).toBeNull();
+  });
+
+  it("refuses a time or date that isn't one", async () => {
+    const { id } = await seedDue("2026-11-05");
+    for (const bad of [
+      { dueTime: "9am" },
+      { dueTime: "09:30; drop" },
+      { dueDate: "tomorrow" },
+    ]) {
+      expect(await updateTaskDetail({ id, ...bad })).toEqual({
+        ok: false,
+        error: "Invalid input",
+      });
+    }
+    expect(due(id)).toBe("2026-11-05");
+  });
+});
+
+describe("a click on an old screen", () => {
+  const seedTask = (
+    over: { status?: "todo" | "done"; completedAt?: string | null; tagIds?: string[] } = {},
+  ) =>
+    insertTask({
+      userId,
+      title: "Greenhouse",
+      description: "",
+      subtasks: [],
+      tagIds: over.tagIds ?? [],
+      priority: "med",
+      status: over.status ?? "todo",
+      due: null,
+      projectId: null,
+      goalId: null,
+      lifeArea: "personal",
+      order: 0,
+      createdAt: "2026-10-01",
+      completedAt: over.completedAt ?? null,
+    });
+  const task = (id: string) => getStore().tasks.find((t) => t._id === id)!;
+
+  // Every one sends the real state back, or that old screen stays old.
+  const expectFreshPage = () => expect(revalidatePath).toHaveBeenCalled();
+
+  describe("on the task checkbox", () => {
+    it("keeps a task closed, with its date, when a chat got there first", async () => {
+      const { id } = await seedTask({ status: "done", completedAt: "2026-10-02" });
+      const before = task(id);
+      expect((await toggleTask(id, true)).ok).toBe(true);
+      expect(task(id)).toBe(before);
+      expectFreshPage();
+    });
+
+    it("keeps a task open when the click meant reopen", async () => {
+      const { id } = await seedTask();
+      const before = task(id);
+      expect((await toggleTask(id, false)).ok).toBe(true);
+      expect(task(id)).toBe(before);
+      expectFreshPage();
+    });
+
+    it("still closes and reopens when that changes something", async () => {
+      const { id } = await seedTask();
+      await toggleTask(id, true);
+      expect(task(id).status).toBe("done");
+      expect(task(id).completedAt).not.toBeNull();
+      await toggleTask(id, false);
+      expect(task(id).status).toBe("todo");
+      expect(task(id).completedAt).toBeNull();
+    });
+
+    it("still flips for a caller that doesn't say which way", async () => {
+      const { id } = await seedTask();
+      await toggleTask(id);
+      expect(task(id).status).toBe("done");
+      await toggleTask(id);
+      expect(task(id).status).toBe("todo");
+    });
+
+    it("refuses anything but a yes or no", async () => {
+      const { id } = await seedTask();
+      const before = task(id);
+      expect(await toggleTask(id, "yes" as never)).toEqual({
+        ok: false,
+        error: "Invalid input",
+      });
+      expect(task(id)).toBe(before);
+    });
+  });
+
+  describe("on a tag chip", () => {
+    const tagged = async () => (await insertTag(userId, "stale-tag"))!;
+
+    it("keeps a tag that a chat already put on", async () => {
+      const tag = await tagged();
+      const { id } = await seedTask({ tagIds: [tag.id] });
+      const before = task(id);
+      expect(await toggleEntityTag("task", id, tag.id, true)).toEqual({
+        ok: true,
+        data: { applied: true },
+      });
+      expect(task(id)).toBe(before);
+      expectFreshPage();
+    });
+
+    it("keeps a tag off when a chat already took it off", async () => {
+      const tag = await tagged();
+      const { id } = await seedTask();
+      const before = task(id);
+      expect(await toggleEntityTag("task", id, tag.id, false)).toEqual({
+        ok: true,
+        data: { applied: false },
+      });
+      expect(task(id)).toBe(before);
+    });
+
+    it("still adds and removes when that changes something", async () => {
+      const tag = await tagged();
+      const { id } = await seedTask();
+      await toggleEntityTag("task", id, tag.id, true);
+      expect(task(id).tagIds).toContain(tag.id);
+      await toggleEntityTag("task", id, tag.id, false);
+      expect(task(id).tagIds).not.toContain(tag.id);
+    });
+
+    it("holds for the other things a tag goes on", async () => {
+      const tag = await tagged();
+      const goal = await makeGoal();
+      const project = await makeProject();
+      const note = await insertNote({
+        userId,
+        title: "N",
+        body: "",
+        tagIds: [],
+        pinned: false,
+        lifeArea: "personal",
+        createdAt: "2026-07-18",
+        updatedAt: "2026-07-18",
+      });
+      const habit = getStore().habits[0];
+      for (const [entity, id] of [
+        ["goal", goal.id],
+        ["project", project.id],
+        ["note", note.id],
+        ["habit", habit._id],
+      ] as const) {
+        await toggleEntityTag(entity, id, tag.id, true);
+        const res = await toggleEntityTag(entity, id, tag.id, true);
+        expect(res, entity).toEqual({ ok: true, data: { applied: true } });
+        const rows = {
+          goal: getStore().goals,
+          project: getStore().projects,
+          note: getStore().notes,
+          habit: getStore().habits,
+        }[entity] as { _id: string; tagIds: string[] }[];
+        expect(
+          rows.find((r) => r._id === id)!.tagIds.filter((t) => t === tag.id),
+          entity,
+        ).toEqual([tag.id]);
+      }
+    });
+
+    it("refuses anything but a yes or no", async () => {
+      const tag = await tagged();
+      const { id } = await seedTask();
+      expect(await toggleEntityTag("task", id, tag.id, "yes" as never)).toEqual({
+        ok: false,
+        error: "Invalid input",
+      });
+    });
+  });
+
+  describe("on a note's star", () => {
+    const seedNote = (pinned: boolean) =>
+      insertNote({
+        userId,
+        title: "N",
+        body: "",
+        tagIds: [],
+        pinned,
+        lifeArea: "personal",
+        createdAt: "2026-07-18",
+        updatedAt: "2026-07-18",
+      });
+    const note = (id: string) => getStore().notes.find((n) => n._id === id)!;
+
+    it("keeps it pinned when it already is", async () => {
+      const { id } = await seedNote(true);
+      const before = note(id);
+      expect((await toggleNotePin(id, true)).ok).toBe(true);
+      expect(note(id)).toBe(before);
+      expectFreshPage();
+    });
+
+    it("changes it when that changes something, and still flips when not told", async () => {
+      const { id } = await seedNote(false);
+      await toggleNotePin(id, true);
+      expect(note(id).pinned).toBe(true);
+      await toggleNotePin(id);
+      expect(note(id).pinned).toBe(false);
+    });
+
+    it("refuses anything but a yes or no", async () => {
+      const { id } = await seedNote(false);
+      expect(await toggleNotePin(id, "yes" as never)).toEqual({
+        ok: false,
+        error: "Invalid input",
+      });
+    });
+  });
+
+  describe("on a habit box", () => {
+    const seedHabit = () =>
+      insertHabit({
+        userId,
+        name: "H",
+        color: "oklch(0.6 0.13 155)",
+        frequency: { type: "daily", target: 1 },
+        order: 0,
+        archived: false,
+        goalIds: [],
+        goalTargetStreak: 30,
+        tagIds: [],
+        lifeArea: "personal",
+        createdAt: "2026-07-18",
+      });
+    const day = { start: "2026-10-31", end: "2026-10-31", markDate: "2026-10-31" };
+    const entries = (habitId: string) =>
+      getStore().habitEntries.filter((e) => e.habitId === habitId);
+
+    it("keeps a box ticked when it already is", async () => {
+      const { id } = await seedHabit();
+      await markHabitEntry(userId, id, day.markDate);
+      const res = await toggleHabitPeriod({ habitId: id, ...day, done: true });
+      expect(res).toEqual({ ok: true, data: { done: true } });
+      expect(entries(id)).toHaveLength(1);
+      expectFreshPage();
+    });
+
+    it("keeps a box empty when it already is", async () => {
+      const { id } = await seedHabit();
+      const res = await toggleHabitPeriod({ habitId: id, ...day, done: false });
+      expect(res).toEqual({ ok: true, data: { done: false } });
+      expect(entries(id)).toHaveLength(0);
+    });
+
+    it("still ticks, clears and flips when that changes something", async () => {
+      const { id } = await seedHabit();
+      await toggleHabitPeriod({ habitId: id, ...day, done: true });
+      expect(entries(id)).toHaveLength(1);
+      await toggleHabitPeriod({ habitId: id, ...day, done: false });
+      expect(entries(id)).toHaveLength(0);
+      await toggleHabitPeriod({ habitId: id, ...day });
+      expect(entries(id)).toHaveLength(1);
+    });
+  });
+
+  describe("on the timer button", () => {
+    it("leaves a running timer running, and a stopped one stopped", async () => {
+      const { id } = await seedTask();
+      await startTaskTimer(id);
+      const running = task(id).timerStartedAt;
+      expect(running).not.toBeNull();
+      vi.mocked(revalidatePath).mockClear();
+      expect((await startTaskTimer(id)).ok).toBe(true);
+      expect(task(id).timerStartedAt).toBe(running);
+      expectFreshPage();
+
+      await stopTaskTimer(id);
+      const stopped = task(id);
+      vi.mocked(revalidatePath).mockClear();
+      expect((await stopTaskTimer(id)).ok).toBe(true);
+      expect(task(id)).toBe(stopped);
+      expectFreshPage();
+    });
   });
 });

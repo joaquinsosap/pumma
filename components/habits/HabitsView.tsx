@@ -57,6 +57,7 @@ import {
 } from "@/lib/habit-visibility";
 import { Switch } from "@/components/ui/switch";
 import { EditableTitle } from "@/components/ui/editable-title";
+import { trySave } from "@/lib/try-save";
 import { cn } from "@/lib/utils";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 
@@ -161,12 +162,19 @@ export function HabitsView({
     habitEntries,
     (
       state: HabitEntry[],
-      t: { habitId: string; start: string; end: string; markDate: string },
+      t: {
+        habitId: string;
+        start: string;
+        end: string;
+        markDate: string;
+        done: boolean;
+      },
     ) => {
       const inRange = (e: HabitEntry) =>
         e.habitId === t.habitId && e.date >= t.start && e.date <= t.end;
+      if (!t.done) return state.filter((e) => !inRange(e));
       return state.some(inRange)
-        ? state.filter((e) => !inRange(e))
+        ? state
         : [
             ...state,
             {
@@ -188,11 +196,16 @@ export function HabitsView({
   const togglePeriod = (
     id: string,
     period: { start: string; end: string; markDate: string },
-  ) =>
+  ) => {
+    const done = !optimisticEntries.some(
+      (e) =>
+        e.habitId === id && e.date >= period.start && e.date <= period.end,
+    );
     startTransition(async () => {
-      applyToggle({ habitId: id, ...period });
-      await toggleHabitPeriod({ habitId: id, ...period });
+      applyToggle({ habitId: id, ...period, done });
+      await trySave(() => toggleHabitPeriod({ habitId: id, ...period, done }));
     });
+  };
 
   useEffect(() => {
     if (!habitId) return;

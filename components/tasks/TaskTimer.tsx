@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react";
 import { Play, Square } from "@/components/icons";
 import type { Task } from "@/lib/schemas";
-import { toggleTaskTimer } from "@/lib/actions/task-timer";
+import { startTaskTimer, stopTaskTimer } from "@/lib/actions/task-timer";
+import { trySave } from "@/lib/try-save";
 import {
   formatDuration,
   formatDurationClock,
@@ -43,9 +44,11 @@ export function TaskTimer({
   const handleToggle = (e: React.MouseEvent) => {
     guard(e);
     startTransition(async () => {
-      // toggleTaskTimer revalidates the route, which re-renders this chip with
-      // the new timerStartedAt — no explicit refresh round-trip needed.
-      await toggleTaskTimer(task.id);
+      // These revalidate the route, which re-renders this chip with the new
+      // timerStartedAt, so no explicit refresh round-trip is needed.
+      await trySave(() =>
+        running ? stopTaskTimer(task.id) : startTaskTimer(task.id),
+      );
     });
   };
 

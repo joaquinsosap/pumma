@@ -8,10 +8,10 @@ import {
   useState,
   useTransition,
 } from "react";
-import { unstable_rethrow, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, Plus, X } from "@/components/icons";
 import type { Project, Subtask, Tag, Task } from "@/lib/schemas";
-import { mergeTaskDueDate, oid, taskDueDateInput } from "@/lib/date";
+import { oid, taskDueDateInput } from "@/lib/date";
 import {
   changeTaskSubtask,
   updateTaskDetail,
@@ -24,10 +24,10 @@ import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { ScrollHint } from "@/components/ui/scroll-hint";
 import { EditableTitle } from "@/components/ui/editable-title";
-import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import { trySave } from "@/lib/try-save";
 import {
   applySubtaskChange,
   sameSubtasks,
@@ -61,6 +61,10 @@ type Props = {
    *  used when this panel replaces another panel in place (Projects view). */
   onBack?: { label: string; action: () => void };
 };
+
+function dueTimeOf(due: string | null): string {
+  return due?.includes("T") ? due.slice(11, 16) : "";
+}
 
 /** One checklist row. Its title draft lives only while the input has focus, so a title changed elsewhere still shows. */
 function SubtaskRow({
@@ -134,9 +138,21 @@ export function TaskDetailPanel({
 }: Props) {
   const router = useRouter();
   const bodyRef = useRef<HTMLDivElement>(null);
-  const [title, setTitle] = useSyncedDraft(task.title, task.id);
-  const [subtasks, applyLocally] = useOptimistic(
+  const [title, setTitle, flushTitle, cancelTitle] = useAutosaveDraft(
+    task.title,
+    task.id,
+    useCallback(
+      (id: string, value: string) => updateTaskDetail({ id, title: value }),
+      [],
+    ),
+    { delay: null, required: true },
+  );
+  const [storedSubtasks, setStoredSubtasks] = useSyncedDraft(
     task.subtasks,
+    task.id,
+  );
+  const [subtasks, applyLocally] = useOptimistic(
+    storedSubtasks,
     (list: Subtask[], change: SubtaskChange) =>
       applySubtaskChange(list, change) ?? list,
   );
@@ -148,42 +164,51 @@ export function TaskDetailPanel({
     taskDueDateInput(task.due),
     task.id,
   );
-  const [dueTime, setDueTime] = useSyncedDraft(
-    task.due?.includes("T") ? task.due.slice(11, 16) : "",
-    task.id,
-  );
+  const [dueTime, setDueTime] = useSyncedDraft(dueTimeOf(task.due), task.id);
   const [pending, startTransition] = useTransition();
 
   // What the last save left stored, to check against the page that comes back.
   const saved = useRef<Subtask[] | null>(null);
   useEffect(() => {
     if (pending || !saved.current) return;
-    // Any URL write during a save makes Next throw that page away, which would flip the box back with the tick stored.
+    // Any URL write during a save makes Next throw that page away, so the list behind this panel needs another one.
     if (!sameSubtasks(saved.current, task.subtasks)) router.refresh();
     saved.current = null;
   }, [pending, task.subtasks, router]);
+
+  // Closing or switching mid-save navigates, and Next drops that save's page, so the list behind needs another one.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const refreshIfGone = useCallback(() => {
+    if (!mounted.current) router.refresh();
+  }, [router]);
 
   const project = projects.find((p) => p.id === task.projectId);
 
   const moveToProject = (projectId: string | null) => {
     startTransition(async () => {
-      const res = await setTaskProject({ id: task.id, projectId });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
-      router.refresh();
+      const res = await trySave(() =>
+        setTaskProject({ id: task.id, projectId }),
+      );
+      if (res) router.refresh();
     });
   };
 
   const persist = useCallback(
-    (patch: {
-      title?: string;
-      description?: string;
-      tagIds?: string[];
-      priority?: Task["priority"];
-      due?: string | null;
-    }) => {
+    (
+      patch: {
+        priority?: Task["priority"];
+        due?: null;
+        dueDate?: string;
+        dueTime?: string | null;
+      },
+      onFail: () => void,
+    ) => {
       startTransition(async () => {
         // No router.refresh(). Every one of these actions ends in
         // revalidatePath("/", "layout"), and Next returns the re-rendered tree
@@ -195,10 +220,11 @@ export function TaskDetailPanel({
         // sidebar re-prefetch all nine of its links. This is the panel's hot
         // path — it fires on every debounced keystroke in the description and
         // on every field change.
-        await updateTaskDetail({ id: task.id, ...patch });
+        await trySave(() => updateTaskDetail({ id: task.id, ...patch }), onFail);
+        refreshIfGone();
       });
     },
-    [task.id],
+    [task.id, refreshIfGone],
   );
 
   // Autosaves, and survives closing the panel / switching tasks mid-sentence.
@@ -207,7 +233,7 @@ export function TaskDetailPanel({
     task.id,
     useCallback(
       (id: string, value: string) =>
-        void updateTaskDetail({ id, description: value }),
+        updateTaskDetail({ id, description: value }),
       [],
     ),
   );
@@ -221,29 +247,18 @@ export function TaskDetailPanel({
     onClose();
   }, [flushDescription, onClose]);
 
-  const saveTitle = () => {
-    const next = title.trim();
-    if (next === task.title) return;
-    if (!next) return;
-    persist({ title: next });
-  };
-
   const changeSubtask = (change: SubtaskChange, onFail?: () => void) => {
     startTransition(async () => {
       applyLocally(change);
-      try {
-        const res = await changeTaskSubtask({ id: task.id, change });
-        if (res.ok) {
-          saved.current = res.data ?? null;
-        } else {
-          toast.error(res.error);
-          onFail?.();
-        }
-      } catch (err) {
-        // A redirect passes through; anything else would reach the error boundary and take the page with it.
-        unstable_rethrow(err);
-        toast.error("Could not save that change. Check your connection.");
-        onFail?.();
+      const res = await trySave(
+        () => changeTaskSubtask({ id: task.id, change }),
+        onFail,
+      );
+      refreshIfGone();
+      if (res?.ok && res.data) {
+        saved.current = res.data;
+        // What the server says now, so a page thrown away by a URL write can't flip the box back.
+        setStoredSubtasks(res.data);
       }
     });
   };
@@ -258,19 +273,17 @@ export function TaskDetailPanel({
   };
 
   const toggleTag = (tagId: string) => {
+    const apply = !tagIds.includes(tagId);
     startTransition(async () => {
-      const res = await toggleEntityTag("task", task.id, tagId);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
-      if (res.data) {
-        setTagIds((prev) =>
-          res.data!.applied
-            ? [...prev, tagId]
-            : prev.filter((id) => id !== tagId),
-        );
-      }
+      const res = await trySave(() =>
+        toggleEntityTag("task", task.id, tagId, apply),
+      );
+      if (!res) return;
+      setTagIds((prev) =>
+        apply
+          ? [...prev.filter((id) => id !== tagId), tagId]
+          : prev.filter((id) => id !== tagId),
+      );
       // A project tag rewrites projectId and strips the old project's tags, so
       // the server's version is the one to believe.
       router.refresh();
@@ -280,21 +293,29 @@ export function TaskDetailPanel({
   const setTaskStatus = (next: Task["status"]) => {
     setStatus(next);
     startTransition(async () => {
-      await moveTaskStatus(task.id, next);
-      router.refresh();
+      const res = await trySave(
+        () => moveTaskStatus(task.id, next),
+        () => setStatus(task.status),
+      );
+      if (res) router.refresh();
     });
   };
 
   const setTaskPriority = (next: Task["priority"]) => {
     setPriority(next);
-    persist({ priority: next });
+    persist({ priority: next }, () => setPriority(task.priority));
+  };
+
+  const revertDue = () => {
+    setDueDate(taskDueDateInput(task.due));
+    setDueTime(dueTimeOf(task.due));
   };
 
   const clearDueDate = () => {
     if (!task.due) return;
     setDueDate("");
     setDueTime("");
-    persist({ due: null });
+    persist({ due: null }, revertDue);
   };
 
   // A time only means anything once there's a date it belongs to, and the
@@ -304,9 +325,8 @@ export function TaskDetailPanel({
   const setTaskTime = (next: string) => {
     if (!dueDate) return;
     setDueTime(next);
-    const nextDue = next ? `${dueDate}T${next}` : dueDate;
-    if (nextDue !== (task.due ?? null)) {
-      persist({ due: nextDue });
+    if (next !== dueTimeOf(task.due)) {
+      persist({ dueTime: next || null }, revertDue);
     }
   };
 
@@ -351,8 +371,8 @@ export function TaskDetailPanel({
             <EditableTitle
               value={title}
               onChange={setTitle}
-              onCommit={saveTitle}
-              onCancel={() => setTitle(task.title)}
+              onCommit={flushTitle}
+              onCancel={cancelTitle}
               placeholder="Task title"
               ariaLabel="Task title"
               className="text-lg font-bold text-ink"
@@ -420,9 +440,8 @@ export function TaskDetailPanel({
                 return;
               }
               setDueDate(next);
-              const nextDue = mergeTaskDueDate(next, task.due);
-              if (nextDue !== (task.due ?? null)) {
-                persist({ due: nextDue });
+              if (next !== taskDueDateInput(task.due)) {
+                persist({ dueDate: next }, revertDue);
               }
             }}
           />

@@ -34,12 +34,14 @@ export function TaskTimeEditDialog({ task, open, onOpenChange, now }: Props) {
   const [minutes, setMinutes] = useState(Math.floor((elapsed % 3600) / 60));
   const [textInput, setTextInput] = useState("");
 
+  // On opening only: with a timer running, elapsed changes every second and would wipe what's being typed.
   useEffect(() => {
     if (!open) return;
     setHours(Math.floor(elapsed / 3600));
     setMinutes(Math.floor((elapsed % 3600) / 60));
     setTextInput("");
-  }, [open, elapsed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const save = (seconds: number) => {
     startTransition(async () => {

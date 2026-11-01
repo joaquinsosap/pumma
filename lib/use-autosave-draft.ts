@@ -1,68 +1,117 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  committedRequired,
+  draftFrom,
+  fromServer,
+  reverted,
+  send,
+  sendFailed,
+  typed,
+  type DraftState,
+} from "@/lib/draft-state";
+import { trySave } from "@/lib/try-save";
+
+type Save = (
+  entityKey: string,
+  value: string,
+) => void | Promise<{ ok: boolean; error?: string } | void>;
 
 /**
- * A text field that autosaves without ever losing what you typed.
+ * A text field that saves only what you typed, and never loses it.
  *
  * Debounced saves alone are a data-loss trap: the timer lives in an effect, so
  * closing the editor (or switching to another record) cancels it and the text
- * goes with it. This keeps the unsaved value in a ref — tagged with the record
- * it belongs to — and commits it:
- *   • after `delay` ms of no typing,
+ * goes with it. This commits what was typed:
+ *   • after `delay` ms of no typing (never, when `delay` is null),
  *   • on blur (via the returned `flush`),
  *   • when the record changes or the component unmounts.
  *
- * The tag matters: flushing during a switch must write to the record the text
- * was typed into, not the one being opened.
+ * Nothing but typing can make it save, so an open panel can't write its old copy
+ * over newer text. The server's value shows as soon as it changes, unless
+ * unsaved typing is in the box. The rules are in lib/draft-state.ts.
  *
- * Returns [draft, setDraft, flush].
+ * `required` is for titles: a blank box is never sent and goes back to what is
+ * stored when you leave it.
+ *
+ * Returns [draft, setDraft, flush, cancel].
  */
 export function useAutosaveDraft(
   serverValue: string,
   entityKey: string,
-  save: (entityKey: string, value: string) => void,
-  delay = 500,
-): [string, (value: string) => void, () => void] {
-  const [draft, setDraft] = useState(serverValue);
-  const pendingRef = useRef<{ key: string; value: string } | null>(null);
+  save: Save,
+  {
+    delay = 500,
+    required = false,
+  }: { delay?: number | null; required?: boolean } = {},
+): [string, (value: string) => void, () => void, () => void] {
+  const [shown, setShown] = useState(serverValue);
+  const stateRef = useRef(draftFrom(serverValue));
+  // Moves on only after the outgoing record's flush, so that text goes to the record it was typed into.
+  const keyRef = useRef(entityKey);
+  const timerRef = useRef<number | undefined>(undefined);
 
-  // Keep the latest save fn without making it an effect dependency (callers
-  // usually pass an inline closure, which would restart the debounce).
+  // Keep the latest save fn without restarting anything (callers usually pass an inline closure).
   const saveRef = useRef(save);
   saveRef.current = save;
 
-  // Adopt the server value when the record changes — not on every refresh,
-  // which would clobber what's being typed.
-  useEffect(() => {
-    setDraft(serverValue);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [entityKey]);
-
-  const flush = useCallback(() => {
-    const pending = pendingRef.current;
-    if (!pending) return;
-    pendingRef.current = null;
-    saveRef.current(pending.key, pending.value);
+  const apply = useCallback((next: DraftState) => {
+    stateRef.current = next;
+    setShown(next.shown);
   }, []);
 
+  const sendNow = useCallback(() => {
+    if (required && !stateRef.current.shown.trim()) return;
+    const out = send(stateRef.current);
+    if (!out) return;
+    stateRef.current = out.state;
+    const key = keyRef.current;
+    void trySave(
+      () => saveRef.current(key, out.value),
+      () => {
+        if (keyRef.current === key) apply(sendFailed(stateRef.current, out.value));
+      },
+    );
+  }, [apply, required]);
+
+  const flush = useCallback(() => {
+    window.clearTimeout(timerRef.current);
+    if (required) apply(committedRequired(stateRef.current));
+    sendNow();
+  }, [apply, required, sendNow]);
+
+  const setDraft = useCallback(
+    (value: string) => {
+      window.clearTimeout(timerRef.current);
+      apply(typed(stateRef.current, value));
+      if (delay !== null && stateRef.current.unsaved) {
+        timerRef.current = window.setTimeout(sendNow, delay);
+      }
+    },
+    [apply, delay, sendNow],
+  );
+
+  const cancel = useCallback(() => {
+    window.clearTimeout(timerRef.current);
+    apply(reverted(stateRef.current));
+  }, [apply]);
+
   useEffect(() => {
-    if (draft === serverValue) {
-      pendingRef.current = null;
+    if (keyRef.current === entityKey) {
+      apply(fromServer(stateRef.current, serverValue));
       return;
     }
-    pendingRef.current = { key: entityKey, value: draft };
-    const handle = window.setTimeout(flush, delay);
-    return () => window.clearTimeout(handle);
-  }, [draft, serverValue, entityKey, flush, delay]);
+    keyRef.current = entityKey;
+    apply(draftFrom(serverValue));
+  }, [serverValue, entityKey, apply]);
 
-  // Runs on unmount AND before entityKey changes — commits the outgoing edit.
-  // Declared after the debounce effect so its timer is cleared first.
+  // Runs on unmount AND before entityKey changes: commits the outgoing edit.
   useEffect(() => {
     return () => {
       flush();
     };
   }, [entityKey, flush]);
 
-  return [draft, setDraft, flush];
+  return [shown, setDraft, flush, cancel];
 }

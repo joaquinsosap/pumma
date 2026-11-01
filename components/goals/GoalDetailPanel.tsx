@@ -39,6 +39,8 @@ import {
   type HabitVisibilitySettings,
 } from "@/lib/habit-visibility";
 import type { WeekStart } from "@/lib/date";
+import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import { trySave } from "@/lib/try-save";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { EntityTagRow } from "@/components/tags/EntityTagRow";
 
@@ -69,10 +71,25 @@ export function GoalDetailPanel({
   const confirm = useConfirm();
   const bodyRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
-  const [title, setTitle] = useSyncedDraft(goal.title, goal.id);
-  const [metricLabel, setMetricLabel] = useSyncedDraft(
+  const [title, setTitle, flushTitle] = useAutosaveDraft(
+    goal.title,
+    goal.id,
+    useCallback(
+      (id: string, value: string) =>
+        updateGoalDetailAction({ id, title: value }),
+      [],
+    ),
+    { delay: null, required: true },
+  );
+  const [metricLabel, setMetricLabel, flushMetricLabel] = useAutosaveDraft(
     goal.metricLabel,
     goal.id,
+    useCallback(
+      (id: string, value: string) =>
+        updateGoalDetailAction({ id, metricLabel: value }),
+      [],
+    ),
+    { delay: null },
   );
   const [targetDate, setTargetDate] = useSyncedDraft(
     goal.targetDate ?? "",
@@ -97,20 +114,6 @@ export function GoalDetailPanel({
     (h) => !h.archived && !h.goalIds.includes(goal.id),
   );
 
-  const persist = useCallback(
-    (patch: {
-      title?: string;
-      metricLabel?: string;
-      targetDate?: string | null;
-    }) => {
-      startTransition(async () => {
-        await updateGoalDetailAction({ id: goal.id, ...patch });
-        router.refresh();
-      });
-    },
-    [goal.id, router],
-  );
-
   // Manual progress: the bar used to render the server value and fire one
   // round-trip per tap, so nothing moved until it landed — you tap again, and
   // the deltas pile up. Show the change instantly and send a single request
@@ -128,19 +131,27 @@ export function GoalDetailPanel({
     pendingDeltaRef.current = 0;
     if (!total) return;
     // Not wrapped in startTransition: this also runs while the panel unmounts.
-    void setGoalProgress(goal.id, total);
+    void trySave(
+      () => setGoalProgress(goal.id, total),
+      () => {
+        displayedRef.current = serverProgressRef.current;
+        setShownProgress(null);
+      },
+    );
   }, [goal.id]);
 
   // The live value also lives in a ref: rapid taps are batched, so reading it
   // from render state made every tap in a burst compute from the same stale
   // number and the bar moved once instead of once per tap.
   const displayedRef = useRef(goal.progress);
+  const serverProgressRef = useRef(goal.progress);
+  serverProgressRef.current = goal.progress;
 
-  // Adopt the server value again once it catches up (or the goal changes).
+  // Adopt the server value again once it catches up (or the goal changes), but not over taps still waiting to go.
   useEffect(() => {
+    if (pendingDeltaRef.current) return;
     setShownProgress(null);
     displayedRef.current = goal.progress;
-    pendingDeltaRef.current = 0;
   }, [goal.id, goal.progress]);
 
   // Never drop taps that haven't been sent yet.
@@ -162,13 +173,6 @@ export function GoalDetailPanel({
     setShownProgress(next);
     if (bumpTimerRef.current) window.clearTimeout(bumpTimerRef.current);
     bumpTimerRef.current = window.setTimeout(flushProgress, 350);
-  };
-
-  const saveTitle = () => {
-    const next = title.trim();
-    if (next === goal.title) return;
-    if (!next) return;
-    persist({ title: next });
   };
 
   const handleDelete = async () => {
@@ -230,7 +234,7 @@ export function GoalDetailPanel({
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            onBlur={saveTitle}
+            onBlur={flushTitle}
             onKeyDown={(e) => {
               if (e.key === "Enter") e.currentTarget.blur();
             }}
@@ -262,9 +266,7 @@ export function GoalDetailPanel({
             <input
               value={metricLabel}
               onChange={(e) => setMetricLabel(e.target.value)}
-              onBlur={() => {
-                if (metricLabel !== goal.metricLabel) persist({ metricLabel });
-              }}
+              onBlur={flushMetricLabel}
               placeholder="e.g. B1, $10k"
               className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:border-faint"
             />
@@ -278,10 +280,14 @@ export function GoalDetailPanel({
               value={targetDate || null}
               onChange={(next) => {
                 setTargetDate(next ?? "");
-                const normalized = next || null;
-                if (normalized !== goal.targetDate) {
-                  persist({ targetDate: normalized });
-                }
+                const targetDate = next || null;
+                if (targetDate === goal.targetDate) return;
+                startTransition(async () => {
+                  await trySave(
+                    () => updateGoalDetailAction({ id: goal.id, targetDate }),
+                    () => setTargetDate(goal.targetDate ?? ""),
+                  );
+                });
               }}
             />
           </label>

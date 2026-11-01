@@ -56,13 +56,22 @@ export async function updateNoteAction(
   return { ok: true };
 }
 
-export async function toggleNotePin(id: string): Promise<ActionResult> {
+export async function toggleNotePin(
+  id: string,
+  wantPinned?: boolean,
+): Promise<ActionResult> {
   const parsed = entityId.safeParse(id);
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const want = z.boolean().optional().safeParse(wantPinned);
+  if (!parsed.success || !want.success) {
+    return { ok: false, error: "Invalid input" };
+  }
   const userId = await requireUserId();
   const note = await getNote(userId, parsed.data);
   if (!note) return { ok: false, error: "Not found" };
-  await updateNote(userId, parsed.data, { pinned: !note.pinned });
+  const pinned = want.data ?? !note.pinned;
+  if (pinned !== note.pinned) {
+    await updateNote(userId, parsed.data, { pinned });
+  }
   revalidatePath("/", "layout");
   return { ok: true };
 }

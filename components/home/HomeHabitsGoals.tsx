@@ -7,6 +7,7 @@ import type { Habit, HabitEntry } from "@/lib/schemas";
 import { iso, weekDates, dowLetters, type WeekStart } from "@/lib/date";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { toggleHabitPeriod } from "@/lib/actions/habits";
+import { trySave } from "@/lib/try-save";
 import {
   currentHabitPeriod,
   habitAppliesOn,
@@ -63,11 +64,12 @@ export function HomeHabitsGoals({
   // Toggles the habit's own period: for a weekly habit "undone" has to clear
   // the whole week, or leftover entries keep it green.
   const toggle = (habitId: string, start: string, end: string) => {
+    const inRange = (e: { habitId: string; date: string }) =>
+      e.habitId === habitId && e.date >= start && e.date <= end;
+    const done = !optimisticEntries.some(inRange);
     startTransition(async () => {
-      const inRange = (e: { habitId: string; date: string }) =>
-        e.habitId === habitId && e.date >= start && e.date <= end;
       setOptimisticEntries(
-        optimisticEntries.some(inRange)
+        !done
           ? optimisticEntries.filter((e) => !inRange(e))
           : [
               ...optimisticEntries,
@@ -82,7 +84,9 @@ export function HomeHabitsGoals({
       );
       // The action revalidates the route; the optimistic entry above holds
       // until that lands — no extra refresh round-trip.
-      await toggleHabitPeriod({ habitId, start, end, markDate: td });
+      await trySave(() =>
+        toggleHabitPeriod({ habitId, start, end, markDate: td, done }),
+      );
     });
   };
 

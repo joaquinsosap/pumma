@@ -3,12 +3,13 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus } from "@/components/icons";
-import { toast } from "sonner";
 import type { Tag } from "@/lib/schemas";
 import { toggleEntityTag, type TaggableEntity } from "@/lib/actions/tags";
 import { tagBg } from "@/lib/parse";
 import { isLifeTag, SPECIAL_LIFE_TAGS } from "@/lib/life-area-sync";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
+import { useSyncedDraft } from "@/lib/use-synced-draft";
 
 type Props = {
   entity: TaggableEntity;
@@ -32,7 +33,7 @@ export function EntityTagRow({
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [selected, setSelected] = useState(selectedTagIds);
+  const [selected, setSelected] = useSyncedDraft(selectedTagIds, entityId);
   const [picking, setPicking] = useState(false);
 
   const on = new Set(selected);
@@ -43,19 +44,17 @@ export function EntityTagRow({
   const chosenLabels = labels.filter((t) => on.has(t.id));
 
   const toggle = (tagId: string) => {
+    const apply = !selected.includes(tagId);
     startTransition(async () => {
-      const res = await toggleEntityTag(entity, entityId, tagId);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
-      if (res.data) {
-        setSelected((prev) =>
-          res.data!.applied
-            ? [...prev, tagId]
-            : prev.filter((id) => id !== tagId),
-        );
-      }
+      const res = await trySave(() =>
+        toggleEntityTag(entity, entityId, tagId, apply),
+      );
+      if (!res) return;
+      setSelected((prev) =>
+        apply
+          ? [...prev.filter((id) => id !== tagId), tagId]
+          : prev.filter((id) => id !== tagId),
+      );
       // A life tag can move a goal to the other column and drag a project's
       // tasks with it, so the server's version is the one to believe.
       router.refresh();

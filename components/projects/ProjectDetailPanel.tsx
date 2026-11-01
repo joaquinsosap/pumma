@@ -17,6 +17,7 @@ import { PROJECT_COLORS } from "@/lib/project-colors";
 import { cn } from "@/lib/utils";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
+import { trySave } from "@/lib/try-save";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 import {
   Dialog,
@@ -46,7 +47,16 @@ export function ProjectDetailPanel({
   const router = useRouter();
   const confirm = useConfirm();
   const bodyRef = useRef<HTMLDivElement>(null);
-  const [title, setTitle] = useSyncedDraft(project.title, project.id);
+  const [title, setTitle, flushTitle, cancelTitle] = useAutosaveDraft(
+    project.title,
+    project.id,
+    useCallback(
+      (id: string, value: string) =>
+        updateProjectDetail({ id, title: value }),
+      [],
+    ),
+    { delay: null, required: true },
+  );
   const [color, setColor] = useSyncedDraft(project.color, project.id);
   const [, startTransition] = useTransition();
 
@@ -55,15 +65,6 @@ export function ProjectDetailPanel({
     (t) => t.projectId === project.id && t.status !== "done",
   ).length;
 
-  const persist = useCallback(
-    (patch: { title?: string; description?: string; color?: string }) => {
-      startTransition(async () => {
-        await updateProjectDetail({ id: project.id, ...patch });
-        router.refresh();
-      });
-    },
-    [project.id, router],
-  );
 
   // Autosaves, and survives closing the panel / switching project mid-sentence.
   const [description, setDescription, flushDescription] = useAutosaveDraft(
@@ -71,16 +72,20 @@ export function ProjectDetailPanel({
     project.id,
     useCallback(
       (id: string, value: string) =>
-        void updateProjectDetail({ id, description: value }),
+        updateProjectDetail({ id, description: value }),
       [],
     ),
   );
 
-  const saveTitle = () => {
-    const next = title.trim();
-    if (next === project.title) return;
-    if (!next) return;
-    persist({ title: next });
+  const pickColor = (next: string) => {
+    setColor(next);
+    startTransition(async () => {
+      const res = await trySave(
+        () => updateProjectDetail({ id: project.id, color: next }),
+        () => setColor(project.color),
+      );
+      if (res) router.refresh();
+    });
   };
 
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -127,8 +132,8 @@ export function ProjectDetailPanel({
         <EditableTitle
           value={title}
           onChange={setTitle}
-          onCommit={saveTitle}
-          onCancel={() => setTitle(project.title)}
+          onCommit={flushTitle}
+          onCancel={cancelTitle}
           placeholder="Project title"
           ariaLabel="Project title"
           className="text-lg font-bold text-ink"
@@ -189,10 +194,7 @@ export function ProjectDetailPanel({
                 key={c}
                 type="button"
                 title="Set project color"
-                onClick={() => {
-                  setColor(c);
-                  persist({ color: c });
-                }}
+                onClick={() => pickColor(c)}
                 className={cn(
                   "h-7 w-7 rounded-lg border-2 transition-transform hover:scale-105",
                   color === c ? "border-ink" : "border-transparent",

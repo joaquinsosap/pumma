@@ -46,7 +46,9 @@ import {
   title as titleField,
   noteBody,
   shortText,
+  isoDate,
 } from "@/lib/validation";
+import { mergeTaskDueDate, mergeTaskDueTime } from "@/lib/date";
 import { MAX_SUBTASKS, type SubtaskChange } from "@/lib/subtask-changes";
 
 const omniSchema = z.object({
@@ -341,30 +343,27 @@ export async function addTask(
   };
 }
 
-export async function toggleTask(id: string): Promise<ActionResult> {
+export async function toggleTask(
+  id: string,
+  wantDone?: boolean,
+): Promise<ActionResult> {
+  const want = z.boolean().optional().safeParse(wantDone);
+  if (!want.success) return { ok: false, error: "Invalid input" };
   const userId = await requireUserId();
   const { getTask } = await import("@/lib/db/tasks");
   const task = await getTask(userId, id);
   if (!task) return { ok: false, error: "Not found" };
-  const { today: td } = await userToday();
-  const done = task.status !== "done";
-  await updateTask(userId, id, {
-    status: done ? "done" : "todo",
-    completedAt: done ? td : null,
-  });
-  if (task.projectId) await syncGoalsForProject(userId, task.projectId);
-  revalidatePath("/", "layout");
-  return { ok: true };
-}
-
-export async function cycleTaskPriority(id: string): Promise<ActionResult> {
-  const userId = await requireUserId();
-  const { getTask } = await import("@/lib/db/tasks");
-  const task = await getTask(userId, id);
-  if (!task) return { ok: false, error: "Not found" };
-  const order = ["low", "med", "high"] as const;
-  const next = order[(order.indexOf(task.priority) + 1) % 3];
-  await updateTask(userId, id, { priority: next });
+  const isDone = task.status === "done";
+  const done = want.data ?? !isDone;
+  // A click on an old screen says which way it wanted the task. Already there: keep the date, and send the real state.
+  if (done !== isDone) {
+    const { today: td } = await userToday();
+    await updateTask(userId, id, {
+      status: done ? "done" : "todo",
+      completedAt: done ? td : null,
+    });
+    if (task.projectId) await syncGoalsForProject(userId, task.projectId);
+  }
   revalidatePath("/", "layout");
   return { ok: true };
 }
@@ -862,6 +861,13 @@ const updateTaskDetailSchema = z.object({
   tagIds: z.array(z.string()).max(50).optional(),
   priority: z.enum(["low", "med", "high"]).optional(),
   due: z.string().max(40).nullable().optional(),
+  // Only the part clicked, laid on what is stored now, so an old panel can't write back an old date or time.
+  dueDate: isoDate.optional(),
+  dueTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/)
+    .nullable()
+    .optional(),
 });
 
 export async function updateTaskDetail(
@@ -870,14 +876,26 @@ export async function updateTaskDetail(
   const parsed = updateTaskDetailSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
-  const { id, ...patch } = parsed.data;
-  if (!Object.keys(patch).length)
+  const { id, dueDate, dueTime, ...patch } = parsed.data;
+  if (
+    !Object.keys(patch).length &&
+    dueDate === undefined &&
+    dueTime === undefined
+  )
     return { ok: false, error: "Nothing to update" };
 
   const userId = await requireUserId();
   const { getTask } = await import("@/lib/db/tasks");
   const existing = await getTask(userId, id);
   if (!existing) return { ok: false, error: "Not found" };
+
+  let duePatch: { due: string | null } | undefined;
+  if (dueDate !== undefined) {
+    duePatch = { due: mergeTaskDueDate(dueDate, existing.due) };
+  } else if (dueTime !== undefined) {
+    if (!existing.due) return { ok: false, error: "Set a due date first" };
+    duePatch = { due: mergeTaskDueTime(existing.due, dueTime) };
+  }
 
   // Drop tag ids that no longer exist (deleted since the client last rendered).
   let tagPatch: { tagIds: string[]; lifeArea: Task["lifeArea"] } | undefined;
@@ -895,6 +913,7 @@ export async function updateTaskDetail(
     ...(patch.due !== undefined
       ? { due: patch.due === "" ? null : patch.due }
       : {}),
+    ...(duePatch ?? {}),
     ...(tagPatch ?? {}),
   };
 

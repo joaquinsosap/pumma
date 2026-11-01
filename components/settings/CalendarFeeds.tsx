@@ -304,6 +304,7 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                 <p className="m-0 flex items-center gap-1.5 text-[13px] font-semibold text-ink">
                   <Link2 className="h-3 w-3 shrink-0 text-faint2" />
                   <input
+                    key={f.label}
                     defaultValue={f.label}
                     aria-label={`Name for ${f.label}`}
                     onBlur={(e) => {

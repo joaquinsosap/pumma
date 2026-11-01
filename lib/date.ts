@@ -218,6 +218,16 @@ export function mergeTaskDueDate(
   return time ? `${datePart}T${time}` : datePart;
 }
 
+/** Set or clear the time of day, keeping the stored date. Null when there is no date for it to belong to. */
+export function mergeTaskDueTime(
+  existingDue: string | null,
+  time: string | null,
+): string | null {
+  const date = taskDueDateInput(existingDue);
+  if (!date) return null;
+  return time ? `${date}T${time}` : date;
+}
+
 export function parseTimeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);
   return (h ?? 0) * 60 + (m ?? 0);
