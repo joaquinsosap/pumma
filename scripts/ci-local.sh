@@ -30,7 +30,7 @@
 set -uo pipefail
 
 cd "$(dirname "$0")/.."
-ROOT="$(pwd)"
+ROOT="$(pwd -P)"
 fail=0
 
 step() { printf "\n\033[1m== %s\033[0m\n" "$1"; }
@@ -106,6 +106,7 @@ run "tests"     npm test
 # The build shares .next with a running dev server, and a production build on
 # top of a live one corrupts both. Refuse rather than produce a confusing mess.
 # Only a server running from this folder counts: other apps use these ports too.
+# A folder lsof can't read belongs to another user, so it can't be this server.
 dev_server_here() {
   local port pid cwd
   for port in 3000 3001 3010; do
