@@ -21,8 +21,9 @@ import {
   toggleTask,
   updateTaskDetail,
   deleteTaskAction,
+  undoDeleteTask,
 } from "@/lib/actions/tasks";
-import { useTrySave } from "@/lib/use-try-save";
+import { trySave } from "@/lib/try-save";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -227,7 +228,6 @@ export function TaskList({
   const router = useRouter();
   const [optimistic, setOptimistic] = useOptimistic(tasks);
   const [, startTransition] = useTransition();
-  const attempt = useTrySave();
 
   const tagMap = new Map(tags.map((t) => [t.id, t]));
   const isPage = variant === "page";
@@ -250,7 +250,7 @@ export function TaskList({
       // The action's revalidatePath already re-renders the current route in the
       // same response, so no explicit router.refresh() round-trip is needed,
       // unless a row was opened meanwhile, which throws that response away.
-      await attempt(() => toggleTask(id, done));
+      await trySave(() => toggleTask(id, done));
     });
   };
 
@@ -263,20 +263,24 @@ export function TaskList({
       setOptimistic(
         optimistic.map((t) => (t.id === id ? { ...t, priority } : t)),
       );
-      await attempt(() => updateTaskDetail({ id, priority }));
+      await trySave(() => updateTaskDetail({ id, priority }));
     });
   };
 
   const handleDelete = (id: string) => {
     startTransition(async () => {
       setOptimistic(optimistic.filter((t) => t.id !== id));
-      const res = await attempt(() => deleteTaskAction(id));
+      const res = await trySave(() => deleteTaskAction(id));
       if (res?.ok) {
+        const snapshot = res.undo && JSON.stringify(res.undo.snapshot);
         toast.success("Task deleted", {
-          action: res.undo
+          action: snapshot
             ? {
                 label: "UNDO",
-                onClick: () => router.refresh(),
+                onClick: async () => {
+                  const undone = await trySave(() => undoDeleteTask(snapshot));
+                  if (undone) router.refresh();
+                },
               }
             : undefined,
         });

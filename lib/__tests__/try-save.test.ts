@@ -1,12 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const toastError = vi.hoisted(() => vi.fn());
+const catchUpNow = vi.hoisted(() => vi.fn());
 vi.mock("sonner", () => ({ toast: { error: toastError } }));
+vi.mock("@/lib/save-catch-up", () => ({ catchUpNow }));
 
 import { redirect } from "next/navigation";
 import { trySave } from "@/lib/try-save";
 
-beforeEach(() => toastError.mockClear());
+beforeEach(() => {
+  toastError.mockClear();
+  catchUpNow.mockClear();
+});
 
 describe("trySave", () => {
   it("hands back what the save answered, and says nothing", async () => {
@@ -29,7 +34,7 @@ describe("trySave", () => {
       await trySave(async () => ({ ok: false, error: "Name taken" }), onFail),
     ).toBeNull();
     expect(toastError).toHaveBeenCalledWith("Name taken");
-    expect(onFail).toHaveBeenCalledOnce();
+    expect(onFail).toHaveBeenCalledExactlyOnceWith("refused");
   });
 
   it("says something even when the refusal has no words", async () => {
@@ -46,8 +51,9 @@ describe("trySave", () => {
     ).toBeNull();
     expect(toastError).toHaveBeenCalledWith(
       "Could not save that. Check your connection.",
+      expect.anything(),
     );
-    expect(onFail).toHaveBeenCalledOnce();
+    expect(onFail).toHaveBeenCalledExactlyOnceWith("lost");
   });
 
   it("lets a redirect through, so a lapsed session reaches the login page", async () => {
@@ -57,5 +63,26 @@ describe("trySave", () => {
     ).rejects.toThrow("NEXT_REDIRECT");
     expect(toastError).not.toHaveBeenCalled();
     expect(onFail).not.toHaveBeenCalled();
+  });
+
+  describe("catching up after the address moved", () => {
+    it("asks before handing back, so the caller's transition is still open", async () => {
+      const order: string[] = [];
+      catchUpNow.mockImplementationOnce(() => order.push("catch up"));
+      await trySave(async () => ({ ok: true })).then(() => order.push("back"));
+      expect(order).toEqual(["catch up", "back"]);
+    });
+
+    it("asks after a refusal too, since the server answered", async () => {
+      await trySave(async () => ({ ok: false, error: "No" }));
+      expect(catchUpNow).toHaveBeenCalledOnce();
+    });
+
+    it("asks for nothing after a lost connection", async () => {
+      await trySave(async () => {
+        throw new TypeError("Failed to fetch");
+      });
+      expect(catchUpNow).not.toHaveBeenCalled();
+    });
   });
 });

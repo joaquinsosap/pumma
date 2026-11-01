@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Play, Square } from "@/components/icons";
 import type { Task } from "@/lib/schemas";
 import { startTaskTimer, stopTaskTimer } from "@/lib/actions/task-timer";
-import { useTrySave } from "@/lib/use-try-save";
+import { trySave } from "@/lib/try-save";
 import {
   formatDuration,
   formatDurationClock,
@@ -32,7 +32,6 @@ export function TaskTimer({
   // re-render on the interval.
   const now = useNow(running);
   const [pending, startTransition] = useTransition();
-  const attempt = useTrySave();
   const [editOpen, setEditOpen] = useState(false);
 
   const elapsed = taskElapsedSec(task, now);
@@ -47,7 +46,7 @@ export function TaskTimer({
     startTransition(async () => {
       // These revalidate the route, which re-renders this chip with the new
       // timerStartedAt, so no explicit refresh round-trip is needed.
-      await attempt(() =>
+      await trySave(() =>
         running ? stopTaskTimer(task.id) : startTaskTimer(task.id),
       );
     });

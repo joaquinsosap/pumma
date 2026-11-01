@@ -94,11 +94,10 @@ export function ProjectDetailPanel({
   const runDelete = (deleteTasks: boolean) => {
     setDeleteOpen(false);
     startTransition(async () => {
-      const res = await deleteProjectAction(project.id, { deleteTasks });
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not delete project");
-        return;
-      }
+      const res = await trySave(() =>
+        deleteProjectAction(project.id, { deleteTasks }),
+      );
+      if (!res) return;
       toast.success(
         deleteTasks && taskCount > 0
           ? `Project + ${taskCount} task${taskCount === 1 ? "" : "s"} deleted`
@@ -218,9 +217,10 @@ export function ProjectDetailPanel({
             value={project.goalId}
             onChange={(goalId) =>
               startTransition(async () => {
-                const res = await linkProjectToGoal(project.id, goalId);
-                if (!res.ok) toast.error(res.error ?? "Could not link goal");
-                router.refresh();
+                const res = await trySave(() =>
+                  linkProjectToGoal(project.id, goalId),
+                );
+                if (res) router.refresh();
               })
             }
           />

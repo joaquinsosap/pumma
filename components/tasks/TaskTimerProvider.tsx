@@ -9,6 +9,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import type { Task } from "@/lib/schemas";
+import { serverAnswers } from "@/lib/lost-connection";
 
 type TaskTimerContextValue = {
   runningTask: Task | null;
@@ -36,7 +37,11 @@ export function TaskTimerProvider({
   const runningTask = tasks.find((t) => t.timerStartedAt) ?? null;
 
   useEffect(() => {
-    const refresh = () => router.refresh();
+    const refresh = () => {
+      void serverAnswers().then((up) => {
+        if (up) router.refresh();
+      });
+    };
     const onVisibility = () => {
       if (document.visibilityState === "visible") refresh();
     };

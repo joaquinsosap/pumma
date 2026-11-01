@@ -14,6 +14,7 @@ import {
 } from "@/lib/life-calendar";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 import { toast } from "sonner";
 
 type Props = {
@@ -47,15 +48,14 @@ export function LifeWeekDialog({
   const clear = () => {
     if (!week) return;
     startTransition(async () => {
-      const res = await saveLifeWeek({
-        weekStart: week.weekStart,
-        note: "",
-        mood: null,
-      });
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not clear week");
-        return;
-      }
+      const res = await trySave(() =>
+        saveLifeWeek({
+          weekStart: week.weekStart,
+          note: "",
+          mood: null,
+        }),
+      );
+      if (!res) return;
       toast.success("Week cleared");
       onOpenChange(false);
       router.refresh();
@@ -67,27 +67,14 @@ export function LifeWeekDialog({
     startTransition(async () => {
       const note = weekNote.trim();
       const mood = weekMood === "" ? null : weekMood;
-      if (!note && !mood) {
-        const res = await saveLifeWeek({
-          weekStart: week.weekStart,
-          note: "",
-          mood: null,
-        });
-        if (!res.ok) {
-          toast.error(res.error ?? "Could not save week");
-          return;
-        }
-      } else {
-        const res = await saveLifeWeek({
+      const res = await trySave(() =>
+        saveLifeWeek({
           weekStart: week.weekStart,
           note,
           mood,
-        });
-        if (!res.ok) {
-          toast.error(res.error ?? "Could not save week");
-          return;
-        }
-      }
+        }),
+      );
+      if (!res) return;
       toast.success("Week saved");
       onOpenChange(false);
       router.refresh();

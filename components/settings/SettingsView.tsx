@@ -81,6 +81,7 @@ import { NotificationSettings } from "@/components/settings/NotificationSettings
 import { InstallCard } from "@/components/pwa/InstallCard";
 import { DEFAULT_NOTIFICATION_SETTINGS } from "@/lib/notifications";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 import {
   SettingsGroupBlock,
   SettingsNav,
@@ -274,7 +275,12 @@ export function SettingsView({
     };
   }
   const [tagName, setTagName] = useState("");
-  const [name, setName] = useState(userName);
+  const [name, setName, flushName, cancelName] = useAutosaveDraft(
+    userName,
+    "display-name",
+    useCallback((_key: string, next: string) => updateUserNameAction(next), []),
+    { delay: null, required: true },
+  );
 
   // Tag ordering. The chosen sort applies instantly and persists behind; a
   // drag both rearranges and IS the act of choosing "custom", so it flips the
@@ -334,32 +340,18 @@ export function SettingsView({
     // reversed would put the tag anywhere but where it was dropped.
     setTagReversed(false);
     startTransition(async () => {
-      const res = await reorderTagsAction(next);
-      if (!res.ok) toast.error(res.error ?? "Could not save that order");
-      router.refresh();
-    });
-  };
-
-  useEffect(() => {
-    setName(userName);
-  }, [userName]);
-
-  const saveName = () => {
-    const trimmed = name.trim();
-    if (!trimmed || trimmed === userName) {
-      setName(userName);
-      return;
-    }
-    startTransition(async () => {
-      await updateUserNameAction(trimmed);
-      router.refresh();
+      const res = await trySave(
+        () => reorderTagsAction(next),
+        () => setDraggedIds(null),
+      );
+      if (res) router.refresh();
     });
   };
 
   const update = (patch: Parameters<typeof updateSettingsAction>[0]) => {
     startTransition(async () => {
-      await updateSettingsAction(patch);
-      router.refresh();
+      const res = await trySave(() => updateSettingsAction(patch));
+      if (res) router.refresh();
     });
   };
 
@@ -367,8 +359,8 @@ export function SettingsView({
     const next = settings?.theme === "dark" ? "light" : "dark";
     setLocal(next);
     startTransition(async () => {
-      await setTheme(next);
-      router.refresh();
+      const res = await trySave(() => setTheme(next));
+      if (res) router.refresh();
     });
   };
 
@@ -414,9 +406,13 @@ export function SettingsView({
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    onBlur={saveName}
+                    onBlur={flushName}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") e.currentTarget.blur();
+                      if (e.key === "Escape") {
+                        cancelName();
+                        e.currentTarget.blur();
+                      }
                     }}
                     placeholder="Your name"
                     maxLength={64}
@@ -997,7 +993,8 @@ export function SettingsView({
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && tagName.trim()) {
                     startTransition(async () => {
-                      await addTagAction(tagName);
+                      const res = await trySave(() => addTagAction(tagName));
+                      if (!res) return;
                       setTagName("");
                       router.refresh();
                     });
@@ -1007,7 +1004,8 @@ export function SettingsView({
               <Button
                 onClick={() =>
                   startTransition(async () => {
-                    await addTagAction(tagName);
+                    const res = await trySave(() => addTagAction(tagName));
+                    if (!res) return;
                     setTagName("");
                     router.refresh();
                   })
@@ -1225,8 +1223,7 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
     const idx = TAG_PALETTE.indexOf(tag.color as (typeof TAG_PALETTE)[number]);
     const next = TAG_PALETTE[(idx + 1) % TAG_PALETTE.length];
     startTransition(async () => {
-      const res = await updateTagAction({ id: tag.id, color: next });
-      if (!res.ok) toast.error(res.error ?? "Could not update color");
+      await trySave(() => updateTagAction({ id: tag.id, color: next }));
     });
   };
 
@@ -1239,9 +1236,8 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
     });
     if (!ok) return;
     startTransition(async () => {
-      const res = await deleteTagAction(tag.id);
-      if (!res.ok) toast.error(res.error ?? "Could not delete tag");
-      else toast.success("Tag deleted");
+      const res = await trySave(() => deleteTagAction(tag.id));
+      if (res) toast.success("Tag deleted");
     });
   };
 
@@ -1258,7 +1254,14 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
       />
       <input
         value={draft}
-        onChange={(e) => setDraft(e.target.value.toLowerCase())}
+        onChange={(e) => {
+          // Written to the box here, or React moves the caret to the end when a capital changes the text.
+          const box = e.target;
+          const caret = box.selectionStart;
+          box.value = box.value.toLowerCase();
+          box.setSelectionRange(caret, caret);
+          setDraft(box.value);
+        }}
         onBlur={flushName}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();

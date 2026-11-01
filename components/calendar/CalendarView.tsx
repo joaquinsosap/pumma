@@ -7,7 +7,6 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useQueryState, parseAsInteger } from "nuqs";
 import { Repeat } from "@/components/icons";
-import { toast } from "sonner";
 import type { AgendaItem, Task, HabitEntry } from "@/lib/schemas";
 import { iso } from "@/lib/date";
 import { deleteMeetingAction } from "@/lib/actions/agenda";
@@ -32,6 +31,7 @@ import type { Tag } from "@/lib/schemas";
 import { Topbar } from "@/components/shell/Topbar";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 
@@ -83,9 +83,10 @@ export function CalendarView({
   // Removing from a day removes just that occurrence of a repeating meeting.
   const deleteMeeting = (id: string, date: string) => {
     startTransition(async () => {
-      const res = await deleteMeetingAction({ id, scope: "occurrence", date });
-      if (!res.ok) toast.error(res.error ?? "Could not remove meeting");
-      else router.refresh();
+      const res = await trySave(() =>
+        deleteMeetingAction({ id, scope: "occurrence", date }),
+      );
+      if (res) router.refresh();
     });
   };
   const [editingMeeting, setEditingMeeting] = useState<AgendaItem | null>(null);

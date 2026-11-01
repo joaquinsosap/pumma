@@ -49,6 +49,25 @@ handed back to the user to check.
   output invents bugs, and the in-memory data store (`DATA_SOURCE=memory`)
   resets, which looks exactly like a write that failed to persist.
 
+## Traps
+
+- **Writing the address during a save throws the save's page away.**
+  `history.replaceState` (nuqs, `NotesView.pickNote`) makes Next dispatch a
+  restore, which discards the running server action and then overwrites the
+  refresh it queued in its place. A write during a refresh discards that too,
+  with nothing queued. `components/shell/SaveCatchUp.tsx` catches both for every
+  save in the app, so a screen adds nothing for it. To reproduce by hand, use
+  `history.replaceState(null, "", url)`: passing `history.state` carries `__NA`
+  and skips Next's patch.
+- **A `router.refresh()` with no answer leaves the page.** Next falls back to a
+  full navigation, so the browser's error screen replaces the app and unsaved
+  text goes with it. A refresh nobody clicked for asks `serverAnswers()` first.
+- **A save that can fail goes through `trySave`.** Unguarded in a transition, a
+  lost connection reaches the error screen. `useLostConnectionRecovery` puts the
+  page straight back, but what was typed in it is gone.
+- **`border-ink` can't mark a selection.** The tour section of `globals.css`
+  forces `.border-ink` to a pale `var(--rim)`. Use a ring.
+
 ## Tests
 
 - **Every pure rule module gets a behavioural test file, written with the

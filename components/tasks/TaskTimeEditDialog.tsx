@@ -10,6 +10,7 @@ import {
   secondsFromParts,
   taskElapsedSec,
 } from "@/lib/time";
+import { trySave } from "@/lib/try-save";
 import {
   Dialog,
   DialogContent,
@@ -45,14 +46,13 @@ export function TaskTimeEditDialog({ task, open, onOpenChange, now }: Props) {
 
   const save = (seconds: number) => {
     startTransition(async () => {
-      const res = await setTaskTimeSpent({
-        taskId: task.id,
-        timeSpentSec: seconds,
-      });
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not save time");
-        return;
-      }
+      const res = await trySave(() =>
+        setTaskTimeSpent({
+          taskId: task.id,
+          timeSpentSec: seconds,
+        }),
+      );
+      if (!res) return;
       onOpenChange(false);
       router.refresh();
     });

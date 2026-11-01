@@ -20,6 +20,7 @@ import { describeRecurrence, weekdayOf } from "@/lib/meetings";
 import type { AgendaItem, Recurrence } from "@/lib/schemas";
 import { lifeAreaForCreate, type LifeView } from "@/lib/life-area";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 const DURATIONS = [15, 30, 45, 60, 90, 120] as const;
 const FREQS = [
@@ -151,13 +152,12 @@ export function MeetingDialog({
         notes: notes.trim(),
         recurrence,
       };
-      const res = meeting
-        ? await updateMeetingAction({ id: meeting.id, ...payload })
-        : await addMeetingAction(payload);
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not save the meeting");
-        return;
-      }
+      const res = await trySave(() =>
+        meeting
+          ? updateMeetingAction({ id: meeting.id, ...payload })
+          : addMeetingAction(payload),
+      );
+      if (!res) return;
       toast.success(editing ? "Meeting updated" : "Meeting added");
       onOpenChange(false);
     });
@@ -166,15 +166,14 @@ export function MeetingDialog({
   const remove = (scope: "occurrence" | "series") => {
     if (!meeting) return;
     startTransition(async () => {
-      const res = await deleteMeetingAction({
-        id: meeting.id,
-        scope,
-        date: occurrenceDate ?? meeting.date ?? undefined,
-      });
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not remove the meeting");
-        return;
-      }
+      const res = await trySave(() =>
+        deleteMeetingAction({
+          id: meeting.id,
+          scope,
+          date: occurrenceDate ?? meeting.date ?? undefined,
+        }),
+      );
+      if (!res) return;
       toast.success(
         scope === "series" ? "Meeting deleted" : "Occurrence removed",
       );

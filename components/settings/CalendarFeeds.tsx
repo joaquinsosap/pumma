@@ -14,6 +14,7 @@ import {
 } from "@/lib/actions/calendar-feeds";
 import { FEED_PALETTE, OWN_MEETING_COLOR } from "@/lib/calendar-colors";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 import { ColorSwatch } from "@/components/ui/color-swatch";
 
 /**
@@ -138,11 +139,8 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
   const add = () => {
     if (!url.trim()) return;
     start(async () => {
-      const res = await addCalendarFeedAction(url.trim(), area);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() => addCalendarFeedAction(url.trim(), area));
+      if (!res?.ok) return;
       setUrl("");
       toast.success(`Reading ${res.data?.label ?? "that calendar"}`);
     });

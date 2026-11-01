@@ -4,6 +4,7 @@ import { OmniBox } from "@/components/shell/OmniBox";
 import { SpaceShortcuts } from "@/components/shell/SpaceShortcuts";
 import { TimeZoneProvider } from "@/components/shell/TimeZoneProvider";
 import { TimezoneSync } from "@/components/shell/TimezoneSync";
+import { SaveCatchUp } from "@/components/shell/SaveCatchUp";
 import { AssistantProvider } from "@/components/assistant/AssistantProvider";
 import { TaskTimerProvider } from "@/components/tasks/TaskTimerProvider";
 import { MobileShell } from "@/components/shell/MobileShell";
@@ -84,6 +85,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <TimeZoneProvider timezone={data.timezone}>
       <TimezoneSync />
+      <SaveCatchUp />
       <TagMenuProvider tags={data.tags} tasks={shellTasks} notes={shellNotes}>
         <TaskTimerProvider tasks={shellTasks}>
           <div className="flex h-dvh overflow-hidden bg-background text-ink">

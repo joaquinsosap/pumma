@@ -53,6 +53,7 @@ import {
 } from "@/lib/actions/changeset";
 import { cn } from "@/lib/utils";
 import { entityHref } from "@/lib/entity-href";
+import { trySave } from "@/lib/try-save";
 
 // ---------------------------------------------------------------------------
 // Draft model: ops with stable client keys, so exclusion and edits survive
@@ -209,12 +210,14 @@ export function ChangesetCanvas({
 
   const apply = () => {
     startTransition(async () => {
-      const res = await applyChangesetAction({
-        summary: changeset.summary,
-        ops: included.map((d) => d.op),
-      });
-      if (!res.ok || !res.data) {
-        toast.error((!res.ok && res.error) || "Apply failed");
+      const res = await trySave(() =>
+        applyChangesetAction({
+          summary: changeset.summary,
+          ops: included.map((d) => d.op),
+        }),
+      );
+      if (!res?.ok || !res.data) {
+        if (res) toast.error("Apply failed");
         setPhase({ name: "editing" });
         return;
       }
@@ -233,12 +236,14 @@ export function ChangesetCanvas({
     setPhase({ name: "editing" });
     startTransition(async () => {
       const ops = included.filter((d) => d.op.op !== "delete").map((d) => d.op);
-      const res = await applyChangesetAction({
-        summary: changeset.summary,
-        ops,
-      });
-      if (!res.ok || !res.data) {
-        toast.error((!res.ok && res.error) || "Apply failed");
+      const res = await trySave(() =>
+        applyChangesetAction({
+          summary: changeset.summary,
+          ops,
+        }),
+      );
+      if (!res?.ok || !res.data) {
+        if (res) toast.error("Apply failed");
         return;
       }
       setPhase({ name: "applied", result: res.data });
@@ -248,11 +253,8 @@ export function ChangesetCanvas({
 
   const undo = (result: ApplyChangesetResult) => {
     startTransition(async () => {
-      const res = await undoChangesetAction(result.undo);
-      if (!res.ok) {
-        toast.error(res.error ?? "Undo failed");
-        return;
-      }
+      const res = await trySave(() => undoChangesetAction(result.undo));
+      if (!res) return;
       setUndoDone(true);
       router.refresh();
     });

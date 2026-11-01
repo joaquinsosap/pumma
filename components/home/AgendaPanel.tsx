@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { useMeetingBodies } from "@/components/agenda/useMeetingBodies";
 import { Link2, Repeat } from "@/components/icons";
-import { toast } from "sonner";
 import {
   iso,
   weekDates,
@@ -31,6 +30,7 @@ import { SyncCalendarsButton } from "@/components/agenda/SyncCalendarsButton";
 import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 import { taskDetailHref } from "@/lib/task-links";
+import { trySave } from "@/lib/try-save";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 
@@ -170,9 +170,10 @@ export function AgendaPanel({
 
   const deleteOccurrence = (id: string, date: string) => {
     startTransition(async () => {
-      const res = await deleteMeetingAction({ id, scope: "occurrence", date });
-      if (!res.ok) toast.error(res.error ?? "Could not remove meeting");
-      else router.refresh();
+      const res = await trySave(() =>
+        deleteMeetingAction({ id, scope: "occurrence", date }),
+      );
+      if (res) router.refresh();
     });
   };
   const week = weekDates(new Date(), weekStart, timeZone);

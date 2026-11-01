@@ -50,6 +50,7 @@ import type { GoalCategory } from "@/lib/types";
 import type { WeekStart } from "@/lib/date";
 import type { HabitVisibilitySettings } from "@/lib/habit-visibility";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 const CATEGORIES: GoalCategory[] = ["personal", "work"];
 
@@ -157,7 +158,7 @@ export function GoalsView({
         const ids = layoutIds(next);
         // Layout action revalidates the route; the optimistic dnd order
         // holds until it lands — no extra refresh round-trip.
-        await updateGoalsLayoutAction(ids.personal, ids.work);
+        await trySave(() => updateGoalsLayoutAction(ids.personal, ids.work));
       } finally {
         persistPendingRef.current = false;
       }

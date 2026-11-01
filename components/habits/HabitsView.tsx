@@ -59,7 +59,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { EditableTitle } from "@/components/ui/editable-title";
 import { trySave } from "@/lib/try-save";
-import { useTrySave } from "@/lib/use-try-save";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { cn } from "@/lib/utils";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
@@ -127,15 +126,13 @@ export function HabitsView({
     const next = arrayMove(ids, from, to);
     setDragOrder(next);
     startTransition(async () => {
-      const res = await updateHabitsOrderAction(next);
-      if (!res.ok) {
-        setDragOrder(null);
-        toast.error(res.error ?? "Could not save the new order");
-      }
+      await trySave(
+        () => updateHabitsOrderAction(next),
+        () => setDragOrder(null),
+      );
     });
   };
   const [habitId] = useQueryState("habit");
-  const attempt = useTrySave();
   const timeZone = useTimezone();
   const confirm = useConfirm();
 
@@ -151,9 +148,8 @@ export function HabitsView({
     });
     if (!ok) return;
     startTransition(async () => {
-      const res = await deleteHabitAction(h.id);
-      if (!res.ok) toast.error(res.error ?? "Could not delete habit");
-      else toast.success("Habit deleted");
+      const res = await trySave(() => deleteHabitAction(h.id));
+      if (res) toast.success("Habit deleted");
     });
   };
   const td = iso(new Date(), timeZone);
@@ -207,7 +203,7 @@ export function HabitsView({
     );
     startTransition(async () => {
       applyToggle({ habitId: id, ...period, done });
-      await attempt(() => toggleHabitPeriod({ habitId: id, ...period, done }));
+      await trySave(() => toggleHabitPeriod({ habitId: id, ...period, done }));
     });
   };
 
@@ -328,18 +324,12 @@ export function HabitsView({
                               disabled={pending}
                               onChange={(days) =>
                                 startTransition(async () => {
-                                  const res = await updateHabitFrequencyAction(
-                                    h.id,
-                                    {
+                                  await trySave(() =>
+                                    updateHabitFrequencyAction(h.id, {
                                       type: "daily",
                                       days,
-                                    },
+                                    }),
                                   );
-                                  if (!res.ok) {
-                                    toast.error(
-                                      res.error ?? "Could not save days",
-                                    );
-                                  }
                                 })
                               }
                             />

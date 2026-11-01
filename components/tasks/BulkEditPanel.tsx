@@ -14,6 +14,7 @@ import { tagBg } from "@/lib/parse";
 import { isLifeTag } from "@/lib/life-area-sync";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 const STATUS_OPTIONS = [
   ["todo", "To do"],
@@ -110,13 +111,11 @@ export function BulkEditPanel({
 
   const apply = (patch: BulkPatch, describe: string) => {
     startTransition(async () => {
-      const res = await bulkUpdateTasks({ ids, ...patch });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() => bulkUpdateTasks({ ids, ...patch }));
+      if (!res?.ok) return;
       const n = res.data?.updated ?? ids.length;
-      toast.success(`${n} ${n === 1 ? "task" : "tasks"} ${describe}`);
+      if (n === 0) toast.info("Nothing to change");
+      else toast.success(`${n} ${n === 1 ? "task" : "tasks"} ${describe}`);
       router.refresh();
     });
   };
@@ -134,11 +133,8 @@ export function BulkEditPanel({
 
   const handleDelete = () => {
     startTransition(async () => {
-      const res = await bulkDeleteTasks({ ids });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() => bulkDeleteTasks({ ids }));
+      if (!res?.ok) return;
       const n = res.data?.deleted ?? ids.length;
       const snapshot = res.undo ? JSON.stringify(res.undo.snapshot) : null;
       (onDeleted ?? onClear)();
@@ -147,8 +143,8 @@ export function BulkEditPanel({
           ? {
               label: "UNDO",
               onClick: async () => {
-                await undoDeleteTasks(snapshot);
-                router.refresh();
+                const undone = await trySave(() => undoDeleteTasks(snapshot));
+                if (undone) router.refresh();
               },
             }
           : undefined,

@@ -13,6 +13,7 @@ import { renameProjectTagAction } from "@/lib/actions/tags";
 import { tagsForProject } from "@/lib/project-tags";
 import { isLifeTag } from "@/lib/life-area-sync";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 import { useConfirm } from "@/components/ui/confirm-dialog";
 
 /**
@@ -42,12 +43,8 @@ export function ProjectTagsField({
 
   const run = (fn: () => Promise<{ ok: boolean; error?: string }>) =>
     startTransition(async () => {
-      const res = await fn();
-      if (!res.ok) {
-        toast.error(res.error ?? "Something went wrong");
-        return;
-      }
-      router.refresh();
+      const res = await trySave(fn);
+      if (res) router.refresh();
     });
 
   const commitRename = (tag: Tag) => {
@@ -56,12 +53,10 @@ export function ProjectTagsField({
     if (!next || next === tag.name) return;
 
     startTransition(async () => {
-      const res = await renameProjectTagAction({ id: tag.id, name: next });
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not rename");
-        return;
-      }
-      if (!res.data) return;
+      const res = await trySave(() =>
+        renameProjectTagAction({ id: tag.id, name: next }),
+      );
+      if (!res?.ok || !res.data) return;
       if (res.data.status === "renamed") {
         router.refresh();
         return;
@@ -88,15 +83,14 @@ export function ProjectTagsField({
       });
       if (!ok) return;
 
-      const merged = await renameProjectTagAction({
-        id: tag.id,
-        name: next,
-        confirmMerge: true,
-      });
-      if (!merged.ok) {
-        toast.error(merged.error ?? "Could not rename");
-        return;
-      }
+      const merged = await trySave(() =>
+        renameProjectTagAction({
+          id: tag.id,
+          name: next,
+          confirmMerge: true,
+        }),
+      );
+      if (!merged?.ok) return;
       if (merged.data?.status === "renamed" && merged.data.filed) {
         toast.success(
           `#${next} files here now, ${merged.data.filed} task${merged.data.filed === 1 ? "" : "s"} moved in`,
@@ -176,14 +170,13 @@ export function ProjectTagsField({
               setAdding(false);
               if (!tagId) return;
               startTransition(async () => {
-                const res = await attachTagToProjectAction({
-                  projectId: project.id,
-                  tagId,
-                });
-                if (!res.ok) {
-                  toast.error(res.error ?? "Could not add tag");
-                  return;
-                }
+                const res = await trySave(() =>
+                  attachTagToProjectAction({
+                    projectId: project.id,
+                    tagId,
+                  }),
+                );
+                if (!res?.ok) return;
                 const filed = res.data?.filed ?? 0;
                 if (filed) {
                   toast.success(

@@ -5,14 +5,13 @@ import { Square } from "@/components/icons";
 import { stopTaskTimer } from "@/lib/actions/task-timer";
 import { formatDurationClock, taskElapsedSec } from "@/lib/time";
 import { useNow, useTaskTimer } from "@/components/tasks/TaskTimerProvider";
-import { useTrySave } from "@/lib/use-try-save";
+import { trySave } from "@/lib/try-save";
 import { cn } from "@/lib/utils";
 
 export function ActiveTaskTimer({ className }: { className?: string }) {
   const { runningTask } = useTaskTimer();
   const now = useNow(Boolean(runningTask));
   const [pending, startTransition] = useTransition();
-  const attempt = useTrySave();
 
   const elapsed = runningTask ? taskElapsedSec(runningTask, now) : 0;
 
@@ -20,7 +19,7 @@ export function ActiveTaskTimer({ className }: { className?: string }) {
     if (!runningTask) return;
     startTransition(async () => {
       // stopTaskTimer revalidates the route → runningTask clears on its own.
-      await attempt(() => stopTaskTimer(runningTask.id));
+      await trySave(() => stopTaskTimer(runningTask.id));
     });
   };
 

@@ -6,13 +6,14 @@ import {
   draftFrom,
   fromServer,
   landed,
+  nameRefused,
   reverted,
   send,
   sendFailed,
   typed,
   type DraftState,
 } from "@/lib/draft-state";
-import { useTrySave } from "@/lib/use-try-save";
+import { trySave } from "@/lib/try-save";
 
 type Save = (
   entityKey: string,
@@ -34,7 +35,7 @@ type Save = (
  * unsaved typing is in the box. The rules are in lib/draft-state.ts.
  *
  * `required` is for titles: a blank box is never sent and goes back to what is
- * stored when you leave it.
+ * stored when you leave it, and so does a name the server refuses.
  *
  * Returns [draft, setDraft, flush, cancel].
  */
@@ -52,7 +53,6 @@ export function useAutosaveDraft(
   // Moves on only after the outgoing record's flush, so that text goes to the record it was typed into.
   const keyRef = useRef(entityKey);
   const timerRef = useRef<number | undefined>(undefined);
-  const attempt = useTrySave();
 
   // Keep the latest save fn without restarting anything (callers usually pass an inline closure).
   const saveRef = useRef(save);
@@ -69,17 +69,19 @@ export function useAutosaveDraft(
     if (!out) return;
     stateRef.current = out.state;
     const key = keyRef.current;
-    void attempt(
+    void trySave(
       () => saveRef.current(key, out.value),
-      () => {
-        if (keyRef.current === key) apply(sendFailed(stateRef.current, out.value));
+      (why) => {
+        if (keyRef.current !== key) return;
+        const failed = required && why === "refused" ? nameRefused : sendFailed;
+        apply(failed(stateRef.current, out.value));
       },
     ).then((res) => {
       if (res !== null && keyRef.current === key) {
         stateRef.current = landed(stateRef.current, out.value);
       }
     });
-  }, [apply, attempt, required]);
+  }, [apply, required]);
 
   const flush = useCallback(() => {
     window.clearTimeout(timerRef.current);

@@ -71,6 +71,7 @@ import { Topbar } from "@/components/shell/Topbar";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { useIsDesktop } from "@/lib/use-media-query";
 import { useTaskSelection } from "@/lib/use-task-selection";
+import { trySave } from "@/lib/try-save";
 
 const tabs = ["today", "upcoming", "all"] as const;
 const groups = ["none", "tag", "project"] as const;
@@ -255,14 +256,13 @@ export function TasksView({
       : "No project";
 
     startTransition(async () => {
-      const res = await setTaskProject({
-        id: taskId,
-        projectId: nextProjectId,
-      });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() =>
+        setTaskProject({
+          id: taskId,
+          projectId: nextProjectId,
+        }),
+      );
+      if (!res) return;
       toast.success(`Moved to ${destination}`);
     });
   };

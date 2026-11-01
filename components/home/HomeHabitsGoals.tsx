@@ -7,7 +7,7 @@ import type { Habit, HabitEntry } from "@/lib/schemas";
 import { iso, weekDates, dowLetters, type WeekStart } from "@/lib/date";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { toggleHabitPeriod } from "@/lib/actions/habits";
-import { useTrySave } from "@/lib/use-try-save";
+import { trySave } from "@/lib/try-save";
 import {
   currentHabitPeriod,
   habitAppliesOn,
@@ -51,7 +51,6 @@ export function HomeHabitsGoals({
   const letters = dowLetters(weekStart);
   const [, startTransition] = useTransition();
   const [optimisticEntries, setOptimisticEntries] = useOptimistic(habitEntries);
-  const attempt = useTrySave();
 
   const entriesFor = (habitId: string) =>
     new Set(
@@ -85,7 +84,7 @@ export function HomeHabitsGoals({
       );
       // The action revalidates the route; the optimistic entry above holds
       // until that lands — no extra refresh round-trip.
-      await attempt(() =>
+      await trySave(() =>
         toggleHabitPeriod({ habitId, start, end, markDate: td, done }),
       );
     });

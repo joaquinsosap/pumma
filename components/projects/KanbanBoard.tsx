@@ -38,7 +38,7 @@ import {
 } from "@/lib/use-task-selection";
 import { dropIndex } from "@/lib/kanban-drop";
 import { sortTasks, type ProjectTaskSort } from "@/lib/collection-sort";
-import { useTrySave } from "@/lib/use-try-save";
+import { trySave } from "@/lib/try-save";
 import { cn } from "@/lib/utils";
 
 export type ColumnId = "todo" | "doing" | "done";
@@ -217,7 +217,6 @@ export function KanbanBoard({
   onArrange,
 }: Props) {
   const [, startTransition] = useTransition();
-  const attempt = useTrySave();
   const [items, setItems] = useState<ItemsByColumn>(() =>
     groupByStatus(tasks, sort, sortReversed),
   );
@@ -425,7 +424,7 @@ export function KanbanBoard({
     // crossed between them: the one it left has a hole where it used to be.
     const current = itemsRef.current;
     startTransition(async () => {
-      await attempt(
+      await trySave(
         () =>
           moveTaskOnBoard({
             id: taskId,

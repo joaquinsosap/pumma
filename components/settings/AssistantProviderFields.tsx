@@ -22,6 +22,7 @@ import {
   providerDef,
   type ProviderId,
 } from "@/lib/ai/providers";
+import { trySave } from "@/lib/try-save";
 
 const GROUPS: { label: string; group: "vendor" | "gateway" | "local" }[] = [
   { label: "Model vendors", group: "vendor" },
@@ -109,11 +110,8 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
     const key = draftKey.trim();
     if (!key) return;
     startTransition(async () => {
-      const res = await setAiApiKeyAction(key);
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not save key");
-        return;
-      }
+      const res = await trySave(() => setAiApiKeyAction(key));
+      if (!res) return;
       toast.success("API key saved");
       setDraftKey("");
       setEditingKey(false);

@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 import { toast } from "sonner";
 
 type Props = {
@@ -44,15 +45,14 @@ export function LifeDayDialog({
   const save = () => {
     if (!date) return;
     startTransition(async () => {
-      const res = await saveLifeDay({
-        date,
-        note,
-        mood: mood === "" ? null : mood,
-      });
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not save");
-        return;
-      }
+      const res = await trySave(() =>
+        saveLifeDay({
+          date,
+          note,
+          mood: mood === "" ? null : mood,
+        }),
+      );
+      if (!res) return;
       toast.success("Day saved");
       onOpenChange(false);
       router.refresh();

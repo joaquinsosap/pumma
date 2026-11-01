@@ -42,6 +42,7 @@ import {
   PRIORITY_GLYPH,
 } from "@/components/tasks/PriorityChip";
 import type { TaskPriority } from "@/lib/types";
+import { trySave } from "@/lib/try-save";
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: "high", label: "High" },
@@ -299,21 +300,20 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
       return;
     }
     startTransition(async () => {
-      const res = await createFromOmni({
-        text: trimmed,
-        type,
-        projectId: type === "task" ? capture.projectId : undefined,
-        due:
-          type === "task" ? (parsed.due ?? pickedDue ?? undefined) : undefined,
-        priority: type === "task" ? pickedPriority : undefined,
-        goalCategory: type === "goal" ? capture.goalCategory : undefined,
-        lifeView: life,
-        tagIds: selectedTagIds,
-      });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() =>
+        createFromOmni({
+          text: trimmed,
+          type,
+          projectId: type === "task" ? capture.projectId : undefined,
+          due:
+            type === "task" ? (parsed.due ?? pickedDue ?? undefined) : undefined,
+          priority: type === "task" ? pickedPriority : undefined,
+          goalCategory: type === "goal" ? capture.goalCategory : undefined,
+          lifeView: life,
+          tagIds: selectedTagIds,
+        }),
+      );
+      if (!res?.ok) return;
       // After the save. Same rule as the desk bar: only a quick-picked due is
       // a preference worth learning from.
       nudge.record("captureType", type);
@@ -346,11 +346,10 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
           ? {
               label: "UNDO",
               onClick: async () => {
-                await undoCreate(
-                  res.undo!.entity,
-                  res.undo!.snapshot as string,
+                const undone = await trySave(() =>
+                  undoCreate(res.undo!.entity, res.undo!.snapshot as string),
                 );
-                router.refresh();
+                if (undone) router.refresh();
               },
             }
           : undefined,

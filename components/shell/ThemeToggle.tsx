@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Sun, Moon } from "@/components/icons";
 import { setTheme } from "@/lib/actions/settings";
+import { trySave } from "@/lib/try-save";
 
 export function ThemeToggle() {
   const { theme, setTheme: setLocal } = useTheme();
@@ -16,7 +17,7 @@ export function ThemeToggle() {
   const toggle = async () => {
     const next = theme === "dark" ? "light" : "dark";
     setLocal(next);
-    await setTheme(next);
+    await trySave(() => setTheme(next));
   };
 
   return (

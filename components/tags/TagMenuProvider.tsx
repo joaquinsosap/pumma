@@ -256,17 +256,16 @@ export function TagMenuProvider({
     if (!menu || !selectionIds || pending) return;
     const apply = selectionTagState(tagId) !== "all";
     setPending(true);
-    const res = await bulkToggleEntityTag({
-      entity: menu.entity,
-      ids: selectionIds,
-      tagId,
-      apply,
-    });
+    const res = await trySave(() =>
+      bulkToggleEntityTag({
+        entity: menu.entity,
+        ids: selectionIds,
+        tagId,
+        apply,
+      }),
+    );
     setPending(false);
-    if (!res.ok) {
-      toast.error(res.error);
-      return;
-    }
+    if (!res?.ok) return;
     const { changed, failed, error } = res.data ?? { changed: 0, failed: 0 };
     dirtyRef.current = true;
     const name = tags.find((t) => t.id === tagId)?.name ?? "tag";
@@ -304,13 +303,12 @@ export function TagMenuProvider({
       tags,
     );
     setTagIds(nextTagIds);
-    const res = await toggleEntityTag(menu.entity, menu.id, tagId, applied);
+    const res = await trySave(
+      () => toggleEntityTag(menu.entity, menu.id, tagId, applied),
+      () => setTagIds(menu.tagIds),
+    );
     setPending(false);
-    if (!res.ok) {
-      setTagIds(menu.tagIds);
-      toast.error(res.error);
-      return;
-    }
+    if (!res) return;
     dirtyRef.current = true;
 
     // Picking another project's tag moves the task: its project, its life tags
@@ -324,15 +322,13 @@ export function TagMenuProvider({
   const handleDelete = async () => {
     if (!menu || pending) return;
     setPending(true);
-    const res =
+    const res = await trySave(() =>
       menu.entity === "task"
-        ? await deleteTaskAction(menu.id)
-        : await deleteNoteAction(menu.id);
+        ? deleteTaskAction(menu.id)
+        : deleteNoteAction(menu.id),
+    );
     setPending(false);
-    if (!res.ok) {
-      toast.error(res.error);
-      return;
-    }
+    if (!res?.ok) return;
     const label = menu.entity === "task" ? "Task deleted" : "Note deleted";
     // JSON, not the object: undoDeleteTask parses a string, and handing it the
     // raw snapshot made UNDO fail silently.
@@ -346,8 +342,8 @@ export function TagMenuProvider({
         ? {
             label: "UNDO",
             onClick: async () => {
-              await undoDeleteTask(undoSnapshot);
-              router.refresh();
+              const undone = await trySave(() => undoDeleteTask(undoSnapshot));
+              if (undone) router.refresh();
             },
           }
         : undefined,
@@ -373,9 +369,8 @@ export function TagMenuProvider({
       dirtyRef.current = true;
       return;
     }
-    const res = await addTagAction(name);
-    if (!res.ok) {
-      toast.error(res.error);
+    const res = await trySave(() => addTagAction(name));
+    if (!res?.ok) {
       setPending(false);
       return;
     }
@@ -469,12 +464,9 @@ export function TagMenuProvider({
     setPending(true);
     close();
     void (async () => {
-      const res = await bulkUpdateTasks({ ids, ...patch });
+      const res = await trySave(() => bulkUpdateTasks({ ids, ...patch }));
       setPending(false);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      if (!res) return;
       toast.success(ids.length > 1 ? `${label} · ${ids.length} tasks` : label);
       router.refresh();
     })();

@@ -303,7 +303,7 @@ function NoteEditor({
 
   // The editor advertises "autosaves", so it must actually survive closing the
   // note or switching to another one mid-sentence, not just blur.
-  const [title, setTitle, flushTitle] = useAutosaveDraft(
+  const [title, setTitle, flushTitle, cancelTitle] = useAutosaveDraft(
     note.title,
     note.id,
     useCallback(
@@ -334,6 +334,7 @@ function NoteEditor({
           value={title}
           onChange={setTitle}
           onCommit={flushTitle}
+          onCancel={cancelTitle}
           placeholder="Untitled"
           ariaLabel="Note title"
           wrapperClassName="flex-1"
@@ -345,7 +346,8 @@ function NoteEditor({
           className="rounded-md border border-tasks/40 bg-tasks/10 px-2.5 py-1 font-mono text-[11px] font-semibold text-tasks/80"
           onClick={() =>
             startTransition(async () => {
-              await convertNoteToTask(note.id);
+              const res = await trySave(() => convertNoteToTask(note.id));
+              if (!res) return;
               toast.success("Converted to task");
               onRefresh();
             })
@@ -357,7 +359,8 @@ function NoteEditor({
           label="Delete note"
           onClick={() =>
             startTransition(async () => {
-              await deleteNoteAction(note.id);
+              const res = await trySave(() => deleteNoteAction(note.id));
+              if (!res) return;
               toast.success("Note deleted");
               onRefresh();
             })

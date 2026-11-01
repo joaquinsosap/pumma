@@ -29,6 +29,7 @@ import {
 import { NotificationSheet } from "@/components/notifications/NotificationSheet";
 import { showLocalNotification } from "@/lib/notify-local";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 /** How often the tray refreshes itself while a tab is open. */
 const POLL_MS = 60_000;
@@ -210,8 +211,10 @@ export function NotificationCenter() {
                 type="button"
                 onClick={() =>
                   startTransition(async () => {
-                    await markAllNotificationsReadAction();
-                    void load();
+                    const res = await trySave(() =>
+                      markAllNotificationsReadAction(),
+                    );
+                    if (res) void load();
                   })
                 }
                 className="text-[11px] font-semibold text-faint transition-colors hover:text-ink"
@@ -296,13 +299,13 @@ export function NotificationCenter() {
                         dismissed.current.add(n.id);
                         if (pillId === n.id) setPillId(null);
                         startTransition(async () => {
-                          const res = await dismissNotificationAction(n.id);
-                          if (!res.ok) {
-                            // Put it back rather than lie: the row left the
-                            // screen but is still in the database.
-                            void load();
-                            return;
-                          }
+                          // Put it back rather than lie: the row left the
+                          // screen but is still in the database.
+                          const res = await trySave(
+                            () => dismissNotificationAction(n.id),
+                            () => void load(),
+                          );
+                          if (!res?.ok) return;
                           const was = res.data?.was ?? "read";
                           toast.success("Notification removed", {
                             action: {

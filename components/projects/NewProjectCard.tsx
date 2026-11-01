@@ -6,6 +6,7 @@ import { Plus } from "@/components/icons";
 import { createProjectAction } from "@/lib/actions/projects";
 import type { LifeArea } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 import { toast } from "sonner";
 
 type Props = {
@@ -24,11 +25,10 @@ export function NewProjectCard({ lifeArea, onCreated, className }: Props) {
     const trimmed = title.trim();
     if (!trimmed) return;
     startTransition(async () => {
-      const res = await createProjectAction({ title: trimmed, lifeArea });
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not create project");
-        return;
-      }
+      const res = await trySave(() =>
+        createProjectAction({ title: trimmed, lifeArea }),
+      );
+      if (!res?.ok) return;
       if (!res.data) {
         toast.error("Could not create project");
         return;

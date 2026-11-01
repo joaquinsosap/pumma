@@ -27,7 +27,6 @@ import { cn } from "@/lib/utils";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { trySave } from "@/lib/try-save";
-import { useTrySave } from "@/lib/use-try-save";
 import { applySubtaskChange, type SubtaskChange } from "@/lib/subtask-changes";
 
 const STATUS_OPTIONS = [
@@ -73,6 +72,7 @@ function SubtaskRow({
   const [draft, setDraft] = useState<{ from: string; value: string } | null>(
     null,
   );
+  const cancelled = useRef(false);
 
   const commitTitle = (value: string) => {
     const from = draft?.from ?? sub.title;
@@ -110,9 +110,20 @@ function SubtaskRow({
         onChange={(e) =>
           setDraft({ from: draft?.from ?? sub.title, value: e.target.value })
         }
-        onBlur={(e) => commitTitle(e.target.value)}
+        onBlur={(e) => {
+          if (cancelled.current) {
+            cancelled.current = false;
+            setDraft(null);
+            return;
+          }
+          commitTitle(e.target.value);
+        }}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
+          if (e.key === "Escape") {
+            cancelled.current = true;
+            e.currentTarget.blur();
+          }
         }}
         className={cn(
           // Same tell as the titles above, minus the pencil.
@@ -162,7 +173,6 @@ export function TaskDetailPanel({
   );
   const [dueTime, setDueTime] = useSyncedDraft(dueTimeOf(task.due), task.id);
   const [pending, startTransition] = useTransition();
-  const attempt = useTrySave();
 
   const project = projects.find((p) => p.id === task.projectId);
 
@@ -196,10 +206,10 @@ export function TaskDetailPanel({
         // sidebar re-prefetch all nine of its links. This is the panel's hot
         // path — it fires on every debounced keystroke in the description and
         // on every field change.
-        await attempt(() => updateTaskDetail({ id: task.id, ...patch }), onFail);
+        await trySave(() => updateTaskDetail({ id: task.id, ...patch }), onFail);
       });
     },
-    [task.id, attempt],
+    [task.id],
   );
 
   // Autosaves, and survives closing the panel / switching tasks mid-sentence.
@@ -225,7 +235,7 @@ export function TaskDetailPanel({
   const changeSubtask = (change: SubtaskChange, onFail?: () => void) => {
     startTransition(async () => {
       applyLocally(change);
-      const res = await attempt(
+      const res = await trySave(
         () => changeTaskSubtask({ id: task.id, change }),
         onFail,
       );

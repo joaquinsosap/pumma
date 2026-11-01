@@ -75,10 +75,24 @@ export function reverted(state: DraftState): DraftState {
   return { ...state, shown: value, stored: value, unsaved: false };
 }
 
+/** The server said no to a name and would say it again, so the box goes back to what it holds. Anything typed since stays. */
+export function nameRefused(state: DraftState, value: string): DraftState {
+  const failed = sendFailed(state, value);
+  return failed.stored === null && state.shown === value
+    ? reverted(failed)
+    : failed;
+}
+
 /** Leaving a box that can't be blank: trims what was typed, and blank goes back to what is stored. Text nobody typed stays as the server has it. */
 export function committedRequired(state: DraftState): DraftState {
-  if (!state.unsaved) return state;
   const trimmed = state.shown.trim();
+  if (!state.unsaved) {
+    // The timer already sent it, and the server trims. Stored stays the sent text, so a failed save still goes again.
+    const wentOut = state.sent.length > 0 || state.shown !== state.server;
+    return wentOut && trimmed && trimmed !== state.shown
+      ? { ...state, shown: trimmed }
+      : state;
+  }
   if (!trimmed) return reverted(state);
   return trimmed === state.shown ? state : typed(state, trimmed);
 }

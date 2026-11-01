@@ -50,6 +50,7 @@ import { classifyDue } from "@/lib/nudge";
 import { NudgeOffer, useNudgeOffer } from "@/components/shell/NudgeOffer";
 import { useAssistant } from "@/components/assistant/AssistantProvider";
 import { isTutorialActive } from "@/lib/tutorial-lock";
+import { trySave } from "@/lib/try-save";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { EnterKey, Pencil, Sparkles } from "@/components/icons";
 
@@ -553,20 +554,19 @@ export function OmniBox({
     const taskDue = parsed.due ?? pickedDue ?? defaultTaskDue;
 
     startTransition(async () => {
-      const res = await createFromOmni({
-        text: trimmed,
-        type,
-        projectId: type === "task" ? capture.projectId : undefined,
-        due: type === "task" ? taskDue : undefined,
-        priority: type === "task" ? pickedPriority : undefined,
-        goalCategory: type === "goal" ? capture.goalCategory : undefined,
-        lifeView: life,
-        tagIds: taggable ? selectedTagIds : undefined,
-      });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() =>
+        createFromOmni({
+          text: trimmed,
+          type,
+          projectId: type === "task" ? capture.projectId : undefined,
+          due: type === "task" ? taskDue : undefined,
+          priority: type === "task" ? pickedPriority : undefined,
+          goalCategory: type === "goal" ? capture.goalCategory : undefined,
+          lifeView: life,
+          tagIds: taggable ? selectedTagIds : undefined,
+        }),
+      );
+      if (!res?.ok) return;
       // After the save, never before. The due is only worth learning from
       // when it came from the quick-pick: a typed "#friday" is a decision
       // about one task, not a preference.
@@ -598,11 +598,10 @@ export function OmniBox({
           ? {
               label: "UNDO",
               onClick: async () => {
-                await undoCreate(
-                  res.undo!.entity,
-                  res.undo!.snapshot as string,
+                const undone = await trySave(() =>
+                  undoCreate(res.undo!.entity, res.undo!.snapshot as string),
                 );
-                router.refresh();
+                if (undone) router.refresh();
               },
             }
           : undefined,

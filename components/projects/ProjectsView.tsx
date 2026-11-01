@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { useIsDesktop } from "@/lib/use-media-query";
 import { useTaskSelection } from "@/lib/use-task-selection";
 import { lifeAreaForCreate } from "@/lib/life-area";
+import { trySave } from "@/lib/try-save";
 
 type Props = {
   projects: Project[];
@@ -116,14 +117,13 @@ export function ProjectsView({
     const destination =
       projects.find((p) => p.id === nextProjectId)?.title ?? "project";
     startProjectMove(async () => {
-      const res = await setTaskProject({
-        id: taskId,
-        projectId: nextProjectId,
-      });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() =>
+        setTaskProject({
+          id: taskId,
+          projectId: nextProjectId,
+        }),
+      );
+      if (!res) return;
       toast.success(`Moved to ${destination}`);
     });
   };

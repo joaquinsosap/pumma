@@ -4,6 +4,7 @@ import {
   draftFrom,
   fromServer,
   landed,
+  nameRefused,
   reverted,
   send,
   sendFailed,
@@ -169,6 +170,12 @@ describe("a fresh value while typing, afterwards", () => {
 });
 
 describe("a save that was answered", () => {
+  it("counts a page that kept the text exactly as sent, padding and all", () => {
+    const first = send(typed(draftFrom("Note "), "Other"))!;
+    const back = send(typed(first.state, "Note "))!;
+    expect(landed(back.state, back.value).sent).toEqual([]);
+  });
+
   it("forgets the old text once the last save lands on the value the page already has", () => {
     // Typed away and back: the page never changes, so no page comes for either save.
     const away = sent(typed(draftFrom("A"), "B"));
@@ -196,6 +203,36 @@ describe("a save that was answered", () => {
     expect(answered.sent).toEqual(["abc"]);
     const typing = typed(answered, "abcd");
     expect(fromServer(typing, "abc").shown).toBe("abcd");
+  });
+});
+
+describe("a name the server refuses", () => {
+  it("goes back to what the server holds, and isn't sent again", () => {
+    const out = send(typed(draftFrom("finance"), "personal"))!;
+    const state = nameRefused(out.state, out.value);
+    expect(state.shown).toBe("finance");
+    expect(state.unsaved).toBe(false);
+    expect(send(state)).toBeNull();
+  });
+
+  it("keeps what was typed since, and that goes next", () => {
+    const out = send(typed(draftFrom("finance"), "personal"))!;
+    const state = nameRefused(typed(out.state, "personal2"), out.value);
+    expect(state.shown).toBe("personal2");
+    expect(send(state)?.value).toBe("personal2");
+  });
+
+  it("leaves a newer name that already went out", () => {
+    const first = send(typed(draftFrom("x"), "a"))!;
+    const second = send(typed(first.state, "ab"))!;
+    const state = nameRefused(second.state, first.value);
+    expect(state.shown).toBe("ab");
+    expect(state.sent).toEqual(["ab"]);
+  });
+
+  it("clears what it was waiting on", () => {
+    const out = send(typed(draftFrom("finance"), "personal"))!;
+    expect(nameRefused(out.state, out.value).sent).toEqual([]);
   });
 });
 
@@ -263,6 +300,35 @@ describe("cancelling", () => {
     const state = reverted(typed(out, "abcd"));
     expect(state.shown).toBe("abc");
     expect(send(state)).toBeNull();
+  });
+});
+
+describe("leaving a box that can't be blank, after the timer sent it", () => {
+  it("trims the box with no second write", () => {
+    const out = send(typed(draftFrom("Old"), "New "))!;
+    const state = committedRequired(out.state);
+    expect(state.shown).toBe("New");
+    expect(send(state)).toBeNull();
+  });
+
+  it("trims it when the server's trimmed page came first", () => {
+    const out = send(typed(draftFrom("Old"), "New "))!;
+    const state = committedRequired(fromServer(out.state, "New"));
+    expect(state.shown).toBe("New");
+    expect(send(state)).toBeNull();
+  });
+
+  it("takes the trimmed page for its own after trimming", () => {
+    const out = send(typed(draftFrom("Old"), "New "))!;
+    const state = fromServer(committedRequired(out.state), "New");
+    expect(state.shown).toBe("New");
+    expect(state.sent).toEqual([]);
+  });
+
+  it("still sends the words again if that save failed", () => {
+    const out = send(typed(draftFrom("Old"), "New "))!;
+    const state = sendFailed(committedRequired(out.state), out.value);
+    expect(send(state)?.value).toBe("New");
   });
 });
 

@@ -23,6 +23,7 @@ import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { updateSettingsAction } from "@/lib/actions/settings";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 const options = ["both", "personal", "work"] as const;
 
@@ -187,8 +188,10 @@ export function LifeAreaToggle({
     if (nextEnabled === enabled) return;
     setOptimisticEnabled(nextEnabled);
     startAutoSwitchTransition(async () => {
-      await updateSettingsAction({ lifeAutoSwitch: nextEnabled });
-      router.refresh();
+      const res = await trySave(() =>
+        updateSettingsAction({ lifeAutoSwitch: nextEnabled }),
+      );
+      if (res) router.refresh();
     });
   };
 
@@ -209,8 +212,11 @@ export function LifeAreaToggle({
     setMinsDraft(String(n));
     if (n === auto?.overrideMins) return;
     startMinsTransition(async () => {
-      await updateSettingsAction({ lifeAutoOverrideMins: n });
-      router.refresh();
+      const res = await trySave(
+        () => updateSettingsAction({ lifeAutoOverrideMins: n }),
+        () => setMinsDraft(String(auto?.overrideMins ?? 60)),
+      );
+      if (res) router.refresh();
     });
   };
 
@@ -233,8 +239,11 @@ export function LifeAreaToggle({
       stepValue.current = null;
       if (n === auto?.overrideMins) return;
       startMinsTransition(async () => {
-        await updateSettingsAction({ lifeAutoOverrideMins: n });
-        router.refresh();
+        const res = await trySave(
+          () => updateSettingsAction({ lifeAutoOverrideMins: n }),
+          () => setMinsDraft(String(auto?.overrideMins ?? 60)),
+        );
+        if (res) router.refresh();
       });
     }, 600);
   };

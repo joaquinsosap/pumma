@@ -35,6 +35,7 @@ import {
   snoozeNotificationAction,
 } from "@/lib/actions/notifications";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 const KIND = {
   meeting: { icon: CalendarPlus, tint: "var(--calendar)", noun: "Meeting" },
@@ -109,11 +110,8 @@ export function NotificationSheet({
 
   const snooze = (minutes: number) =>
     start(async () => {
-      const res = await snoozeNotificationAction(n.id, minutes);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() => snoozeNotificationAction(n.id, minutes));
+      if (!res) return;
       done(
         minutes < 60
           ? `Back in ${minutes} minutes`
@@ -123,11 +121,8 @@ export function NotificationSheet({
 
   const dismiss = () =>
     start(async () => {
-      const res = await dismissNotificationAction(n.id);
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() => dismissNotificationAction(n.id));
+      if (!res?.ok) return;
       const was = res.data?.was ?? "read";
       toast.success("Notification removed", {
         action: {

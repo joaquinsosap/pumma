@@ -41,7 +41,6 @@ import {
 import type { WeekStart } from "@/lib/date";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { trySave } from "@/lib/try-save";
-import { useTrySave } from "@/lib/use-try-save";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { EntityTagRow } from "@/components/tags/EntityTagRow";
 
@@ -80,7 +79,6 @@ export function GoalDetailPanel({
   const confirm = useConfirm();
   const bodyRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
-  const attempt = useTrySave();
   const [title, setTitle, flushTitle, cancelTitle] = useAutosaveDraft(
     goal.title,
     goal.id,
@@ -141,14 +139,14 @@ export function GoalDetailPanel({
     pendingDeltaRef.current = 0;
     if (!total) return;
     // Not wrapped in startTransition: this also runs while the panel unmounts.
-    void attempt(
+    void trySave(
       () => setGoalProgress(goal.id, total),
       () => {
         displayedRef.current = serverProgressRef.current;
         setShownProgress(null);
       },
     );
-  }, [goal.id, attempt]);
+  }, [goal.id]);
 
   // The live value also lives in a ref: rapid taps are batched, so reading it
   // from render state made every tap in a burst compute from the same stale
@@ -199,11 +197,8 @@ export function GoalDetailPanel({
     if (!ok) return;
 
     startTransition(async () => {
-      const res = await deleteGoalAction(goal.id);
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not delete goal");
-        return;
-      }
+      const res = await trySave(() => deleteGoalAction(goal.id));
+      if (!res) return;
       toast.success("Goal deleted");
       onClose();
       router.refresh();
@@ -292,7 +287,7 @@ export function GoalDetailPanel({
                 if (picked === targetDate) return;
                 setTargetDate(picked);
                 startTransition(async () => {
-                  await attempt(
+                  await trySave(
                     () =>
                       updateGoalDetailAction({
                         id: goal.id,
@@ -408,13 +403,14 @@ export function GoalDetailPanel({
             dotShape="circle"
             onAttach={(habitId) =>
               startTransition(async () => {
-                const res = await attachHabitToGoal(
-                  habitId,
-                  goal.id,
-                  DEFAULT_HABIT_GOAL_STREAK,
+                const res = await trySave(() =>
+                  attachHabitToGoal(
+                    habitId,
+                    goal.id,
+                    DEFAULT_HABIT_GOAL_STREAK,
+                  ),
                 );
-                if (!res.ok) toast.error(res.error ?? "Could not link habit");
-                router.refresh();
+                if (res) router.refresh();
               })
             }
             onDetach={() => {}}
@@ -491,9 +487,10 @@ export function GoalDetailPanel({
             }))}
             onAttach={(projectId) =>
               startTransition(async () => {
-                const res = await linkProjectToGoal(projectId, goal.id);
-                if (!res.ok) toast.error(res.error ?? "Could not link project");
-                router.refresh();
+                const res = await trySave(() =>
+                  linkProjectToGoal(projectId, goal.id),
+                );
+                if (res) router.refresh();
               })
             }
             onDetach={() => {}}
