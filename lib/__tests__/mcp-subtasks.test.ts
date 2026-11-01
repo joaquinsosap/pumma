@@ -23,6 +23,7 @@ import {
   subtaskChanges,
   subtasksFromInput,
   tickedSubtasks,
+  withRowsAddedSince,
 } from "@/lib/mcp/subtasks";
 import { completeTask, createTask, updateTask } from "@/lib/mcp/tools/write";
 
@@ -48,6 +49,25 @@ function counter() {
   let n = 0;
   return () => `new-${++n}`;
 }
+
+describe("withRowsAddedSince", () => {
+  const c: Subtask = { id: "c", title: "Plant", done: false };
+
+  it("keeps a row that arrived after the first read, last", () => {
+    expect(withRowsAddedSince([b], [a, b, c], new Set(["a", "b"]))).toEqual([
+      b,
+      c,
+    ]);
+  });
+
+  it("drops a row the first read saw and the list left out", () => {
+    expect(withRowsAddedSince([b], [a, b], new Set(["a", "b"]))).toEqual([b]);
+  });
+
+  it("doesn't double a new row the list already took by its title", () => {
+    expect(withRowsAddedSince([c], [c], new Set())).toEqual([c]);
+  });
+});
 
 describe("subtasksFromInput", () => {
   it("gives a new title a fresh id and leaves it not done", () => {
@@ -577,6 +597,76 @@ describe("the MCP task tools", () => {
         ["Weed", true],
         ["Plant", true],
       ]);
+    });
+  });
+
+  describe("a list write that loses the race and reads again", () => {
+    /** The first read and build, then a row lands, then the rebuild: what a lost compare-and-set does. */
+    const rowLandsMidWrite = () => {
+      vi.mocked(rewriteRow).mockImplementationOnce(async (user, rowId, build) => {
+        const real =
+          await vi.importActual<typeof import("@/lib/db/tasks")>("@/lib/db/tasks");
+        build((await real.getTask(user, rowId))!.subtasks);
+        await real.changeSubtask(user, rowId, {
+          kind: "add",
+          id: "c",
+          title: "Plant",
+        });
+        return real.rewriteSubtasks(user, rowId, build);
+      });
+    };
+
+    it("keeps the row that landed, and saves the chat's own row", async () => {
+      const { id } = await seed([a, b]);
+      rowLandsMidWrite();
+      const out = await update({
+        id,
+        subtasks: [{ title: "Water" }, { title: "Weed" }, { title: "From the chat" }],
+      });
+      expect(data(out).ok).toBe(true);
+      expect(stored(id).subtasks.map((s) => s.title)).toEqual([
+        "Water",
+        "Weed",
+        "From the chat",
+        "Plant",
+      ]);
+    });
+
+    it("doesn't count that row as left out, so no delete permission is needed", async () => {
+      const { id } = await seed([a, b]);
+      rowLandsMidWrite();
+      const out = await update(
+        { id, subtasks: [{ title: "Water" }, { title: "Weed" }] },
+        await callerWith(false),
+      );
+      expect(data(out).ok).toBe(true);
+      expect(stored(id).subtasks.map((s) => s.id)).toEqual(["a", "b", "c"]);
+    });
+
+    it("still refuses to drop a row that was there when the write began", async () => {
+      const { id } = await seed([a, b]);
+      rowLandsMidWrite();
+      await expect(
+        update({ id, subtasks: [{ title: "Water" }] }, await callerWith(false)),
+      ).rejects.toBeInstanceOf(McpPolicyError);
+      expect(stored(id).subtasks.map((s) => s.id)).toEqual(["a", "b"]);
+    });
+
+    it("still drops it when delete is allowed, and only it", async () => {
+      const { id } = await seed([a, b]);
+      rowLandsMidWrite();
+      await update({ id, subtasks: [{ title: "Water" }] }, await callerWith(true));
+      expect(stored(id).subtasks.map((s) => s.id)).toEqual(["a", "c"]);
+    });
+
+    it("takes the landed row as the chat's own when the list names its title", async () => {
+      const { id } = await seed([a, b]);
+      rowLandsMidWrite();
+      await update({
+        id,
+        subtasks: [{ title: "Water" }, { title: "Weed" }, { title: "Plant" }],
+      });
+      expect(stored(id).subtasks.map((s) => s.id)).toEqual(["a", "b", "c"]);
     });
   });
 

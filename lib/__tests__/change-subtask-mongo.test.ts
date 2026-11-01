@@ -18,12 +18,14 @@ const state = vi.hoisted(() => ({
   reads: [] as unknown[][],
   readCount: 0,
   missWrites: 0,
+  readFilters: [] as unknown[],
 }));
 
 vi.mock("@/lib/mongodb", () => ({
   getDb: async () => ({
     collection: () => ({
-      findOne: async () => {
+      findOne: async (filter: unknown) => {
+        state.readFilters.push(filter);
         if (!state.found) return null;
         const subtasks =
           state.reads[Math.min(state.readCount, state.reads.length - 1)];
@@ -101,6 +103,7 @@ beforeEach(() => {
   state.reads = [];
   state.readCount = 0;
   state.missWrites = 0;
+  state.readFilters.length = 0;
 });
 
 describe("changeSubtask on Mongo", () => {
@@ -193,6 +196,12 @@ describe("rewriteSubtasks on Mongo", () => {
     const { filter, options } = state.writes.at(-1) as Write;
     expect(filter).toEqual({ _id: "t1", userId: "me", subtasks: list });
     expect(options).toEqual({ returnDocument: "after" });
+  });
+
+  it("reads only this owner's task, so another account's list never reaches the build", async () => {
+    state.reads = [[stored("Water")]];
+    await rewriteSubtasks("me", "t1", tickAll);
+    expect(state.readFilters[0]).toEqual({ _id: "t1", userId: "me" });
   });
 
   it("builds from decrypted titles and stores them sealed", async () => {

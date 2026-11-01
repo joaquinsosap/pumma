@@ -36,6 +36,19 @@ export function subtasksFromInput(
   }));
 }
 
+/** A retried write: a row that arrived after its first read wasn't there for anyone to leave out, so it stays. */
+export function withRowsAddedSince(
+  next: Subtask[],
+  stored: Subtask[],
+  firstRead: ReadonlySet<string>,
+): Subtask[] {
+  const named = new Set(next.map((s) => s.id));
+  return [
+    ...next,
+    ...stored.filter((s) => !firstRead.has(s.id) && !named.has(s.id)),
+  ];
+}
+
 /** Every box ticked, for a chat that asked for that. */
 export function tickedSubtasks(subtasks: Subtask[]): Subtask[] {
   return subtasks.map((s) => ({ ...s, done: true }));

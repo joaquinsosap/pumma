@@ -49,6 +49,7 @@ import {
   subtaskChanges,
   subtasksFromInput,
   tickedSubtasks,
+  withRowsAddedSince,
   type SubtaskInput,
 } from "@/lib/mcp/subtasks";
 import {
@@ -460,11 +461,13 @@ async function runTaskUpdate(
   }
 
   const list = { added: 0, removed: 0, changed: false };
+  let firstRead: Set<string> | undefined;
   // Straight to the row, since no metric reads subtasks; first, so nothing slow sits between that read and this write.
   const current = writesList
     ? await rewriteSubtasks(caller.userId, id, (stored) => {
+        firstRead ??= new Set(stored.map((s) => s.id));
         const next = given
-          ? subtasksFromInput(given, stored)
+          ? withRowsAddedSince(subtasksFromInput(given, stored), stored, firstRead)
           : tickedSubtasks(stored);
         const { added, removed } = subtaskChanges(stored, next);
         // Before anything is written.
