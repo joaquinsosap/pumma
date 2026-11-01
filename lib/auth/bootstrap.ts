@@ -3,7 +3,7 @@
 import "server-only";
 import { insertUser } from "@/lib/db/users";
 import { insertSettings, updateSettings } from "@/lib/db/settings";
-import { ensureLifeTags, listTags } from "@/lib/db/tags";
+import { ensureLifeTags, insertTag, listTags } from "@/lib/db/tags";
 import { insertTask } from "@/lib/db/tasks";
 import { insertNote } from "@/lib/db/notes";
 import { insertHabit } from "@/lib/db/habits";
@@ -150,23 +150,42 @@ async function plantSampleData(userId: string): Promise<StarterEntry[]> {
     });
   };
 
-  for (const doc of seed.projects) {
+  // The account already has its life tags, and a new tag gets a new id, so the seed's ids are swapped for real ones.
+  const mine = await listTags(userId);
+  const tagIdFor = new Map<string, string>();
+  for (const tag of seed.tags) {
+    const real =
+      mine.find((t) => t.name === tag.name) ??
+      (await insertTag(userId, tag.name, {
+        projectId: tag.projectId,
+        isProjectPrimary: tag.isProjectPrimary,
+        color: tag.color,
+      }));
+    if (real) tagIdFor.set(tag._id, real.id);
+  }
+  const retagged = <T extends { tagIds: string[] }>(docs: T[]): T[] =>
+    docs.map((doc) => ({
+      ...doc,
+      tagIds: doc.tagIds.flatMap((id) => tagIdFor.get(id) ?? []),
+    }));
+
+  for (const doc of retagged(seed.projects)) {
     await insertProject(doc);
     record("project", doc);
   }
-  for (const doc of seed.goals) {
+  for (const doc of retagged(seed.goals)) {
     await insertGoal(doc);
     record("goal", doc);
   }
-  for (const doc of seed.habits) {
+  for (const doc of retagged(seed.habits)) {
     await insertHabit(doc);
     record("habit", doc);
   }
-  for (const doc of seed.tasks) {
+  for (const doc of retagged(seed.tasks)) {
     await insertTask(doc);
     record("task", doc);
   }
-  for (const doc of seed.notes) {
+  for (const doc of retagged(seed.notes)) {
     await insertNote(doc);
     record("note", doc);
   }
