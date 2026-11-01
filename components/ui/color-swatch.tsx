@@ -29,7 +29,10 @@ export function ColorSwatch({
       style={{ background: color }}
     >
       {picked && (
-        <Check className="h-3.5 w-3.5 text-white" strokeWidth={3.2} />
+        // The dark chip keeps the white check readable on the light colors too.
+        <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-black/30">
+          <Check className="h-3 w-3 text-white" strokeWidth={3.2} />
+        </span>
       )}
     </button>
   );

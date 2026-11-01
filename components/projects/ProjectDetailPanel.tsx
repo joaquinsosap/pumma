@@ -13,7 +13,7 @@ import { linkProjectToGoal } from "@/lib/actions/links";
 import { GoalLinkField } from "@/components/links/GoalLinkField";
 import { ProjectTagsField } from "@/components/projects/ProjectTagsField";
 import { EntityTagRow } from "@/components/tags/EntityTagRow";
-import { PROJECT_COLORS } from "@/lib/project-colors";
+import { PROJECT_COLOR_NAMES, PROJECT_COLORS } from "@/lib/project-colors";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { trySave } from "@/lib/try-save";
@@ -194,7 +194,7 @@ export function ProjectDetailPanel({
                 key={c}
                 color={c}
                 picked={color === c}
-                title="Set project color"
+                title={`Set project color to ${PROJECT_COLOR_NAMES[c]}`}
                 onClick={() => pickColor(c)}
                 className="h-7 w-7"
               />

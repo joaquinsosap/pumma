@@ -286,7 +286,7 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                           if (!res.ok) toast.error(res.error);
                         });
                       }}
-                      className="h-6 w-6"
+                      className="h-6 w-6 rounded-md hover:scale-110"
                     />
                   ))}
                 </div>
