@@ -40,6 +40,9 @@ export function BottomSheet({
     last: number;
   } | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
+  // A direct ?task= link renders this open on the server, where there is no <body> to portal into.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const peekPx = () => window.innerHeight * 0.55;
   const fullPx = () => window.innerHeight - 12;
@@ -126,7 +129,7 @@ export function BottomSheet({
     setSnap(h > (peekPx() + fullPx()) / 2 ? "full" : "peek");
   };
 
-  if (!open || isDesktop) return null;
+  if (!open || isDesktop || !mounted) return null;
 
   // Portalled to <body>, not rendered where it is used.
   //
