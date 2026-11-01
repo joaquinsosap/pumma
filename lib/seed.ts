@@ -19,7 +19,7 @@ import type {
 import { taskSchema } from "@/lib/schemas";
 import { LIFE_SPAN_DEFAULT } from "@/lib/life-constants";
 import { addDays, iso, oid } from "@/lib/date";
-import { projectTagSlug } from "@/lib/project-tags";
+import { projectTagSlug, withProjectPrimaryTag } from "@/lib/project-tags";
 
 export type SeedData = {
   users: UserDoc[];
@@ -747,7 +747,17 @@ export function createSeedData(userId: string): SeedData {
     users: [user],
     settings: [settings],
     tags,
-    tasks: withLife(tasks).map((t) => taskSchema.parse(t)),
+    // Filed under a project means carrying its tag, the same as a real capture.
+    tasks: withLife(tasks).map((t) =>
+      taskSchema.parse({
+        ...t,
+        tagIds: withProjectPrimaryTag(
+          t.tagIds,
+          t.projectId,
+          tags.map((tag) => ({ ...tag, id: tag._id })),
+        ),
+      }),
+    ),
     habits: withLife(habits),
     habitEntries,
     notes: withLife(notes),
