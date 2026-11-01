@@ -14,6 +14,7 @@ import {
 } from "@/lib/actions/calendar-feeds";
 import { FEED_PALETTE, OWN_MEETING_COLOR } from "@/lib/calendar-colors";
 import { cn } from "@/lib/utils";
+import { ColorSwatch } from "@/components/ui/color-swatch";
 
 /**
  * Where a subscription is added, and the only place one can be removed.
@@ -273,10 +274,10 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                 </summary>
                 <div className="pumma-floating absolute left-0 top-6 z-20 grid w-[132px] grid-cols-4 gap-1 rounded-lg border border-border bg-surface p-1.5 shadow-lg">
                   {FEED_PALETTE.map((c) => (
-                    <button
+                    <ColorSwatch
                       key={c.value}
-                      type="button"
-                      aria-label={c.name}
+                      color={c.value}
+                      picked={c.value === f.color}
                       title={c.name}
                       onClick={(e) => {
                         e.currentTarget.closest("details")?.removeAttribute("open");
@@ -285,13 +286,7 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                           if (!res.ok) toast.error(res.error);
                         });
                       }}
-                      className={cn(
-                        "h-6 w-6 rounded-md border transition-transform hover:scale-110",
-                        c.value === f.color
-                          ? "border-ink"
-                          : "border-transparent",
-                      )}
-                      style={{ background: c.value }}
+                      className="h-6 w-6"
                     />
                   ))}
                 </div>

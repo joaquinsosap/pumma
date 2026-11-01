@@ -14,7 +14,6 @@ import { GoalLinkField } from "@/components/links/GoalLinkField";
 import { ProjectTagsField } from "@/components/projects/ProjectTagsField";
 import { EntityTagRow } from "@/components/tags/EntityTagRow";
 import { PROJECT_COLORS } from "@/lib/project-colors";
-import { cn } from "@/lib/utils";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { trySave } from "@/lib/try-save";
@@ -27,6 +26,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollHint } from "@/components/ui/scroll-hint";
 import { EditableTitle } from "@/components/ui/editable-title";
+import { ColorSwatch } from "@/components/ui/color-swatch";
 import { toast } from "sonner";
 
 type Props = {
@@ -190,16 +190,13 @@ export function ProjectDetailPanel({
           </h4>
           <div className="flex flex-wrap gap-2">
             {PROJECT_COLORS.map((c) => (
-              <button
+              <ColorSwatch
                 key={c}
-                type="button"
+                color={c}
+                picked={color === c}
                 title="Set project color"
                 onClick={() => pickColor(c)}
-                className={cn(
-                  "h-7 w-7 rounded-lg border-2 transition-transform hover:scale-105",
-                  color === c ? "border-ink" : "border-transparent",
-                )}
-                style={{ background: c }}
+                className="h-7 w-7"
               />
             ))}
           </div>
