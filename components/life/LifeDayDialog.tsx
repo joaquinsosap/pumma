@@ -102,7 +102,7 @@ export function LifeDayDialog({
             onChange={(e) => setMood(e.target.value as LifeMood | "")}
             className="rounded-lg border border-border bg-surface px-3 py-2 text-sm"
           >
-            <option value="">—</option>
+            <option value="">-</option>
             {LIFE_MOODS.map((m) => (
               <option key={m.value} value={m.value}>
                 {m.label}

@@ -118,7 +118,7 @@ export function LifeWeekDialog({
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[17px] font-extrabold tracking-tight text-ink">
-              Age {ageLabel ?? "—"} · Week {week.weekIndex.toLocaleString()}
+              Age {ageLabel ?? "-"} · Week {week.weekIndex.toLocaleString()}
             </div>
             <div className="mt-0.5 font-mono text-[11px] text-faint">
               {rangeLabel} · {status}

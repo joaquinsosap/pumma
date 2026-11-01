@@ -39,7 +39,7 @@ export function habitScheduleLabel(frequency: HabitSchedule): string {
   // and weekends are the two runs people actually keep.
   const contiguous = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
   if (contiguous && days.length > 2) {
-    return `${NAMES[days[0]]}\u2013${NAMES[days[days.length - 1]]}`;
+    return `${NAMES[days[0]]} to ${NAMES[days[days.length - 1]]}`;
   }
   return days.map((d) => NAMES[d]).join(", ");
 }

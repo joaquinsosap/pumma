@@ -73,7 +73,7 @@ const GLYPH_NUDGE: Record<TaskPriority, string> = {
 
 export const PRIORITY_GLYPH: Record<TaskPriority, string> = {
   high: "\u2303",
-  med: "\u2013",
+  med: "\u2212",
   low: "\u2304",
 };
 

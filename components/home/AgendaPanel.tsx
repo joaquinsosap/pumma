@@ -41,8 +41,8 @@ const PRIO_COLOR = {
 } as const;
 
 function taskTimeLabel(due: string | null): string {
-  if (!due) return "—";
-  if (due.includes("T")) return due.split("T")[1]?.slice(0, 5) ?? "—";
+  if (!due) return "-";
+  if (due.includes("T")) return due.split("T")[1]?.slice(0, 5) ?? "-";
   return "all day";
 }
 

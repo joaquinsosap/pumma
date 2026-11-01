@@ -59,7 +59,7 @@ export default async function SettingsPage() {
       mcpEndpoint={mcpEndpoint}
       mcpActivity={mcpActivity}
       mcpClients={mcpClients}
-      stats={{ dayPct: 0, habitsLabel: "—", topStreak: 0 }}
+      stats={{ dayPct: 0, habitsLabel: "-", topStreak: 0 }}
     />
   );
 }

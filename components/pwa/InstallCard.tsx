@@ -91,7 +91,7 @@ export function InstallCard({ className }: { className?: string }) {
       )}
     >
       <Smartphone className="mr-1 inline h-3.5 w-3.5 align-[-2px] text-faint2" />
-      Your browser installs apps from its own menu — look for Install or Add to
+      Your browser installs apps from its own menu. Look for Install or Add to
       Home Screen. PUMMA then opens in its own window.
     </p>
   );

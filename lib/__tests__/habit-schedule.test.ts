@@ -41,7 +41,7 @@ describe("habitAppliesOn", () => {
 
 describe("habitScheduleLabel", () => {
   it("names a contiguous run as a range", () => {
-    expect(habitScheduleLabel(weekdays)).toBe("Mon–Fri");
+    expect(habitScheduleLabel(weekdays)).toBe("Mon to Fri");
   });
 
   it("lists a scattered set", () => {

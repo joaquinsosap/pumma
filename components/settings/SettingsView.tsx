@@ -961,8 +961,8 @@ export function SettingsView({
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="m-0 text-[12px] text-faint">
                   Click the dot to change a tag&apos;s color, click the name to
-                  rename. Drag the handle to arrange them yourself — the sidebar
-                  follows this order.
+                  rename. Drag the handle to arrange them yourself, and the
+                  sidebar follows this order.
                 </p>
                 <SortMenu
                   options={TAG_SORTS}

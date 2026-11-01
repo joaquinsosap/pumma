@@ -115,7 +115,7 @@ export function SubscriptionCard() {
             Last payment
           </p>
           <p className="mt-1 text-sm text-ink">
-            {paid?.amount ?? "—"}
+            {paid?.amount ?? "-"}
             {fmtDate(paid?.date) && (
               <span className="text-muted"> on {fmtDate(paid?.date)}</span>
             )}
@@ -129,7 +129,7 @@ export function SubscriptionCard() {
             License key
           </p>
           <p className="mt-1 break-all font-mono text-[12px] text-ink">
-            {summary.licenseKey ?? "—"}
+            {summary.licenseKey ?? "-"}
           </p>
         </div>
       </div>
