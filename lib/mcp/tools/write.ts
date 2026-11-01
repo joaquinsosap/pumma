@@ -52,6 +52,7 @@ import {
   withRowsAddedSince,
   type SubtaskInput,
 } from "@/lib/mcp/subtasks";
+import { MAX_SUBTASKS } from "@/lib/subtask-changes";
 import {
   boardNote,
   columnOf,
@@ -469,6 +470,12 @@ async function runTaskUpdate(
         const next = given
           ? withRowsAddedSince(subtasksFromInput(given, stored), stored, firstRead)
           : tickedSubtasks(stored);
+        // A full list can only go over when a row landed during the write, so reading again sorts it out.
+        if (next.length > MAX_SUBTASKS) {
+          throw new Error(
+            `A task can hold ${MAX_SUBTASKS} subtasks, and rows were added to this one just now. Read it again and send a shorter list.`,
+          );
+        }
         const { added, removed } = subtaskChanges(stored, next);
         // Before anything is written.
         if (removed) assertMayDropSubtasks(caller, removed);

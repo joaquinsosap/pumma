@@ -643,6 +643,29 @@ describe("the MCP task tools", () => {
       expect(stored(id).subtasks.map((s) => s.id)).toEqual(["a", "b", "c"]);
     });
 
+    it("refuses a list the landed row would take past the cap, and writes nothing of it", async () => {
+      const rows = Array.from({ length: 199 }, (_, i) => ({
+        id: `r${i}`,
+        title: `Row ${i}`,
+        done: false,
+      }));
+      const { id } = await seed(rows);
+      rowLandsMidWrite();
+      await expect(
+        update({
+          id,
+          subtasks: [
+            ...rows.map((r) => ({ title: r.title })),
+            { title: "From the chat" },
+          ],
+        }),
+      ).rejects.toThrow(/can hold 200/);
+      const titles = stored(id).subtasks.map((s) => s.title);
+      expect(titles).toHaveLength(200);
+      expect(titles).toContain("Plant");
+      expect(titles).not.toContain("From the chat");
+    });
+
     it("still refuses to drop a row that was there when the write began", async () => {
       const { id } = await seed([a, b]);
       rowLandsMidWrite();
