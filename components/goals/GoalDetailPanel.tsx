@@ -41,6 +41,7 @@ import {
 import type { WeekStart } from "@/lib/date";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { trySave } from "@/lib/try-save";
+import { useTrySave } from "@/lib/use-try-save";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { EntityTagRow } from "@/components/tags/EntityTagRow";
 
@@ -55,6 +56,14 @@ type Props = {
   weekStart: WeekStart;
   onClose: () => void;
 };
+
+/** Enter keeps what was typed, Escape drops it, and both leave the box. */
+function leaveOnKey(cancel: () => void) {
+  return (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") cancel();
+    if (e.key === "Enter" || e.key === "Escape") e.currentTarget.blur();
+  };
+}
 
 export function GoalDetailPanel({
   goal,
@@ -71,7 +80,8 @@ export function GoalDetailPanel({
   const confirm = useConfirm();
   const bodyRef = useRef<HTMLDivElement>(null);
   const [, startTransition] = useTransition();
-  const [title, setTitle, flushTitle] = useAutosaveDraft(
+  const attempt = useTrySave();
+  const [title, setTitle, flushTitle, cancelTitle] = useAutosaveDraft(
     goal.title,
     goal.id,
     useCallback(
@@ -81,7 +91,7 @@ export function GoalDetailPanel({
     ),
     { delay: null, required: true },
   );
-  const [metricLabel, setMetricLabel, flushMetricLabel] = useAutosaveDraft(
+  const [metricLabel, setMetricLabel, flushMetricLabel, cancelMetricLabel] = useAutosaveDraft(
     goal.metricLabel,
     goal.id,
     useCallback(
@@ -131,14 +141,14 @@ export function GoalDetailPanel({
     pendingDeltaRef.current = 0;
     if (!total) return;
     // Not wrapped in startTransition: this also runs while the panel unmounts.
-    void trySave(
+    void attempt(
       () => setGoalProgress(goal.id, total),
       () => {
         displayedRef.current = serverProgressRef.current;
         setShownProgress(null);
       },
     );
-  }, [goal.id]);
+  }, [goal.id, attempt]);
 
   // The live value also lives in a ref: rapid taps are batched, so reading it
   // from render state made every tap in a burst compute from the same stale
@@ -235,9 +245,7 @@ export function GoalDetailPanel({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={flushTitle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") e.currentTarget.blur();
-            }}
+            onKeyDown={leaveOnKey(cancelTitle)}
             className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-[15px] font-bold text-ink outline-none focus:border-faint"
             maxLength={120}
           />
@@ -267,6 +275,7 @@ export function GoalDetailPanel({
               value={metricLabel}
               onChange={(e) => setMetricLabel(e.target.value)}
               onBlur={flushMetricLabel}
+              onKeyDown={leaveOnKey(cancelMetricLabel)}
               placeholder="e.g. B1, $10k"
               className="w-full rounded-lg border border-border bg-background/50 px-3 py-2 text-sm outline-none focus:border-faint"
             />
@@ -279,12 +288,16 @@ export function GoalDetailPanel({
               mode="goal"
               value={targetDate || null}
               onChange={(next) => {
-                setTargetDate(next ?? "");
-                const targetDate = next || null;
-                if (targetDate === goal.targetDate) return;
+                const picked = next ?? "";
+                if (picked === targetDate) return;
+                setTargetDate(picked);
                 startTransition(async () => {
-                  await trySave(
-                    () => updateGoalDetailAction({ id: goal.id, targetDate }),
+                  await attempt(
+                    () =>
+                      updateGoalDetailAction({
+                        id: goal.id,
+                        targetDate: picked || null,
+                      }),
                     () => setTargetDate(goal.targetDate ?? ""),
                   );
                 });
@@ -360,15 +373,20 @@ export function GoalDetailPanel({
                   habitEntries={habitEntries}
                   habitVisibility={habitVisibility}
                   weekStart={weekStart}
-                  onTargetChange={(value) =>
+                  onTargetChange={(value, onFail) =>
                     startTransition(async () => {
-                      await updateHabitGoalTargetAction(habit.id, value);
+                      await trySave(
+                        () => updateHabitGoalTargetAction(habit.id, value),
+                        onFail,
+                      );
                       router.refresh();
                     })
                   }
                   onRemove={() =>
                     startTransition(async () => {
-                      await detachHabitFromGoal(habit.id, goal.id);
+                      await trySave(() =>
+                        detachHabitFromGoal(habit.id, goal.id),
+                      );
                       router.refresh();
                     })
                   }
@@ -432,7 +450,9 @@ export function GoalDetailPanel({
                       type="button"
                       onClick={() =>
                         startTransition(async () => {
-                          await linkProjectToGoal(project.id, null);
+                          await trySave(() =>
+                            linkProjectToGoal(project.id, null),
+                          );
                           router.refresh();
                         })
                       }
@@ -514,7 +534,7 @@ function HabitGoalLinkRow({
   habitEntries: HabitEntry[];
   habitVisibility: HabitVisibilitySettings;
   weekStart: WeekStart;
-  onTargetChange: (value: number) => void;
+  onTargetChange: (value: number, onFail: () => void) => void;
   onRemove: () => void;
 }) {
   const [targetInput, setTargetInput] = useState(String(target));
@@ -586,7 +606,9 @@ function HabitGoalLinkRow({
             }
             const next = Math.max(1, Math.min(999, Math.round(parsed)));
             setTargetInput(String(next));
-            if (next !== target) onTargetChange(next);
+            if (next !== target) {
+              onTargetChange(next, () => setTargetInput(String(target)));
+            }
           }}
           onKeyDown={(e) => {
             if (e.key === "Enter") e.currentTarget.blur();

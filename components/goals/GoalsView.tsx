@@ -292,6 +292,7 @@ export function GoalsView({
         <div className="min-h-0 overflow-y-auto p-3 max-lg:pb-28 lg:border-r lg:border-border2 lg:p-4">
           {dragReady ? (
             <DndContext
+              id="goals"
               sensors={sensors}
               collisionDetection={closestCorners}
               onDragStart={handleDragStart}
@@ -410,6 +411,7 @@ export function GoalsView({
         <BottomSheet open={!!selectedGoal} onClose={() => setGoalId(null)}>
           {selectedGoal && !isDesktop && (
             <GoalDetailPanel
+              key={selectedGoal.id}
               goal={selectedGoal}
               tags={tags}
               projects={projects}

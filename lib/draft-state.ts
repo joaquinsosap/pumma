@@ -63,13 +63,22 @@ export function sendFailed(state: DraftState, value: string): DraftState {
   return { ...state, sent, stored: null, unsaved: true };
 }
 
-/** Back to what is stored, dropping anything typed. */
-export function reverted(state: DraftState): DraftState {
-  return typed(state, state.stored ?? state.server);
+/** A save was answered. When it is the newest and the page already says the same, no page is coming for it, so nothing is out. */
+export function landed(state: DraftState, value: string): DraftState {
+  const says = state.server === value || state.server === value.trim();
+  return says && state.sent.at(-1) === value ? { ...state, sent: [] } : state;
 }
 
-/** Leaving a box that can't be blank: trims it, and blank goes back to what is stored. */
+/** Back to what is stored, dropping anything typed. After a failed save that is the server's last word, and it never goes back to the server. */
+export function reverted(state: DraftState): DraftState {
+  const value = state.stored ?? state.server;
+  return { ...state, shown: value, stored: value, unsaved: false };
+}
+
+/** Leaving a box that can't be blank: trims what was typed, and blank goes back to what is stored. Text nobody typed stays as the server has it. */
 export function committedRequired(state: DraftState): DraftState {
-  const next = state.shown.trim() || (state.stored ?? state.server);
-  return next === state.shown ? state : typed(state, next);
+  if (!state.unsaved) return state;
+  const trimmed = state.shown.trim();
+  if (!trimmed) return reverted(state);
+  return trimmed === state.shown ? state : typed(state, trimmed);
 }

@@ -3,6 +3,7 @@ import {
   committedRequired,
   draftFrom,
   fromServer,
+  landed,
   reverted,
   send,
   sendFailed,
@@ -100,12 +101,101 @@ describe("our own page coming back", () => {
     expect(send(state)).toBeNull();
   });
 
+  it("knows its own text exactly, spaces included, so an older page still can't move the box", () => {
+    const first = sent(typed(draftFrom("old"), "  padded  "));
+    const second = sent(typed(first, "newer"));
+    const state = fromServer(second, "  padded  ");
+    expect(state.shown).toBe("newer");
+    expect(state.sent).toEqual(["newer"]);
+  });
+
+  it("doesn't take a chat's text for its own when only the outer spaces differ", () => {
+    const out = sent(typed(draftFrom("old"), "abc"));
+    expect(fromServer(out, " abc ").shown).toBe(" abc ");
+  });
+
+  it("lets go of everything up to the newest copy of a value sent twice", () => {
+    const one = sent(typed(draftFrom("old"), "a"));
+    const two = sent(typed(one, "b"));
+    const three = sent(typed(two, "a"));
+    const page = fromServer(three, "a");
+    expect(page.sent).toEqual([]);
+    // "b" is a chat's text now, not an old page of ours.
+    expect(fromServer(page, "b").shown).toBe("b");
+  });
+
+  it("keeps the newer saves in mind while pages come back one at a time", () => {
+    const one = sent(typed(draftFrom("old"), "a"));
+    const two = sent(typed(one, "b"));
+    const three = sent(typed(two, "c"));
+    const first = fromServer(three, "a");
+    expect(first.sent).toEqual(["b", "c"]);
+    const second = fromServer(first, "b");
+    expect(second.shown).toBe("c");
+    expect(second.sent).toEqual(["c"]);
+  });
+
+  it("remembers what the server said in its own page, for when a later save fails", () => {
+    const first = sent(typed(draftFrom("old"), "abc"));
+    const page = fromServer(first, "abc");
+    const second = send(typed(page, "abcd"))!;
+    expect(reverted(sendFailed(second.state, second.value)).shown).toBe("abc");
+  });
+
   it("forgets what it sent once a newer value came from elsewhere", () => {
     const out = sent(typed(draftFrom("old"), "abc"));
     const theirs = fromServer(out, "theirs");
     expect(theirs.shown).toBe("theirs");
     // Our save landed after theirs, so this page is the truth and it shows.
     expect(fromServer(theirs, "abc").shown).toBe("abc");
+  });
+});
+
+describe("a fresh value while typing, afterwards", () => {
+  it("treats our own late page as the newest value once a chat's text came between", () => {
+    const out = sent(typed(draftFrom("old"), "abc"));
+    const typing = typed(out, "abcd");
+    const theirs = fromServer(typing, "theirs");
+    const ours = fromServer(theirs, "abc");
+    expect(ours.shown).toBe("abcd");
+    expect(reverted(ours).shown).toBe("abc");
+  });
+
+  it("falls back to the chat's text when the words on screen fail to save", () => {
+    const state = fromServer(typed(draftFrom("old"), "mine"), "theirs");
+    const out = send(state)!;
+    expect(reverted(sendFailed(out.state, out.value)).shown).toBe("theirs");
+  });
+});
+
+describe("a save that was answered", () => {
+  it("forgets the old text once the last save lands on the value the page already has", () => {
+    // Typed away and back: the page never changes, so no page comes for either save.
+    const away = sent(typed(draftFrom("A"), "B"));
+    const back = send(typed(away, "A"))!;
+    const state = landed(back.state, back.value);
+    expect(state.sent).toEqual([]);
+    expect(fromServer(state, "B").shown).toBe("B");
+  });
+
+  it("counts a page the server trimmed as the same value", () => {
+    const out = send(typed(draftFrom("abc"), "abc "))!;
+    expect(landed(out.state, out.value).sent).toEqual([]);
+  });
+
+  it("waits when a newer save is out", () => {
+    const first = send(typed(draftFrom("old"), "abc"))!;
+    const second = sent(typed(first.state, "abcd"));
+    const state = landed(fromServer(second, "abc"), first.value);
+    expect(state.sent).toEqual(["abcd"]);
+  });
+
+  it("waits when its page hasn't come, so that page still reads as ours", () => {
+    const out = send(typed(draftFrom("old"), "abc"))!;
+    const answered = landed(out.state, out.value);
+    expect(answered.sent).toEqual(["abc"]);
+    const typing = typed(answered, "abcd");
+    expect(fromServer(typing, "abc").shown).toBe("abcd");
   });
 });
 
@@ -161,10 +251,18 @@ describe("cancelling", () => {
     expect(send(state)).toBeNull();
   });
 
-  it("goes back to what the server last said after a failed save", () => {
+  it("goes back to what the server last said after a failed save, and doesn't send it", () => {
     const first = send(typed(draftFrom("old"), "abc"))!;
     const state = reverted(sendFailed(first.state, first.value));
     expect(state.shown).toBe("old");
+    expect(send(state)).toBeNull();
+  });
+
+  it("goes back to the words on their way, not to the older page, and sends nothing", () => {
+    const out = sent(typed(draftFrom("old"), "abc"));
+    const state = reverted(typed(out, "abcd"));
+    expect(state.shown).toBe("abc");
+    expect(send(state)).toBeNull();
   });
 });
 
@@ -194,9 +292,41 @@ describe("leaving a box that can't be blank", () => {
     expect(send(state)).toBeNull();
   });
 
-  it("goes back to what the server last said when a save failed and the box is blank", () => {
+  it("goes back to what the server last said when a save failed and the box is blank, and doesn't send it", () => {
     const first = send(typed(draftFrom("Title"), "New"))!;
     const failed = sendFailed(first.state, first.value);
-    expect(committedRequired(typed(failed, "")).shown).toBe("Title");
+    const state = committedRequired(typed(failed, ""));
+    expect(state.shown).toBe("Title");
+    expect(send(state)).toBeNull();
+  });
+
+  it("goes back to the words on their way when blank, not to the older page", () => {
+    const out = sent(typed(draftFrom("Title"), "New"));
+    const state = committedRequired(typed(out, "  "));
+    expect(state.shown).toBe("New");
+    expect(send(state)).toBeNull();
+  });
+
+  it("leaves a stored title with outer spaces alone: nobody typed it", () => {
+    const state = draftFrom("  Buy milk  ");
+    expect(committedRequired(state)).toBe(state);
+    expect(send(committedRequired(state))).toBeNull();
+  });
+
+  it("leaves a chat's padded title alone too", () => {
+    const state = fromServer(draftFrom("Title"), " From a chat ");
+    expect(committedRequired(state).shown).toBe(" From a chat ");
+    expect(send(committedRequired(state))).toBeNull();
+  });
+
+  it("still trims typing that keeps a stored title's spaces out", () => {
+    const state = committedRequired(typed(draftFrom("  Buy milk  "), " Buy eggs "));
+    expect(send(state)?.value).toBe("Buy eggs");
+  });
+
+  it("sends nothing more after a trailing space went out and came back trimmed", () => {
+    const out = sent(typed(draftFrom("Title"), "New "));
+    const state = committedRequired(fromServer(out, "New"));
+    expect(send(state)).toBeNull();
   });
 });

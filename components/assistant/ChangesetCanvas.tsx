@@ -421,6 +421,7 @@ export function ChangesetCanvas({
         </div>
 
         <DndContext
+          id="changeset"
           sensors={sensors}
           collisionDetection={pointerWithin}
           onDragEnd={onDragEnd}

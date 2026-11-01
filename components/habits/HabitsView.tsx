@@ -3,6 +3,7 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { EntityTagRow } from "@/components/tags/EntityTagRow";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
   useOptimistic,
@@ -58,6 +59,8 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { EditableTitle } from "@/components/ui/editable-title";
 import { trySave } from "@/lib/try-save";
+import { useTrySave } from "@/lib/use-try-save";
+import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { cn } from "@/lib/utils";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 
@@ -132,6 +135,7 @@ export function HabitsView({
     });
   };
   const [habitId] = useQueryState("habit");
+  const attempt = useTrySave();
   const timeZone = useTimezone();
   const confirm = useConfirm();
 
@@ -203,7 +207,7 @@ export function HabitsView({
     );
     startTransition(async () => {
       applyToggle({ habitId: id, ...period, done });
-      await trySave(() => toggleHabitPeriod({ habitId: id, ...period, done }));
+      await attempt(() => toggleHabitPeriod({ habitId: id, ...period, done }));
     });
   };
 
@@ -231,6 +235,7 @@ export function HabitsView({
           </span>
         </div>
         <DndContext
+          id="habits"
           sensors={sensors}
           collisionDetection={closestCenter}
           onDragEnd={onDragEnd}
@@ -290,24 +295,17 @@ export function HabitsView({
                       </button>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <HabitName
-                            name={h.name}
-                            onRename={(next) =>
-                              startTransition(async () => {
-                                const res = await renameHabit(h.id, next);
-                                if (!res.ok)
-                                  toast.error(res.error ?? "Rename failed");
-                              })
-                            }
-                          />
+                          <HabitName id={h.id} name={h.name} />
                           <select
                             className="shrink-0 rounded-md border border-border bg-surface px-2 py-1 font-mono text-[10px] text-muted outline-none focus:border-faint"
                             value={frequency}
                             onChange={(e) =>
                               startTransition(async () => {
-                                await updateHabitFrequencyAction(h.id, {
-                                  type: e.target.value as HabitFrequencyType,
-                                });
+                                const type = e.target
+                                  .value as HabitFrequencyType;
+                                await trySave(() =>
+                                  updateHabitFrequencyAction(h.id, { type }),
+                                );
                               })
                             }
                           >
@@ -361,12 +359,16 @@ export function HabitsView({
                             dotShape="diamond"
                             onAttach={(goalId) =>
                               startTransition(async () => {
-                                await attachHabitToGoal(h.id, goalId);
+                                await trySave(() =>
+                                  attachHabitToGoal(h.id, goalId),
+                                );
                               })
                             }
                             onDetach={(goalId) =>
                               startTransition(async () => {
-                                await detachHabitFromGoal(h.id, goalId);
+                                await trySave(() =>
+                                  detachHabitFromGoal(h.id, goalId),
+                                );
                               })
                             }
                           />
@@ -386,7 +388,7 @@ export function HabitsView({
                           onCheckedChange={(active) => {
                             if (active === !h.archived) return;
                             startTransition(async () => {
-                              await archiveHabit(h.id);
+                              await trySave(() => archiveHabit(h.id, !active));
                             });
                           }}
                           aria-label={
@@ -463,33 +465,23 @@ export function HabitsView({
 }
 
 /** Habit title that edits in place: click to focus, Enter/blur to save. */
-function HabitName({
-  name,
-  onRename,
-}: {
-  name: string;
-  onRename: (next: string) => void;
-}) {
-  const [draft, setDraft] = useState(name);
-
-  // Reconcile with server state when the habit is renamed elsewhere.
-  useEffect(() => setDraft(name), [name]);
-
-  const save = () => {
-    const next = draft.trim();
-    if (!next || next === name) {
-      setDraft(name);
-      return;
-    }
-    onRename(next);
-  };
+function HabitName({ id, name }: { id: string; name: string }) {
+  const [draft, setDraft, flush, cancel] = useAutosaveDraft(
+    name,
+    id,
+    useCallback(
+      (habitId: string, next: string) => renameHabit(habitId, next),
+      [],
+    ),
+    { delay: null, required: true },
+  );
 
   return (
     <EditableTitle
       value={draft}
       onChange={setDraft}
-      onCommit={save}
-      onCancel={() => setDraft(name)}
+      onCommit={flush}
+      onCancel={cancel}
       maxLength={200}
       ariaLabel="Habit name"
       wrapperClassName="min-w-0 flex-1"

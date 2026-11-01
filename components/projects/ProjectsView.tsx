@@ -321,6 +321,7 @@ export function ProjectsView({
                 <BottomSheet open onClose={() => void setTaskId(null)}>
                   {!isDesktop && (
                     <TaskDetailPanel
+                      key={editingTask.id}
                       task={editingTask}
                       tags={tags}
                       projects={projects}
@@ -334,6 +335,7 @@ export function ProjectsView({
               <div className="hidden min-h-0 lg:block">
                 {isDesktop && (
                   <ProjectDetailPanel
+                    key={selected.id}
                     project={selected}
                     goals={goals}
                     tasks={tasks}
@@ -352,6 +354,7 @@ export function ProjectsView({
               <BottomSheet open onClose={() => setDetailsOpen(false)}>
                 <div className="h-full px-3 pb-4">
                   <ProjectDetailPanel
+                    key={selected.id}
                     project={selected}
                     goals={goals}
                     tasks={tasks}

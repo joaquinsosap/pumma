@@ -192,8 +192,8 @@ export function LifeAreaToggle({
     });
   };
 
-  // Override-window minutes editor. Keyed on a constant so a local edit isn't
-  // blown away by a router.refresh() before the new value round-trips back.
+  // Override-window minutes editor. Only the stored value changing resets a
+  // local edit, so a router.refresh() landing mid-edit can't blow it away.
   const [minsDraft, setMinsDraft] = useSyncedDraft(
     String(auto?.overrideMins ?? 60),
     "life-auto-override-mins",

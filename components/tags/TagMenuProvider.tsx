@@ -39,6 +39,7 @@ import { addDays, iso } from "@/lib/date";
 import { tagsByUsage } from "@/lib/metrics";
 import { isLifeTag, SPECIAL_LIFE_TAGS } from "@/lib/life-area-sync";
 import { toast } from "sonner";
+import { trySave } from "@/lib/try-save";
 import { isTutorialActive } from "@/lib/tutorial-lock";
 import { cn } from "@/lib/utils";
 import {
@@ -361,9 +362,10 @@ export function TagMenuProvider({
     const existing = tags.find((t) => t.name === name);
     if (existing) {
       if (!tagIds.includes(existing.id)) {
-        await toggleEntityTag(menu.entity, menu.id, existing.id, true);
-        const nextTagIds = [...tagIds, existing.id];
-        setTagIds(nextTagIds);
+        const tagged = await trySave(() =>
+          toggleEntityTag(menu.entity, menu.id, existing.id, true),
+        );
+        if (tagged) setTagIds([...tagIds, existing.id]);
       }
       setPending(false);
       setAdding(false);
@@ -377,14 +379,15 @@ export function TagMenuProvider({
       setPending(false);
       return;
     }
-    await toggleEntityTag(menu.entity, menu.id, res.data!.id, true);
-    const nextTagIds = [...tagIds, res.data!.id];
-    setTagIds(nextTagIds);
+    const tagged = await trySave(() =>
+      toggleEntityTag(menu.entity, menu.id, res.data!.id, true),
+    );
+    if (tagged) setTagIds([...tagIds, res.data!.id]);
     setMenuTags((prev) => [...prev, res.data!]);
     setPending(false);
     setAdding(false);
     setNewTag("");
-    toast.success(`Tagged with ${name}`);
+    if (tagged) toast.success(`Tagged with ${name}`);
     dirtyRef.current = true;
   };
 

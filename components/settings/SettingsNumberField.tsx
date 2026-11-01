@@ -19,6 +19,7 @@ export function SettingsNumberField({
 }: Props) {
   const [draft, setDraft] = useState(String(value));
   const focusedRef = useRef(false);
+  const typedRef = useRef(false);
 
   useEffect(() => {
     if (!focusedRef.current) setDraft(String(value));
@@ -35,11 +36,17 @@ export function SettingsNumberField({
           onFocus={() => {
             focusedRef.current = true;
           }}
-          onChange={(e) => setDraft(e.target.value)}
+          onChange={(e) => {
+            typedRef.current = true;
+            setDraft(e.target.value);
+          }}
           onBlur={() => {
             focusedRef.current = false;
+            const typed = typedRef.current;
+            typedRef.current = false;
             const trimmed = draft.trim();
-            if (!trimmed) {
+            // Passing through saves nothing, even when the value moved elsewhere meanwhile.
+            if (!typed || !trimmed) {
               setDraft(String(value));
               return;
             }

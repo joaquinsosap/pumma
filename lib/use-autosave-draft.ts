@@ -5,13 +5,14 @@ import {
   committedRequired,
   draftFrom,
   fromServer,
+  landed,
   reverted,
   send,
   sendFailed,
   typed,
   type DraftState,
 } from "@/lib/draft-state";
-import { trySave } from "@/lib/try-save";
+import { useTrySave } from "@/lib/use-try-save";
 
 type Save = (
   entityKey: string,
@@ -51,6 +52,7 @@ export function useAutosaveDraft(
   // Moves on only after the outgoing record's flush, so that text goes to the record it was typed into.
   const keyRef = useRef(entityKey);
   const timerRef = useRef<number | undefined>(undefined);
+  const attempt = useTrySave();
 
   // Keep the latest save fn without restarting anything (callers usually pass an inline closure).
   const saveRef = useRef(save);
@@ -67,13 +69,17 @@ export function useAutosaveDraft(
     if (!out) return;
     stateRef.current = out.state;
     const key = keyRef.current;
-    void trySave(
+    void attempt(
       () => saveRef.current(key, out.value),
       () => {
         if (keyRef.current === key) apply(sendFailed(stateRef.current, out.value));
       },
-    );
-  }, [apply, required]);
+    ).then((res) => {
+      if (res !== null && keyRef.current === key) {
+        stateRef.current = landed(stateRef.current, out.value);
+      }
+    });
+  }, [apply, attempt, required]);
 
   const flush = useCallback(() => {
     window.clearTimeout(timerRef.current);

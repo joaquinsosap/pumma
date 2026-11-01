@@ -22,7 +22,7 @@ import {
   updateTaskDetail,
   deleteTaskAction,
 } from "@/lib/actions/tasks";
-import { trySave } from "@/lib/try-save";
+import { useTrySave } from "@/lib/use-try-save";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { DeleteButton } from "@/components/ui/delete-button";
@@ -227,6 +227,7 @@ export function TaskList({
   const router = useRouter();
   const [optimistic, setOptimistic] = useOptimistic(tasks);
   const [, startTransition] = useTransition();
+  const attempt = useTrySave();
 
   const tagMap = new Map(tags.map((t) => [t.id, t]));
   const isPage = variant === "page";
@@ -247,8 +248,9 @@ export function TaskList({
         ),
       );
       // The action's revalidatePath already re-renders the current route in the
-      // same response, so no explicit router.refresh() round-trip is needed.
-      await trySave(() => toggleTask(id, done));
+      // same response, so no explicit router.refresh() round-trip is needed,
+      // unless a row was opened meanwhile, which throws that response away.
+      await attempt(() => toggleTask(id, done));
     });
   };
 
@@ -261,15 +263,15 @@ export function TaskList({
       setOptimistic(
         optimistic.map((t) => (t.id === id ? { ...t, priority } : t)),
       );
-      await trySave(() => updateTaskDetail({ id, priority }));
+      await attempt(() => updateTaskDetail({ id, priority }));
     });
   };
 
   const handleDelete = (id: string) => {
     startTransition(async () => {
       setOptimistic(optimistic.filter((t) => t.id !== id));
-      const res = await deleteTaskAction(id);
-      if (res.ok) {
+      const res = await attempt(() => deleteTaskAction(id));
+      if (res?.ok) {
         toast.success("Task deleted", {
           action: res.undo
             ? {

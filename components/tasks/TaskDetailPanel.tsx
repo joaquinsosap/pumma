@@ -2,7 +2,6 @@
 
 import {
   useCallback,
-  useEffect,
   useOptimistic,
   useRef,
   useState,
@@ -28,11 +27,8 @@ import { cn } from "@/lib/utils";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { trySave } from "@/lib/try-save";
-import {
-  applySubtaskChange,
-  sameSubtasks,
-  type SubtaskChange,
-} from "@/lib/subtask-changes";
+import { useTrySave } from "@/lib/use-try-save";
+import { applySubtaskChange, type SubtaskChange } from "@/lib/subtask-changes";
 
 const STATUS_OPTIONS = [
   ["todo", "To do"],
@@ -166,27 +162,7 @@ export function TaskDetailPanel({
   );
   const [dueTime, setDueTime] = useSyncedDraft(dueTimeOf(task.due), task.id);
   const [pending, startTransition] = useTransition();
-
-  // What the last save left stored, to check against the page that comes back.
-  const saved = useRef<Subtask[] | null>(null);
-  useEffect(() => {
-    if (pending || !saved.current) return;
-    // Any URL write during a save makes Next throw that page away, so the list behind this panel needs another one.
-    if (!sameSubtasks(saved.current, task.subtasks)) router.refresh();
-    saved.current = null;
-  }, [pending, task.subtasks, router]);
-
-  // Closing or switching mid-save navigates, and Next drops that save's page, so the list behind needs another one.
-  const mounted = useRef(true);
-  useEffect(() => {
-    mounted.current = true;
-    return () => {
-      mounted.current = false;
-    };
-  }, []);
-  const refreshIfGone = useCallback(() => {
-    if (!mounted.current) router.refresh();
-  }, [router]);
+  const attempt = useTrySave();
 
   const project = projects.find((p) => p.id === task.projectId);
 
@@ -220,11 +196,10 @@ export function TaskDetailPanel({
         // sidebar re-prefetch all nine of its links. This is the panel's hot
         // path — it fires on every debounced keystroke in the description and
         // on every field change.
-        await trySave(() => updateTaskDetail({ id: task.id, ...patch }), onFail);
-        refreshIfGone();
+        await attempt(() => updateTaskDetail({ id: task.id, ...patch }), onFail);
       });
     },
-    [task.id, refreshIfGone],
+    [task.id, attempt],
   );
 
   // Autosaves, and survives closing the panel / switching tasks mid-sentence.
@@ -250,16 +225,12 @@ export function TaskDetailPanel({
   const changeSubtask = (change: SubtaskChange, onFail?: () => void) => {
     startTransition(async () => {
       applyLocally(change);
-      const res = await trySave(
+      const res = await attempt(
         () => changeTaskSubtask({ id: task.id, change }),
         onFail,
       );
-      refreshIfGone();
-      if (res?.ok && res.data) {
-        saved.current = res.data;
-        // What the server says now, so a page thrown away by a URL write can't flip the box back.
-        setStoredSubtasks(res.data);
-      }
+      // What the server says now, so a page thrown away by a URL write can't flip the box back.
+      if (res?.ok && res.data) setStoredSubtasks(res.data);
     });
   };
 
@@ -312,7 +283,7 @@ export function TaskDetailPanel({
   };
 
   const clearDueDate = () => {
-    if (!task.due) return;
+    if (!dueDate) return;
     setDueDate("");
     setDueTime("");
     persist({ due: null }, revertDue);
@@ -323,11 +294,9 @@ export function TaskDetailPanel({
   // place a task picks up a time of day, and it can always be cleared back
   // to a plain due date.
   const setTaskTime = (next: string) => {
-    if (!dueDate) return;
+    if (!dueDate || next === dueTime) return;
     setDueTime(next);
-    if (next !== dueTimeOf(task.due)) {
-      persist({ dueTime: next || null }, revertDue);
-    }
+    persist({ dueTime: next || null }, revertDue);
   };
 
   const doneSubtasks = subtasks.filter((s) => s.done).length;
@@ -439,10 +408,9 @@ export function TaskDetailPanel({
                 clearDueDate();
                 return;
               }
+              if (next === dueDate) return;
               setDueDate(next);
-              if (next !== taskDueDateInput(task.due)) {
-                persist({ dueDate: next }, revertDue);
-              }
+              persist({ dueDate: next }, revertDue);
             }}
           />
           <div className="mt-2 flex items-center gap-2">

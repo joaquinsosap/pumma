@@ -38,6 +38,7 @@ import {
 } from "@/lib/use-task-selection";
 import { dropIndex } from "@/lib/kanban-drop";
 import { sortTasks, type ProjectTaskSort } from "@/lib/collection-sort";
+import { useTrySave } from "@/lib/use-try-save";
 import { cn } from "@/lib/utils";
 
 export type ColumnId = "todo" | "doing" | "done";
@@ -216,6 +217,7 @@ export function KanbanBoard({
   onArrange,
 }: Props) {
   const [, startTransition] = useTransition();
+  const attempt = useTrySave();
   const [items, setItems] = useState<ItemsByColumn>(() =>
     groupByStatus(tasks, sort, sortReversed),
   );
@@ -423,13 +425,17 @@ export function KanbanBoard({
     // crossed between them: the one it left has a hole where it used to be.
     const current = itemsRef.current;
     startTransition(async () => {
-      await moveTaskOnBoard({
-        id: taskId,
-        status: nextStatus,
-        columnIds: current[nextStatus].map((t) => t.id),
-        fromColumnIds:
-          from === nextStatus ? undefined : current[from].map((t) => t.id),
-      });
+      await attempt(
+        () =>
+          moveTaskOnBoard({
+            id: taskId,
+            status: nextStatus,
+            columnIds: current[nextStatus].map((t) => t.id),
+            fromColumnIds:
+              from === nextStatus ? undefined : current[from].map((t) => t.id),
+          }),
+        () => setBoard(groupByStatus(tasks, sort, sortReversed)),
+      );
     });
   };
 
@@ -487,6 +493,7 @@ export function KanbanBoard({
 
   return (
     <DndContext
+      id="kanban"
       sensors={sensors}
       collisionDetection={collisionDetection}
       onDragStart={handleDragStart}

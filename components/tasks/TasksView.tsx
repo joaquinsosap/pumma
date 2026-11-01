@@ -861,6 +861,7 @@ function DragArea({
   if (!enabled) return <>{children}</>;
   return (
     <DndContext
+      id="tasks-list"
       sensors={sensors}
       collisionDetection={groupCollisionDetection}
       onDragStart={onDragStart}

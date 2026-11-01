@@ -56,7 +56,8 @@ import { Topbar } from "@/components/shell/Topbar";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useState, useEffect, useRef, type ReactNode } from "react";
+import { useCallback, useState, useEffect, useRef, type ReactNode } from "react";
+import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import type { OmniType } from "@/lib/types";
 import { LIFE_SPAN_DEFAULT, LIFE_SPAN_MAX } from "@/lib/date";
 import {
@@ -972,6 +973,7 @@ export function SettingsView({
                 />
               </div>
             <DndContext
+              id="settings-tags"
               sensors={tagDragSensors}
               collisionDetection={closestCenter}
               onDragEnd={handleTagDragEnd}
@@ -1209,9 +1211,15 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
   const blocked = tagDeleteBlock(tag);
   const [, startTransition] = useTransition();
   const confirm = useConfirm();
-  const [draft, setDraft] = useState(tag.name);
-
-  useEffect(() => setDraft(tag.name), [tag.name]);
+  const [draft, setDraft, flushName, cancelName] = useAutosaveDraft(
+    tag.name,
+    tag.id,
+    useCallback(
+      (id: string, name: string) => updateTagAction({ id, name }),
+      [],
+    ),
+    { delay: null, required: true },
+  );
 
   const cycleColor = () => {
     const idx = TAG_PALETTE.indexOf(tag.color as (typeof TAG_PALETTE)[number]);
@@ -1219,21 +1227,6 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
     startTransition(async () => {
       const res = await updateTagAction({ id: tag.id, color: next });
       if (!res.ok) toast.error(res.error ?? "Could not update color");
-    });
-  };
-
-  const saveName = () => {
-    const next = draft.trim().toLowerCase();
-    if (!next || next === tag.name) {
-      setDraft(tag.name);
-      return;
-    }
-    startTransition(async () => {
-      const res = await updateTagAction({ id: tag.id, name: next });
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not rename tag");
-        setDraft(tag.name);
-      }
     });
   };
 
@@ -1265,12 +1258,12 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
       />
       <input
         value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={saveName}
+        onChange={(e) => setDraft(e.target.value.toLowerCase())}
+        onBlur={flushName}
         onKeyDown={(e) => {
           if (e.key === "Enter") e.currentTarget.blur();
           if (e.key === "Escape") {
-            setDraft(tag.name);
+            cancelName();
             e.currentTarget.blur();
           }
         }}
