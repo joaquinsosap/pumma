@@ -39,6 +39,7 @@ import {
   withProjectPrimaryTag,
   withSingleProjectTag,
   splitTagsByProject,
+  projectAfterRetag,
   projectIdFromTags,
 } from "@/lib/project-tags";
 import {
@@ -406,11 +407,14 @@ export async function moveTaskStatus(
   const { getTask } = await import("@/lib/db/tasks");
   const task = await getTask(userId, id);
   if (!task) return { ok: false, error: "Not found" };
-  const { today: td } = await userToday();
-  await updateTask(userId, id, {
-    status,
-    completedAt: status === "done" ? td : null,
-  });
+  // A click on an old screen: already there keeps the date, and still repairs the goal above it.
+  if (task.status !== status) {
+    const { today: td } = await userToday();
+    await updateTask(userId, id, {
+      status,
+      completedAt: status === "done" ? td : null,
+    });
+  }
   if (task.projectId) await syncGoalsForProject(userId, task.projectId);
   revalidatePath("/", "layout");
   return { ok: true };
@@ -621,7 +625,7 @@ export async function bulkUpdateTasks(
     const patch: Parameters<typeof updateTask>[2] = {};
     if (priority !== undefined) patch.priority = priority;
     if (due !== undefined) patch.due = due === "" ? null : due;
-    if (status !== undefined) {
+    if (status !== undefined && status !== task.status) {
       patch.status = status;
       patch.completedAt = status === "done" ? td : null;
     }
@@ -634,7 +638,7 @@ export async function bulkUpdateTasks(
       // An explicit project wins; otherwise a project tag that came in with
       // `add` files the task, exactly as toggling that tag on its own would.
       const nextProjectId =
-        projectId !== undefined ? projectId : projectIdFromTags(tagIds, tags);
+        projectId !== undefined ? projectId : projectAfterRetag(tagIds, task, tags);
 
       tagIds = withSingleProjectTag(tagIds, nextProjectId, tags);
       if (nextProjectId && nextProjectId !== task.projectId) {
@@ -664,7 +668,8 @@ export async function bulkUpdateTasks(
       projectsToSync.add(task.projectId);
     }
 
-    patches.push({ id, patch });
+    // A status it already has leaves nothing to write.
+    if (Object.keys(patch).length) patches.push({ id, patch });
   }
 
   const updated = await updateTasks(userId, patches);
@@ -890,11 +895,16 @@ export async function updateTaskDetail(
   if (!existing) return { ok: false, error: "Not found" };
 
   let duePatch: { due: string | null } | undefined;
-  if (dueDate !== undefined) {
-    duePatch = { due: mergeTaskDueDate(dueDate, existing.due) };
-  } else if (dueTime !== undefined) {
-    if (!existing.due) return { ok: false, error: "Set a due date first" };
-    duePatch = { due: mergeTaskDueTime(existing.due, dueTime) };
+  if (dueDate !== undefined || dueTime !== undefined) {
+    let due =
+      dueDate !== undefined
+        ? mergeTaskDueDate(dueDate, existing.due)
+        : existing.due;
+    if (dueTime !== undefined) {
+      if (!due) return { ok: false, error: "Set a due date first" };
+      due = mergeTaskDueTime(due, dueTime);
+    }
+    duePatch = { due };
   }
 
   // Drop tag ids that no longer exist (deleted since the client last rendered).

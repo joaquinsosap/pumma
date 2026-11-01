@@ -74,6 +74,25 @@ export function projectIdFromTags(
 }
 
 /**
+ * Which project a task belongs to once its tags change. With no project tag
+ * left, only taking one off unfiles it: a task filed without one (an old
+ * capture, a demo task) stays where it is when an unrelated tag moves.
+ */
+export function projectAfterRetag(
+  tagIds: string[],
+  task: { tagIds: string[]; projectId: string | null },
+  tags: ProjectTagLike[],
+): string | null {
+  const tagged = projectIdFromTags(tagIds, tags);
+  if (tagged) return tagged;
+  const byId = new Map(tags.map((t) => [t.id, t]));
+  const tookOneOff = task.tagIds.some(
+    (id) => !tagIds.includes(id) && byId.get(id)?.projectId,
+  );
+  return tookOneOff ? null : task.projectId;
+}
+
+/**
  * Drop every project tag except the one being kept, so a task never carries
  * two. Ordinary tags are untouched — those are shareable.
  */

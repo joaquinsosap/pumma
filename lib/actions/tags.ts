@@ -26,7 +26,7 @@ import { getProject, listProjects, updateProject } from "@/lib/db/projects";
 import { listHabits, updateHabit } from "@/lib/db/habits";
 import { listGoals, nextGoalOrder, updateGoal } from "@/lib/db/goals";
 import { setProjectLifeArea } from "@/lib/project-life-server";
-import { projectIdFromTags, withSingleProjectTag } from "@/lib/project-tags";
+import { projectAfterRetag, withSingleProjectTag } from "@/lib/project-tags";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 
 export type TaggableEntity = "task" | "note" | "habit" | "goal" | "project";
@@ -86,7 +86,7 @@ async function toggleOneEntityTag(
 
     // Project tags file the task. A task belongs to one project, so adding a
     // second project's tag replaces the first rather than stacking.
-    const nextProjectId = projectIdFromTags(tagIds, tags);
+    const nextProjectId = projectAfterRetag(tagIds, task, tags);
     tagIds = withSingleProjectTag(tagIds, nextProjectId, tags);
 
     // Moving to a project adopts that project's side of life, replacing

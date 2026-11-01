@@ -17,7 +17,6 @@ import {
   updateHabitsOrder,
 } from "@/lib/db/habits";
 import {
-  toggleHabitEntry,
   habitEntriesInRange,
   clearHabitEntriesInRange,
   markHabitEntry,
@@ -29,20 +28,6 @@ async function ownsHabit(userId: string, habitId: string): Promise<boolean> {
   const habits = await listHabits(userId);
   return habits.some((h) => h.id === habitId);
 }
-
-export async function toggleHabitToday(habitId: string): Promise<ActionResult> {
-  const parsed = entityId.safeParse(habitId);
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
-  const userId = await requireUserId();
-  if (!(await ownsHabit(userId, parsed.data)))
-    return { ok: false, error: "Not found" };
-  const { today: td } = await userToday();
-  await toggleHabitEntry(userId, parsed.data, td);
-  revalidatePath("/", "layout");
-  return { ok: true };
-}
-
-const toggleDateSchema = z.object({ habitId: entityId, date: isoDate });
 
 const togglePeriodSchema = z.object({
   habitId: entityId,
@@ -92,20 +77,6 @@ export async function toggleHabitPeriod(input: {
   await markHabitEntry(userId, habitId, date);
   revalidatePath("/", "layout");
   return { ok: true, data: { done: true } };
-}
-
-export async function toggleHabitDate(
-  habitId: string,
-  date: string,
-): Promise<ActionResult> {
-  const parsed = toggleDateSchema.safeParse({ habitId, date });
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
-  const userId = await requireUserId();
-  if (!(await ownsHabit(userId, parsed.data.habitId)))
-    return { ok: false, error: "Not found" };
-  await toggleHabitEntry(userId, parsed.data.habitId, parsed.data.date);
-  revalidatePath("/", "layout");
-  return { ok: true };
 }
 
 const nameSchema = z.object({
@@ -161,15 +132,25 @@ export async function renameHabit(
   return { ok: true };
 }
 
-export async function archiveHabit(id: string): Promise<ActionResult> {
+export async function archiveHabit(
+  id: string,
+  /** Which way the click wanted it, so a habit already there stays. Left out: flip. */
+  wantArchived?: boolean,
+): Promise<ActionResult> {
   const parsed = entityId.safeParse(id);
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const want = z.boolean().optional().safeParse(wantArchived);
+  if (!parsed.success || !want.success) {
+    return { ok: false, error: "Invalid input" };
+  }
   const userId = await requireUserId();
   const { listHabits } = await import("@/lib/db/habits");
   const habits = await listHabits(userId);
   const h = habits.find((x) => x.id === parsed.data);
   if (!h) return { ok: false, error: "Not found" };
-  await updateHabit(userId, parsed.data, { archived: !h.archived });
+  const archived = want.data ?? !h.archived;
+  if (archived !== h.archived) {
+    await updateHabit(userId, parsed.data, { archived });
+  }
   revalidatePath("/", "layout");
   return { ok: true };
 }

@@ -4,6 +4,7 @@ import {
   uniqueTagName,
   projectIdFromTags,
   withSingleProjectTag,
+  projectAfterRetag,
   withProjectPrimaryTag,
   tagsForProject,
   isProjectTag,
@@ -158,6 +159,40 @@ describe("splitTagsByProject", () => {
     expect(
       splitTagsByProject(["t-web", "t-ai"], tags).map((b) => b.projectId),
     ).toEqual(["p-web", "p-ai"]);
+  });
+});
+
+describe("projectAfterRetag", () => {
+  const filed = (tagIds: string[], projectId: string | null) => ({
+    tagIds,
+    projectId,
+  });
+
+  it("follows a project tag that is on the task", () => {
+    expect(projectAfterRetag(["t-ai"], filed([], null), tags)).toBe("p-ai");
+  });
+
+  it("moves to the newest project tag", () => {
+    expect(
+      projectAfterRetag(["t-ai", "t-web"], filed(["t-ai"], "p-ai"), tags),
+    ).toBe("p-web");
+  });
+
+  it("leaves a task filed without a project tag where it is when another tag moves", () => {
+    expect(
+      projectAfterRetag(["t-work"], filed([], "p-ai"), tags),
+    ).toBe("p-ai");
+    expect(
+      projectAfterRetag([], filed(["t-work"], "p-ai"), tags),
+    ).toBe("p-ai");
+  });
+
+  it("unfiles a task when its project tag comes off", () => {
+    expect(projectAfterRetag([], filed(["t-ai"], "p-ai"), tags)).toBeNull();
+  });
+
+  it("stays out of every project when nothing files it", () => {
+    expect(projectAfterRetag(["t-work"], filed([], null), tags)).toBeNull();
   });
 });
 
