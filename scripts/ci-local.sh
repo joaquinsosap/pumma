@@ -105,8 +105,20 @@ run "tests"     npm test
 
 # The build shares .next with a running dev server, and a production build on
 # top of a live one corrupts both. Refuse rather than produce a confusing mess.
-if lsof -ti:3000 >/dev/null 2>&1 || lsof -ti:3010 >/dev/null 2>&1; then
-  bad "a dev server is running; stop it before the production build (shared .next)"
+# Only a server running from this folder counts: other apps use these ports too.
+dev_server_here() {
+  local port pid cwd
+  for port in 3000 3001 3010; do
+    for pid in $(lsof -tiTCP:"$port" -sTCP:LISTEN 2>/dev/null); do
+      cwd="$(lsof -a -p "$pid" -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+      [ "$cwd" = "$ROOT" ] && return 0
+    done
+  done
+  return 1
+}
+
+if dev_server_here; then
+  bad "a dev server is running from this folder; stop it before the production build (shared .next)"
 else
   run "production build" npm run build
 fi
