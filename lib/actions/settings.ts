@@ -78,7 +78,6 @@ const settingsPatchSchema = z
       .max(3)
       .optional(),
     defaultHabitFrequency: z.enum(["daily", "weekly", "monthly"]).optional(),
-    projectsRailSortVisible: z.boolean().optional(),
     taskSort: z.enum(["priority", "due", "created", "alpha"]).optional(),
     sortReversed: z
       .array(z.enum(["task", "projectTask", "project", "note", "tag"]))
@@ -98,7 +97,6 @@ const settingsPatchSchema = z
     projectTaskSort: z
       .enum(["priority", "custom", "created", "alpha"])
       .optional(),
-    projectSort: z.enum(["created", "alpha", "progress"]).optional(),
     noteSort: z.enum(["edited", "created", "alpha"]).optional(),
     tagSort: z.enum(["custom", "alpha", "usage", "created"]).optional(),
     tagAutoClean: z.boolean().optional(),
@@ -150,7 +148,6 @@ export async function updateSettingsAction(patch: {
   defaultTasksStatus?: ("todo" | "doing" | "done")[];
   defaultTasksPriority?: ("low" | "med" | "high")[];
   defaultHabitFrequency?: "daily" | "weekly" | "monthly";
-  projectsRailSortVisible?: boolean;
   taskSort?: "priority" | "due" | "created" | "alpha";
   sortReversed?: ("task" | "projectTask" | "project" | "note" | "tag")[];
   notifications?: {
@@ -162,7 +159,6 @@ export async function updateSettingsAction(patch: {
     digestTime: string;
   };
   projectTaskSort?: "priority" | "custom" | "created" | "alpha";
-  projectSort?: "created" | "alpha" | "progress";
   noteSort?: "edited" | "created" | "alpha";
   tagSort?: "custom" | "alpha" | "usage" | "created";
   tagAutoClean?: boolean;

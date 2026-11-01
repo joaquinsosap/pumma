@@ -147,7 +147,6 @@ export const settingsSchema = z.object({
    * left reveals it and sets this; scrolling right or picking a project
    * clears it.
    */
-  projectsRailSortVisible: z.boolean().default(false),
   /**
    * The nudge: per setting key, the last few values chosen at creation time,
    * and when the one-time "make it the default?" offer was answered. History

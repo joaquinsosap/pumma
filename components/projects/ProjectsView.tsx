@@ -12,7 +12,6 @@ import { KanbanBoard, boardOrder } from "@/components/projects/KanbanBoard";
 import {
   setReversedIn,
   sortProjects,
-  PROJECT_SORTS,
   PROJECT_TASK_SORTS,
   type ProjectSort,
   type ProjectTaskSort,
@@ -41,8 +40,6 @@ type Props = {
   birthDate?: string | null;
   lifeSpanYears?: number;
   projectSort?: ProjectSort;
-  /** Whether the rail rests on its sort control. See ProjectRail. */
-  projectsRailSortVisible?: boolean;
   projectTaskSort?: ProjectTaskSort;
   sortReversed?: string[];
 };
@@ -58,45 +55,12 @@ export function ProjectsView({
   projectSort = "created",
   projectTaskSort = "priority",
   sortReversed: sortReversedSetting = [],
-  projectsRailSortVisible = false,
 }: Props) {
   const searchParams = useSearchParams();
   const lifeView = parseLifeView(searchParams.get("life"));
 
-  // Both orderings apply locally the moment they change; the server write
-  // follows behind. See TasksView for the reasoning.
-  const [railSort, setRailSort] = useState<ProjectSort>(projectSort);
-  // Whether the rail rests on its sort control. Local for responsiveness,
-  // persisted behind it: this is a preference, not view state.
-  const [railSortVisible, setRailSortVisible] = useState(
-    projectsRailSortVisible,
-  );
-  useEffect(
-    () => setRailSortVisible(projectsRailSortVisible),
-    [projectsRailSortVisible],
-  );
-  const changeRailSortVisible = (visible: boolean) => {
-    setRailSortVisible(visible);
-    void updateSettingsAction({ projectsRailSortVisible: visible });
-  };
-  useEffect(() => setRailSort(projectSort), [projectSort]);
-  const changeRailSort = (next: ProjectSort) => {
-    setRailSort(next);
-    setRailReversed(false);
-    void updateSettingsAction({
-      projectSort: next,
-      sortReversed: setReversedIn(sortReversedSetting, "project", false),
-    });
-  };
-  const [railReversed, setRailReversed] = useState(
-    sortReversedSetting.includes("project"),
-  );
-  const changeRailReversed = (next: boolean) => {
-    setRailReversed(next);
-    void updateSettingsAction({
-      sortReversed: setReversedIn(sortReversedSetting, "project", next),
-    });
-  };
+  // Applies locally the moment it changes; the server write follows behind.
+  // See TasksView for the reasoning.
   const [taskSort, setTaskSort] = useState<ProjectTaskSort>(projectTaskSort);
   useEffect(() => setTaskSort(projectTaskSort), [projectTaskSort]);
   const changeTaskSort = (next: ProjectTaskSort) => {
@@ -131,8 +95,13 @@ export function ProjectsView({
   };
 
   const projects = useMemo(
-    () => sortProjects(rawProjects, railSort, railReversed),
-    [rawProjects, railSort, railReversed],
+    () =>
+      sortProjects(
+        rawProjects,
+        projectSort,
+        sortReversedSetting.includes("project"),
+      ),
+    [rawProjects, projectSort, sortReversedSetting],
   );
   const [projectId, setProjectId] = useQueryState("project", {
     defaultValue: projects[0]?.id ?? "",
@@ -222,17 +191,6 @@ export function ProjectsView({
               tasks={tasks}
               onSelect={(id) => void setProjectId(id)}
               lifeArea={lifeAreaForCreate(lifeView)}
-              sortVisible={railSortVisible}
-              onSortVisibleChange={changeRailSortVisible}
-              sortControl={
-                <SortMenu
-                  options={PROJECT_SORTS}
-                  value={railSort}
-                  onChange={changeRailSort}
-                  reversed={railReversed}
-                  onReversedChange={changeRailReversed}
-                />
-              }
             />
           )}
         </div>
@@ -298,17 +256,6 @@ export function ProjectsView({
                       onSelect={(id) => void setProjectId(id)}
                       lifeArea={lifeAreaForCreate(lifeView)}
                       droppable
-                      sortVisible={railSortVisible}
-                      onSortVisibleChange={changeRailSortVisible}
-                      sortControl={
-                        <SortMenu
-                          options={PROJECT_SORTS}
-                          value={railSort}
-                          onChange={changeRailSort}
-                          reversed={railReversed}
-                          onReversedChange={changeRailReversed}
-                        />
-                      }
                     />
                   }
                   railHost={railHost}
