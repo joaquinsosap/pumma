@@ -13,7 +13,11 @@ import { insertGoal, updateGoal } from "@/lib/db/memory/goals";
 import { insertProject } from "@/lib/db/memory/projects";
 import { getSettings } from "@/lib/db/memory/settings";
 import { insertTask } from "@/lib/db/memory/tasks";
-import { insertTask as insertRow, updateTask as updateRow } from "@/lib/db/tasks";
+import {
+  insertTask as insertRow,
+  rewriteSubtasks as rewriteRow,
+  updateTask as updateRow,
+} from "@/lib/db/tasks";
 import {
   sameSubtasks,
   subtaskChanges,
@@ -29,6 +33,7 @@ vi.mock("@/lib/db/tasks", async (actual) => {
     ...real,
     insertTask: vi.fn(real.insertTask),
     updateTask: vi.fn(real.updateTask),
+    rewriteSubtasks: vi.fn(real.rewriteSubtasks),
   };
 });
 vi.mock("@/lib/db/goals", async (actual) => {
@@ -195,8 +200,8 @@ describe("the MCP task tools", () => {
       updateTask.inputSchema.parse(input),
       caller ?? (await callerWith(false)),
     );
-  const complete = async (id: string) =>
-    completeTask.handler({ id }, await callerWith(false));
+  const complete = async (id: string, tickSubtasks?: boolean) =>
+    completeTask.handler({ id, tickSubtasks }, await callerWith(false));
 
   function seed(
     subtasks: Subtask[],
@@ -503,9 +508,9 @@ describe("the MCP task tools", () => {
       ]);
     });
 
-    it("can close a task, since ticking removes nothing", async () => {
+    it("can close a task and tick its boxes, since that removes nothing", async () => {
       const { id } = await seed([a, b]);
-      await completeTask.handler({ id }, await writeOnly());
+      await completeTask.handler({ id, tickSubtasks: true }, await writeOnly());
       expect(stored(id).status).toBe("done");
       expect(allDone(id)).toBe(true);
     });
@@ -522,46 +527,72 @@ describe("the MCP task tools", () => {
         title: "Barn",
         subtasks: [{ title: "Water" }, { title: "Weed", done: true }],
       });
-      expect(writes()).toEqual([["subtasks"], ["title"]]);
+      expect(writes()).toEqual([["title"]]);
+      const [list] = vi.mocked(rewriteRow).mock.invocationCallOrder;
+      const [title] = vi.mocked(updateRow).mock.invocationCallOrder;
+      expect(list).toBeLessThan(title);
     });
 
     it("stops when the task is gone before the list is saved", async () => {
       const { id } = await seed([a, b]);
-      vi.mocked(updateRow).mockResolvedValueOnce(null);
+      vi.mocked(rewriteRow).mockResolvedValueOnce(null);
       const out = await update({
         id,
         title: "Barn",
         subtasks: [{ title: "Water" }, { title: "Weed", done: true }],
       });
       expect(data(out).ok).toBe(false);
-      expect(out.text).toContain("Could not save the subtasks");
-      expect(updateRow).toHaveBeenCalledTimes(1);
+      expect(out.text).toContain("No task with id");
+      expect(updateRow).not.toHaveBeenCalled();
     });
 
     it("says so when the task is deleted between the two writes", async () => {
       const { id } = await seed([a, b]);
       const real =
         await vi.importActual<typeof import("@/lib/db/tasks")>("@/lib/db/tasks");
-      vi.mocked(updateRow).mockImplementationOnce(async (user, rowId, patch) => {
-        const saved = await real.updateTask(user, rowId, patch);
+      vi.mocked(rewriteRow).mockImplementationOnce(async (user, rowId, build) => {
+        const saved = await real.rewriteSubtasks(user, rowId, build);
         await real.deleteTask(user, rowId);
         return saved;
       });
-      expect(data(await complete(id)).ok).toBe(false);
+      expect(data(await complete(id, true)).ok).toBe(false);
+    });
+
+    it("builds the list from what is stored when it writes, not from an earlier read", async () => {
+      const { id } = await seed([a, b]);
+      const real =
+        await vi.importActual<typeof import("@/lib/db/tasks")>("@/lib/db/tasks");
+      // Someone adds a row right before the write.
+      vi.mocked(rewriteRow).mockImplementationOnce(async (user, rowId, build) => {
+        await real.changeSubtask(user, rowId, {
+          kind: "add",
+          id: "c",
+          title: "Plant",
+        });
+        return real.rewriteSubtasks(user, rowId, build);
+      });
+      await complete(id, true);
+      expect(stored(id).subtasks.map((s) => [s.title, s.done])).toEqual([
+        ["Water", true],
+        ["Weed", true],
+        ["Plant", true],
+      ]);
     });
   });
 
   describe("update_task status", () => {
-    it("ticks every box when status goes to done", async () => {
+    it("leaves the boxes alone when status goes to done", async () => {
       const { id } = await seed([a, b]);
+      const before = stored(id).subtasks;
       const out = await update({ id, status: "done" });
-      expect(data(out).changed).toEqual(["status", "subtasks"]);
+      expect(data(out).changed).toEqual(["status"]);
       expect(stored(id).status).toBe("done");
       expect(stored(id).completedAt).not.toBeNull();
-      expect(allDone(id)).toBe(true);
+      expect(stored(id).subtasks).toBe(before);
+      expect(rewriteRow).not.toHaveBeenCalled();
     });
 
-    it("lets a list sent with done win over the ticking", async () => {
+    it("takes a list sent along with done", async () => {
       const { id } = await seed([a, b]);
       await update({
         id,
@@ -633,9 +664,19 @@ describe("the MCP task tools", () => {
   });
 
   describe("complete_task", () => {
-    it("closes the task and ticks every box", async () => {
+    it("closes the task and leaves its boxes alone", async () => {
       const { id } = await seed([a, b]);
+      const before = stored(id).subtasks;
       const out = await complete(id);
+      expect(data(out)).toEqual({ ok: true, id, changed: ["status"] });
+      expect(stored(id).status).toBe("done");
+      expect(stored(id).subtasks).toBe(before);
+      expect(rewriteRow).not.toHaveBeenCalled();
+    });
+
+    it("ticks every box only when asked", async () => {
+      const { id } = await seed([a, b]);
+      const out = await complete(id, true);
       expect(data(out)).toEqual({
         ok: true,
         id,
@@ -645,17 +686,17 @@ describe("the MCP task tools", () => {
       expect(allDone(id)).toBe(true);
     });
 
-    it("reports only the status, with no second write, when every box is ticked", async () => {
+    it("reports only the status, with no second write, when asked to tick and every box is ticked", async () => {
       const { id } = await seed([a]);
       const before = stored(id).subtasks;
-      const out = await complete(id);
+      const out = await complete(id, true);
       expect(data(out).changed).toEqual(["status"]);
       expect(stored(id).subtasks).toBe(before);
     });
 
-    it("repairs a task closed before this, without moving its completion date", async () => {
+    it("can tick a closed task's boxes without moving its completion date", async () => {
       const { id } = await seed([a, b], { completedAt: "2020-01-02" });
-      const out = await complete(id);
+      const out = await complete(id, true);
       expect(data(out).changed).toEqual(["subtasks"]);
       expect(allDone(id)).toBe(true);
       expect(stored(id).completedAt).toBe("2020-01-02");
@@ -670,8 +711,8 @@ describe("the MCP task tools", () => {
 
     it("is safe to call twice", async () => {
       const { id } = await seed([a, b], { completedAt: "2020-01-02" });
-      await complete(id);
-      const out = await complete(id);
+      await complete(id, true);
+      const out = await complete(id, true);
       expect(data(out)).toEqual({ ok: true, id, changed: [] });
       expect(stored(id).completedAt).toBe("2020-01-02");
     });

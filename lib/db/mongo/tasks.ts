@@ -8,7 +8,11 @@ import {
 import { newId } from "@/lib/store/memory";
 import { toDto, type Task, taskSchema } from "@/lib/schemas";
 import type { Subtask, TaskDoc } from "@/lib/schemas";
-import { MAX_SUBTASKS, type SubtaskChange } from "@/lib/subtask-changes";
+import {
+  MAX_SUBTASKS,
+  sameSubtasks,
+  type SubtaskChange,
+} from "@/lib/subtask-changes";
 
 async function col() {
   const db = await getDb();
@@ -195,6 +199,32 @@ export async function changeSubtask(
   });
   if (!doc) return null;
   return toDto(taskSchema.parse(await decryptFor("tasks", userId, doc)));
+}
+
+/** Rewrites a task's checklist from what is stored now, reading again if anything touched the list before the write. Null when the task is missing. */
+export async function rewriteSubtasks(
+  userId: string,
+  id: string,
+  build: (current: Subtask[]) => Subtask[],
+): Promise<Task | null> {
+  const c = await col();
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const raw = await c.findOne({ _id: id, userId });
+    if (!raw) return null;
+    const task = toDto(taskSchema.parse(await decryptFor("tasks", userId, raw)));
+    const subtasks = build(task.subtasks);
+    if (sameSubtasks(subtasks, task.subtasks)) return task;
+    // Titles seal differently on every write, so an exact match means nobody touched the list.
+    const doc = await c.findOneAndUpdate(
+      { _id: id, userId, subtasks: raw.subtasks },
+      { $set: await encryptFor("tasks", userId, { subtasks }) },
+      { returnDocument: "after" },
+    );
+    if (doc) {
+      return toDto(taskSchema.parse(await decryptFor("tasks", userId, doc)));
+    }
+  }
+  throw new Error("This task's subtasks kept changing while saving. Try again.");
 }
 
 /**

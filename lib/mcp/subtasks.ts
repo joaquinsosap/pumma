@@ -36,7 +36,7 @@ export function subtasksFromInput(
   }));
 }
 
-/** Every box ticked, for a task that just closed. */
+/** Every box ticked, for a chat that asked for that. */
 export function tickedSubtasks(subtasks: Subtask[]): Subtask[] {
   return subtasks.map((s) => ({ ...s, done: true }));
 }

@@ -33,7 +33,7 @@ import { listGoals, updateGoal as updateGoalRow } from "@/lib/db/goals";
 import {
   getTask,
   listTasks,
-  updateTask as updateTaskRow,
+  rewriteSubtasks,
   updateTasks,
 } from "@/lib/db/tasks";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
@@ -446,42 +446,40 @@ function assertMayDropSubtasks(caller: McpCaller, removed: number): void {
   }
 }
 
-/** runUpdate plus the subtask list the call implies: the one given, or every box ticked when the task closes. */
+/** runUpdate plus the subtask list the call asks for: the one given, or every box ticked when it says so. */
 async function runTaskUpdate(
   caller: McpCaller,
   id: string,
   patch: Record<string, unknown>,
-  given?: SubtaskInput[],
+  { given, tick }: { given?: SubtaskInput[]; tick?: boolean } = {},
 ) {
   const closing = patch.status === "done";
-  if (!given && !closing) return runUpdate(caller, "task", id, patch, "task");
+  const writesList = given !== undefined || tick === true;
+  if (!writesList && !closing) {
+    return runUpdate(caller, "task", id, patch, "task");
+  }
 
-  const current = await getTask(caller.userId, id);
+  const list = { added: 0, removed: 0, changed: false };
+  // Straight to the row, since no metric reads subtasks; first, so nothing slow sits between that read and this write.
+  const current = writesList
+    ? await rewriteSubtasks(caller.userId, id, (stored) => {
+        const next = given
+          ? subtasksFromInput(given, stored)
+          : tickedSubtasks(stored);
+        const { added, removed } = subtaskChanges(stored, next);
+        // Before anything is written.
+        if (removed) assertMayDropSubtasks(caller, removed);
+        list.added = added;
+        list.removed = removed;
+        list.changed = !sameSubtasks(next, stored);
+        return next;
+      })
+    : await getTask(caller.userId, id);
   if (!current) {
     return {
       text: `No task with id ${id}, or nothing changed.`,
       data: { ok: false },
     };
-  }
-
-  const list = given
-    ? subtasksFromInput(given, current.subtasks)
-    : tickedSubtasks(current.subtasks);
-  const { added, removed } = subtaskChanges(current.subtasks, list);
-  // Before anything is written.
-  if (removed) assertMayDropSubtasks(caller, removed);
-
-  // Straight to the row, since no metric reads subtasks; first, so nothing slow sits between that read and this write.
-  const listChanged = !sameSubtasks(list, current.subtasks);
-  if (listChanged) {
-    const saved = await updateTaskRow(caller.userId, id, { subtasks: list });
-    if (!saved) {
-      return {
-        text: `Could not save the subtasks on task ${id}.`,
-        data: { ok: false },
-        entityIds: [id],
-      };
-    }
   }
 
   // Already closed: done again would restamp the date, but a retry still has to repair the goal above it.
@@ -497,11 +495,14 @@ async function runTaskUpdate(
     if (!updated.data.ok) return updated;
   }
 
-  const changed = [...Object.keys(rest), ...(listChanged ? ["subtasks"] : [])];
-  const counts = added || removed ? ` (${added} added, ${removed} removed)` : "";
+  const changed = [...Object.keys(rest), ...(list.changed ? ["subtasks"] : [])];
+  const counts =
+    list.added || list.removed
+      ? ` (${list.added} added, ${list.removed} removed)`
+      : "";
   return {
     text: changed.length
-      ? `Updated task ${id}. Changed: ${changed.join(", ")}${listChanged ? counts : ""}.`
+      ? `Updated task ${id}. Changed: ${changed.join(", ")}${list.changed ? counts : ""}.`
       : `Task ${id} is already like that. Nothing changed.`,
     data: { ok: true, id, changed },
     entityIds: [id],
@@ -512,7 +513,7 @@ export const updateTask = defineTool({
   name: "update_task",
   title: "Update a task",
   description:
-    "Change a task. Only the fields you pass are touched. Setting status to done stamps the completion date unless the task is already closed, ticks its subtasks unless you send a list, and updates the project's progress.",
+    "Change a task. Only the fields you pass are touched. Setting status to done stamps the completion date unless the task is already closed, and updates the project's progress. Subtasks only change when you send a list.",
   opClass: "update",
   inputSchema: z.object({
     id: z.string(),
@@ -526,7 +527,7 @@ export const updateTask = defineTool({
     subtasks: subtasksField
       .optional()
       .describe(
-        "Replaces the whole checklist, so send the items to keep too; get_task returns the current list. A title already on the task keeps its tick unless done says otherwise, ignoring case and outer spaces. Any other title is new and starts unticked. Leaving a subtask out removes it, which needs delete permission.",
+        "Replaces the whole checklist, so send the items to keep too; get_task returns the current list. A title already on the task keeps its tick unless done says otherwise, ignoring case and outer spaces. Leave done out unless you are changing it: a value from an old read undoes a tick made since. Any other title is new and starts unticked. Leaving a subtask out removes it, which needs delete permission.",
       ),
   }),
   handler: async (input, caller) => {
@@ -535,7 +536,7 @@ export const updateTask = defineTool({
       caller,
       id,
       fields({ ...rest, date: due }),
-      subtasks,
+      { given: subtasks },
     );
   },
 });
@@ -544,11 +545,21 @@ export const completeTask = defineTool({
   name: "complete_task",
   title: "Complete a task",
   description:
-    "Mark a task done and tick its subtasks. Safe to call twice: a task that is already closed keeps its completion date.",
+    "Mark a task done. Safe to call twice: a task that is already closed keeps its completion date. Its subtasks stay as they are unless tickSubtasks is true.",
   opClass: "update",
-  inputSchema: z.object({ id: z.string() }),
+  inputSchema: z.object({
+    id: z.string(),
+    tickSubtasks: z
+      .boolean()
+      .optional()
+      .describe(
+        "Also tick every subtask. Only when the user says all of them are done.",
+      ),
+  }),
   handler: async (input, caller) =>
-    runTaskUpdate(caller, input.id, { status: "done" }),
+    runTaskUpdate(caller, input.id, { status: "done" }, {
+      tick: input.tickSubtasks,
+    }),
 });
 
 export const moveTask = defineTool({

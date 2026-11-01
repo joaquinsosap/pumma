@@ -19,6 +19,7 @@ export const insertTasks = impl.insertTasks;
 export const updateTask = impl.updateTask;
 export const updateTasks = impl.updateTasks;
 export const changeSubtask = impl.changeSubtask;
+export const rewriteSubtasks = impl.rewriteSubtasks;
 export const accumulateRunningTime = impl.accumulateRunningTime;
 export const stopRunningTimers = impl.stopRunningTimers;
 export const deleteTask = impl.deleteTask;
