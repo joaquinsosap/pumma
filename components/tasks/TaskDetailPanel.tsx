@@ -2,13 +2,15 @@
 
 import {
   useCallback,
+  useLayoutEffect,
   useOptimistic,
   useRef,
   useState,
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, Plus, X } from "@/components/icons";
+import { ArrowLeft, Check, Maximize2, Plus, X } from "@/components/icons";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { Project, Subtask, Tag, Task } from "@/lib/schemas";
 import { oid, taskDueDateInput } from "@/lib/date";
 import {
@@ -222,6 +224,20 @@ export function TaskDetailPanel({
       [],
     ),
   );
+
+  // The box grows with what is written in it, up to most of the screen, so a
+  // long description is read and edited without a four-line window onto it.
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = descriptionRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const edges = el.offsetHeight - el.clientHeight;
+    const most = Math.round(window.innerHeight * 0.6);
+    el.style.height = `${Math.min(el.scrollHeight + edges, most)}px`;
+  }, [description]);
+  // The same text in a wide editor, for when the panel is too narrow to write in.
+  const [wideOpen, setWideOpen] = useState(false);
 
   // Closing commits any pending description first. The unmount cleanup above is
   // a backstop, but an action fired while the tree is being torn down inside a
@@ -540,14 +556,57 @@ export function TaskDetailPanel({
           <h4 className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
             Description
           </h4>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={flushDescription}
-            placeholder="Add notes, context, links…"
-            rows={4}
-            className="w-full resize-y rounded-lg border border-border bg-surface2/50 px-3 py-2.5 text-[13px] leading-relaxed text-ink outline-none transition-colors placeholder:text-faint2 focus:border-faint"
-          />
+          <div className="relative">
+            <textarea
+              ref={descriptionRef}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              onBlur={flushDescription}
+              placeholder="Add notes, context, links…"
+              rows={4}
+              className="block w-full resize-none overflow-y-auto rounded-lg border border-border bg-surface2/50 py-2.5 pl-3 pr-9 text-[14px] leading-relaxed text-ink outline-none transition-colors placeholder:text-faint2 focus:border-faint"
+            />
+            <button
+              type="button"
+              onClick={() => setWideOpen(true)}
+              title="Open wide"
+              aria-label="Open the description in a wide editor"
+              className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-md border border-border bg-surface text-faint transition-colors hover:border-faint hover:text-ink"
+            >
+              <Maximize2 className="h-3 w-3" strokeWidth={2.4} />
+            </button>
+          </div>
+          <Dialog
+            open={wideOpen}
+            onOpenChange={(open) => {
+              // Leaving the wide editor is a commit, the same as leaving the box.
+              if (!open) flushDescription();
+              setWideOpen(open);
+            }}
+          >
+            <DialogContent className="flex h-[min(80dvh,720px)] max-w-3xl flex-col gap-3 p-5">
+              <DialogTitle className="pr-8 text-[15px] font-bold leading-snug">
+                {task.title}
+              </DialogTitle>
+              <div className="font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
+                Description
+              </div>
+              <textarea
+                autoFocus
+                // Opens ready to carry on writing, not at the first character.
+                onFocus={(e) => {
+                  const end = e.currentTarget.value.length;
+                  e.currentTarget.setSelectionRange(end, end);
+                }}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={flushDescription}
+                placeholder="Add notes, context, links…"
+                className="min-h-0 w-full flex-1 resize-none rounded-lg border border-border bg-surface2/50 px-4 py-3 text-[14.5px] leading-relaxed text-ink outline-none transition-colors placeholder:text-faint2 focus:border-faint"
+              />
+              <div className="font-mono text-[10px] text-faint2">autosaves</div>
+            </DialogContent>
+          </Dialog>
         </section>
 
         <section className="mb-5">

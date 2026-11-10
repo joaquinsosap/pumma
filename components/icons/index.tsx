@@ -77,6 +77,7 @@ export {
   Moon,
   MoreHorizontal,
   MousePointerClick,
+  Maximize2,
   Plug,
   RefreshCw,
   Repeat,
