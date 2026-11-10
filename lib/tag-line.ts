@@ -45,11 +45,13 @@ const counterCost = (n: number) => GAP + 1 + String(n).length;
 export function fitTagLine<T extends TagLike>(
   tags: T[],
   budgetChars: number,
+  /** Characters already taken at the start of the line, by the ticket chip. */
+  lead = 0,
 ): TagLineFit<T> {
   if (tags.length === 0) return { shown: [], hidden: 0 };
 
   const shown: T[] = [];
-  let used = 0;
+  let used = lead;
 
   for (let i = 0; i < tags.length; i++) {
     const cost = (shown.length === 0 ? 0 : GAP) + tagCost(tags[i].name);
@@ -66,9 +68,25 @@ export function fitTagLine<T extends TagLike>(
   // A single tag too long for the line still renders: one truncated tag says
   // more than a bare "+1", and CSS trims the overflow. Showing nothing at all
   // would make the tag look deleted.
-  if (shown.length === 0) return { shown: [tags[0]], hidden: tags.length - 1 };
+  //
+  // Not beside a ticket chip, though. The chip is already on the line, so the
+  // tags are not missing, they are counted: forcing one in would push it out
+  // of sight behind the chip and leave the count wrong by one.
+  if (shown.length === 0) {
+    return lead > 0
+      ? { shown: [], hidden: tags.length }
+      : { shown: [tags[0]], hidden: tags.length - 1 };
+  }
 
   return { shown, hidden: tags.length - shown.length };
+}
+
+/**
+ * What a ticket chip costs the line, in characters: its label, the link glyph
+ * and the chip's own padding, and the gap after it.
+ */
+export function ticketLead(label: string): number {
+  return label.length + 3 + GAP;
 }
 
 /**

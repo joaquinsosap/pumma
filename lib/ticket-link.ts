@@ -69,6 +69,12 @@ function jiraKeyIn(url: URL): string | null {
     const candidate = decoded(parts[i + 1]);
     if (candidate && JIRA_KEY.test(candidate)) return candidate.toUpperCase();
   }
+  // A service desk's customer portal: ".../servicedesk/customer/portal/3/VST-1234".
+  const portal = parts.indexOf("portal");
+  if (portal > 0 && parts[portal - 1] === "customer" && parts[portal + 2]) {
+    const candidate = decoded(parts[portal + 2]);
+    if (candidate && JIRA_KEY.test(candidate)) return candidate.toUpperCase();
+  }
   // A board with one issue open: "...?selectedIssue=VST-1234".
   const picked = url.searchParams.get("selectedIssue");
   if (picked && JIRA_KEY.test(picked)) return picked.toUpperCase();

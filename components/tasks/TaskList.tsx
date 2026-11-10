@@ -30,7 +30,9 @@ import { DeleteButton } from "@/components/ui/delete-button";
 import { RangeIndicator } from "@/components/ui/range-indicator";
 import { useDraggable } from "@dnd-kit/core";
 import { PriorityChip } from "@/components/tasks/PriorityChip";
-import { budgetForWidth, fitTagLine } from "@/lib/tag-line";
+import { budgetForWidth, fitTagLine, ticketLead } from "@/lib/tag-line";
+import { ticketFromUrl } from "@/lib/ticket-link";
+import { TicketChip } from "@/components/tasks/TicketChip";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { TaskPriority } from "@/lib/types";
@@ -162,7 +164,17 @@ function SubtaskProgress({ done, total }: { done: number; total: number }) {
  * tiers covers. One ResizeObserver per row sounded expensive until the
  * alternative turned out to be silently clipping the common case.
  */
-function TagLine({ tags }: { tags: Tag[] }) {
+function TagLine({
+  tags,
+  ticketUrl,
+  nested = false,
+}: {
+  tags: Tag[];
+  /** The task's ticket link. Its chip leads the line and the tags fit after it. */
+  ticketUrl?: string | null;
+  /** The row is itself a link, so the chip cannot be one. */
+  nested?: boolean;
+}) {
   const ref = useRef<HTMLSpanElement>(null);
   const [budget, setBudget] = useState<number | null>(null);
 
@@ -176,19 +188,23 @@ function TagLine({ tags }: { tags: Tag[] }) {
     return () => ro.disconnect();
   }, []);
 
-  if (tags.length === 0) return null;
+  const ticket = ticketFromUrl(ticketUrl);
+  if (tags.length === 0 && !ticket) return null;
 
   // Before the first measurement there is no honest answer, so the line
   // renders empty at its full height rather than flashing every tag and
   // snapping back to two. One frame, and only on mount.
   const { shown, hidden } =
-    budget === null ? { shown: [], hidden: 0 } : fitTagLine(tags, budget);
+    budget === null
+      ? { shown: [], hidden: 0 }
+      : fitTagLine(tags, budget, ticket ? ticketLead(ticket.label) : 0);
 
   return (
     <span
       ref={ref}
       className="mt-0.5 flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden font-mono text-[11px] leading-[1.4]"
     >
+      {ticket && <TicketChip url={ticket.url} nested={nested} />}
       {shown.map((tg) => (
         <span key={tg.id} className="shrink-0 whitespace-nowrap">
           <span className="text-faint2">#</span>
@@ -825,7 +841,7 @@ export function TaskList({
                       </span>
                     )}
                   </span>
-                  <TagLine tags={taskTags} />
+                  <TagLine tags={taskTags} ticketUrl={t.ticketUrl} nested />
                 </Link>
               ) : (
                 <>
@@ -835,7 +851,7 @@ export function TaskList({
                   {compact && subtaskTotal > 0 && (
                     <SubtaskProgress done={subtaskDone} total={subtaskTotal} />
                   )}
-                  <TagLine tags={taskTags} />
+                  <TagLine tags={taskTags} ticketUrl={t.ticketUrl} />
                 </>
               )}
             </div>

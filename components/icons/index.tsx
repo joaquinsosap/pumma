@@ -77,6 +77,7 @@ export {
   Moon,
   MoreHorizontal,
   MousePointerClick,
+  ArrowUpRight,
   Maximize2,
   Plug,
   RefreshCw,

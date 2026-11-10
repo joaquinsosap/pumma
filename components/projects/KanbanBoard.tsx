@@ -48,6 +48,7 @@ import {
   type NewTaskArrival,
 } from "@/lib/new-task-arrival";
 import { landCard } from "@/lib/land-card";
+import { TicketChip } from "@/components/tasks/TicketChip";
 
 export type ColumnId = "todo" | "doing" | "done";
 
@@ -864,6 +865,7 @@ function KanbanCardShell({
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <TaskTimer task={task} compact stopPropagation />
+        {!overlay && <TicketChip url={task.ticketUrl} />}
         {task.tagIds.map((id) => {
           const tg = tagMap.get(id);
           if (!tg) return null;

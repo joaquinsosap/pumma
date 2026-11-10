@@ -61,6 +61,7 @@ describe("ticketFromUrl", () => {
     ["from a filter view", "https://jira.example.com/issues/VST-7?filter=-1"],
     ["open on a board", "https://jira.example.com/secure/RapidBoard.jspa?rapidView=4&selectedIssue=VST-7"],
     ["typed in lower case", "https://jira.example.com/browse/vst-7"],
+    ["on a service desk portal", "https://desk.example.com/servicedesk/customer/portal/3/VST-7"],
   ])("finds the key %s", (_where, url) => {
     expect(ticketFromUrl(url)?.key).toBe("VST-7");
     expect(ticketFromUrl(url)?.kind).toBe("jira");

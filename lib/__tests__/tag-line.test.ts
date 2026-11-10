@@ -2,7 +2,7 @@
 // seventy-row list reads as a bug. These pin the arithmetic that decides what
 // fits, including the cases where the counter itself is what pushes a tag out.
 import { describe, expect, it } from "vitest";
-import { budgetForWidth, fitTagLine } from "@/lib/tag-line";
+import { budgetForWidth, fitTagLine, ticketLead } from "@/lib/tag-line";
 
 const tags = (...names: string[]) =>
   names.map((name, i) => ({ id: `t${i}`, name, color: "#000" }));
@@ -113,5 +113,38 @@ describe("budgetForWidth", () => {
 
   it("grows with the container", () => {
     expect(budgetForWidth(300)).toBeGreaterThan(budgetForWidth(150));
+  });
+});
+
+describe("a ticket chip at the start of the line", () => {
+  const tags = [
+    { id: "1", name: "work" },
+    { id: "2", name: "alerts" },
+    { id: "3", name: "infra" },
+  ];
+
+  it("takes its share, so fewer tags fit after it", () => {
+    const alone = fitTagLine(tags, 24);
+    const beside = fitTagLine(tags, 24, ticketLead("VST-1234"));
+    expect(alone.shown.length).toBeGreaterThan(beside.shown.length);
+    expect(beside.shown.length + beside.hidden).toBe(tags.length);
+  });
+
+  it("costs nothing when there is no ticket", () => {
+    expect(fitTagLine(tags, 24, 0)).toEqual(fitTagLine(tags, 24));
+  });
+
+  it("counts every tag instead of forcing one in when the chip fills the line", () => {
+    // Alone on a tiny line, one tag still renders so it does not look deleted.
+    expect(fitTagLine(tags, 4).shown).toHaveLength(1);
+    // Beside a chip it would be pushed out of sight, so all three are counted.
+    expect(fitTagLine(tags, 4, ticketLead("VST-1234"))).toEqual({
+      shown: [],
+      hidden: 3,
+    });
+  });
+
+  it("grows with the ticket's number", () => {
+    expect(ticketLead("VST-12345")).toBe(ticketLead("VST-1") + 4);
   });
 });

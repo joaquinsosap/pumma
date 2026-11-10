@@ -22,6 +22,7 @@ import {
 import { toggleEntityTag } from "@/lib/actions/tags";
 import { TagGridPicker } from "@/components/tags/TagGridPicker";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
+import { TicketBlock } from "@/components/tasks/TicketBlock";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { ScrollHint } from "@/components/ui/scroll-hint";
 import { EditableTitle } from "@/components/ui/editable-title";
@@ -551,6 +552,8 @@ export function TaskDetailPanel({
             </select>
           </div>
         </section>
+
+        <TicketBlock taskId={task.id} url={task.ticketUrl} />
 
         <section className="mb-5">
           <h4 className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
