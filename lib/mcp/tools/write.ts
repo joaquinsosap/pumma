@@ -37,11 +37,8 @@ import {
   updateTask as updateTaskRow,
   updateTasks,
 } from "@/lib/db/tasks";
-import {
-  TICKET_URL_MAX,
-  cleanTicketUrl,
-  ticketFromUrl,
-} from "@/lib/ticket-link";
+import { TICKET_URL_MAX, ticketFromUrl } from "@/lib/ticket-link";
+import { ticketUrlFromInput } from "@/lib/jira/connection-server";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 import { isoDateInTz } from "@/lib/timezone";
 import {
@@ -160,11 +157,17 @@ export const createTask = defineTool({
       ),
   }),
   handler: async (input, caller) => {
-    // Sent at all, it has to be a link: a blank one is a mistake to report, not "no ticket".
-    const ticketUrl =
-      input.ticketUrl === undefined ? null : cleanTicketUrl(input.ticketUrl);
-    if (input.ticketUrl !== undefined && !ticketUrl) {
-      return { text: NOT_A_LINK, data: { ok: false } };
+    // Sent at all, it has to name a ticket: a blank one is a mistake to report, not "no ticket".
+    let ticketUrl: string | null = null;
+    if (input.ticketUrl !== undefined) {
+      const ticket = await ticketUrlFromInput(caller.userId, input.ticketUrl);
+      if (!ticket.ok || !ticket.url) {
+        return {
+          text: ticket.ok ? NOT_A_LINK : ticket.error,
+          data: { ok: false },
+        };
+      }
+      ticketUrl = ticket.url;
     }
     const ctx = await contextFor(caller);
     const op: CreateOp = {
@@ -577,7 +580,7 @@ export const setTaskTicket = defineTool({
   name: "set_task_ticket",
   title: "Link a task to a ticket",
   description:
-    "Link a task to its ticket in an outside tracker by the ticket page's address, for example a Jira issue link ending in /browse/KEY-123. The ticket key is read from the link. Pass url as null to take the link off. Nothing is sent to the tracker.",
+    "Link a task to its ticket in an outside tracker by the ticket page's address, for example a Jira issue link ending in /browse/KEY-123. The ticket key is read from the link. A bare key such as KEY-123 also works once the user has saved their Jira address in PUMMA. Pass url as null to take the link off. Nothing is sent to the tracker.",
   opClass: "update",
   inputSchema: z.object({
     id: z.string().describe("Task id, as returned by list_tasks."),
@@ -585,9 +588,16 @@ export const setTaskTicket = defineTool({
   }),
   handler: async (input, caller) => {
     // Only null takes the link off. A blank string is refused like any other non-link.
-    const url = input.url === null ? null : cleanTicketUrl(input.url);
-    if (input.url !== null && !url) {
-      return { text: NOT_A_LINK, data: { ok: false } };
+    let url: string | null = null;
+    if (input.url !== null) {
+      const ticket = await ticketUrlFromInput(caller.userId, input.url);
+      if (!ticket.ok || !ticket.url) {
+        return {
+          text: ticket.ok ? NOT_A_LINK : ticket.error,
+          data: { ok: false },
+        };
+      }
+      url = ticket.url;
     }
     const updated = await updateTaskRow(caller.userId, input.id, {
       ticketUrl: url,

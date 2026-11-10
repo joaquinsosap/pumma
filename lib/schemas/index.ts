@@ -71,6 +71,13 @@ export const settingsSchema = z.object({
   // the only piece the UI is allowed to see.
   aiApiKeyEnc: z.string().nullable().default(null),
   aiApiKeyLast4: z.string().nullable().default(null),
+  // The user's own Jira: where it lives and their personal token, both
+  // encrypted at rest the way the AI key is, and both kept out of the DTO.
+  // The address is sealed too because it names an employer's system.
+  // `jiraTokenLast4` is the only piece the UI is allowed to see.
+  jiraBaseUrlEnc: z.string().nullable().default(null),
+  jiraTokenEnc: z.string().nullable().default(null),
+  jiraTokenLast4: z.string().nullable().default(null),
   // Which provider that key belongs to, and which model to ask for. Both
   // default, so a row written before providers existed reads as Anthropic on
   // its default model — exactly what it did before.
@@ -569,7 +576,10 @@ export type SubscriptionDoc = z.infer<typeof subscriptionSchema>;
 
 export type User = Omit<UserDoc, "_id"> & { id: string };
 // The encrypted key never crosses the server/client boundary — the DTO drops it.
-export type Settings = Omit<SettingsDoc, "_id" | "aiApiKeyEnc"> & {
+export type Settings = Omit<
+  SettingsDoc,
+  "_id" | "aiApiKeyEnc" | "jiraBaseUrlEnc" | "jiraTokenEnc"
+> & {
   id: string;
 };
 export type Tag = Omit<TagDoc, "_id"> & { id: string };
@@ -593,6 +603,12 @@ export function toDto<T extends { _id: string }>(
 
 /** Settings DTO with the encrypted API key stripped — safe to send to the client. */
 export function settingsToDto(doc: SettingsDoc): Settings {
-  const { _id, aiApiKeyEnc: _enc, ...rest } = doc;
+  const {
+    _id,
+    aiApiKeyEnc: _enc,
+    jiraBaseUrlEnc: _jiraBase,
+    jiraTokenEnc: _jiraToken,
+    ...rest
+  } = doc;
   return { ...rest, id: _id };
 }

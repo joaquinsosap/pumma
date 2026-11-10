@@ -51,6 +51,13 @@ export function cleanTicketUrl(raw: unknown): string | null {
 /** Jira issue keys: a project code, a dash, a number. */
 const JIRA_KEY = /^[A-Za-z][A-Za-z0-9_]{1,29}-\d{1,9}$/;
 
+/** "VST-1234" typed on its own, in any case. The tidy form, or null when it is not a ticket number. */
+export function ticketKeyFrom(text: unknown): string | null {
+  if (typeof text !== "string") return null;
+  const word = text.trim();
+  return JIRA_KEY.test(word) ? word.toUpperCase() : null;
+}
+
 /** A path segment as text. A broken escape ("%zz") is no key, and must not throw: this runs while a page draws. */
 function decoded(segment: string): string | null {
   try {

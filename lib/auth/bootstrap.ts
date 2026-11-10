@@ -84,6 +84,9 @@ export async function bootstrapNewUser(user: {
     timezone: "UTC", // refined by the client TimezoneSync cookie on first load
     aiApiKeyEnc: null,
     aiApiKeyLast4: null,
+    jiraBaseUrlEnc: null,
+    jiraTokenEnc: null,
+    jiraTokenLast4: null,
     aiProvider: "anthropic",
     aiModel: null,
     lifeAutoSwitch: false,

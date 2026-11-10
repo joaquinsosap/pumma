@@ -37,3 +37,15 @@ export async function getAiApiKeyEnc(userId: string): Promise<string | null> {
   const doc = store.settings.find((s) => s.userId === userId);
   return doc?.aiApiKeyEnc ?? null;
 }
+
+/** Server-only: the Jira connection as stored, still encrypted. */
+export async function getJiraSecretsEnc(
+  userId: string,
+): Promise<{ baseUrlEnc: string | null; tokenEnc: string | null }> {
+  const store = getStore();
+  const doc = store.settings.find((s) => s.userId === userId);
+  return {
+    baseUrlEnc: doc?.jiraBaseUrlEnc ?? null,
+    tokenEnc: doc?.jiraTokenEnc ?? null,
+  };
+}

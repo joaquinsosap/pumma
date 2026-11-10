@@ -12,6 +12,7 @@ import { mcpAvailable, mcpResourceUrl } from "@/lib/mcp/config";
 import { listMcpAudit } from "@/lib/db/mcp-audit";
 import { listConnectedClients } from "@/lib/mcp/connections";
 import { getSessionUserId } from "@/lib/auth/session";
+import { jiraBaseUrl } from "@/lib/jira/connection-server";
 
 export default async function SettingsPage() {
   const lifeView = await resolveLifeView();
@@ -40,6 +41,13 @@ export default async function SettingsPage() {
   const userId = mcpEndpoint ? await getSessionUserId() : null;
   const mcpActivity = userId ? await listMcpAudit(userId, 8) : [];
   const mcpClients = userId ? await listConnectedClients(userId) : [];
+  // Opened on the server and handed over as the address only. The token never
+  // leaves: the screen gets its last four characters, from the settings row.
+  const viewerId = userId ?? (await getSessionUserId());
+  const jira = {
+    address: viewerId ? await jiraBaseUrl(viewerId) : null,
+    tokenLast4: data.settings?.jiraTokenLast4 ?? null,
+  };
 
   return (
     <SettingsView
@@ -59,6 +67,7 @@ export default async function SettingsPage() {
       mcpEndpoint={mcpEndpoint}
       mcpActivity={mcpActivity}
       mcpClients={mcpClients}
+      jira={jira}
       stats={{ dayPct: 0, habitsLabel: "-", topStreak: 0 }}
     />
   );

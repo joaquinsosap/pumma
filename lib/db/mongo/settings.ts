@@ -47,3 +47,18 @@ export async function getAiApiKeyEnc(userId: string): Promise<string | null> {
   const doc = await c.findOne({ userId }, { projection: { aiApiKeyEnc: 1 } });
   return doc?.aiApiKeyEnc ?? null;
 }
+
+/** Server-only: the Jira connection as stored, still encrypted. Never send to a client. */
+export async function getJiraSecretsEnc(
+  userId: string,
+): Promise<{ baseUrlEnc: string | null; tokenEnc: string | null }> {
+  const c = await col();
+  const doc = await c.findOne(
+    { userId },
+    { projection: { jiraBaseUrlEnc: 1, jiraTokenEnc: 1 } },
+  );
+  return {
+    baseUrlEnc: doc?.jiraBaseUrlEnc ?? null,
+    tokenEnc: doc?.jiraTokenEnc ?? null,
+  };
+}

@@ -75,6 +75,7 @@ import type { StarterStatus } from "@/lib/actions/starter";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { CalendarFeeds } from "@/components/settings/CalendarFeeds";
 import { McpSettings, type McpPrefs } from "@/components/settings/McpSettings";
+import { JiraConnection } from "@/components/settings/JiraConnection";
 import type { McpAuditRow } from "@/lib/mcp/audit-types";
 import type { ConnectedClient } from "@/lib/mcp/connections";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
@@ -109,6 +110,8 @@ type Props = {
   pushPublicKey?: string;
   /** The MCP server URL to paste into a client. Empty when not served here. */
   mcpEndpoint?: string;
+  /** The saved Jira connection, as much of it as the screen may see. */
+  jira?: { address: string | null; tokenLast4: string | null };
   /** Last few MCP tool calls, newest first. */
   mcpActivity?: McpAuditRow[];
   /** Apps this account has approved, newest first. */
@@ -188,6 +191,7 @@ export function SettingsView({
   mcpEndpoint = "",
   mcpActivity = [],
   mcpClients = [],
+  jira = { address: null, tokenLast4: null },
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -948,6 +952,17 @@ export function SettingsView({
                     This PUMMA instance does not serve MCP.
                   </p>
                 )}
+              </SettingsSection>
+            </div>
+            <div id="jira" className="mb-6 scroll-mt-4">
+              <SettingsSection
+                title="Jira"
+                description="Connect your own Jira so a task can be linked to its ticket by number. PUMMA only reads from Jira with this connection, and only when you ask it to."
+              >
+                <JiraConnection
+                  address={jira.address}
+                  tokenLast4={jira.tokenLast4}
+                />
               </SettingsSection>
             </div>
             </SettingsGroupBlock>

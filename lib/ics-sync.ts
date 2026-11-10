@@ -1,7 +1,7 @@
 import "server-only";
 
-import { lookup } from "node:dns/promises";
-import { isBlockedHost, vetFeedUrl } from "@/lib/calendar-feed-url";
+import { vetFeedUrl } from "@/lib/calendar-feed-url";
+import { resolvesToPublicAddress } from "@/lib/outbound-guard";
 import { parseIcs } from "@/lib/ics";
 import { addDays, iso } from "@/lib/date";
 import {
@@ -42,31 +42,6 @@ const TIMEOUT_MS = 15_000;
 export type SyncResult =
   | { ok: true; events: number; unchanged: boolean }
   | { ok: false; error: string };
-
-/**
- * The second half of the SSRF defence.
- *
- * `vetFeedUrl` rejects what is wrong on its face, but a hostname is not an
- * address: "calendar.example.com" is free to resolve to 127.0.0.1, and that is
- * a deliberate attack, not a hypothetical. So the name is resolved here and
- * the ANSWER is checked before anything connects.
- *
- * This still leaves a rebinding window (the address could change between this
- * lookup and fetch's own). Closing it properly needs a custom agent that pins
- * the socket to the address we checked. Worth doing if this ever accepts
- * feeds from untrusted users; for a personal tool the narrowed window plus
- * the literal checks is a reasonable place to stop, and saying so is better
- * than implying it is airtight.
- */
-async function resolvesToPublicAddress(host: string): Promise<boolean> {
-  try {
-    const answers = await lookup(host, { all: true, verbatim: true });
-    if (answers.length === 0) return false;
-    return answers.every((a) => !isBlockedHost(a.address));
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Pull one feed and replace its cached events.

@@ -8,3 +8,4 @@ export const getSettings = cache(impl.getSettings);
 export const insertSettings = impl.insertSettings;
 export const updateSettings = impl.updateSettings;
 export const getAiApiKeyEnc = impl.getAiApiKeyEnc;
+export const getJiraSecretsEnc = impl.getJiraSecretsEnc;

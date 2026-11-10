@@ -51,6 +51,7 @@ import {
 } from "@/lib/validation";
 import { mergeTaskDueDate, mergeTaskDueTime } from "@/lib/date";
 import { TICKET_URL_MAX, cleanTicketUrl } from "@/lib/ticket-link";
+import { ticketUrlFromInput } from "@/lib/jira/connection-server";
 import { MAX_SUBTASKS, type SubtaskChange } from "@/lib/subtask-changes";
 
 const omniSchema = z.object({
@@ -907,18 +908,16 @@ export async function updateTaskDetail(
   )
     return { ok: false, error: "Nothing to update" };
 
-  // Only a link that can be opened safely is ever stored: it ends up in an href.
-  if (patch.ticketUrl !== undefined && patch.ticketUrl?.trim()) {
-    const clean = cleanTicketUrl(patch.ticketUrl);
-    if (!clean) {
-      return { ok: false, error: "That is not a link. Paste the ticket's address, starting with https://" };
-    }
-    patch.ticketUrl = clean;
-  } else if (patch.ticketUrl !== undefined) {
-    patch.ticketUrl = null;
+  const userId = await requireUserId();
+
+  // Only a link that can be opened safely is ever stored: it ends up in an
+  // href. A bare ticket number becomes a link on the user's saved Jira.
+  if (patch.ticketUrl !== undefined) {
+    const ticket = await ticketUrlFromInput(userId, patch.ticketUrl);
+    if (!ticket.ok) return { ok: false, error: ticket.error };
+    patch.ticketUrl = ticket.url;
   }
 
-  const userId = await requireUserId();
   const { getTask } = await import("@/lib/db/tasks");
   const existing = await getTask(userId, id);
   if (!existing) return { ok: false, error: "Not found" };

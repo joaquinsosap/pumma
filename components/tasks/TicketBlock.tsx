@@ -4,13 +4,13 @@ import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ArrowUpRight, ChevronRight } from "@/components/icons";
 import { updateTaskDetail } from "@/lib/actions/tasks";
-import { cleanTicketUrl, ticketFromUrl } from "@/lib/ticket-link";
+import { cleanTicketUrl, ticketFromUrl, ticketKeyFrom } from "@/lib/ticket-link";
 import { trySave } from "@/lib/try-save";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { cn } from "@/lib/utils";
 
 const NOT_A_LINK =
-  "That is not a link. Paste the ticket's address, starting with https://";
+  "That is not a link. Paste the ticket's address, starting with https://, or type its number.";
 
 /**
  * The task's ticket in an outside tracker: a box to paste its link into, and
@@ -38,12 +38,28 @@ export function TicketBlock({
 
   const save = (raw: string | null) => {
     const next = raw && raw.trim() ? cleanTicketUrl(raw) : null;
-    if (raw && raw.trim() && !next) {
+    const number = !next && raw ? ticketKeyFrom(raw) : null;
+    if (raw && raw.trim() && !next && !number) {
       if (refused.current !== raw) toast.error(NOT_A_LINK);
       refused.current = raw;
       return;
     }
     refused.current = null;
+    if (number) {
+      // The link is built on the server, from the Jira address saved in
+      // Settings, so there is nothing to show until it answers. If no address
+      // is saved the server says where to add one, and the number stays typed.
+      startTransition(async () => {
+        const res = await trySave(() =>
+          updateTaskDetail({ id: taskId, ticketUrl: number }),
+        );
+        if (!res?.ok) return;
+        setUrl(res.data?.ticketUrl ?? null);
+        setEditing(false);
+        setText("");
+      });
+      return;
+    }
     const before = url;
     setEditing(false);
     setText("");
@@ -66,8 +82,10 @@ export function TicketBlock({
 
       {!ticket || editing ? (
         <input
-          type="url"
+          type="text"
           inputMode="url"
+          autoComplete="off"
+          spellCheck={false}
           autoFocus={editing}
           value={text}
           onChange={(e) => {
@@ -96,7 +114,7 @@ export function TicketBlock({
             if (text.trim()) save(text);
             else setEditing(false);
           }}
-          placeholder="Paste a ticket link"
+          placeholder="Paste a ticket link, or type its number"
           aria-label="Ticket link"
           className="w-full rounded-lg border border-border bg-surface2/50 px-3 py-2 text-[13px] text-ink outline-none transition-colors placeholder:text-faint2 focus:border-faint"
         />
