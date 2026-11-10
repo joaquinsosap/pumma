@@ -83,6 +83,19 @@ export function omniHint(
   );
 }
 
+/**
+ * What the Tab bubble says beside its key.
+ *
+ * Before Tab: how many MORE options it holds past the one it writes next, so
+ * two matches read "+1". While Tab cycles: where the cycle stands. One option
+ * needs no number, the key alone says it.
+ */
+export function hintBadge(hint: OmniHint): string | null {
+  if (hint.kind === "cycling") return `${hint.position}/${hint.count}`;
+  if (hint.kind === "open" && hint.count > 1) return `+${hint.count - 1}`;
+  return null;
+}
+
 function openOn(typed: string, candidates: string[], next: number): OmniHint {
   const target = candidates[next];
   const shared = commonPrefix(candidates);

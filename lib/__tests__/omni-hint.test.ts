@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { omniHint, type OmniHintOptions } from "@/lib/omni-hint";
+import { hintBadge, omniHint, type OmniHintOptions } from "@/lib/omni-hint";
 import { completeOmniToken } from "@/lib/omni-complete";
 
 const typeWords = ["task", "habit", "goal", "note"];
@@ -130,5 +130,25 @@ describe("omniHint while Tab cycles", () => {
 
   it("ignores a selection that is not Tab's guess", () => {
     expect(omniHint("#gaming", 3, 7, opts(pool))).toBeNull();
+  });
+});
+
+describe("what the Tab bubble says", () => {
+  it("counts the options Tab holds past the one it writes next", () => {
+    const two = atEnd("ship #we", opts(["website-redesign", "weekly"]))!;
+    expect(two.kind).toBe("open");
+    expect(hintBadge(two)).toBe("+1");
+    const three = atEnd("ship #we", opts(["website-redesign", "weekly", "wellness"]))!;
+    expect(hintBadge(three)).toBe("+2");
+  });
+
+  it("shows the key alone when one match is left", () => {
+    const one = atEnd("pay rent #fin", opts(["finance", "health"]))!;
+    expect(one.kind).toBe("certain");
+    expect(hintBadge(one)).toBeNull();
+  });
+
+  it("says where the cycle stands once Tab has written a guess", () => {
+    expect(hintBadge({ kind: "cycling", position: 2, count: 3 })).toBe("2/3");
   });
 });

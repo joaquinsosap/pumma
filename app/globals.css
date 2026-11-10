@@ -495,6 +495,7 @@ body {
   pointer-events: none;
 }
 
+
 @keyframes kanbanLift {
   from {
     transform: scale(1) rotate(0deg);
@@ -1685,6 +1686,54 @@ select:hover:not(:disabled) {
   -webkit-backdrop-filter: none !important;
   border-top: 1px solid var(--rim) !important;
   box-shadow: 0 -6px 18px rgba(10, 20, 35, 0.1) !important;
+}
+
+/* The Tab bubble over a half-typed #tag or !priority: the key that finishes
+   it, and how many more it holds. Fixed, because the capture bar clips. */
+.omni-tab-hint {
+  position: fixed;
+  z-index: 70;
+  transform: translateY(-100%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 4px 12px var(--shadow);
+  pointer-events: none;
+  animation: pumaFadeIn 0.14s ease-out both;
+}
+.omni-tab-hint::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  bottom: -5px;
+  width: 8px;
+  height: 8px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+.omni-tab-hint kbd {
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 16px;
+}
+.omni-tab-hint span {
+  color: var(--faint);
+  font-family: var(--font-plex-mono), ui-monospace, monospace;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 .pumma-floating {

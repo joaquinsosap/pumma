@@ -10,9 +10,9 @@ import {
   useState,
   type ComponentPropsWithoutRef,
 } from "react";
-import { flushSync } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import type { Tag } from "@/lib/schemas";
-import type { OmniHint } from "@/lib/omni-hint";
+import { hintBadge, type OmniHint } from "@/lib/omni-hint";
 import { ScrambleText } from "@/components/shell/ScrambleText";
 import { NEW_TAG_PREVIEW_COLOR, tagBg, tokenizeOmniInput } from "@/lib/parse";
 import { CALENDAR_PRIO } from "@/lib/calendar-tasks";
@@ -127,12 +127,45 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
     }, [value, hintFor, selectionTick]);
 
     const hint = focused && hintFor ? hintFor(value, sel.start, sel.end) : null;
-    const count =
-      hint?.kind === "open" && hint.count > 1
-        ? String(hint.count)
-        : hint?.kind === "cycling"
-          ? `${hint.position}/${hint.count}`
-          : null;
+    const badge = hint ? hintBadge(hint) : null;
+
+    // The Tab bubble floats over the caret, where the guess is drawn. It is
+    // portaled out and placed by hand because the bar clips what it holds.
+    const [bubble, setBubble] = useState<{ left: number; top: number } | null>(
+      null,
+    );
+    const placeBubble = () => {
+      const el = inputRef.current;
+      const at = hintRef.current;
+      if (!hint || !el || !at) {
+        setBubble((prev) => (prev ? null : prev));
+        return;
+      }
+      const box = el.getBoundingClientRect();
+      const caret = at.getBoundingClientRect();
+      // Its arrow sits a little in from its edge, so it starts left of the caret, and never outside the bar.
+      const left = Math.round(
+        Math.min(Math.max(caret.left - 16, box.left), box.right - 64),
+      );
+      const top = Math.round(box.top - 6);
+      setBubble((prev) =>
+        prev && prev.left === left && prev.top === top ? prev : { left, top },
+      );
+    };
+    // After every paint: typing, Tab's guess and a scrolled bar all move the caret.
+    useLayoutEffect(placeBubble);
+    const hinting = Boolean(hint);
+    useEffect(() => {
+      if (!hinting) return;
+      window.addEventListener("resize", placeBubble);
+      window.addEventListener("scroll", placeBubble, true);
+      return () => {
+        window.removeEventListener("resize", placeBubble);
+        window.removeEventListener("scroll", placeBubble, true);
+      };
+      // placeBubble reads refs and the latest hint through the layout effect above.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [hinting]);
     const tokens = useMemo(
       () => tokenizeOmniInput(value, tags, { showTags, showPriority, dimFrom }),
       [value, tags, showTags, showPriority, dimFrom],
@@ -268,14 +301,19 @@ export const OmniHighlightInput = forwardRef<HTMLInputElement, Props>(
             ref={inputRef}
           />
         </div>
-        {count && (
-          <span
-            aria-hidden
-            className="shrink-0 font-mono text-[11px] tabular-nums text-faint"
-          >
-            {count}
-          </span>
-        )}
+        {hint &&
+          bubble &&
+          createPortal(
+            <span
+              aria-hidden
+              className="omni-tab-hint"
+              style={{ left: bubble.left, top: bubble.top }}
+            >
+              <kbd>Tab</kbd>
+              {badge && <span>{badge}</span>}
+            </span>,
+            document.body,
+          )}
       </div>
     );
   },
