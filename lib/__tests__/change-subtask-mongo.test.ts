@@ -151,7 +151,10 @@ describe("changeSubtask on Mongo", () => {
       done: true,
     });
     expect(filter["subtasks.id"]).toBe("s");
-    expect(update).toEqual({ $set: { "subtasks.$.done": true } });
+    // The tick and the task's stamp, and nothing else.
+    expect(update).toEqual({
+      $set: { "subtasks.$.done": true, updatedAt: expect.any(String) },
+    });
   });
 
   it("renames one row by position, with the title sealed", async () => {
@@ -169,7 +172,10 @@ describe("changeSubtask on Mongo", () => {
   it("removes by id, matching the task whether or not the row is still there", async () => {
     const { filter, update } = await write({ kind: "remove", id: "s" });
     expect(filter).not.toHaveProperty("subtasks.id");
-    expect(update).toEqual({ $pull: { subtasks: { id: "s" } } });
+    expect(update).toEqual({
+      $pull: { subtasks: { id: "s" } },
+      $set: { updatedAt: expect.any(String) },
+    });
   });
 
   it("answers null when nothing matched", async () => {

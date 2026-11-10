@@ -1,4 +1,5 @@
 import type { Note, Project, Tag, Task } from "@/lib/schemas";
+import { projectProgress } from "@/lib/metrics";
 import { sortTasksByPriority } from "@/lib/task-order";
 
 /**
@@ -10,8 +11,8 @@ import { sortTasksByPriority } from "@/lib/task-order";
  * exercise the comparator the view will actually run.
  *
  * "custom" is only offered where the view has a way to arrange things by hand
- * (the kanban board, the tag list in Settings). A custom order with no way to
- * make one is a menu item that does nothing.
+ * (the kanban board, the project rail, the tag list in Settings). A custom
+ * order with no way to make one is a menu item that does nothing.
  *
  * Every non-custom sort here is stable on its input: ties keep the order the
  * caller passed, so switching sorts never shuffles rows it has no opinion on.
@@ -24,7 +25,13 @@ export const PROJECT_TASK_SORTS = [
   "created",
   "alpha",
 ] as const;
-export const PROJECT_SORTS = ["created", "alpha", "progress"] as const;
+export const PROJECT_SORTS = [
+  "custom",
+  "edited",
+  "alpha",
+  "progress",
+  "created",
+] as const;
 export const NOTE_SORTS = ["edited", "created", "alpha"] as const;
 export const TAG_SORTS = ["custom", "alpha", "usage", "created"] as const;
 
@@ -158,20 +165,89 @@ function reverseByKey<T>(items: T[], key: (item: T) => string): T[] {
   return groups.reverse().flat();
 }
 
+/**
+ * When a project last changed: its own edits or its tasks', whichever is later.
+ *
+ * Derived, not stored. Every task write already stamps the task, so reading
+ * the latest of them costs nothing, where stamping the project on each task
+ * save would add a round trip to every tick and rename.
+ */
+export function projectEditedAt(
+  project: Pick<Project, "id" | "createdAt" | "updatedAt">,
+  tasks: Pick<Task, "projectId" | "createdAt" | "updatedAt">[],
+): string {
+  let latest = project.updatedAt ?? project.createdAt;
+  for (const t of tasks) {
+    if (t.projectId !== project.id) continue;
+    const at = t.updatedAt ?? t.createdAt;
+    if (at > latest) latest = at;
+  }
+  return latest;
+}
+
+/**
+ * `tasks` feeds the two orderings that are about a project's work: "edited"
+ * and "progress". Progress is counted from the tasks because the stored
+ * `progress` field is only ever written as 0.
+ */
 export function sortProjects(
   projects: Project[],
   sort: ProjectSort,
   reversed = false,
+  tasks: Task[] = [],
 ): Project[] {
   switch (sort) {
+    case "custom":
+      // The order the user made by dragging the cards. Rows never arranged
+      // all read 0 and so stay newest first.
+      return stable(
+        projects,
+        turned((a, b) => a.order - b.order || newest(a, b), reversed),
+      );
+    case "edited": {
+      const at = new Map(
+        projects.map((p) => [p.id, projectEditedAt(p, tasks)]),
+      );
+      return stable(
+        projects,
+        turned((a, b) => {
+          const x = at.get(a.id)!;
+          const y = at.get(b.id)!;
+          return x < y ? 1 : x > y ? -1 : 0;
+        }, reversed),
+      );
+    }
     case "created":
       return stable(projects, turned(newest, reversed));
     case "alpha":
       return stable(projects, turned(byTitle, reversed));
-    case "progress":
+    case "progress": {
       // Most finished first: the rail then reads as "closest to done".
-      return stable(projects, turned((a, b) => b.progress - a.progress, reversed));
+      const done = new Map(
+        projects.map((p) => [p.id, projectProgress(p.id, tasks).progress]),
+      );
+      return stable(
+        projects,
+        turned((a, b) => done.get(b.id)! - done.get(a.id)!, reversed),
+      );
+    }
   }
+}
+
+/**
+ * The whole hand-made order after one view rearranged the part it shows.
+ *
+ * A view filtered to Personal or Work holds only some of the list. The rows it
+ * shows take their new sequence in the slots they already held and the rest
+ * stay exactly where they were, so arranging one side of life never shuffles
+ * the other. Ids the list does not know, and repeats, are dropped.
+ */
+export function reorderWithin(all: string[], arranged: string[]): string[] {
+  const known = new Set(all);
+  const sequence = [...new Set(arranged)].filter((id) => known.has(id));
+  const moving = new Set(sequence);
+  let next = 0;
+  return all.map((id) => (moving.has(id) ? sequence[next++] : id));
 }
 
 /** Pinned notes stay on top whatever the sort — a pin outranks an ordering. */

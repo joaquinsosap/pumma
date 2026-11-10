@@ -13,6 +13,7 @@ import {
   sameSubtasks,
   type SubtaskChange,
 } from "@/lib/subtask-changes";
+import { touchProjects } from "@/lib/db/mongo/projects";
 
 async function col() {
   const db = await getDb();
@@ -23,14 +24,23 @@ async function col() {
  * defaulted fields, plus an optional client-chosen _id (undo restores one). */
 type NewTaskDoc = Omit<
   TaskDoc,
-  "_id" | "timeSpentSec" | "timerStartedAt" | "description" | "subtasks"
+  | "_id"
+  | "timeSpentSec"
+  | "timerStartedAt"
+  | "description"
+  | "subtasks"
+  | "updatedAt"
 > & {
   _id?: string;
   timeSpentSec?: number;
   timerStartedAt?: string | null;
   description?: string;
   subtasks?: Subtask[];
+  updatedAt?: string | null;
 };
+
+/** Every write stamps the task inside the write it already makes, which is what a project's "last edited" reads. */
+const now = () => new Date().toISOString();
 
 export async function listTasks(userId: string): Promise<Task[]> {
   const c = await col();
@@ -102,6 +112,7 @@ export async function insertTask(doc: NewTaskDoc): Promise<Task> {
     subtasks: [],
     timeSpentSec: 0,
     timerStartedAt: null,
+    updatedAt: now(),
     ...doc,
     _id: doc._id ?? newId(),
   } as TaskDoc;
@@ -116,6 +127,7 @@ export async function insertTask(doc: NewTaskDoc): Promise<Task> {
 export async function insertTasks(docs: NewTaskDoc[]): Promise<Task[]> {
   if (!docs.length) return [];
   const c = await col();
+  const stamp = now();
   const fulls: TaskDoc[] = docs.map(
     (doc) =>
       ({
@@ -123,6 +135,7 @@ export async function insertTasks(docs: NewTaskDoc[]): Promise<Task[]> {
         subtasks: [],
         timeSpentSec: 0,
         timerStartedAt: null,
+        updatedAt: stamp,
         ...doc,
         _id: doc._id ?? newId(),
       }) as TaskDoc,
@@ -140,9 +153,12 @@ export async function updateTask(
   patch: Partial<TaskDoc>,
 ): Promise<Task | null> {
   const c = await col();
+  // A moved task carries its stamp into the project it lands in.
   const doc = await c.findOneAndUpdate(
     { _id: id, userId },
-    { $set: await encryptFor("tasks", userId, patch) },
+    {
+      $set: await encryptFor("tasks", userId, { updatedAt: now(), ...patch }),
+    },
     { returnDocument: "after" },
   );
   if (!doc) return null;
@@ -178,19 +194,30 @@ export async function changeSubtask(
             done: false,
           },
         },
+        $set: { updatedAt: now() },
       };
       break;
     case "setDone":
       filter = row;
-      update = { $set: { "subtasks.$.done": change.done } };
+      update = {
+        $set: { "subtasks.$.done": change.done, updatedAt: now() },
+      };
       break;
     case "rename":
       filter = row;
-      update = { $set: { "subtasks.$.title": await seal(change.title) } };
+      update = {
+        $set: {
+          "subtasks.$.title": await seal(change.title),
+          updatedAt: now(),
+        },
+      };
       break;
     case "remove":
       filter = task;
-      update = { $pull: { subtasks: { id: change.id } } };
+      update = {
+        $pull: { subtasks: { id: change.id } },
+        $set: { updatedAt: now() },
+      };
       break;
   }
 
@@ -217,7 +244,12 @@ export async function rewriteSubtasks(
     // Titles seal differently on every write, so an exact match means nobody touched the list.
     const doc = await c.findOneAndUpdate(
       { _id: id, userId, subtasks: raw.subtasks },
-      { $set: await encryptFor("tasks", userId, { subtasks }) },
+      {
+        $set: await encryptFor("tasks", userId, {
+          subtasks,
+          updatedAt: now(),
+        }),
+      },
       { returnDocument: "after" },
     );
     if (doc) {
@@ -239,11 +271,17 @@ export async function updateTasks(
 ): Promise<number> {
   if (!patches.length) return 0;
   const c = await col();
+  const stamp = now();
   const ops = await Promise.all(
     patches.map(async ({ id, patch }) => ({
       updateOne: {
         filter: { _id: id, userId },
-        update: { $set: await encryptFor("tasks", userId, patch) },
+        update: {
+          $set: await encryptFor("tasks", userId, {
+            updatedAt: stamp,
+            ...patch,
+          }),
+        },
       },
     })),
   );
@@ -258,7 +296,15 @@ export async function deleteTasks(
 ): Promise<number> {
   if (!ids.length) return 0;
   const c = await col();
+  // Deleted tasks leave no row behind, so their projects take the stamp. One read for the batch.
+  const gone = await c
+    .find({ userId, _id: { $in: ids } }, { projection: { projectId: 1 } })
+    .toArray();
   const res = await c.deleteMany({ userId, _id: { $in: ids } });
+  await touchProjects(
+    userId,
+    gone.flatMap((t) => (t.projectId ? [t.projectId] : [])),
+  );
   return res.deletedCount;
 }
 
@@ -293,6 +339,12 @@ export { accumulateRunningTime };
 
 export async function deleteTask(userId: string, id: string): Promise<boolean> {
   const c = await col();
-  const res = await c.deleteOne({ _id: id, userId });
-  return res.deletedCount > 0;
+  const gone = await c.findOneAndDelete(
+    { _id: id, userId },
+    { projection: { projectId: 1 } },
+  );
+  if (!gone) return false;
+  // A deleted task leaves no row behind, so its project takes the stamp.
+  if (gone.projectId) await touchProjects(userId, [gone.projectId]);
+  return true;
 }

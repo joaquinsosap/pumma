@@ -22,7 +22,11 @@ import {
   listProjects,
   updateProject,
   deleteProject,
+  reorderProjects,
 } from "@/lib/db/projects";
+import { getSettings, updateSettings } from "@/lib/db/settings";
+import { reorderWithin, sortProjects } from "@/lib/collection-sort";
+import { entityId } from "@/lib/validation";
 import { syncGoalProgress, syncGoalsForProject } from "@/lib/goal-sync-server";
 import { setProjectLifeArea } from "@/lib/project-life-server";
 import { fileTaggedTasksIntoProject } from "@/lib/project-filing-server";
@@ -246,6 +250,36 @@ export async function deleteProjectAction(
   await releaseProjectTags(userId, id);
 
   if (goalId) await syncGoalProgress(userId, goalId);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/**
+ * Persist a hand-arranged project order: the array is the arrangement of the
+ * projects the view was showing.
+ *
+ * Merged into the whole order rather than written as is, because a view
+ * filtered to one side of life sends only its own projects. Ids that are not
+ * this user's are dropped.
+ */
+export async function reorderProjectsAction(
+  ids: string[],
+): Promise<ActionResult> {
+  const parsed = z.array(entityId).min(1).max(500).safeParse(ids);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+
+  const userId = await requireUserId();
+  const all = sortProjects(await listProjects(userId), "custom").map(
+    (p) => p.id,
+  );
+  await reorderProjects(userId, reorderWithin(all, parsed.data));
+  // Custom AND forwards: this order was made by hand, and a standing
+  // "reversed" would show the drop anywhere but where it landed.
+  const current = await getSettings(userId);
+  await updateSettings(userId, {
+    projectSort: "custom",
+    sortReversed: (current?.sortReversed ?? []).filter((k) => k !== "project"),
+  });
   revalidatePath("/", "layout");
   return { ok: true };
 }

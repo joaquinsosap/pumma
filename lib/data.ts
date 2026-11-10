@@ -25,6 +25,7 @@ import { iso } from "@/lib/date";
 import { habitStreak, normalizeHabitFrequency } from "@/lib/habit-visibility";
 import { resolveTimezoneFromSettings } from "@/lib/timezone-server";
 import { computeGoalProgress } from "@/lib/goal-sync";
+import { sortProjects } from "@/lib/collection-sort";
 import {
   DEFAULT_LIFE_VIEW,
   filterByLifeView,
@@ -138,7 +139,14 @@ function shellFromCore(
 ) {
   const tasks = filterByLifeView(core.allTasks, lifeView);
   const habits = filterByLifeView(core.allHabits, lifeView);
-  const projects = filterByLifeView(core.allProjects, lifeView);
+  // One order everywhere a project is listed: the rail, the home widget, the
+  // pickers and Tasks grouped by project all read this.
+  const projects = sortProjects(
+    filterByLifeView(core.allProjects, lifeView),
+    core.settings?.projectSort ?? "created",
+    (core.settings?.sortReversed ?? []).includes("project"),
+    core.allTasks,
+  );
   const notes = filterByLifeView(core.allNotes, lifeView);
   // Goals were the one collection left out of this, so switching to Work still
   // showed every personal goal. They filter on their category rather than the

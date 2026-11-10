@@ -9,3 +9,5 @@ export const getProject = cache(impl.getProject);
 export const insertProject = impl.insertProject;
 export const updateProject = impl.updateProject;
 export const deleteProject = impl.deleteProject;
+export const reorderProjects = impl.reorderProjects;
+export const touchProjects = impl.touchProjects;

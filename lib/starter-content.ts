@@ -59,6 +59,8 @@ export function buildStarterContent(
       tagIds: [...personal],
       lifeArea: "personal",
       createdAt: today,
+      order: 0,
+      updatedAt: null,
     },
   ];
 
@@ -85,6 +87,7 @@ export function buildStarterContent(
       completedAt: null,
       timeSpentSec: 0,
       timerStartedAt: null,
+      updatedAt: null,
     },
     {
       _id: oid(),
@@ -104,6 +107,7 @@ export function buildStarterContent(
       completedAt: null,
       timeSpentSec: 0,
       timerStartedAt: null,
+      updatedAt: null,
     },
     {
       _id: oid(),
@@ -123,6 +127,7 @@ export function buildStarterContent(
       completedAt: today,
       timeSpentSec: 0,
       timerStartedAt: null,
+      updatedAt: null,
     },
   ];
 

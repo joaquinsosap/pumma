@@ -97,6 +97,9 @@ const settingsPatchSchema = z
     projectTaskSort: z
       .enum(["priority", "custom", "created", "alpha"])
       .optional(),
+    projectSort: z
+      .enum(["custom", "edited", "alpha", "progress", "created"])
+      .optional(),
     noteSort: z.enum(["edited", "created", "alpha"]).optional(),
     tagSort: z.enum(["custom", "alpha", "usage", "created"]).optional(),
     tagAutoClean: z.boolean().optional(),
@@ -159,6 +162,7 @@ export async function updateSettingsAction(patch: {
     digestTime: string;
   };
   projectTaskSort?: "priority" | "custom" | "created" | "alpha";
+  projectSort?: "custom" | "edited" | "alpha" | "progress" | "created";
   noteSort?: "edited" | "created" | "alpha";
   tagSort?: "custom" | "alpha" | "usage" | "created";
   tagAutoClean?: boolean;

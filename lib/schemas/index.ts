@@ -152,7 +152,9 @@ export const settingsSchema = z.object({
   projectTaskSort: z
     .enum(["priority", "custom", "created", "alpha"])
     .default("priority"),
-  projectSort: z.enum(["created", "alpha", "progress"]).default("created"),
+  projectSort: z
+    .enum(["custom", "edited", "alpha", "progress", "created"])
+    .default("created"),
   noteSort: z.enum(["edited", "created", "alpha"]).default("edited"),
   tagSort: z.enum(["custom", "alpha", "usage", "created"]).default("custom"),
   /** Reminders: what fires, and how long before. See lib/notifications. */
@@ -253,6 +255,8 @@ export const taskSchema = z.object({
   completedAt: z.string().nullable(),
   timeSpentSec: z.number().default(0),
   timerStartedAt: z.string().nullable().default(null),
+  /** Last write to the task. Rides in the same write, so it costs no round trip. */
+  updatedAt: z.string().nullable().default(null),
 });
 
 export const habitSchema = z.preprocess(
@@ -347,7 +351,11 @@ export const projectSchema = z.object({
   /** The project's own tags — not the tags that file tasks into it. */
   tagIds: z.array(z.string()).default([]),
   lifeArea: z.enum(["personal", "work", "both"]),
+  /** Place in the hand-made order, lowest first. Rows from before it existed read 0. */
+  order: z.number().default(0),
   createdAt: z.string(),
+  /** Last change to the project itself. Its tasks carry their own stamp. */
+  updatedAt: z.string().nullable().default(null),
 });
 
 /**

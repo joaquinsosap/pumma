@@ -22,7 +22,9 @@ const project = (id: string, goalId: string | null): Project =>
     goalId,
     tagIds: [],
     lifeArea: "personal",
+    order: 0,
     createdAt: "2026-01-01",
+    updatedAt: null,
   }) as Project;
 
 let seq = 0;
@@ -45,6 +47,7 @@ const task = (projectId: string, status: "todo" | "done"): Task =>
     completedAt: null,
     timeSpentSec: 0,
     timerStartedAt: null,
+    updatedAt: null,
   }) as Task;
 
 const habit = (

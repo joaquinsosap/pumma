@@ -15,7 +15,9 @@ const base: Project = {
   goalId: null,
   tagIds: [],
   lifeArea: "personal",
+  order: 0,
   createdAt: "2026-10-20",
+  updatedAt: null,
 };
 
 const projects: Project[] = [

@@ -6,18 +6,28 @@ import {
   sameSubtasks,
   type SubtaskChange,
 } from "@/lib/subtask-changes";
+import { touchProjects } from "@/lib/db/memory/projects";
 
-/** Mirrors the mongo layer's NewTaskDoc — see lib/db/mongo/tasks.ts. */
+/** Mirrors the mongo layer's NewTaskDoc. See lib/db/mongo/tasks.ts. */
 type NewTaskDoc = Omit<
   TaskDoc,
-  "_id" | "timeSpentSec" | "timerStartedAt" | "description" | "subtasks"
+  | "_id"
+  | "timeSpentSec"
+  | "timerStartedAt"
+  | "description"
+  | "subtasks"
+  | "updatedAt"
 > & {
   _id?: string;
   timeSpentSec?: number;
   timerStartedAt?: string | null;
   description?: string;
   subtasks?: Subtask[];
+  updatedAt?: string | null;
 };
+
+/** Every write stamps the task, which is what a project's "last edited" reads. */
+const now = () => new Date().toISOString();
 
 export async function listTasks(userId: string): Promise<Task[]> {
   const store = getStore();
@@ -85,6 +95,7 @@ export async function insertTask(doc: NewTaskDoc): Promise<Task> {
     subtasks: [],
     timeSpentSec: 0,
     timerStartedAt: null,
+    updatedAt: now(),
     ...doc,
     _id: doc._id ?? newId(),
   };
@@ -98,11 +109,13 @@ export async function insertTask(doc: NewTaskDoc): Promise<Task> {
 export async function insertTasks(docs: NewTaskDoc[]): Promise<Task[]> {
   if (!docs.length) return [];
   const store = getStore();
+  const stamp = now();
   const fulls = docs.map((doc) => ({
     description: "",
     subtasks: [],
     timeSpentSec: 0,
     timerStartedAt: null,
+    updatedAt: stamp,
     ...doc,
     _id: doc._id ?? newId(),
   }));
@@ -118,7 +131,8 @@ export async function updateTask(
   const store = getStore();
   const idx = store.tasks.findIndex((t) => t._id === id && t.userId === userId);
   if (idx < 0) return null;
-  store.tasks[idx] = { ...store.tasks[idx], ...patch };
+  // A moved task carries its stamp into the project it lands in.
+  store.tasks[idx] = { ...store.tasks[idx], updatedAt: now(), ...patch };
   return toDto(taskSchema.parse(store.tasks[idx]));
 }
 
@@ -133,7 +147,7 @@ export async function changeSubtask(
   if (idx < 0) return null;
   const subtasks = applySubtaskChange(store.tasks[idx].subtasks, change);
   if (!subtasks) return null;
-  store.tasks[idx] = { ...store.tasks[idx], subtasks };
+  store.tasks[idx] = { ...store.tasks[idx], subtasks, updatedAt: now() };
   return toDto(taskSchema.parse(store.tasks[idx]));
 }
 
@@ -147,7 +161,7 @@ export async function rewriteSubtasks(
   if (idx < 0) return null;
   const subtasks = build(store.tasks[idx].subtasks);
   if (!sameSubtasks(subtasks, store.tasks[idx].subtasks)) {
-    store.tasks[idx] = { ...store.tasks[idx], subtasks };
+    store.tasks[idx] = { ...store.tasks[idx], subtasks, updatedAt: now() };
   }
   return toDto(taskSchema.parse(store.tasks[idx]));
 }
@@ -159,13 +173,14 @@ export async function updateTasks(
   patches: { id: string; patch: Partial<TaskDoc> }[],
 ): Promise<number> {
   const store = getStore();
+  const stamp = now();
   let matched = 0;
   for (const { id, patch } of patches) {
     const idx = store.tasks.findIndex(
       (t) => t._id === id && t.userId === userId,
     );
     if (idx < 0) continue;
-    store.tasks[idx] = { ...store.tasks[idx], ...patch };
+    store.tasks[idx] = { ...store.tasks[idx], updatedAt: stamp, ...patch };
     matched++;
   }
   return matched;
@@ -202,11 +217,12 @@ export { accumulateRunningTime };
 
 export async function deleteTask(userId: string, id: string): Promise<boolean> {
   const store = getStore();
-  const before = store.tasks.length;
-  store.tasks = store.tasks.filter(
-    (t) => !(t._id === id && t.userId === userId),
-  );
-  return store.tasks.length < before;
+  const gone = store.tasks.find((t) => t._id === id && t.userId === userId);
+  if (!gone) return false;
+  store.tasks = store.tasks.filter((t) => t !== gone);
+  // A deleted task leaves no row behind, so its project takes the stamp.
+  if (gone.projectId) await touchProjects(userId, [gone.projectId]);
+  return true;
 }
 
 /** deleteTask for a batch, mirroring the mongo layer's deleteMany. */
@@ -217,9 +233,13 @@ export async function deleteTasks(
   if (!ids.length) return 0;
   const wanted = new Set(ids);
   const store = getStore();
-  const before = store.tasks.length;
-  store.tasks = store.tasks.filter(
-    (t) => !(t.userId === userId && wanted.has(t._id)),
+  const gone = store.tasks.filter(
+    (t) => t.userId === userId && wanted.has(t._id),
   );
-  return before - store.tasks.length;
+  store.tasks = store.tasks.filter((t) => !gone.includes(t));
+  await touchProjects(
+    userId,
+    gone.flatMap((t) => (t.projectId ? [t.projectId] : [])),
+  );
+  return gone.length;
 }

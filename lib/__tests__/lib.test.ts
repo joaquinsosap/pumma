@@ -345,6 +345,7 @@ describe("metrics", () => {
           completedAt: td,
           timeSpentSec: 0,
           timerStartedAt: null,
+          updatedAt: null,
         },
         {
           id: "t2",
@@ -364,6 +365,7 @@ describe("metrics", () => {
           completedAt: null,
           timeSpentSec: 0,
           timerStartedAt: null,
+          updatedAt: null,
         },
       ],
       [

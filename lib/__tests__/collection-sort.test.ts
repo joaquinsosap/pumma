@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
+  projectEditedAt,
+  reorderWithin,
   sortNotes,
   sortProjects,
   sortTags,
@@ -93,29 +95,175 @@ describe("sortTasks", () => {
 });
 
 describe("sortProjects", () => {
-  const p = (over: Partial<Project>): Project =>
-    ({
-      id: "p",
-      title: "p",
-      progress: 0,
-      createdAt: "2026-08-01",
-      ...over,
-    }) as Project;
+  const p = (over: Partial<Project>): Project => ({
+    id: "p",
+    userId: "u",
+    title: "p",
+    description: "",
+    color: "oklch(0.6 0.13 155)",
+    progress: 0,
+    label: "",
+    goalId: null,
+    tagIds: [],
+    lifeArea: "personal",
+    order: 0,
+    createdAt: "2026-08-01",
+    updatedAt: null,
+    ...over,
+  });
+  const work = (over: Partial<Task>): Task => ({
+    id: "t",
+    userId: "u",
+    title: "task",
+    description: "",
+    subtasks: [],
+    tagIds: [],
+    priority: "med",
+    status: "todo",
+    due: null,
+    projectId: null,
+    goalId: null,
+    lifeArea: "personal",
+    order: 0,
+    createdAt: "2026-08-01",
+    completedAt: null,
+    timeSpentSec: 0,
+    timerStartedAt: null,
+    updatedAt: null,
+    ...over,
+  });
+  const ids = (list: Project[]) => list.map((x) => x.id);
 
-  it("progress puts the closest-to-done first", () => {
+  it("progress counts the tasks, since the stored number is never kept", () => {
     const got = sortProjects(
-      [p({ id: "a", progress: 20 }), p({ id: "b", progress: 80 })],
+      // The stored field says the opposite of the truth on purpose.
+      [p({ id: "a", progress: 90 }), p({ id: "b", progress: 0 })],
       "progress",
-    ).map((x) => x.id);
-    expect(got).toEqual(["b", "a"]);
+      false,
+      [
+        work({ id: "1", projectId: "a", status: "todo" }),
+        work({ id: "2", projectId: "b", status: "done" }),
+        work({ id: "3", projectId: "b", status: "todo" }),
+      ],
+    );
+    expect(ids(got)).toEqual(["b", "a"]);
   });
 
   it("alpha ignores case", () => {
     const got = sortProjects(
       [p({ id: "z", title: "zeta" }), p({ id: "a", title: "Alpha" })],
       "alpha",
-    ).map((x) => x.id);
-    expect(got).toEqual(["a", "z"]);
+    );
+    expect(ids(got)).toEqual(["a", "z"]);
+  });
+
+  it("custom reads the order the drags wrote", () => {
+    const got = sortProjects(
+      [p({ id: "b", order: 1 }), p({ id: "c", order: 2 }), p({ id: "a", order: 0 })],
+      "custom",
+    );
+    expect(ids(got)).toEqual(["a", "b", "c"]);
+  });
+
+  it("custom leaves projects nobody arranged newest first", () => {
+    const got = sortProjects(
+      [
+        p({ id: "old", createdAt: "2026-01-01" }),
+        p({ id: "new", createdAt: "2026-09-01" }),
+      ],
+      "custom",
+    );
+    expect(ids(got)).toEqual(["new", "old"]);
+  });
+
+  it("a project made after the others were arranged comes first", () => {
+    // What the stores write: one below the lowest.
+    const got = sortProjects(
+      [p({ id: "a", order: 0 }), p({ id: "b", order: 1 }), p({ id: "fresh", order: -1 })],
+      "custom",
+    );
+    expect(ids(got)).toEqual(["fresh", "a", "b"]);
+  });
+
+  it("last edited follows the latest change to the project or its tasks", () => {
+    const projects = [
+      p({ id: "renamed", updatedAt: "2026-09-02T10:00:00.000Z" }),
+      p({ id: "worked-in", updatedAt: "2026-08-15T10:00:00.000Z" }),
+      p({ id: "untouched" }),
+    ];
+    const tasks = [
+      work({
+        id: "1",
+        projectId: "worked-in",
+        updatedAt: "2026-09-03T08:00:00.000Z",
+      }),
+    ];
+    expect(ids(sortProjects(projects, "edited", false, tasks))).toEqual([
+      "worked-in",
+      "renamed",
+      "untouched",
+    ]);
+    expect(ids(sortProjects(projects, "edited", true, tasks))).toEqual([
+      "untouched",
+      "renamed",
+      "worked-in",
+    ]);
+  });
+});
+
+describe("projectEditedAt", () => {
+  const project = { id: "p", createdAt: "2026-08-01", updatedAt: null };
+
+  it("falls back to the day it was made when nothing has touched it", () => {
+    expect(projectEditedAt(project, [])).toBe("2026-08-01");
+  });
+
+  it("reads a task from before tasks were stamped by the day it was made", () => {
+    expect(
+      projectEditedAt(project, [
+        { projectId: "p", createdAt: "2026-08-20", updatedAt: null },
+      ]),
+    ).toBe("2026-08-20");
+  });
+
+  it("ignores another project's tasks", () => {
+    expect(
+      projectEditedAt(project, [
+        {
+          projectId: "other",
+          createdAt: "2026-08-01",
+          updatedAt: "2026-10-01T00:00:00.000Z",
+        },
+      ]),
+    ).toBe("2026-08-01");
+  });
+});
+
+describe("reorderWithin", () => {
+  it("takes a full arrangement as it is", () => {
+    expect(reorderWithin(["a", "b", "c"], ["c", "a", "b"])).toEqual([
+      "c",
+      "a",
+      "b",
+    ]);
+  });
+
+  it("rearranges one side of life without moving the other", () => {
+    // Personal view shows a, c, e. Work's b and d keep their slots.
+    expect(reorderWithin(["a", "b", "c", "d", "e"], ["e", "a", "c"])).toEqual([
+      "e",
+      "b",
+      "a",
+      "d",
+      "c",
+    ]);
+  });
+
+  it("drops ids it does not know and ones sent twice", () => {
+    expect(reorderWithin(["a", "b"], ["b", "ghost", "b", "a"])).toEqual([
+      "b",
+      "a",
+    ]);
   });
 });
 
