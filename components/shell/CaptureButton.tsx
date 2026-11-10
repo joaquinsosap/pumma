@@ -23,16 +23,19 @@ export function CaptureButton({
   tight = false,
   className,
 }: {
-  type: OmniType;
+  type: OmniType | "project";
   compact?: boolean;
   tight?: boolean;
   className?: string;
 }) {
-  const label = `New ${CAPTURE_NAMES[type]}`;
+  const project = type === "project";
+  const label = `New ${project ? "project" : CAPTURE_NAMES[type]}`;
   return (
     <button
       type="button"
-      onClick={() => askCapture(type)}
+      onClick={() =>
+        project ? askCapture("task", { project: true }) : askCapture(type)
+      }
       aria-label={label}
       title={compact || tight ? label : undefined}
       className={cn(

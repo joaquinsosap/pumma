@@ -7,6 +7,8 @@ import { createProjectAction } from "@/lib/actions/projects";
 import type { LifeArea } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
+import { askCapture } from "@/lib/ask-capture";
+import { projectCreatedLine } from "@/lib/project-created";
 import { toast } from "sonner";
 
 type Props = {
@@ -33,17 +35,8 @@ export function NewProjectCard({ lifeArea, onCreated, className }: Props) {
         toast.error("Could not create project");
         return;
       }
-      const { project, adopted } = res.data;
-      // Say when the project took over an existing tag — it moves tasks, and
-      // silently reassigning someone's work is not a nice surprise.
-      toast.success(
-        adopted
-          ? `Created "${project.title}", #${adopted.tagName} files here now` +
-              (adopted.filed
-                ? `, ${adopted.filed} unfiled task${adopted.filed === 1 ? "" : "s"} moved in`
-                : "")
-          : `Created "${project.title}"`,
-      );
+      const { project } = res.data;
+      toast.success(projectCreatedLine(res.data));
       setTitle("");
       setOpen(false);
       onCreated(project.id);
@@ -55,7 +48,11 @@ export function NewProjectCard({ lifeArea, onCreated, className }: Props) {
     return (
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        // Where the capture bar is on screen it makes the project, set to
+        // "New project"; this card's own box is for screens without the bar.
+        onClick={() => {
+          if (!askCapture("task", { project: true })) setOpen(true);
+        }}
         className={cn(
           "flex min-h-[88px] min-w-[160px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[11px] border border-dashed border-border bg-surface/50 p-[11px_14px] text-faint transition-colors hover:border-faint2 hover:bg-surface hover:text-muted",
           className,

@@ -6,6 +6,7 @@ import {
   WidgetHeaderLink,
   WidgetRowLink,
 } from "@/components/home/WidgetLink";
+import { CaptureButton } from "@/components/shell/CaptureButton";
 import { TodayTasksCard } from "@/components/home/TodayTasksCard";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 
@@ -45,6 +46,8 @@ export function HomeTasksProjects({
               {projects.length} active
             </span>
           </WidgetHeaderLink>
+          {/* Wide screens only: a project is made from the bar, and a phone has no bar. */}
+          <CaptureButton type="project" compact className="max-lg:hidden" />
         </WidgetHeader>
         <div className="glow-room min-h-0 flex-1 overflow-x-hidden pb-3.5 max-xl:overflow-y-visible xl:overflow-y-auto">
           <div className="flex flex-col gap-3">

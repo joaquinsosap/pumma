@@ -30,6 +30,9 @@ const KIND_PLACEHOLDER: Record<OmniType, string> = {
   note: 'New note… try "Meeting ideas: discuss roadmap #work" or just jot thoughts',
 };
 
+/** The words in the empty bar while it is set to make a project. */
+export const PROJECT_PLACEHOLDER = 'New project… name it, like "Website redesign"';
+
 /**
  * The words in the empty bar. The page's own while the bar makes what the page
  * makes ("Add to Website redesign…"); the kind's own once it has been switched

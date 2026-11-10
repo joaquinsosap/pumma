@@ -15,7 +15,13 @@ import type { EntityLifeArea, OmniType } from "@/lib/types";
 import type { Project, Tag, Task, Note } from "@/lib/schemas";
 import { iso } from "@/lib/date";
 import { parseOmni, taskTitleEnd } from "@/lib/parse";
-import { capturePlaceholder, getCaptureContext } from "@/lib/capture-context";
+import {
+  PROJECT_PLACEHOLDER,
+  capturePlaceholder,
+  getCaptureContext,
+} from "@/lib/capture-context";
+import { createProjectAction } from "@/lib/actions/projects";
+import { PROJECT_TITLE_MAX, projectCreatedLine } from "@/lib/project-created";
 import { CAPTURE_BAR_EVENT } from "@/lib/ask-capture";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { entityHref } from "@/lib/entity-href";
@@ -178,6 +184,9 @@ export function OmniBox({
   const [pickedPriority, setPickedPriority] = useState<TaskPriority>("med");
   const [type, setType] = useState<OmniType>(defaultType);
   const [mode, setMode] = useState<OmniMode>("capture");
+  // A project is made from the task side of the bar: same place, same typing,
+  // and what is typed becomes the project's name instead of a task's.
+  const [asProject, setAsProject] = useState(false);
   const [pending, startTransition] = useTransition();
   const assistant = useAssistant();
   const timeZone = useTimezone();
@@ -189,8 +198,12 @@ export function OmniBox({
 
   // Everything you can capture carries tags — habits and goals included, since
   // their life area is read from them like everything else's.
-  const taggable = mode === "capture";
   const isTask = type === "task";
+  const makingProject = mode === "capture" && isTask && asProject;
+  // A project takes its own tag from its name, so there is nothing to pick.
+  const taggable = mode === "capture" && !makingProject;
+  /** The task-only parts: a date, a priority, the title dimming. A project has none of them. */
+  const taskFields = isTask && !makingProject;
   const agendaDay =
     pathname === "/" ? (searchParams.get("day")?.slice(0, 10) ?? null) : null;
 
@@ -230,6 +243,14 @@ export function OmniBox({
   useEffect(() => {
     if (!taggable) setSelectedTagIds([]);
   }, [taggable]);
+
+  // "New project" belongs to the task side and to the page it was asked on.
+  useEffect(() => {
+    if (!isTask || mode !== "capture") setAsProject(false);
+  }, [isTask, mode]);
+  useEffect(() => {
+    setAsProject(false);
+  }, [pathname]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -300,8 +321,12 @@ export function OmniBox({
   useEffect(() => {
     const onAsk = (e: Event) => {
       if (isTutorialActive()) return;
-      const asked = (e as CustomEvent).detail?.type as OmniType | undefined;
+      const detail = (e as CustomEvent).detail as
+        | { type?: OmniType; project?: boolean }
+        | undefined;
+      const asked = detail?.type;
       const kind = asked && OMNI_TYPES.includes(asked) ? asked : type;
+      setAsProject(kind === "task" && detail?.project === true);
       // The input is swapped when the mode changes, and the effect below
       // focuses the new one once it exists. Asked only when something will
       // change: a request nothing answers would wait, and pull the caret up
@@ -590,9 +615,47 @@ export function OmniBox({
     }
   }, [parsed.typeToken, type]);
 
+  // What was typed is the project's name, whole: no tags or dates are read out of it.
+  const submitProject = (title: string) => {
+    if (title.length > PROJECT_TITLE_MAX) {
+      toast.error(`A project's name can be ${PROJECT_TITLE_MAX} characters at most.`);
+      return;
+    }
+    startTransition(async () => {
+      const res = await trySave(() =>
+        createProjectAction({ title, lifeArea: baseArea }),
+      );
+      if (!res?.ok) return;
+      if (!res.data) {
+        toast.error("Could not create project");
+        return;
+      }
+      const openIt = hrefWithLife(
+        `/projects?project=${res.data.project.id}`,
+        viewShowing(baseArea, life),
+      );
+      // On Projects the new board is what you came for. Anywhere else you
+      // stay where you are, with a way over to it.
+      const here = pathname === "/projects";
+      toast.success(projectCreatedLine(res.data), {
+        cancel: here
+          ? undefined
+          : { label: "SEE →", onClick: () => router.push(openIt) },
+      });
+      setText("");
+      setAsProject(false);
+      if (here) router.push(openIt);
+      router.refresh();
+    });
+  };
+
   const submit = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    if (makingProject) {
+      submitProject(trimmed);
+      return;
+    }
     const taskDue = parsed.due ?? pickedDue ?? defaultTaskDue;
     // Where the bar is now: a board showing the new task flies its card in from here.
     const typedAt = inputRef.current?.getBoundingClientRect() ?? null;
@@ -684,7 +747,11 @@ export function OmniBox({
       style={
         {
           "--omni-accent":
-            mode === "assistant" ? "var(--primary)" : omniAccent(type),
+            mode === "assistant"
+              ? "var(--primary)"
+              : makingProject
+                ? "var(--projects)"
+                : omniAccent(type),
           ...(showLifeSignal && lifeTint
             ? { borderColor: lifeTint.border }
             : {}),
@@ -705,9 +772,13 @@ export function OmniBox({
           {mode === "capture" && (
             <span
               className="shrink-0 rounded-[7px] px-[9px] py-1 font-mono text-xs font-semibold lowercase text-background transition-transform duration-200 group-focus-within:scale-[1.04]"
-              style={{ background: TYPE_META[type].color }}
+              style={{
+                background: makingProject
+                  ? "var(--projects)"
+                  : TYPE_META[type].color,
+              }}
             >
-              {TYPE_META[type].label}
+              {makingProject ? "project" : TYPE_META[type].label}
             </span>
           )}
           {showLifeSignal && (
@@ -730,7 +801,36 @@ export function OmniBox({
               → {lifeTint?.label ?? "Both"}
             </span>
           )}
-          {mode === "capture" && captureHint && (
+          {mode === "capture" && isTask && (
+            <button
+              type="button"
+              aria-pressed={makingProject}
+              onClick={() => {
+                setAsProject((was) => !was);
+                inputRef.current?.focus();
+              }}
+              title={
+                makingProject
+                  ? "Back to adding a task"
+                  : "Make a project instead of a task. What you type is its name"
+              }
+              className={cn(
+                "shrink-0 cursor-pointer whitespace-nowrap rounded-[7px] border px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors",
+                // No drawn border while it is off: a bordered button is
+                // skinned as a control by the theme (white, ink), and this one
+                // is meant to sit back in grey until it is wanted.
+                makingProject
+                  ? "border-transparent text-background"
+                  : "border-transparent bg-hover text-faint hover:text-ink",
+              )}
+              style={
+                makingProject ? { background: "var(--projects)" } : undefined
+              }
+            >
+              New project →
+            </button>
+          )}
+          {mode === "capture" && captureHint && !makingProject && (
             <span className="hidden shrink-0 font-mono text-[10px] text-faint transition-colors duration-200 group-focus-within:text-muted md:inline">
               → {captureHint}
             </span>
@@ -739,11 +839,11 @@ export function OmniBox({
             <OmniHighlightInput
               ref={inputRef}
               tags={tags}
-              showTags
-              showPriority={isTask}
+              showTags={!makingProject}
+              showPriority={taskFields}
               hintFor={hintFor}
               selectionTick={selectionTick}
-              dimFrom={isTask ? taskTitleEnd(text, parsed) : undefined}
+              dimFrom={taskFields ? taskTitleEnd(text, parsed) : undefined}
               value={text}
               onChange={(e) => setText(e.target.value)}
               onKeyDown={(e) => {
@@ -752,7 +852,11 @@ export function OmniBox({
                   submit();
                 }
               }}
-              placeholder={capturePlaceholder(capture, type)}
+              placeholder={
+                makingProject
+                  ? PROJECT_PLACEHOLDER
+                  : capturePlaceholder(capture, type)
+              }
               disabled={pending || busy}
             />
           ) : (
@@ -853,7 +957,7 @@ export function OmniBox({
                 onClick={() => setType("note")}
               />
             </div>
-            {isTask && !parsed.dateLabel && (
+            {taskFields && !parsed.dateLabel && (
               <>
                 <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />
                 <DueQuickPick
@@ -869,7 +973,7 @@ export function OmniBox({
                 />
               </>
             )}
-            {isTask && !parsed.hasPriorityToken && (
+            {taskFields && !parsed.hasPriorityToken && (
               <>
                 <span className="h-3.5 w-px shrink-0 bg-border" aria-hidden />
                 <PriorityQuickPick
