@@ -1,9 +1,11 @@
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
 import path from "path";
 
 export default defineConfig({
   test: {
     environment: "node",
+    // Session worktrees live under .claude/ and carry a stale copy of every test.
+    exclude: [...configDefaults.exclude, ".claude/**"],
   },
   resolve: {
     alias: {
