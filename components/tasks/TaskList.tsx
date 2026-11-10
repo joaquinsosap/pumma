@@ -177,7 +177,12 @@ function TagLine({
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [budget, setBudget] = useState<number | null>(null);
+  const ticket = ticketFromUrl(ticketUrl);
+  // With nothing to show there is no line, and so nothing to measure yet.
+  const hasLine = tags.length > 0 || Boolean(ticket);
 
+  // Keyed on the line existing: a task that gains its first tag or its ticket
+  // after it was drawn has no line at mount, and would never be measured.
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -186,10 +191,9 @@ function TagLine({
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [hasLine]);
 
-  const ticket = ticketFromUrl(ticketUrl);
-  if (tags.length === 0 && !ticket) return null;
+  if (!hasLine) return null;
 
   // Before the first measurement there is no honest answer, so the line
   // renders empty at its full height rather than flashing every tag and

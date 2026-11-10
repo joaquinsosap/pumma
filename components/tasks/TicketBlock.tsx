@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ArrowUpRight, ChevronRight } from "@/components/icons";
 import { updateTaskDetail } from "@/lib/actions/tasks";
@@ -33,13 +33,17 @@ export function TicketBlock({
   const [text, setText] = useState("");
   const [open, setOpen] = useState(false);
   const ticket = ticketFromUrl(url);
+  // What was last turned down, so leaving the box does not say it a second time.
+  const refused = useRef<string | null>(null);
 
   const save = (raw: string | null) => {
     const next = raw && raw.trim() ? cleanTicketUrl(raw) : null;
     if (raw && raw.trim() && !next) {
-      toast.error(NOT_A_LINK);
+      if (refused.current !== raw) toast.error(NOT_A_LINK);
+      refused.current = raw;
       return;
     }
+    refused.current = null;
     const before = url;
     setEditing(false);
     setText("");
@@ -66,7 +70,10 @@ export function TicketBlock({
           inputMode="url"
           autoFocus={editing}
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) => {
+            refused.current = null;
+            setText(e.target.value);
+          }}
           // A pasted link is the whole answer, so it saves without a second step.
           onPaste={(e) => {
             const pasted = e.clipboardData.getData("text");

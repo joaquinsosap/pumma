@@ -28,7 +28,8 @@ export function TicketChip({
 
   // 13px of text plus the border is 15px: inside the tag line's own height, so a row with a ticket is no taller than its neighbours.
   const look = cn(
-    "inline-flex min-w-0 shrink-0 items-center gap-1 whitespace-nowrap rounded-[5px] border border-border bg-surface2 px-1.5 font-mono text-[10px] font-semibold leading-[13px] text-ink no-underline transition-colors hover:border-faint2 hover:bg-hover",
+    // No shrink-0: on a line narrower than the chip, the label gives way with an ellipsis instead of being cut mid-letter.
+    "inline-flex min-w-0 items-center gap-1 whitespace-nowrap rounded-[5px] border border-border bg-surface2 px-1.5 font-mono text-[10px] font-semibold leading-[13px] text-ink no-underline transition-colors hover:border-faint2 hover:bg-hover",
     className,
   );
   const inside = (
@@ -55,11 +56,13 @@ export function TicketChip({
           open();
         }}
         onKeyDown={(e) => {
+          e.stopPropagation();
           if (e.key !== "Enter") return;
           e.preventDefault();
-          e.stopPropagation();
           open();
         }}
+        onMouseDown={(e) => e.stopPropagation()}
+        onTouchStart={(e) => e.stopPropagation()}
       >
         {inside}
       </span>
@@ -74,9 +77,14 @@ export function TicketChip({
       title={label}
       aria-label={label}
       className={look}
-      // Opening the ticket is not picking the row, opening the task or lifting the card.
+      // Opening the ticket is not picking the row, opening the task or lifting
+      // the card. The drag sensors listen for mouse, touch and key presses, so
+      // each is kept from reaching the card: Enter on the chip follows the link.
       onClick={(e) => e.stopPropagation()}
       onPointerDown={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
     >
       {inside}
     </a>
