@@ -88,6 +88,7 @@ export function buildStarterContent(
       timeSpentSec: 0,
       timerStartedAt: null,
       updatedAt: null,
+      ticketUrl: null,
     },
     {
       _id: oid(),
@@ -108,6 +109,7 @@ export function buildStarterContent(
       timeSpentSec: 0,
       timerStartedAt: null,
       updatedAt: null,
+      ticketUrl: null,
     },
     {
       _id: oid(),
@@ -128,6 +130,7 @@ export function buildStarterContent(
       timeSpentSec: 0,
       timerStartedAt: null,
       updatedAt: null,
+      ticketUrl: null,
     },
   ];
 

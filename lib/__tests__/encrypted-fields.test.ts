@@ -118,7 +118,12 @@ describe("patches", () => {
 
 describe("every collection in the spec", () => {
   const SAMPLES: Record<EncryptedCollection, Record<string, unknown>> = {
-    tasks: { title: "a", description: "b", subtasks: [{ title: "c" }] },
+    tasks: {
+      title: "a",
+      description: "b",
+      ticketUrl: "https://jira.example.com/browse/ABC-1",
+      subtasks: [{ title: "c" }],
+    },
     notes: { title: "a", body: "b" },
     projects: { title: "a", description: "b", label: "c" },
     goals: { title: "a", metricLabel: "b" },

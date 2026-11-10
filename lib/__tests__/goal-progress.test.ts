@@ -48,6 +48,7 @@ const task = (projectId: string, status: "todo" | "done"): Task =>
     timeSpentSec: 0,
     timerStartedAt: null,
     updatedAt: null,
+    ticketUrl: null,
   }) as Task;
 
 const habit = (

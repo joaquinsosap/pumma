@@ -50,6 +50,7 @@ import {
   isoDate,
 } from "@/lib/validation";
 import { mergeTaskDueDate, mergeTaskDueTime } from "@/lib/date";
+import { TICKET_URL_MAX, cleanTicketUrl } from "@/lib/ticket-link";
 import { MAX_SUBTASKS, type SubtaskChange } from "@/lib/subtask-changes";
 
 const omniSchema = z.object({
@@ -554,6 +555,8 @@ export async function undoDeleteTask(snapshot: string): Promise<ActionResult> {
     projectId: project ? task.projectId : null,
     goalId: goals.some((g) => g.id === task.goalId) ? task.goalId : null,
     tagIds: (task.tagIds ?? []).filter((id) => tags.some((t) => t.id === id)),
+    // The snapshot is echoed back by the browser, so its link is vetted again.
+    ticketUrl: cleanTicketUrl(task.ticketUrl),
   });
   revalidatePath("/", "layout");
   return { ok: true };
@@ -796,6 +799,7 @@ export async function undoDeleteTasks(snapshot: string): Promise<ActionResult> {
       projectId: project ? task.projectId : null,
       goalId: goals.some((g) => g.id === task.goalId) ? task.goalId : null,
       tagIds: (task.tagIds ?? []).filter((id) => tags.some((t) => t.id === id)),
+      ticketUrl: cleanTicketUrl(task.ticketUrl),
     };
   });
 
@@ -885,6 +889,8 @@ const updateTaskDetailSchema = z.object({
     .regex(/^\d{2}:\d{2}$/)
     .nullable()
     .optional(),
+  // A pasted link to the task's ticket; null or blank takes it off.
+  ticketUrl: z.string().max(TICKET_URL_MAX).nullable().optional(),
 });
 
 export async function updateTaskDetail(
@@ -900,6 +906,17 @@ export async function updateTaskDetail(
     dueTime === undefined
   )
     return { ok: false, error: "Nothing to update" };
+
+  // Only a link that can be opened safely is ever stored: it ends up in an href.
+  if (patch.ticketUrl !== undefined && patch.ticketUrl?.trim()) {
+    const clean = cleanTicketUrl(patch.ticketUrl);
+    if (!clean) {
+      return { ok: false, error: "That is not a link. Paste the ticket's address, starting with https://" };
+    }
+    patch.ticketUrl = clean;
+  } else if (patch.ticketUrl !== undefined) {
+    patch.ticketUrl = null;
+  }
 
   const userId = await requireUserId();
   const { getTask } = await import("@/lib/db/tasks");

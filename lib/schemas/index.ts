@@ -257,6 +257,11 @@ export const taskSchema = z.object({
   timerStartedAt: z.string().nullable().default(null),
   /** Last write to the task. Rides in the same write, so it costs no round trip. */
   updatedAt: z.string().nullable().default(null),
+  /**
+   * A link to this task's ticket in an outside tracker, as pasted. Content,
+   * so encrypted at rest. The key on the chip is read off it: see lib/ticket-link.
+   */
+  ticketUrl: z.string().nullable().default(null),
 });
 
 export const habitSchema = z.preprocess(

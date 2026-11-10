@@ -17,6 +17,7 @@ type NewTaskDoc = Omit<
   | "description"
   | "subtasks"
   | "updatedAt"
+  | "ticketUrl"
 > & {
   _id?: string;
   timeSpentSec?: number;
@@ -24,6 +25,7 @@ type NewTaskDoc = Omit<
   description?: string;
   subtasks?: Subtask[];
   updatedAt?: string | null;
+  ticketUrl?: string | null;
 };
 
 /** Every write stamps the task, which is what a project's "last edited" reads. */

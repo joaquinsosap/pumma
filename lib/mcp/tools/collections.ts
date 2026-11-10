@@ -21,6 +21,7 @@ import { listTags } from "@/lib/db/tags";
 import { getSettings } from "@/lib/db/settings";
 import { isoDateInTz } from "@/lib/timezone";
 import { projectProgress } from "@/lib/metrics";
+import { ticketFromUrl } from "@/lib/ticket-link";
 import { filterByLifeView, filterGoalsByLifeView } from "@/lib/life-area";
 import { habitStreak, normalizeHabitFrequency } from "@/lib/habit-visibility";
 
@@ -38,7 +39,7 @@ export const getTaskTool = defineTool({
   name: "get_task",
   title: "Task detail",
   description:
-    "One task in full: description, subtasks, tags, time tracked. " +
+    "One task in full: description, subtasks, tags, time tracked, and its linked ticket. " +
     "Use list_tasks first to find the id.",
   opClass: "read",
   inputSchema: z.object({
@@ -69,6 +70,12 @@ export const getTaskTool = defineTool({
     }
     const tagNames = task.tagIds.map((id) => names.get(id)).filter(Boolean);
     if (tagNames.length) lines.push("", `Tags: ${tagNames.join(", ")}`);
+    const ticket = ticketFromUrl(task.ticketUrl);
+    if (ticket) {
+      lines.push(
+        ticket.key ? `Ticket: ${ticket.key} ${ticket.url}` : `Ticket: ${ticket.url}`,
+      );
+    }
     if (task.timeSpentSec > 0) {
       lines.push(`Time tracked: ${Math.round(task.timeSpentSec / 60)} min`);
     }
@@ -91,6 +98,8 @@ export const getTaskTool = defineTool({
         timeSpentSec: task.timeSpentSec,
         createdAt: task.createdAt,
         completedAt: task.completedAt,
+        // The task's ticket in an outside tracker, when one is linked.
+        ticket: ticket ? { key: ticket.key, url: ticket.url } : null,
       },
       entityIds: [task.id],
     };

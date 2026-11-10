@@ -34,8 +34,14 @@ import {
   getTask,
   listTasks,
   rewriteSubtasks,
+  updateTask as updateTaskRow,
   updateTasks,
 } from "@/lib/db/tasks";
+import {
+  TICKET_URL_MAX,
+  cleanTicketUrl,
+  ticketFromUrl,
+} from "@/lib/ticket-link";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 import { isoDateInTz } from "@/lib/timezone";
 import {
@@ -83,6 +89,10 @@ const subtasksField = z
   .max(200);
 
 const lifeArea = z.enum(["personal", "work"]);
+
+const ticketUrlField = z.string().max(TICKET_URL_MAX);
+const NOT_A_LINK =
+  "That is not a link that can be stored: send the ticket page's full address, starting with https://, with no sign-in written into it.";
 
 /** Build the context the mutation layer expects for a single-entity write. */
 async function contextFor(caller: McpCaller): Promise<Ctx> {
@@ -143,8 +153,17 @@ export const createTask = defineTool({
     subtasks: subtasksField
       .optional()
       .describe("The task's checklist. done defaults to false."),
+    ticketUrl: ticketUrlField
+      .optional()
+      .describe(
+        "Link to this task's ticket in an outside tracker, such as a Jira issue page. The ticket key is read from the link.",
+      ),
   }),
   handler: async (input, caller) => {
+    const ticketUrl = input.ticketUrl ? cleanTicketUrl(input.ticketUrl) : null;
+    if (input.ticketUrl && !ticketUrl) {
+      return { text: NOT_A_LINK, data: { ok: false } };
+    }
     const ctx = await contextFor(caller);
     const op: CreateOp = {
       op: "create" as const,
@@ -162,6 +181,7 @@ export const createTask = defineTool({
     } as CreateOp;
     const made = await applyCreate(caller.userId, op, ctx, {
       subtasks: subtasksFromInput(input.subtasks ?? [], []),
+      ticketUrl,
     });
     if (!made) return { text: "Could not create that task.", data: { ok: false } };
 
@@ -548,6 +568,40 @@ export const updateTask = defineTool({
       fields({ ...rest, date: due }),
       { given: subtasks },
     );
+  },
+});
+
+export const setTaskTicket = defineTool({
+  name: "set_task_ticket",
+  title: "Link a task to a ticket",
+  description:
+    "Link a task to its ticket in an outside tracker by the ticket page's address, for example a Jira issue link ending in /browse/KEY-123. The ticket key is read from the link. Pass url as null to take the link off. Nothing is sent to the tracker.",
+  opClass: "update",
+  inputSchema: z.object({
+    id: z.string().describe("Task id, as returned by list_tasks."),
+    url: ticketUrlField.nullable(),
+  }),
+  handler: async (input, caller) => {
+    const url = input.url ? cleanTicketUrl(input.url) : null;
+    if (input.url && !url) return { text: NOT_A_LINK, data: { ok: false } };
+    const updated = await updateTaskRow(caller.userId, input.id, {
+      ticketUrl: url,
+    });
+    if (!updated) {
+      return { text: `No task with id ${input.id}.`, data: { ok: false } };
+    }
+    const ticket = ticketFromUrl(updated.ticketUrl);
+    return {
+      text: ticket
+        ? `Linked task ${input.id} to ${ticket.key ?? ticket.url}.`
+        : `Task ${input.id} has no ticket linked now.`,
+      data: {
+        ok: true,
+        id: input.id,
+        ticket: ticket ? { key: ticket.key, url: ticket.url } : null,
+      },
+      entityIds: [input.id],
+    };
   },
 });
 

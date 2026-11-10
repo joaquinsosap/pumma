@@ -98,8 +98,8 @@ export async function applyCreate(
   userId: string,
   op: CreateOp,
   ctx: Ctx,
-  // A task's checklist, for callers beyond the assistant's schema; part of the one insert.
-  extras?: { subtasks?: Subtask[] },
+  // A task's checklist and ticket link, for callers beyond the assistant's schema; part of the one insert.
+  extras?: { subtasks?: Subtask[]; ticketUrl?: string | null },
 ): Promise<{ id: string; title: string } | null> {
   const { td, tags, resolve } = ctx;
   const f = op.fields;
@@ -192,6 +192,7 @@ export async function applyCreate(
         title: val(f.title) ?? "Untitled task",
         description: f.description ?? "",
         subtasks: extras?.subtasks ?? [],
+        ticketUrl: extras?.ticketUrl ?? null,
         tagIds,
         priority: (val(f.priority) ?? "med") as "low" | "med" | "high",
         status: "todo",

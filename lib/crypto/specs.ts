@@ -21,7 +21,9 @@ export type Spec = {
 
 export const SPECS = {
   tasks: {
-    fields: ["title", "description"],
+    // ticketUrl: a link into somebody's work tracker names their employer's
+    // system and the ticket, which is content as much as the title is.
+    fields: ["title", "description", "ticketUrl"],
     arrays: [{ path: "subtasks", fields: ["title"] }],
   },
   notes: { fields: ["title", "body"] },

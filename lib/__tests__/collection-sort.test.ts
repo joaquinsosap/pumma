@@ -130,6 +130,7 @@ describe("sortProjects", () => {
     timeSpentSec: 0,
     timerStartedAt: null,
     updatedAt: null,
+    ticketUrl: null,
     ...over,
   });
   const ids = (list: Project[]) => list.map((x) => x.id);
