@@ -11,8 +11,13 @@ export const CAPTURE_SHEET_EVENT = "pumma:capture";
 /** Heard by the bar on a wide screen: it switches to the type and takes the caret. */
 export const CAPTURE_BAR_EVENT = "pumma:capture-bar";
 
-/** The bar is drawn from this width up (Tailwind's `lg`). Below it the sheet is the way in. */
-const BAR_FROM = "(min-width: 1024px)";
+/**
+ * The bar is drawn from this width up (Tailwind's `lg`). Below it the sheet is
+ * the way in. In rem, as Tailwind writes it: with a larger browser font the
+ * breakpoint moves, and a pixel count here would send the request to a bar
+ * that is not on screen.
+ */
+const BAR_FROM = "(min-width: 64rem)";
 
 /** Hand over to wherever capturing happens on this screen, set to `type`. */
 export function askCapture(type: OmniType): void {

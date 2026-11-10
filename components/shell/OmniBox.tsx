@@ -294,14 +294,27 @@ export function OmniBox({
 
   // A "New note" button somewhere on the page: become what it named, take the
   // caret, and move once so the eye finds where the typing will go.
+  //
+  // A kind already typed into the bar ("#habit run") still wins, as it does
+  // against the chips: what was written is the more deliberate of the two.
   useEffect(() => {
     const onAsk = (e: Event) => {
       if (isTutorialActive()) return;
       const asked = (e as CustomEvent).detail?.type as OmniType | undefined;
-      wantFocusRef.current = true;
+      const kind = asked && OMNI_TYPES.includes(asked) ? asked : type;
+      // The input is swapped when the mode changes, and the effect below
+      // focuses the new one once it exists. Asked only when something will
+      // change: a request nothing answers would wait, and pull the caret up
+      // here the next time the kind changed for any other reason.
+      wantFocusRef.current = mode !== "capture" || kind !== type;
       setMode("capture");
-      if (asked && OMNI_TYPES.includes(asked)) setType(asked);
-      inputRef.current?.focus();
+      setType(kind);
+      const el = inputRef.current;
+      if (el) {
+        el.focus();
+        const end = el.value.length;
+        el.setSelectionRange(end, end);
+      }
       omniEscBlurredAtRef.current = null;
       const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       if (!still) {
@@ -317,7 +330,7 @@ export function OmniBox({
     };
     window.addEventListener(CAPTURE_BAR_EVENT, onAsk);
     return () => window.removeEventListener(CAPTURE_BAR_EVENT, onAsk);
-  }, []);
+  }, [mode, type]);
 
   useEffect(() => {
     if (!wantFocusRef.current) return;

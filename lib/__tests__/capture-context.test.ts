@@ -14,6 +14,7 @@ describe("captureButtonFor", () => {
     ["/calendar", "task"],
     ["/notes", "note"],
     ["/notes/a1b2", "note"],
+    ["/notes/", "note"],
     ["/habits", "habit"],
     ["/goals", "goal"],
   ])("on %s makes a %s", (path, kind) => {
@@ -71,6 +72,12 @@ describe("capturePlaceholder", () => {
     const said = capturePlaceholder(home, kind);
     expect(said).toContain(words);
     expect(said).not.toContain("task");
+  });
+
+  it("keeps the side of life a goals page names", () => {
+    const work = getCaptureContext("/goals", new URLSearchParams("life=work"), "task");
+    expect(capturePlaceholder(work, "goal")).toContain("New work goal");
+    expect(capturePlaceholder(work, "habit")).toContain("New habit");
   });
 
   it("asks for a task again on a page that makes something else", () => {

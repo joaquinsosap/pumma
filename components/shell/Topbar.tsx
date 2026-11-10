@@ -102,7 +102,7 @@ export function Topbar({
           ) : null}
           {/* Wide screens only: there the bar it points at is on screen. A phone has the dock's plus. */}
           {newKind ? (
-            <CaptureButton type={newKind} className="max-lg:hidden" />
+            <CaptureButton type={newKind} tight className="max-lg:hidden" />
           ) : null}
           <ActiveTaskTimer className="min-w-0 flex-1" />
         </div>
