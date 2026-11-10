@@ -4,7 +4,10 @@ import {
   deriveLifeAreaFromTags,
   withProjectLifeTags,
 } from "@/lib/life-area-sync";
-import { withSingleProjectTag } from "@/lib/project-tags";
+import {
+  withProjectPrimaryTag,
+  withSingleProjectTag,
+} from "@/lib/project-tags";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 
 /**
@@ -33,9 +36,13 @@ export async function fileTaggedTasksIntoProject(
     if (task.projectId) continue;
 
     // The tag is the project's now, so it survives the single-project rule;
-    // the task takes the project's side of life along with its filing.
+    // the task takes the project's own tag and side of life along with its filing.
     const tagIds = withProjectLifeTags(
-      withSingleProjectTag(task.tagIds, project.id, tags),
+      withProjectPrimaryTag(
+        withSingleProjectTag(task.tagIds, project.id, tags),
+        project.id,
+        tags,
+      ),
       project.lifeArea,
       tags,
     );

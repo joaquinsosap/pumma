@@ -26,7 +26,11 @@ import { getProject, listProjects, updateProject } from "@/lib/db/projects";
 import { listHabits, updateHabit } from "@/lib/db/habits";
 import { listGoals, nextGoalOrder, updateGoal } from "@/lib/db/goals";
 import { setProjectLifeArea } from "@/lib/project-life-server";
-import { projectAfterRetag, withSingleProjectTag } from "@/lib/project-tags";
+import {
+  projectAfterRetag,
+  withProjectPrimaryTag,
+  withSingleProjectTag,
+} from "@/lib/project-tags";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 
 export type TaggableEntity = "task" | "note" | "habit" | "goal" | "project";
@@ -93,7 +97,11 @@ async function toggleOneEntityTag(
     // whatever was there — a task in a work project is work, not both.
     if (nextProjectId && nextProjectId !== task.projectId) {
       const target = await getProject(userId, nextProjectId);
-      tagIds = withProjectLifeTags(tagIds, target?.lifeArea, tags);
+      tagIds = withProjectLifeTags(
+        withProjectPrimaryTag(tagIds, nextProjectId, tags),
+        target?.lifeArea,
+        tags,
+      );
     }
 
     const lifeArea = deriveLifeAreaFromTags(tagIds, tags);

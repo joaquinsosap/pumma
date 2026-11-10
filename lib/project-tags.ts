@@ -113,11 +113,10 @@ export function withSingleProjectTag(
  * Make sure a task filed under a project also *says* so.
  *
  * `withSingleProjectTag` only removes other projects' tags; it never adds
- * the one the task is being filed under. That is the right split when the
- * project came from a tag in the text — the tag is already there — but not
- * when it came from the view you were looking at. Capturing inside a project
- * used to set `projectId` and leave the task with no project tag at all,
- * which made it invisible to every tag-based filter.
+ * the one the task is being filed under, so every path that files a task
+ * calls this too. A task filed by one of the project's other tags, or from
+ * the view you were looking at, used to miss the project's own tag, which
+ * left that tag counting 0 and hid the task from its filter.
  *
  * Flagship tag only: a project can own several tags, and inheriting all of
  * them would put words on the task nobody typed.

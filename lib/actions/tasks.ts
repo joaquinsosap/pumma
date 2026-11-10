@@ -129,14 +129,15 @@ export async function createFromOmni(
       const target = bucket.projectId
         ? await getProject(userId, bucket.projectId)
         : scoped;
+      // A task in a project wears the project's own tag, whichever of its tags was typed.
       const bucketTags = withProjectLifeTags(
-        bucket.projectId
-          ? bucket.tagIds
-          : withProjectPrimaryTag(
-              withSingleProjectTag(bucket.tagIds, target?.id ?? null, tags),
-              target?.id ?? null,
-              tags,
-            ),
+        withProjectPrimaryTag(
+          bucket.projectId
+            ? bucket.tagIds
+            : withSingleProjectTag(bucket.tagIds, target?.id ?? null, tags),
+          target?.id ?? null,
+          tags,
+        ),
         target?.lifeArea,
         tags,
       );
