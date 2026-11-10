@@ -9,6 +9,7 @@ import {
   KeyboardSensor,
   MouseSensor,
   TouchSensor,
+  closestCenter,
   closestCorners,
   useDroppable,
   useSensor,
@@ -131,6 +132,16 @@ function makeBoardCollisionDetection(
   return (args) => {
     if (args.pointerCoordinates) pointer.current = args.pointerCoordinates;
 
+    // A project card in the hand only ever lands on another project card.
+    if (args.active.data.current?.type === "project-drag") {
+      return closestCenter({
+        ...args,
+        droppableContainers: args.droppableContainers.filter(
+          (d) => d.data.current?.type === "project-card",
+        ),
+      });
+    }
+
     // Where every card currently sits. Recorded here for the same reason the
     // pointer is: this runs on each move with freshly measured rects, and the
     // drag handlers get neither. Needed to place a card released in the gap
@@ -194,6 +205,8 @@ type Props = {
   railHost?: HTMLElement | null;
   /** Dropping a card on a project card in the rail. */
   onMoveToProject?: (taskId: string, projectId: string) => void;
+  /** Dropping one project card on another: the first takes the second's place. */
+  onReorderProject?: (projectId: string, overProjectId: string) => void;
   /** Multi-select across the columns. */
   selection?: SelectionController;
   /** How the columns are ordered. Defaults to the hand-made order. */
@@ -211,6 +224,7 @@ export function KanbanBoard({
   rail,
   railHost,
   onMoveToProject,
+  onReorderProject,
   selection,
   sort = "custom",
   sortReversed = false,
@@ -290,7 +304,16 @@ export function KanbanBoard({
     return null;
   }, [activeId, items]);
 
+  // The rail's project cards drag inside this same context. Nothing below is
+  // about them: a project in the hand is not a task and moves no column.
+  const isProjectDrag = (event: { active: DragStartEvent["active"] }) =>
+    event.active.data.current?.type === "project-drag";
+
   const handleDragStart = (event: DragStartEvent) => {
+    if (isProjectDrag(event)) {
+      setDragActive(true);
+      return;
+    }
     suppressClickRef.current = true;
     setDragActive(true);
     setActiveId(event.active.id);
@@ -319,6 +342,7 @@ export function KanbanBoard({
    * you let go IS the answer, and the drop has nothing left to work out.
    */
   const handleDragMove = (event: DragMoveEvent) => {
+    if (isProjectDrag(event)) return;
     const { active, over } = event;
     // Over its own slot: it is already exactly where the pointer is asking for.
     if (!over || over.id === active.id) return;
@@ -382,6 +406,17 @@ export function KanbanBoard({
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
+    if (isProjectDrag(event)) {
+      setDragActive(false);
+      const target = over?.data.current;
+      if (target?.type === "project-card") {
+        onReorderProject?.(
+          String(active.data.current?.projectId),
+          String(target.projectId),
+        );
+      }
+      return;
+    }
     setActiveId(null);
     setDragActive(false);
     releaseClickSuppression();

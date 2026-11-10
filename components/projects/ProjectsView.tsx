@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useSearchParams } from "next/navigation";
 import { Pencil } from "@/components/icons";
 import { useQueryState } from "nuqs";
@@ -9,13 +9,16 @@ import { projectProgress } from "@/lib/metrics";
 import { parseLifeView } from "@/lib/life-area";
 import { Topbar } from "@/components/shell/Topbar";
 import { KanbanBoard, boardOrder } from "@/components/projects/KanbanBoard";
+import { arrayMove } from "@dnd-kit/sortable";
 import {
   setReversedIn,
   sortProjects,
+  PROJECT_SORTS,
   PROJECT_TASK_SORTS,
   type ProjectSort,
   type ProjectTaskSort,
 } from "@/lib/collection-sort";
+import { reorderProjectsAction } from "@/lib/actions/projects";
 import { SortMenu } from "@/components/ui/sort-menu";
 import { updateSettingsAction } from "@/lib/actions/settings";
 import { ProjectDetailPanel } from "@/components/projects/ProjectDetailPanel";
@@ -95,23 +98,88 @@ export function ProjectsView({
     });
   };
 
-  const projects = useMemo(
-    () =>
-      sortProjects(
-        rawProjects,
-        projectSort,
-        sortReversedSetting.includes("project"),
-      ),
-    [rawProjects, projectSort, sortReversedSetting],
+  // The rail's own ordering, applied the moment it is picked like the board's.
+  const [sort, setSort] = useState<ProjectSort>(projectSort);
+  useEffect(() => setSort(projectSort), [projectSort]);
+  const [reversed, setReversed] = useState(
+    sortReversedSetting.includes("project"),
   );
+  useEffect(
+    () => setReversed(sortReversedSetting.includes("project")),
+    [sortReversedSetting],
+  );
+  // The order a drag just made, shown until its save settles.
+  const [handOrder, setHandOrder] = useState<string[] | null>(null);
+  const changeSort = (next: ProjectSort) => {
+    setSort(next);
+    setReversed(false);
+    setHandOrder(null);
+    void updateSettingsAction({
+      projectSort: next,
+      sortReversed: setReversedIn(sortReversedSetting, "project", false),
+    });
+  };
+  const changeReversed = (next: boolean) => {
+    setReversed(next);
+    void updateSettingsAction({
+      sortReversed: setReversedIn(sortReversedSetting, "project", next),
+    });
+  };
+
+  const projects = useMemo(() => {
+    const sorted = sortProjects(rawProjects, sort, reversed, tasks);
+    if (!handOrder) return sorted;
+    const place = new Map(handOrder.map((id, i) => [id, i]));
+    return [...sorted].sort(
+      (a, b) =>
+        (place.get(a.id) ?? handOrder.length) -
+        (place.get(b.id) ?? handOrder.length),
+    );
+  }, [rawProjects, sort, reversed, tasks, handOrder]);
   const [projectId, setProjectId] = useQueryState("project", {
     defaultValue: projects[0]?.id ?? "",
+    // Kept in the address even when it IS the first card. See the pin below.
+    clearOnDefault: false,
   });
   const selected = projects.find((p) => p.id === projectId) ?? projects[0];
+  // The first card is only where the page starts. The rail can reorder itself
+  // now (Last edited does, with every task touched), and "the first" would
+  // then swap the board, and the capture bar's target, under the user. So the
+  // project on screen is written into the address once, before anything moves.
+  const pinned = useRef(false);
+  useEffect(() => {
+    if (pinned.current || !selected) return;
+    pinned.current = true;
+    if (!searchParams.get("project")) void setProjectId(selected.id);
+  }, [selected, searchParams, setProjectId]);
   const spTasks = tasks.filter((t) => t.projectId === selected?.id);
   const [railHost, setRailHost] = useState<HTMLDivElement | null>(null);
   const isDesktop = useIsDesktop();
   const [, startProjectMove] = useTransition();
+
+  // Dropping one project card on another: the dragged card takes that place,
+  // the rail shows it at once, and the menu reads Custom because it now is.
+  const handleReorderProject = (dragId: string, overId: string) => {
+    const ids = projects.map((p) => p.id);
+    const from = ids.indexOf(dragId);
+    const to = ids.indexOf(overId);
+    if (from < 0 || to < 0 || from === to) return;
+    const next = arrayMove(ids, from, to);
+    const before = { sort, reversed };
+    setHandOrder(next);
+    setSort("custom");
+    setReversed(false);
+    startProjectMove(async () => {
+      await trySave(
+        () => reorderProjectsAction(next),
+        () => {
+          setSort(before.sort);
+          setReversed(before.reversed);
+        },
+      );
+      setHandOrder(null);
+    });
+  };
 
   const handleMoveToProject = (taskId: string, nextProjectId: string) => {
     const destination =
@@ -181,6 +249,20 @@ export function ProjectsView({
         }
       />
       <div className="flex min-h-0 flex-1 flex-col pb-6 animate-pumma-view">
+        {projects.length > 1 && (
+          <div className="mb-2 flex shrink-0 items-center justify-between">
+            <span className="font-mono text-[10px] uppercase tracking-widest text-faint2">
+              {projects.length} projects
+            </span>
+            <SortMenu
+              options={PROJECT_SORTS}
+              value={sort}
+              onChange={changeSort}
+              reversed={reversed}
+              onReversedChange={changeReversed}
+            />
+          </div>
+        )}
         {/* The rail renders in here, portaled from inside the board's
             DndContext so its cards can receive dropped tasks. Without a board
             there's nothing to drag, so it renders plainly instead. */}
@@ -256,10 +338,12 @@ export function ProjectsView({
                       onSelect={(id) => void setProjectId(id)}
                       lifeArea={lifeAreaForCreate(lifeView)}
                       droppable
+                      sortable
                     />
                   }
                   railHost={railHost}
                   onMoveToProject={handleMoveToProject}
+                  onReorderProject={handleReorderProject}
                   tasks={spTasks}
                   tags={tags}
                   onEditTask={(id) => void setTaskId(id)}

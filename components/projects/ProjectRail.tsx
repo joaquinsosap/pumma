@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useDroppable } from "@dnd-kit/core";
+import { useDraggable, useDroppable } from "@dnd-kit/core";
+import { CSS as DragCSS } from "@dnd-kit/utilities";
 import type { Project, Task } from "@/lib/schemas";
 import { projectProgress } from "@/lib/metrics";
 import { NewProjectCard } from "@/components/projects/NewProjectCard";
@@ -14,8 +15,10 @@ import type { LifeArea } from "@/lib/types";
  * for that project and, while a kanban card is in hand, the drop target that
  * moves a task into it.
  *
- * `droppable` is off unless this is rendered inside the board's DndContext —
- * useDroppable outside one would register nothing and quietly do nothing.
+ * `droppable` is off unless this is rendered inside the board's DndContext,
+ * since useDroppable outside one would register nothing and quietly do nothing.
+ * `sortable` rides on the same context: a card can then be dragged onto
+ * another card to take its place in the rail.
  */
 export function ProjectRail({
   projects,
@@ -24,6 +27,7 @@ export function ProjectRail({
   onSelect,
   lifeArea,
   droppable = false,
+  sortable = false,
 }: {
   projects: Project[];
   tasks: Task[];
@@ -31,6 +35,7 @@ export function ProjectRail({
   onSelect: (id: string) => void;
   lifeArea: LifeArea;
   droppable?: boolean;
+  sortable?: boolean;
 }) {
   const railRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +71,7 @@ export function ProjectRail({
             progress={projectProgress(p.id, tasks)}
             active={p.id === selectedId}
             droppable={droppable}
+            sortable={droppable && sortable}
             onSelect={() => onSelect(p.id)}
           />
         ))}
@@ -85,35 +91,88 @@ function ProjectRailCard({
   progress: prog,
   active,
   droppable,
+  sortable,
   onSelect,
 }: {
   project: Project;
   progress: { progress: number; label: string };
   active: boolean;
   droppable: boolean;
+  sortable: boolean;
   onSelect: () => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({
+  const {
+    setNodeRef: setDropRef,
+    isOver: somethingOver,
+    active: dragged,
+  } = useDroppable({
     id: `project-card:${p.id}`,
     disabled: !droppable,
     data: { type: "project-card", projectId: p.id },
   });
+  const {
+    setNodeRef: setDragRef,
+    listeners,
+    transform,
+    isDragging,
+  } = useDraggable({
+    id: `project-drag:${p.id}`,
+    disabled: !sortable,
+    data: { type: "project-drag", projectId: p.id },
+  });
+  // Pointer and touch only. The key handler would take Enter and Space away from the button, which is how a keyboard picks a project.
+  const { onKeyDown: _keyboardDrag, ...pointerListeners } = listeners ?? {};
+  void _keyboardDrag;
+
+  // What is over this card decides what the card says: a task is moving in, another project is taking this place.
+  const projectDrag = dragged?.data.current?.type === "project-drag";
+  const isOver = somethingOver && !projectDrag;
+  const takingPlace =
+    somethingOver && projectDrag && dragged?.data.current?.projectId !== p.id;
+
+  // The browser still fires a click on the card a drag ends on; swallow it so letting go never switches project.
+  const justDragged = useRef(false);
+  useEffect(() => {
+    if (isDragging) {
+      justDragged.current = true;
+      return;
+    }
+    if (!justDragged.current) return;
+    const t = window.setTimeout(() => {
+      justDragged.current = false;
+    }, 150);
+    return () => window.clearTimeout(t);
+  }, [isDragging]);
 
   return (
     <button
-      ref={droppable ? setNodeRef : undefined}
+      ref={
+        droppable
+          ? (node) => {
+              setDropRef(node);
+              setDragRef(node);
+            }
+          : undefined
+      }
       type="button"
       data-project-id={p.id}
-      onClick={onSelect}
+      onClick={() => {
+        if (!justDragged.current) onSelect();
+      }}
+      {...(sortable ? pointerListeners : {})}
       className={cn(
         "min-w-[160px] max-w-[240px] shrink-0 snap-start cursor-pointer rounded-[11px] border-[1.5px] p-[11px_14px] text-left transition-all hover:border-faint2",
         active ? "" : "border-border bg-surface",
         // A task is hovering over this card — say so loudly, since the card
         // otherwise looks identical to the one you're dragging away from.
         isOver && "scale-[1.02] border-dashed shadow-[2px_2px_0_var(--shadow)]",
+        takingPlace && "ring-2 ring-primary ring-offset-1 ring-offset-background",
+        // In the hand: above its neighbours, and following the pointer with no easing.
+        isDragging &&
+          "relative z-20 cursor-grabbing shadow-[3px_3px_0_var(--shadow)] transition-none",
       )}
-      style={
-        active || isOver
+      style={{
+        ...(active || isOver
           ? {
               borderColor: p.color,
               background: p.color.replace(
@@ -121,8 +180,9 @@ function ProjectRailCard({
                 isOver ? " / 0.16)" : " / 0.06)",
               ),
             }
-          : undefined
-      }
+          : {}),
+        ...(transform ? { transform: DragCSS.Translate.toString(transform) } : {}),
+      }}
     >
       <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
         <span
