@@ -25,6 +25,7 @@ const project = (id: string, goalId: string | null): Project =>
     order: 0,
     createdAt: "2026-01-01",
     updatedAt: null,
+    ticketUrl: null,
   }) as Project;
 
 let seq = 0;

@@ -109,6 +109,7 @@ describe("sortProjects", () => {
     order: 0,
     createdAt: "2026-08-01",
     updatedAt: null,
+    ticketUrl: null,
     ...over,
   });
   const work = (over: Partial<Task>): Task => ({

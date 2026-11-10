@@ -213,7 +213,12 @@ export function planPull(
   return { projects, alreadyHere };
 }
 
-/** The line under the tree: how much "Bring in" will make. A project already here is not made, so it is not counted. */
+/**
+ * The line under the tree: how much "Bring in" will make. A project already
+ * here is not made, so it is not counted, and neither are its epic tags: they
+ * came with it the first time, and this rule cannot see the tags to know which
+ * one is new. The count is a floor there; what was made is said afterwards.
+ */
 export function countPlan(plan: PullPlan): {
   projects: number;
   tags: number;
@@ -221,7 +226,7 @@ export function countPlan(plan: PullPlan): {
 } {
   return {
     projects: plan.projects.filter((p) => p.from !== null && !p.existing).length,
-    tags: plan.projects.reduce((n, p) => n + p.tags.length, 0),
+    tags: plan.projects.reduce((n, p) => n + (p.existing ? 0 : p.tags.length), 0),
     tasks: plan.projects.reduce((n, p) => n + p.tasks.length, 0),
   };
 }

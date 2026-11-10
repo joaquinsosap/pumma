@@ -61,6 +61,7 @@ export function buildStarterContent(
       createdAt: today,
       order: 0,
       updatedAt: null,
+      ticketUrl: null,
     },
   ];
 

@@ -158,7 +158,8 @@ describe("planPull, a second pull of the same thing", () => {
     expect(plan.projects[0].from).toEqual(COORD);
     expect(plan.projects[0].tasks.map((t) => t.ticketUrl)).toEqual([LATENCY.url]);
     expect(plan.alreadyHere).toBe(2);
-    expect(countPlan(plan)).toEqual({ projects: 0, tags: 2, tasks: 1 });
+    // Its epic tags came with it the first time, so they are not promised again.
+    expect(countPlan(plan)).toEqual({ projects: 0, tags: 0, tasks: 1 });
   });
 
   it("does the same per epic when each epic is the project", () => {

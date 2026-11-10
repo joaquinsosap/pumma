@@ -7,6 +7,7 @@ import type { Project, Task } from "@/lib/schemas";
 import { projectProgress } from "@/lib/metrics";
 import { NewProjectCard } from "@/components/projects/NewProjectCard";
 import { ScrollHint } from "@/components/ui/scroll-hint";
+import { Download } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { LifeArea } from "@/lib/types";
 
@@ -28,6 +29,7 @@ export function ProjectRail({
   lifeArea,
   droppable = false,
   sortable = false,
+  onFromJira,
 }: {
   projects: Project[];
   tasks: Task[];
@@ -36,6 +38,8 @@ export function ProjectRail({
   lifeArea: LifeArea;
   droppable?: boolean;
   sortable?: boolean;
+  /** Opens the sheet that brings tickets in. Left out when no Jira is connected, and then there is no card. */
+  onFromJira?: () => void;
 }) {
   const railRef = useRef<HTMLDivElement>(null);
 
@@ -80,9 +84,33 @@ export function ProjectRail({
           onCreated={(id) => onSelect(id)}
           className="shrink-0"
         />
+        {onFromJira && <FromJiraCard onClick={onFromJira} className="shrink-0" />}
       </div>
       <ScrollHint targetRef={railRef} direction="right" />
     </div>
+  );
+}
+
+/** The door to bringing tickets in, drawn like the New project card beside it. */
+export function FromJiraCard({
+  onClick,
+  className,
+}: {
+  onClick: () => void;
+  className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex min-h-[88px] min-w-[160px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[11px] border border-dashed border-border bg-surface/50 p-[11px_14px] text-faint transition-colors hover:border-faint2 hover:bg-surface hover:text-muted",
+        className,
+      )}
+    >
+      <Download className="h-4 w-4" strokeWidth={2.2} />
+      <span className="text-[12px] font-semibold">From Jira</span>
+    </button>
   );
 }
 

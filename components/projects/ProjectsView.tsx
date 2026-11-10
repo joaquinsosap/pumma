@@ -27,7 +27,8 @@ import { BulkEditPanel } from "@/components/tasks/BulkEditPanel";
 import { SelectionBar } from "@/components/tasks/SelectionBar";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { NewProjectCard } from "@/components/projects/NewProjectCard";
-import { ProjectRail } from "@/components/projects/ProjectRail";
+import { FromJiraCard, ProjectRail } from "@/components/projects/ProjectRail";
+import { JiraPullSheet } from "@/components/projects/JiraPullSheet";
 import { setTaskProject } from "@/lib/actions/tasks";
 import { toast } from "sonner";
 import { useIsDesktop } from "@/lib/use-media-query";
@@ -46,6 +47,8 @@ type Props = {
   projectSort?: ProjectSort;
   projectTaskSort?: ProjectTaskSort;
   sortReversed?: string[];
+  /** A Jira address and token are saved, so tickets can be brought in. */
+  jiraConnected?: boolean;
 };
 
 export function ProjectsView({
@@ -59,6 +62,7 @@ export function ProjectsView({
   projectSort = "created",
   projectTaskSort = "priority",
   sortReversed: sortReversedSetting = [],
+  jiraConnected = false,
 }: Props) {
   const searchParams = useSearchParams();
   const lifeView = parseLifeView(searchParams.get("life"));
@@ -234,6 +238,9 @@ export function ProjectsView({
   // Phone only: the bulk sheet opens from the selection bar, not from
   // selecting — a sheet would cover the very cards you're still picking.
   const [bulkSheet, setBulkSheet] = useState(false);
+  const [pullOpen, setPullOpen] = useState(false);
+  // No connection, no door: the rail draws the card only when this is set.
+  const fromJira = jiraConnected ? () => setPullOpen(true) : undefined;
   useEffect(() => {
     if (!selection.active) setBulkSheet(false);
   }, [selection.active]);
@@ -291,6 +298,7 @@ export function ProjectsView({
               tasks={tasks}
               onSelect={(id) => void setProjectId(id)}
               lifeArea={lifeAreaForCreate(lifeView)}
+              onFromJira={fromJira}
             />
           )}
         </div>
@@ -357,6 +365,7 @@ export function ProjectsView({
                       lifeArea={lifeAreaForCreate(lifeView)}
                       droppable
                       sortable
+                      onFromJira={fromJira}
                     />
                   }
                   railHost={railHost}
@@ -478,14 +487,22 @@ export function ProjectsView({
             <p className="text-sm text-faint">
               No projects yet. Create one to get started.
             </p>
-            <NewProjectCard
-              lifeArea={lifeAreaForCreate(lifeView)}
-              onCreated={(id) => void setProjectId(id)}
-              className="min-w-[220px]"
-            />
+            <div className="flex flex-wrap justify-center gap-2">
+              <NewProjectCard
+                lifeArea={lifeAreaForCreate(lifeView)}
+                onCreated={(id) => void setProjectId(id)}
+                className="min-w-[220px]"
+              />
+              {fromJira && (
+                <FromJiraCard onClick={fromJira} className="min-w-[220px]" />
+              )}
+            </div>
           </div>
         )}
       </div>
+      {jiraConnected && (
+        <JiraPullSheet open={pullOpen} onOpenChange={setPullOpen} />
+      )}
       {selection.active && !isDesktop && (
         <SelectionBar
           count={selection.ids.length}

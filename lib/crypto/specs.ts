@@ -27,7 +27,8 @@ export const SPECS = {
     arrays: [{ path: "subtasks", fields: ["title"] }],
   },
   notes: { fields: ["title", "body"] },
-  projects: { fields: ["title", "description", "label"] },
+  // ticketUrl: the same reasoning as a task's. It names the ticket a whole project stands for.
+  projects: { fields: ["title", "description", "label", "ticketUrl"] },
   goals: { fields: ["title", "metricLabel"] },
   habits: { fields: ["name"] },
   agenda: { fields: ["title"] },

@@ -84,6 +84,7 @@ export function createSeedData(userId: string): SeedData {
       createdAt: td,
       order: 0,
       updatedAt: null,
+      ticketUrl: null,
     },
     {
       _id: oid(),
@@ -100,6 +101,7 @@ export function createSeedData(userId: string): SeedData {
       createdAt: td,
       order: 1,
       updatedAt: null,
+      ticketUrl: null,
     },
     {
       _id: oid(),
@@ -115,6 +117,7 @@ export function createSeedData(userId: string): SeedData {
       createdAt: td,
       order: 2,
       updatedAt: null,
+      ticketUrl: null,
     },
     {
       _id: oid(),
@@ -130,6 +133,7 @@ export function createSeedData(userId: string): SeedData {
       createdAt: td,
       order: 3,
       updatedAt: null,
+      ticketUrl: null,
     },
   ];
 

@@ -3,22 +3,17 @@
 import { revalidatePath } from "next/cache";
 import {
   listTags,
-  insertTag,
   detachTagFromProject,
   setTagProject,
 } from "@/lib/db/tags";
 import {
-  deriveLifeAreaFromTags,
   isLifeTag,
-  setLifeTags,
 } from "@/lib/life-area-sync";
-import { projectTagSlug, uniqueTagName } from "@/lib/project-tags";
 import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
 import type { Project } from "@/lib/schemas";
 import {
   getProject,
-  insertProject,
   listProjects,
   updateProject,
   deleteProject,
@@ -32,8 +27,10 @@ import { setProjectLifeArea } from "@/lib/project-life-server";
 import { fileTaggedTasksIntoProject } from "@/lib/project-filing-server";
 import { requireUserId } from "@/lib/auth/session";
 import { releaseProjectTags } from "@/lib/mutations/entities";
-import { userToday } from "@/lib/timezone-server";
-import { pickProjectColor } from "@/lib/project-colors";
+import {
+  createProjectWithTag,
+  type CreatedProject as MadeProject,
+} from "@/lib/project-create-server";
 
 const createProjectSchema = z.object({
   title: z.string().trim().min(1).max(120),
@@ -41,11 +38,7 @@ const createProjectSchema = z.object({
   color: z.string().optional(),
 });
 
-export type CreatedProject = {
-  project: Project;
-  /** Set when the flagship was an existing tag rather than a new one. */
-  adopted: { tagName: string; filed: number } | null;
-};
+export type CreatedProject = Pick<MadeProject, "project" | "adopted">;
 
 export async function createProjectAction(
   input: z.infer<typeof createProjectSchema>,
@@ -54,61 +47,7 @@ export async function createProjectAction(
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
   const userId = await requireUserId();
-  const { today: createdAt } = await userToday();
-  const existing = await listProjects(userId);
-  // The project carries its own life tags — the side of life it's on is read
-  // from them, never from a separate field.
-  const allTags = await listTags(userId);
-  const projectTagIds = setLifeTags(
-    [],
-    parsed.data.lifeArea ?? "personal",
-    allTags,
-  );
-  const project = await insertProject({
-    userId,
-    title: parsed.data.title,
-    description: "",
-    color: parsed.data.color ?? pickProjectColor(existing),
-    progress: 0,
-    label: "0/0",
-    goalId: null,
-    tagIds: projectTagIds,
-    lifeArea: deriveLifeAreaFromTags(projectTagIds, allTags),
-    createdAt,
-  });
-
-  // Every project gets a flagship tag named after it, so "#wr" on a task is
-  // enough to file it here. It's the hint that this works at all.
-  const slug = projectTagSlug(parsed.data.title);
-  const match = allTags.find((t) => t.name.toLowerCase() === slug);
-  // A tag by that name already meaning this work is the whole point — adopt it
-  // rather than making a near-identical twin, and bring what it holds along.
-  // A tag another project owns can't be taken, so that one gets a number.
-  const adoptable = match && !match.projectId && !isLifeTag(match.name);
-
-  let adopted: { tagName: string; filed: number } | null = null;
-  if (adoptable) {
-    await setTagProject(userId, match.id, project.id, { primary: true });
-    const filed = await fileTaggedTasksIntoProject(
-      userId,
-      project,
-      match.id,
-      allTags.map((t) =>
-        t.id === match.id ? { ...t, projectId: project.id } : t,
-      ),
-    );
-    adopted = { tagName: match.name, filed };
-  } else {
-    await insertTag(
-      userId,
-      uniqueTagName(
-        slug,
-        allTags.map((t) => t.name),
-      ),
-      { projectId: project.id, isProjectPrimary: true, color: project.color },
-    );
-  }
-
+  const { project, adopted } = await createProjectWithTag(userId, parsed.data);
   revalidatePath("/", "layout");
   return { ok: true, data: { project, adopted } };
 }

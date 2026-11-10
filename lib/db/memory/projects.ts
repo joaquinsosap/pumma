@@ -3,10 +3,14 @@ import { toDto, type Project, projectSchema } from "@/lib/schemas";
 import type { ProjectDoc } from "@/lib/schemas";
 
 /** What insertProject accepts: the place in the order and the stamp are filled in when left out. */
-export type NewProjectDoc = Omit<ProjectDoc, "_id" | "order" | "updatedAt"> & {
+export type NewProjectDoc = Omit<
+  ProjectDoc,
+  "_id" | "order" | "updatedAt" | "ticketUrl"
+> & {
   _id?: string;
   order?: number;
   updatedAt?: string | null;
+  ticketUrl?: string | null;
 };
 
 export async function listProjects(userId: string): Promise<Project[]> {

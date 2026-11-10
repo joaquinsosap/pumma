@@ -18,6 +18,7 @@ const base: Project = {
   order: 0,
   createdAt: "2026-10-20",
   updatedAt: null,
+  ticketUrl: null,
 };
 
 const projects: Project[] = [

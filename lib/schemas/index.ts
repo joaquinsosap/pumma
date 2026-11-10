@@ -368,6 +368,12 @@ export const projectSchema = z.object({
   createdAt: z.string(),
   /** Last change to the project itself. Its tasks carry their own stamp. */
   updatedAt: z.string().nullable().default(null),
+  /**
+   * The ticket this project was made from, when it was brought in from a
+   * tracker: a COORD or an epic. It is how a later pull finds the project
+   * again instead of making a twin. Null for a project made by hand.
+   */
+  ticketUrl: z.string().nullable().default(null),
 });
 
 /**

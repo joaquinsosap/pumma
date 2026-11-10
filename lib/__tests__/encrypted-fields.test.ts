@@ -125,7 +125,12 @@ describe("every collection in the spec", () => {
       subtasks: [{ title: "c" }],
     },
     notes: { title: "a", body: "b" },
-    projects: { title: "a", description: "b", label: "c" },
+    projects: {
+      title: "a",
+      description: "b",
+      label: "c",
+      ticketUrl: "https://jira.example.com/browse/COOR-1",
+    },
     goals: { title: "a", metricLabel: "b" },
     habits: { name: "a" },
     agenda: { title: "a" },
