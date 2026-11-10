@@ -14,8 +14,10 @@ import {
   LIFE_MOODS,
   clampLifeSpanYears,
   lifeViewStartAge,
+  weekHoldsBirthday,
   type LifeWeekSlot,
 } from "@/lib/life-calendar";
+import { Star } from "@/components/icons";
 import { LifeWeekCell, LifeWeekEmpty } from "@/components/life/LifeWeekCell";
 import { LifeWeekDialog } from "@/components/life/LifeWeekDialog";
 import { Topbar } from "@/components/shell/Topbar";
@@ -133,6 +135,17 @@ export function LifeCalendarView({
     return n;
   }, [lifeWeeks, lifeDays]);
 
+  // Worked out once: a star per year of life, not a date check in each of the grid's cells.
+  const birthdayWeeks = useMemo(
+    () =>
+      new Set(
+        grid.weeks
+          .filter((w) => weekHoldsBirthday(w, birthDate))
+          .map((w) => w.weekStart),
+      ),
+    [grid.weeks, birthDate],
+  );
+
   const weekHasNote = (week: LifeWeekSlot) => {
     const entry = lifeWeekMap.get(week.weekStart);
     if (entry?.note?.trim()) return true;
@@ -242,6 +255,7 @@ export function LifeCalendarView({
                       className="bg-[var(--life-now)]"
                       label="this week"
                     />
+                    <LegendSwatch className="bg-amber-500" label="birthday" />
                     <span className="h-3 w-px bg-border" />
                     {LIFE_MOODS.map((m) => (
                       <LegendSwatch
@@ -266,6 +280,15 @@ export function LifeCalendarView({
                       className="bg-[var(--life-now)]"
                       label="this week"
                     />
+                    <span className="flex items-center gap-1.5">
+                      <Star
+                        aria-hidden
+                        fill="currentColor"
+                        strokeWidth={0}
+                        className="h-[11px] w-[11px] shrink-0 text-amber-500"
+                      />
+                      birthday
+                    </span>
                     <span className="h-3 w-px bg-border" />
                     {LIFE_MOODS.map((m) => (
                       <LegendSwatch
@@ -401,6 +424,7 @@ export function LifeCalendarView({
                                 today={today}
                                 mood={entry?.mood}
                                 hasNote={weekHasNote(week)}
+                                hasBirthday={birthdayWeeks.has(week.weekStart)}
                                 fullView={fullView}
                                 onSelect={openWeek}
                               />

@@ -8,10 +8,12 @@ import { saveLifeWeek } from "@/lib/actions/life-calendar";
 import { ageAt } from "@/lib/date";
 import {
   LIFE_MOODS,
+  birthdayAgeInWeek,
   formatWeekRange,
   moodColor,
   weekStatusLabel,
 } from "@/lib/life-calendar";
+import { Star } from "@/components/icons";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
@@ -87,6 +89,7 @@ export function LifeWeekDialog({
   const rangeLabel = formatWeekRange(week.weekStart, week.weekEnd);
   const status = weekStatusLabel(week.weekStart, week.weekEnd, today);
   const moodC = weekMood ? moodColor(weekMood) : null;
+  const birthdayAge = birthdayAgeInWeek(week, birthDate);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,6 +113,19 @@ export function LifeWeekDialog({
             <div className="mt-0.5 font-mono text-[11px] text-faint">
               {rangeLabel} · {status}
             </div>
+            {birthdayAge !== null && (
+              <div className="mt-1 flex items-center gap-1.5 text-[12px] font-semibold text-ink">
+                <Star
+                  aria-hidden
+                  fill="currentColor"
+                  strokeWidth={0}
+                  className="h-3.5 w-3.5 shrink-0 text-amber-500"
+                />
+                {birthdayAge === 0
+                  ? "The week you were born"
+                  : `Birthday, age ${birthdayAge}`}
+              </div>
+            )}
           </div>
         </div>
 

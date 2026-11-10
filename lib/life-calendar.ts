@@ -99,6 +99,38 @@ export function buildLifeWeeks(
   return weeks;
 }
 
+/**
+ * The age a week's birthday reaches, or null when the week holds none.
+ *
+ * The day of birth counts (age 0) and so does every anniversary. A Feb 29
+ * birth date lands on Mar 1 in a year without one, the day `ageAt` turns the
+ * age, so the star and the age label never disagree.
+ */
+export function birthdayAgeInWeek(
+  slot: Pick<LifeWeekSlot, "days">,
+  birthDate: string | null | undefined,
+): number | null {
+  if (!birthDate) return null;
+  const [by, bm, bd] = birthDate.slice(0, 10).split("-").map(Number);
+  if (!by || !bm || !bd) return null;
+  for (const day of slot.days) {
+    const [y, m, d] = day.split("-").map(Number);
+    const leap = (y % 4 === 0 && y % 100 !== 0) || y % 400 === 0;
+    const onTheDay = m === bm && d === bd;
+    const leapDayMoved = bm === 2 && bd === 29 && !leap && m === 3 && d === 1;
+    if ((onTheDay || leapDayMoved) && y >= by) return y - by;
+  }
+  return null;
+}
+
+/** A week with a birthday in it wears the star. */
+export function weekHoldsBirthday(
+  slot: Pick<LifeWeekSlot, "days">,
+  birthDate: string | null | undefined,
+): boolean {
+  return birthdayAgeInWeek(slot, birthDate) !== null;
+}
+
 /** Map any date in a life week to the grid's canonical weekStart (birth-aligned). */
 export function resolveWeekSlotStart(
   date: string,

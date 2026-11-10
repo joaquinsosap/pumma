@@ -4,12 +4,14 @@
 // drives the one highlighted cell, and the lived/left arithmetic.
 import { describe, expect, it } from "vitest";
 import {
+  birthdayAgeInWeek,
   buildLifeWeeks,
   clampLifeSpanYears,
   computeLifeStats,
   dayCellState,
   resolveWeekSlotStart,
   weekCellState,
+  weekHoldsBirthday,
 } from "@/lib/life-calendar";
 import { LIFE_SPAN_MAX } from "@/lib/date";
 
@@ -105,5 +107,60 @@ describe("clampLifeSpanYears", () => {
     expect(clampLifeSpanYears(0)).toBe(1);
     expect(clampLifeSpanYears(80.9)).toBe(80);
     expect(clampLifeSpanYears(10_000)).toBe(LIFE_SPAN_MAX);
+  });
+});
+
+describe("birthday weeks", () => {
+  const birth = "1990-06-15";
+  const weeks = buildLifeWeeks(birth, 30);
+  const starred = weeks.filter((w) => weekHoldsBirthday(w, birth));
+
+  it("stars one week for the day of birth and one for every year lived", () => {
+    // The span ends the day before the 30th birthday, so ages 0 to 29.
+    expect(starred).toHaveLength(30);
+    expect(starred.map((w) => birthdayAgeInWeek(w, birth))).toEqual(
+      Array.from({ length: 30 }, (_, age) => age),
+    );
+  });
+
+  it("stars the first week of the grid, the one the birth date starts", () => {
+    expect(weekHoldsBirthday(weeks[0], birth)).toBe(true);
+    expect(birthdayAgeInWeek(weeks[0], birth)).toBe(0);
+  });
+
+  it("follows the date, not the column, as a row of 52 weeks falls behind the year", () => {
+    const columns = starred.map((w) => (w.weekIndex - 1) % 52);
+    expect(columns[0]).toBe(0);
+    // A row is 364 days and a year is not, so the star walks right.
+    expect(new Set(columns).size).toBeGreaterThan(1);
+    for (const w of starred) {
+      expect(w.days.some((d) => d.endsWith("-06-15"))).toBe(true);
+    }
+  });
+
+  it("puts a Feb 29 birthday on Mar 1 in a year without one", () => {
+    const leapBirth = "1992-02-29";
+    const leapWeeks = buildLifeWeeks(leapBirth, 9);
+    const days = leapWeeks
+      .filter((w) => weekHoldsBirthday(w, leapBirth))
+      .map((w) =>
+        w.days.find((d) => d.endsWith("-02-29") || d.endsWith("-03-01")),
+      );
+    expect(days).toEqual([
+      "1992-02-29",
+      "1993-03-01",
+      "1994-03-01",
+      "1995-03-01",
+      "1996-02-29",
+      "1997-03-01",
+      "1998-03-01",
+      "1999-03-01",
+      "2000-02-29",
+    ]);
+  });
+
+  it("stars nothing without a birth date", () => {
+    expect(weekHoldsBirthday(weeks[0], null)).toBe(false);
+    expect(birthdayAgeInWeek(weeks[0], "")).toBeNull();
   });
 });
