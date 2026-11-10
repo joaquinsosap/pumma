@@ -118,6 +118,45 @@ describe("jiraGet", () => {
     expect((await jiraGet(BASE, TOKEN, "/rest/api/2/myself")).ok).toBe(false);
   });
 
+  it("stops reading an answer that arrives in pieces and never ends", async () => {
+    // No length stated up front, so the only guard is counting as it arrives.
+    const piece = new Uint8Array(256 * 1024).fill(0x20);
+    let sent = 0;
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        sent += 1;
+        controller.enqueue(piece);
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    stub(new Response(body, { status: 200 }));
+    const res = await jiraGet(BASE, TOKEN, "/rest/api/2/myself");
+    expect(res).toMatchObject({ ok: false, why: "error" });
+    expect(cancelled).toBe(true);
+    // A little past the ceiling of 2 MB, not the whole of an endless body.
+    expect(sent).toBeLessThan(20);
+  });
+
+  it("reads an answer that arrives in pieces", async () => {
+    const text = JSON.stringify({ name: "jdoe" });
+    const bytes = new TextEncoder().encode(text);
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(bytes.slice(0, 5));
+        controller.enqueue(bytes.slice(5));
+        controller.close();
+      },
+    });
+    stub(new Response(body, { status: 200 }));
+    expect(await jiraGet(BASE, TOKEN, "/rest/api/2/myself")).toEqual({
+      ok: true,
+      data: { name: "jdoe" },
+    });
+  });
+
   it("never puts the token in what it reports", async () => {
     for (const res of [answer(401), answer(500, "boom"), new Error(`failed with ${TOKEN}`)]) {
       stub(res);

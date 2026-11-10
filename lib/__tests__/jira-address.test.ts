@@ -31,10 +31,22 @@ describe("jiraBaseFromUrl", () => {
     ["this machine", "https://localhost:8080/secure/Dashboard.jspa"],
     ["a private address", "https://10.0.0.5/secure/Dashboard.jspa"],
     ["a name that only exists inside a network", "https://jira.internal/browse/VST-1"],
+    ["this machine written as one number", "https://2130706433/browse/VST-1"],
+    ["this machine written in hex", "https://0x7f.0.0.1/browse/VST-1"],
+    ["a private address written in octal", "https://0300.0250.1.10/browse/VST-1"],
+    ["this machine over IPv6", "https://[::1]/browse/VST-1"],
+    ["a private address wrapped in IPv6", "https://[::ffff:10.0.0.5]/browse/VST-1"],
+    ["the cloud's own metadata address", "https://169.254.169.254/latest/meta-data"],
+    ["this machine with a public name after a backslash", "https://localhost\\@desk.example.com/browse/VST-1"],
     ["a script", "javascript:alert(1)"],
     ["nothing", "  "],
   ])("refuses %s", (_what, pasted) => {
     expect(jiraBaseFromUrl(pasted)).toBeNull();
+  });
+
+  it("reads a backslash the way the request will: the host before it, never the one after", () => {
+    const base = jiraBaseFromUrl("https://desk.example.com\\@localhost/browse/VST-1");
+    expect(base && new URL(base).hostname).toBe("desk.example.com");
   });
 
   it("refuses what is not text", () => {

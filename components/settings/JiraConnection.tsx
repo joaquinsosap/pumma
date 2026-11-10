@@ -114,7 +114,8 @@ export function JiraConnection({ address, tokenLast4 }: Props) {
         />
         <span className="text-[12px] text-faint">
           Any page works: the dashboard, a ticket, a board. PUMMA keeps the
-          part every page shares.
+          part every page shares. For a Jira your company hosts (Data Center
+          or Server), not Atlassian&apos;s cloud yet.
         </span>
       </label>
 
@@ -128,7 +129,7 @@ export function JiraConnection({ address, tokenLast4 }: Props) {
           spellCheck={false}
           placeholder={
             tokenLast4
-              ? `Saved, ending in ${tokenLast4}. Leave blank to keep it`
+              ? `Saved, ending in ${tokenLast4}. Blank keeps it for this address`
               : "Paste your token"
           }
           onChange={(e) => setDraftToken(e.target.value)}

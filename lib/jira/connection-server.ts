@@ -17,15 +17,21 @@ export async function jiraBaseUrl(userId: string): Promise<string | null> {
   return jiraBaseFromUrl(decryptSecret(baseUrlEnc));
 }
 
-/** Address and token together, for a call to Jira. Null unless both are there and readable. */
-export async function jiraCredentials(
-  userId: string,
-): Promise<{ baseUrl: string; token: string } | null> {
+export type JiraConnection =
+  | { state: "none" }
+  /** Something is saved, but it no longer opens: the server's secret changed, or the row was edited. */
+  | { state: "unreadable" }
+  | { state: "ready"; baseUrl: string; token: string };
+
+/** What is saved, telling "nothing yet" from "saved, and no longer readable": the two need different words. */
+export async function jiraConnection(userId: string): Promise<JiraConnection> {
   const { baseUrlEnc, tokenEnc } = await getJiraSecretsEnc(userId);
-  if (!baseUrlEnc || !tokenEnc) return null;
-  const baseUrl = jiraBaseFromUrl(decryptSecret(baseUrlEnc));
-  const token = decryptSecret(tokenEnc);
-  return baseUrl && token ? { baseUrl, token } : null;
+  if (!baseUrlEnc && !tokenEnc) return { state: "none" };
+  const baseUrl = baseUrlEnc ? jiraBaseFromUrl(decryptSecret(baseUrlEnc)) : null;
+  const token = tokenEnc ? decryptSecret(tokenEnc) : null;
+  return baseUrl && token
+    ? { state: "ready", baseUrl, token }
+    : { state: "unreadable" };
 }
 
 export type TicketInput =

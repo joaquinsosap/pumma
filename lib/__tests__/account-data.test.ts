@@ -150,6 +150,26 @@ describe("what an export must never carry", () => {
     }
   });
 
+  it("strips the stored Jira address and token from settings", async () => {
+    const store = getStore();
+    const me = store.users[0]._id;
+    const mine = store.settings.find((s) => s.userId === me);
+    expect(mine).toBeDefined();
+    Object.assign(mine!, {
+      jiraTokenEnc: "enc:jira-token",
+      jiraBaseUrlEnc: "enc:jira-address",
+    });
+
+    const data = await exportUserData(me);
+    const settings = data.settings as Record<string, unknown>[];
+    expect(settings.length).toBeGreaterThan(0);
+    expect(JSON.stringify(settings)).not.toContain("enc:jira");
+    for (const row of settings) {
+      expect(row.jiraTokenEnc).toBeUndefined();
+      expect(row.jiraBaseUrlEnc).toBeUndefined();
+    }
+  });
+
   it("carries no field from the never-export list, in any collection", async () => {
     const store = getStore();
     const me = store.users[0]._id;

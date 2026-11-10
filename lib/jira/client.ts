@@ -91,8 +91,11 @@ export async function jiraGet(
     if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES) {
       return fail("error", "answer too large");
     }
-    const text = await res.text();
-    if (text.length > MAX_BYTES) return fail("error", "answer too large");
+    const text = await readCapped(res, MAX_BYTES);
+    if (text === null) {
+      controller.abort();
+      return fail("error", "answer too large");
+    }
     try {
       return { ok: true, data: JSON.parse(text) as unknown };
     } catch {
@@ -103,6 +106,25 @@ export async function jiraGet(
   } finally {
     clearTimeout(timer);
   }
+}
+
+/** The body as text, or null once it passes `max` bytes. A body sent in pieces states no length up front, so it is counted as it arrives. */
+async function readCapped(res: Response, max: number): Promise<string | null> {
+  const reader = res.body?.getReader();
+  if (!reader) return "";
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel().catch(() => {});
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
 }
 
 /** Who the token belongs to. The cheapest call that proves address and token both work. */

@@ -70,13 +70,43 @@ describe("saving the Jira connection", () => {
     expect(seen).not.toContain(TOKEN);
   });
 
-  it("keeps the saved token when only the address is corrected", async () => {
-    await saveJiraConnectionAction({ address: "https://old.example.com", token: TOKEN });
+  it("keeps the saved token when the address is corrected within the same Jira", async () => {
+    await saveJiraConnectionAction({ address: "https://desk.example.com", token: TOKEN });
     const before = row().jiraTokenEnc;
-    const res = await saveJiraConnectionAction({ address: "https://desk.example.com" });
+    const res = await saveJiraConnectionAction({
+      address: "https://desk.example.com/jira/secure/Dashboard.jspa",
+    });
     expect(res.ok).toBe(true);
     expect(row().jiraTokenEnc).toBe(before);
-    expect(await jiraBaseUrl(userId)).toBe("https://desk.example.com");
+    expect(await jiraBaseUrl(userId)).toBe("https://desk.example.com/jira");
+  });
+
+  it.each([
+    ["another host", "https://elsewhere.example.org"],
+    ["another port of the same host", "https://desk.example.com:8443"],
+  ])("will not carry the saved token over to %s", async (_what, moved) => {
+    await saveJiraConnectionAction({ address: "https://desk.example.com", token: TOKEN });
+    const before = { ...row() };
+    const res = await saveJiraConnectionAction({ address: moved });
+    expect(res.ok).toBe(false);
+    expect(!res.ok && res.error).toContain("different address");
+    // Nothing moved: the token still goes only where it was saved for.
+    expect(row().jiraBaseUrlEnc).toBe(before.jiraBaseUrlEnc);
+    expect(row().jiraTokenEnc).toBe(before.jiraTokenEnc);
+    await testJiraConnectionAction();
+    expect(jira.calls).toEqual([{ baseUrl: "https://desk.example.com", token: TOKEN }]);
+  });
+
+  it("takes a new address together with a new token", async () => {
+    await saveJiraConnectionAction({ address: "https://desk.example.com", token: TOKEN });
+    const other = `${TOKEN}-other`;
+    const res = await saveJiraConnectionAction({
+      address: "https://elsewhere.example.org",
+      token: other,
+    });
+    expect(res).toMatchObject({ ok: true, data: { address: "https://elsewhere.example.org" } });
+    await testJiraConnectionAction();
+    expect(jira.calls).toEqual([{ baseUrl: "https://elsewhere.example.org", token: other }]);
   });
 
   it.each([
@@ -84,6 +114,9 @@ describe("saving the Jira connection", () => {
     ["an address inside the server's network", { address: "https://localhost", token: TOKEN }],
     ["no token at all", { address: "https://desk.example.com" }],
     ["a sentence where the token goes", { address: "https://desk.example.com", token: "my token is secret" }],
+    // Four readable characters of a short token would be a real share of it.
+    ["a token too short to be one", { address: "https://desk.example.com", token: "abcd1234efgh" }],
+    ["Atlassian's cloud, which signs in another way", { address: "https://acme.atlassian.net/browse/X-1", token: TOKEN }],
   ])("refuses %s and saves nothing", async (_what, input) => {
     const res = await saveJiraConnectionAction(input);
     expect(res.ok).toBe(false);
@@ -117,6 +150,26 @@ describe("testing and removing it", () => {
   it("calls nothing when no connection is saved", async () => {
     expect((await testJiraConnectionAction()).ok).toBe(false);
     expect(jira.calls).toHaveLength(0);
+  });
+
+  it("says so, and calls nothing, when what is saved no longer opens", async () => {
+    await saveJiraConnectionAction({ address: "https://desk.example.com", token: TOKEN });
+    // What a changed server secret leaves behind: a sealed value nothing can open.
+    Object.assign(row(), { jiraTokenEnc: "bm90LWEtc2VhbGVkLXZhbHVl" });
+
+    const tested = await testJiraConnectionAction();
+    expect(tested.ok).toBe(false);
+    expect(!tested.ok && tested.error).toContain("can no longer be read");
+    expect(jira.calls).toHaveLength(0);
+
+    // Blank cannot keep a token that cannot be read; a fresh one is asked for.
+    const kept = await saveJiraConnectionAction({ address: "https://desk.example.com" });
+    expect(kept.ok).toBe(false);
+    expect(!kept.ok && kept.error).toContain("can no longer be read");
+
+    const again = await saveJiraConnectionAction({ address: "https://desk.example.com", token: TOKEN });
+    expect(again.ok).toBe(true);
+    expect(await testJiraConnectionAction()).toEqual({ ok: true, data: { name: "Jane Doe" } });
   });
 
   it("forgets both on remove", async () => {

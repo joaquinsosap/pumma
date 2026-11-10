@@ -16,8 +16,17 @@
  * `aiApiKeyEnc` is their provider key. It is theirs, but a plaintext-adjacent
  * copy on disk is a liability they did not ask for, and it cannot be restored
  * from a file anyway.
+ *
+ * `jiraTokenEnc` / `jiraBaseUrlEnc` are their employer's Jira token and where
+ * it works: the same reasoning, with somebody else's system on the other end.
  */
-export const NEVER_EXPORT = ["dekWrapped", "dekKeyId", "aiApiKeyEnc"] as const;
+export const NEVER_EXPORT = [
+  "dekWrapped",
+  "dekKeyId",
+  "aiApiKeyEnc",
+  "jiraTokenEnc",
+  "jiraBaseUrlEnc",
+] as const;
 
 /** Fields secret only in one collection: a calendar feed's address reads the whole calendar to anyone holding it. */
 export const NEVER_EXPORT_IN: Partial<Record<string, readonly string[]>> = {
