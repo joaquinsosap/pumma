@@ -128,9 +128,23 @@ export function NotesView({
   const [openId, setOpenId] = useState<string | null>(selectedId);
   useEffect(() => setOpenId(selectedId), [selectedId]);
 
+  // A star answers the click: the pick shows at once and the server's value takes over when it changes.
+  const [pins, setPins] = useSyncedDraft<Record<string, boolean>>(
+    Object.fromEntries(notes.map((n) => [n.id, n.pinned])),
+    "notes",
+  );
   const sorted = useMemo(
-    () => sortNotes(notes, sort, reversed),
-    [notes, sort, reversed],
+    () =>
+      sortNotes(
+        notes.map((n) =>
+          (pins[n.id] ?? n.pinned) === n.pinned
+            ? n
+            : { ...n, pinned: pins[n.id] },
+        ),
+        sort,
+        reversed,
+      ),
+    [notes, pins, sort, reversed],
   );
 
   const selected = sorted.find((n) => n.id === openId) ?? sorted[0] ?? null;
@@ -159,9 +173,13 @@ export function NotesView({
     pickNote(id);
   };
 
-  const togglePin = (noteId: string, pinned: boolean, onFail?: () => void) => {
+  const togglePin = (noteId: string, pinned: boolean) => {
+    setPins((p) => ({ ...p, [noteId]: pinned }));
     startTransition(async () => {
-      const res = await trySave(() => toggleNotePin(noteId, pinned), onFail);
+      const res = await trySave(
+        () => toggleNotePin(noteId, pinned),
+        () => setPins((p) => ({ ...p, [noteId]: !pinned })),
+      );
       if (res) router.refresh();
     });
   };
@@ -277,9 +295,7 @@ export function NotesView({
               key={selected.id}
               note={selected}
               onRefresh={() => router.refresh()}
-              onTogglePin={(pinned, onFail) =>
-                togglePin(selected.id, pinned, onFail)
-              }
+              onTogglePin={(pinned) => togglePin(selected.id, pinned)}
             />
           </div>
         )}
@@ -296,9 +312,8 @@ function NoteEditor({
   note: Note;
   /** Re-read from the server. For changes that alter the list, not the text. */
   onRefresh: () => void;
-  onTogglePin: (pinned: boolean, onFail: () => void) => void;
+  onTogglePin: (pinned: boolean) => void;
 }) {
-  const [pinned, setPinned] = useSyncedDraft(note.pinned, note.id);
   const [, startTransition] = useTransition();
 
   // The editor advertises "autosaves", so it must actually survive closing the
@@ -321,12 +336,6 @@ function NoteEditor({
     ),
   );
 
-  const handleTogglePin = () => {
-    const next = !pinned;
-    setPinned(next);
-    onTogglePin(next, () => setPinned(note.pinned));
-  };
-
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[13px] border border-border bg-surface">
       <div className="flex items-center gap-2.5 border-b border-border2 px-5 py-4">
@@ -340,7 +349,10 @@ function NoteEditor({
           wrapperClassName="flex-1"
           className="text-xl font-bold tracking-tight text-ink max-lg:text-lg"
         />
-        <NotePinButton pinned={pinned} onToggle={handleTogglePin} />
+        <NotePinButton
+          pinned={note.pinned}
+          onToggle={() => onTogglePin(!note.pinned)}
+        />
         <button
           type="button"
           className="rounded-md border border-tasks/40 bg-tasks/10 px-2.5 py-1 font-mono text-[11px] font-semibold text-tasks/80"
