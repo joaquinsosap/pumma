@@ -11,10 +11,7 @@ import { jiraMyself } from "@/lib/jira/client";
 import {
   JIRA_UNREADABLE,
   jiraConnection,
-  readTicket,
 } from "@/lib/jira/connection-server";
-import type { TicketRead } from "@/lib/jira/issue";
-import { TICKET_URL_MAX } from "@/lib/ticket-link";
 
 const saveSchema = z.object({
   address: z.string().max(2048),
@@ -111,21 +108,6 @@ export async function testJiraConnectionAction(): Promise<
   const who = await jiraMyself(creds.baseUrl, creds.token);
   if (!who.ok) return { ok: false, error: who.error };
   return { ok: true, data: who.data };
-}
-
-const readSchema = z.object({ url: z.string().min(1).max(TICKET_URL_MAX) });
-
-/**
- * Where a task's linked ticket stands in Jira right now. Nothing is stored:
- * the card asks when it is opened, and shows what came back.
- */
-export async function readTicketAction(
-  input: z.infer<typeof readSchema>,
-): Promise<ActionResult<TicketRead>> {
-  const parsed = readSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
-  const userId = await requireUserId();
-  return { ok: true, data: await readTicket(userId, parsed.data.url) };
 }
 
 /** Forget the connection. Tickets already linked keep their links: those are addresses, not credentials. */

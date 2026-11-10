@@ -29,6 +29,8 @@ export type JiraAnswer<T> =
   | { ok: false; why: JiraFailure; error: string };
 
 const TIMEOUT_MS = 10_000;
+/** Finding the address has its own deadline: a name server that never answers must not hold the request open. */
+const LOOKUP_MS = 4_000;
 /** A page of issues is tens of kilobytes. This is room for that, and a ceiling on anything else. */
 const MAX_BYTES = 2 * 1024 * 1024;
 
@@ -53,6 +55,18 @@ const fail = (why: JiraFailure, detail?: string): JiraAnswer<never> => ({
   error: detail ? `${SAID[why]} (${detail})` : SAID[why],
 });
 
+/** `work`, or `otherwise` if it has not finished in `ms`. Never rejects. */
+function within<T>(ms: number, work: Promise<T>, otherwise: T): Promise<T> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => resolve(otherwise), ms);
+    const settle = (value: T) => {
+      clearTimeout(timer);
+      resolve(value);
+    };
+    work.then(settle, () => settle(otherwise));
+  });
+}
+
 /**
  * One GET against the Jira REST API.
  *
@@ -71,7 +85,7 @@ export async function jiraGet(
   const base = jiraBaseFromUrl(baseUrl);
   if (!base || !token) return fail("address");
   const url = new URL(`${base}${path}`);
-  const where = await whereHostResolves(url.hostname);
+  const where = await within(LOOKUP_MS, whereHostResolves(url.hostname), "nowhere");
   // Inside the server's own network is refused; a name that leads nowhere is an address that cannot be reached.
   if (where === "private") return fail("address");
   if (where === "nowhere") return fail("unreachable");

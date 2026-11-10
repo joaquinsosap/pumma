@@ -3,9 +3,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const guard = vi.hoisted(() => ({
   where: "public" as "public" | "private" | "nowhere",
+  /** A name server that never answers. */
+  hangs: false,
 }));
 vi.mock("@/lib/outbound-guard", () => ({
-  whereHostResolves: async () => guard.where,
+  whereHostResolves: () =>
+    guard.hangs ? new Promise(() => {}) : Promise.resolve(guard.where),
 }));
 
 import { jiraGet, jiraIssue, jiraMyself } from "@/lib/jira/client";
@@ -75,6 +78,21 @@ describe("jiraGet", () => {
     const res = await jiraGet(BASE, TOKEN, "/rest/api/2/myself");
     expect(res).toMatchObject({ ok: false, why: "unreachable" });
     expect(calls).toHaveLength(0);
+  });
+
+  it("gives up on a name that never resolves, and sends nothing", async () => {
+    guard.hangs = true;
+    vi.useFakeTimers();
+    try {
+      stub(answer(200, "{}"));
+      const asked = jiraGet(BASE, TOKEN, "/rest/api/2/myself");
+      await vi.advanceTimersByTimeAsync(4_100);
+      expect(await asked).toMatchObject({ ok: false, why: "unreachable" });
+      expect(calls).toHaveLength(0);
+    } finally {
+      vi.useRealTimers();
+      guard.hangs = false;
+    }
   });
 
   it("sends nothing without a token", async () => {
@@ -226,6 +244,7 @@ describe("jiraIssue", () => {
 
   it.each([
     ["a path", "../myself"],
+    ["a number with a path after it", "VST-1/../../myself"],
     ["a query", "VST-1?expand=changelog"],
     ["a sentence", "VST-1 and more"],
     ["nothing", ""],

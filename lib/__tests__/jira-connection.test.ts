@@ -30,14 +30,13 @@ vi.mock("@/lib/jira/client", () => ({
 
 import {
   clearJiraConnectionAction,
-  readTicketAction,
   saveJiraConnectionAction,
   testJiraConnectionAction,
 } from "@/lib/actions/jira";
 import { updateTaskDetail } from "@/lib/actions/tasks";
 import { getSettings } from "@/lib/db/memory/settings";
 import { insertTask } from "@/lib/db/memory/tasks";
-import { jiraBaseUrl, ticketUrlFromInput } from "@/lib/jira/connection-server";
+import { jiraBaseUrl, readTicket, ticketUrlFromInput } from "@/lib/jira/connection-server";
 import { getCurrentUserId, getStore, resetStore } from "@/lib/store/memory";
 
 const userId = getCurrentUserId();
@@ -261,16 +260,16 @@ describe("reading where a linked ticket stands", () => {
 
   it("asks the connected Jira with the saved token, and passes on what it said", async () => {
     await connect();
-    const res = await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" });
-    expect(res).toEqual({ ok: true, data: { state: "ok", facts: FACTS } });
+    const res = await readTicket(userId, "https://desk.example.com/browse/VST-1234");
+    expect(res).toEqual({ state: "ok", facts: FACTS });
     expect(issue.calls).toEqual([
       { baseUrl: "https://desk.example.com", token: TOKEN, key: "VST-1234" },
     ]);
   });
 
   it("asks nothing, and says where to connect, with no Jira connected", async () => {
-    const res = await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" });
-    expect(res).toEqual({ ok: true, data: { state: "no-connection" } });
+    const res = await readTicket(userId, "https://desk.example.com/browse/VST-1234");
+    expect(res).toEqual({ state: "no-connection" });
     expect(issue.calls).toHaveLength(0);
   });
 
@@ -278,33 +277,40 @@ describe("reading where a linked ticket stands", () => {
     ["on another host", "https://elsewhere.example.org/browse/VST-1234"],
     ["on a look-alike host", "https://desk.example.com.evil.example.org/browse/VST-1234"],
     ["that is no ticket", "https://desk.example.com/secure/Dashboard.jspa"],
+    ["that is not a link", "VST-1234"],
   ])("never sends the token for a link %s", async (_what, url) => {
     await connect();
-    const res = await readTicketAction({ url });
-    expect(res).toEqual({ ok: true, data: { state: "elsewhere" } });
+    expect(await readTicket(userId, url)).toEqual({ state: "elsewhere" });
     expect(issue.calls).toHaveLength(0);
   });
 
   it("passes on why Jira did not answer", async () => {
     await connect();
     issue.answer = { ok: false, why: "no-ticket", error: "Jira has no ticket with that number." };
-    expect(await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" })).toEqual({
-      ok: true,
-      data: { state: "failed", error: "Jira has no ticket with that number." },
+    expect(await readTicket(userId, "https://desk.example.com/browse/VST-1234")).toEqual({
+      state: "failed",
+      error: "Jira has no ticket with that number.",
     });
   });
 
   it("says the connection needs entering again when it no longer opens, and asks nothing", async () => {
     await connect();
     Object.assign(row(), { jiraTokenEnc: "bm90LWEtc2VhbGVkLXZhbHVl" });
-    const res = await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" });
-    expect(res.ok && res.data?.state).toBe("failed");
+    const res = await readTicket(userId, "https://desk.example.com/browse/VST-1234");
+    expect(res.state).toBe("failed");
     expect(issue.calls).toHaveLength(0);
   });
 
-  it("never hands the token or the address secrets back with the answer", async () => {
+  it("uses only the asking account's connection", async () => {
     await connect();
-    const res = await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" });
+    const res = await readTicket("somebody-else", "https://desk.example.com/browse/VST-1234");
+    expect(res).toEqual({ state: "no-connection" });
+    expect(issue.calls).toHaveLength(0);
+  });
+
+  it("never hands the token back with the answer", async () => {
+    await connect();
+    const res = await readTicket(userId, "https://desk.example.com/browse/VST-1234");
     expect(JSON.stringify(res)).not.toContain(TOKEN);
   });
 });

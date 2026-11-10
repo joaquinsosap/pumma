@@ -84,6 +84,13 @@ describe("jiraKeyOn", () => {
     // Another Jira on the same host is another Jira.
     expect(jiraKeyOn(under, "https://tools.example.com/browse/VST-1")).toBeNull();
     expect(jiraKeyOn(under, "https://tools.example.com/other/browse/VST-1")).toBeNull();
+    // A folder whose name only starts the same is another Jira too.
+    expect(jiraKeyOn(under, "https://tools.example.com/jira2/browse/VST-1")).toBeNull();
+  });
+
+  it("knows the same Jira written another way", () => {
+    expect(jiraKeyOn(BASE, "https://DESK.Example.com/browse/VST-1")).toBe("VST-1");
+    expect(jiraKeyOn(BASE, "https://desk.example.com:443/browse/VST-1")).toBe("VST-1");
   });
 
   it.each([

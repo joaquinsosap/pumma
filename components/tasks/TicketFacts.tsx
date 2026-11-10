@@ -3,18 +3,59 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { RefreshCw } from "@/components/icons";
-import { readTicketAction } from "@/lib/actions/jira";
 import type { JiraStage, TicketRead } from "@/lib/jira/issue";
 import { cn } from "@/lib/utils";
 
 /** How long an answer is shown again without asking: folding the card shut and open is not a reason to call Jira. */
 const FRESH_MS = 60_000;
-/** Per page, not per card, so the same ticket on two tasks is asked about once. */
+/**
+ * Per page, not per card, so the same ticket on two tasks is asked about once.
+ * Only an answer from Jira is kept: "not connected" or a failure is asked
+ * again the next time the card is unfolded, since either may have been put
+ * right in the meantime.
+ */
 const READS = new Map<string, { at: number; read: TicketRead }>();
+/** Requests on their way, so two cards unfolded together share one. */
+const ASKING = new Map<string, Promise<TicketRead>>();
 const fresh = (url: string) => {
   const hit = READS.get(url);
   return hit && Date.now() - hit.at < FRESH_MS ? hit.read : null;
 };
+
+const STATES = new Set(["ok", "no-connection", "elsewhere", "failed"]);
+
+/**
+ * Ask PUMMA's server about one ticket. A plain request, not a server action:
+ * those run one at a time, and a slow Jira would hold up every save behind it.
+ */
+function askJira(url: string): Promise<TicketRead> {
+  const running = ASKING.get(url);
+  if (running) return running;
+  const call = (async (): Promise<TicketRead> => {
+    try {
+      const res = await fetch("/api/jira/ticket", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      });
+      const body: unknown = res.ok ? await res.json() : null;
+      const read = body as TicketRead | null;
+      if (read && STATES.has(read.state)) {
+        if (read.state === "ok") READS.set(url, { at: Date.now(), read });
+        else READS.delete(url);
+        return read;
+      }
+      return { state: "failed", error: "PUMMA could not read this ticket." };
+    } catch {
+      // A lost connection is this card's problem, not the page's.
+      return { state: "failed", error: "PUMMA's server did not answer." };
+    } finally {
+      ASKING.delete(url);
+    }
+  })();
+  ASKING.set(url, call);
+  return call;
+}
 
 const label =
   "font-mono text-[9px] uppercase tracking-widest text-faint2 pt-[3px]";
@@ -37,18 +78,7 @@ export function TicketFacts({ url }: { url: string }) {
   const alive = useRef(true);
 
   const ask = useCallback(async () => {
-    let next: TicketRead;
-    try {
-      const res = await readTicketAction({ url });
-      next =
-        res.ok && res.data
-          ? res.data
-          : { state: "failed", error: "PUMMA could not read this ticket." };
-    } catch {
-      // A lost connection is this card's problem, not the page's.
-      next = { state: "failed", error: "PUMMA's server did not answer." };
-    }
-    READS.set(url, { at: Date.now(), read: next });
+    const next = await askJira(url);
     if (!alive.current) return;
     setRead(next);
     setLoading(false);
@@ -163,7 +193,7 @@ export function TicketFacts({ url }: { url: string }) {
         )}
         {facts.title && (
           <>
-            <dt className={label}>In Jira</dt>
+            <dt className={label}>Title</dt>
             <dd className="m-0 min-w-0 break-words text-muted">{facts.title}</dd>
           </>
         )}
