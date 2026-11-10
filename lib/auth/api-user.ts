@@ -3,6 +3,7 @@ import "server-only";
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { getAccessLevel } from "@/lib/billing/access";
+import { sameSite } from "@/lib/same-site";
 
 /**
  * Who is asking a route handler, or the answer to send when nobody may.
@@ -11,9 +12,17 @@ import { getAccessLevel } from "@/lib/billing/access";
  * redirect means nothing to a fetch, so routes check the same two things by
  * hand: a session, and (where billing is on) an account with access.
  */
-export async function apiUserId(): Promise<
+export async function apiUserId(
+  req: Request,
+): Promise<
   { ok: true; userId: string } | { ok: false; response: NextResponse }
 > {
+  if (!sameSite(req)) {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Not from here" }, { status: 403 }),
+    };
+  }
   const user = await getSessionUser();
   if (!user) {
     return {

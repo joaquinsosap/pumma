@@ -7,7 +7,8 @@ import { jiraKeyOn } from "@/lib/jira/address";
 import type { PullHave, PullPlan } from "@/lib/jira/pull-plan";
 import { deriveLifeAreaFromTags, setLifeTags } from "@/lib/life-area-sync";
 import { createProjectWithTag } from "@/lib/project-create-server";
-import { uniqueTagName } from "@/lib/project-tags";
+import { projectTagSlug, uniqueTagName } from "@/lib/project-tags";
+import { syncGoalsForProject } from "@/lib/goal-sync-server";
 import type { Project, Tag } from "@/lib/schemas";
 import { userToday } from "@/lib/timezone-server";
 
@@ -78,6 +79,10 @@ export async function bringIn(
   };
   // Newest first is how a column sorts, so the first ticket takes the lowest place and the rest follow Jira's order.
   let place = -Date.now();
+  // A tag stands for one epic. Two epics whose names collide must not end up sharing one found by its name.
+  const taken = new Set<string>();
+  // Projects that were here before and got tasks: a goal above one of them has to hear about it.
+  const grown = new Set<string>();
 
   for (const planned of plan.projects) {
     let project: Project | null = null;
@@ -90,6 +95,21 @@ export async function bringIn(
         ownTagId =
           known.find((t) => t.projectId === here.id && t.isProjectPrimary)?.id ??
           null;
+        if (!ownTagId) {
+          // A bring-in that stopped between the project and its tag left it without one. Mend it here.
+          const mended = await insertTag(
+            userId,
+            uniqueTagName(
+              projectTagSlug(here.title),
+              known.map((t) => t.name),
+            ),
+            { projectId: here.id, isProjectPrimary: true, color: here.color },
+          );
+          if (mended) {
+            known.push(mended);
+            ownTagId = mended.id;
+          }
+        }
       } else {
         const made = await createProjectWithTag(
           userId,
@@ -97,6 +117,7 @@ export async function bringIn(
             title: planned.title ?? planned.from.key,
             lifeArea: "work",
             ticketUrl: planned.from.url,
+            adoptTag: false,
           },
           { tags: known, projects },
         );
@@ -122,9 +143,11 @@ export async function bringIn(
           (t) =>
             t.projectId === project!.id &&
             !t.isProjectPrimary &&
+            !taken.has(t.id) &&
             again.test(t.name.toLowerCase()),
         );
         if (mine) {
+          taken.add(mine.id);
           tagIdOf.set(name, mine.id);
           continue;
         }
@@ -138,6 +161,7 @@ export async function bringIn(
         );
         if (!made) continue;
         known.push(made);
+        taken.add(made.id);
         tagIdOf.set(name, made.id);
         out.tags += 1;
       }
@@ -173,6 +197,10 @@ export async function bringIn(
     await insertTasks(docs);
     out.tasks += docs.length;
     if (project && !out.openProjectId) out.openProjectId = project.id;
+    if (project && planned.existing) grown.add(project.id);
   }
+  // A goal's progress is stored, and worked out from the projects under it. A
+  // project made just now has no goal yet; one that was here may.
+  for (const projectId of grown) await syncGoalsForProject(userId, projectId);
   return out;
 }

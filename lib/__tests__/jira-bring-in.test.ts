@@ -13,10 +13,16 @@ const jira = vi.hoisted(() => ({
   forest: null as unknown,
   reads: 0,
   fail: null as string | null,
+  /** The next read blows up outright, as a dropped connection inside the server would. */
+  throwOnce: false,
 }));
 vi.mock("@/lib/jira/pull-read", () => ({
   readPull: async () => {
     jira.reads += 1;
+    if (jira.throwOnce) {
+      jira.throwOnce = false;
+      throw new Error("the read blew up");
+    }
     return jira.fail
       ? { ok: false, why: "refused", error: jira.fail }
       : { ok: true, data: { forest: structuredClone(jira.forest), capped: false } };
@@ -79,6 +85,7 @@ beforeEach(async () => {
   jira.forest = tree();
   jira.reads = 0;
   jira.fail = null;
+  jira.throwOnce = false;
   await connect();
 });
 
@@ -174,6 +181,71 @@ describe("bringing the same thing in again", () => {
     const run = await runPull(userId, { source: SOURCE, level: "coord", off: [] });
     expect(run).toMatchObject({ state: "ok", brought: { tasks: 2, alreadyHere: 1 } });
     expect(store().tasks.filter((t) => t.ticketUrl === RULES.url)).toHaveLength(0);
+  });
+});
+
+describe("two bring-ins at once", () => {
+  it("make the project and its tasks once: the second waits, and finds them here", async () => {
+    const [first, second] = await Promise.all([
+      runPull(userId, { source: SOURCE, level: "coord", off: [] }),
+      runPull(userId, { source: SOURCE, level: "coord", off: [] }),
+    ]);
+    expect(first).toMatchObject({ state: "ok", brought: { projects: 1, tasks: 3 } });
+    expect(second).toMatchObject({ state: "ok", brought: { projects: 0, tasks: 0, alreadyHere: 3 } });
+    expect(projectsNamed("Platform alerts")).toHaveLength(1);
+    expect(store().tasks.filter((t) => t.ticketUrl === RULES.url)).toHaveLength(1);
+    expect(store().tags.filter((t) => t.name.startsWith("platform-alerts"))).toHaveLength(1);
+  });
+
+  it("still runs the next one when the one before it blew up", async () => {
+    jira.throwOnce = true;
+    const [bad, good] = await Promise.allSettled([
+      runPull(userId, { source: SOURCE, level: "coord", off: [] }),
+      runPull(userId, { source: SOURCE, level: "coord", off: [] }),
+    ]);
+    expect(bad.status).toBe("rejected");
+    expect(good).toMatchObject({ status: "fulfilled", value: { state: "ok", brought: { projects: 1, tasks: 3 } } });
+    expect(projectsNamed("Platform alerts")).toHaveLength(1);
+  });
+});
+
+describe("a tag of yours with the project's name", () => {
+  it("is left alone, with the tasks it is on: the project gets a numbered tag of its own", async () => {
+    const yours = (await insertTag(userId, "platform-alerts"))!;
+    store().tasks.unshift({
+      ...store().tasks[0],
+      _id: "your-own",
+      userId,
+      title: "Something of yours",
+      tagIds: [yours.id],
+      projectId: null,
+      lifeArea: "personal",
+      ticketUrl: null,
+    });
+
+    await runPull(userId, { source: SOURCE, level: "coord", off: [] });
+    const [project] = projectsNamed("Platform alerts");
+    const mine = store().tasks.find((t) => t._id === "your-own")!;
+    expect(mine.projectId).toBeNull();
+    expect(mine.lifeArea).toBe("personal");
+    expect(tagNamed("platform-alerts")).toMatchObject({ projectId: null });
+    expect(tagNamed("platform-alerts2")).toMatchObject({ projectId: project._id, isProjectPrimary: true });
+  });
+});
+
+describe("a project that lost its tag halfway", () => {
+  it("gets one on the next bring-in, and the new tasks wear it", async () => {
+    await runPull(userId, { source: SOURCE, level: "coord", off: [RUNBOOK.key] });
+    const [project] = projectsNamed("Platform alerts");
+    // What a bring-in that stopped between the project and its tag leaves behind.
+    const all = store().tags;
+    all.splice(all.findIndex((t) => t.projectId === project._id && t.isProjectPrimary), 1);
+
+    await runPull(userId, { source: SOURCE, level: "coord", off: [] });
+    const own = store().tags.find((t) => t.projectId === project._id && t.isProjectPrimary);
+    expect(own).toBeDefined();
+    const runbook = store().tasks.find((t) => t.ticketUrl === RUNBOOK.url)!;
+    expect(runbook.tagIds).toContain(own!._id);
   });
 });
 
@@ -281,6 +353,13 @@ describe("going easy on Jira", () => {
     expect(jira.reads).toBe(2);
     expect(preview.state === "ok" && preview.have.projects).toEqual(["COOR-12"]);
     expect(preview.state === "ok" && [...preview.have.tasks].sort()).toEqual(["VST-221", "VST-222", "VST-230"]);
+  });
+
+  it("does not show one token's read to another: a changed connection reads again", async () => {
+    await previewPull(userId, SOURCE);
+    await saveJiraConnectionAction({ address: BASE, token: `${TOKEN}-another-one` });
+    await previewPull(userId, SOURCE);
+    expect(jira.reads).toBe(2);
   });
 
   it("keeps one pull's read apart from another's", async () => {

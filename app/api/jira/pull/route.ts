@@ -15,7 +15,7 @@ const bodySchema = z.object({ source: pullSourceSchema }).strict();
  * run one at a time, and this waits on somebody else's server.
  */
 export async function POST(req: Request) {
-  const who = await apiUserId();
+  const who = await apiUserId(req);
   if (!who.ok) return who.response;
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

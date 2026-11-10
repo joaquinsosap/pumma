@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
  * tickets were unticked. What gets made is worked out on the server.
  */
 export async function POST(req: Request) {
-  const who = await apiUserId();
+  const who = await apiUserId(req);
   if (!who.ok) return who.response;
   const parsed = pullRunSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {

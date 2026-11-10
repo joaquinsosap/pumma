@@ -42,20 +42,40 @@ const STAGE_DOT: Record<JiraStage, string> = {
   done: "bg-habits",
 };
 
-async function post<T>(path: string, body: unknown): Promise<T | null> {
+type Posted<T> = { ok: true; data: T } | { ok: false; said: string };
+
+/**
+ * Ask one of the pull routes. A refusal is told apart from a failure: "sign in
+ * again" and "something broke halfway" call for different things, and the
+ * second must not read as "nothing happened".
+ */
+async function post<T>(path: string, body: unknown, writes: boolean): Promise<Posted<T>> {
+  let res: Response;
   try {
-    const res = await fetch(path, {
+    res = await fetch(path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    return res.ok ? ((await res.json()) as T) : null;
   } catch {
-    return null;
+    return { ok: false, said: "PUMMA's server did not answer. Check your connection and try again." };
   }
+  if (res.ok) {
+    try {
+      return { ok: true, data: (await res.json()) as T };
+    } catch {
+      return { ok: false, said: "PUMMA's server sent an answer that could not be read." };
+    }
+  }
+  if (res.status === 401) return { ok: false, said: "You are signed out. Sign in and try again." };
+  if (res.status === 403) return { ok: false, said: "This account cannot do that." };
+  return {
+    ok: false,
+    said: writes
+      ? "Something went wrong while bringing it in. Some of it may have come in: look again to see what is already here."
+      : "Something went wrong on PUMMA's side. Try again.",
+  };
 }
-
-const NO_ANSWER = "PUMMA's server did not answer. Try again.";
 
 /** "1 project, 2 tags, 3 tasks", leaving out what there is none of. */
 function made(n: { projects: number; tags: number; tasks: number }): string {
@@ -99,9 +119,10 @@ export function JiraPullSheet({
     if (busy) return;
     setBusy("read");
     setError(null);
-    const res = await post<PullPreview>("/api/jira/pull", { source });
+    const posted = await post<PullPreview>("/api/jira/pull", { source }, false);
     setBusy(null);
-    if (!res) return setError(NO_ANSWER);
+    if (!posted.ok) return setError(posted.said);
+    const res = posted.data;
     if (res.state === "no-connection") {
       return setError("Connect your Jira first: Settings, Connections, Jira.");
     }
@@ -145,13 +166,18 @@ export function JiraPullSheet({
     if (!shown || busy || nothing) return;
     setBusy("bring");
     setError(null);
-    const res = await post<PullRun>("/api/jira/pull/bring", {
-      source: shown.source,
-      level,
-      off: [...off],
-    });
+    const posted = await post<PullRun>(
+      "/api/jira/pull/bring",
+      { source: shown.source, level, off: [...off] },
+      true,
+    );
     setBusy(null);
-    if (!res) return setError(NO_ANSWER);
+    if (!posted.ok) {
+      // What is on screen may no longer be true: the next look reads again.
+      setShown(null);
+      return setError(posted.said);
+    }
+    const res = posted.data;
     if (res.state === "no-connection") {
       return setError("Connect your Jira first: Settings, Connections, Jira.");
     }

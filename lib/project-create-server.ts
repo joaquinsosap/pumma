@@ -33,6 +33,13 @@ export async function createProjectWithTag(
     color?: string;
     /** The ticket the project is made from, for one brought in from a tracker. */
     ticketUrl?: string | null;
+    /**
+     * False to always make a new tag, numbered if the name is taken. Naming a
+     * project after a tag you already use is a way of saying "this is that
+     * work", so its tasks move in. A project somebody else named, in a
+     * tracker, says no such thing, and must not move your tasks.
+     */
+    adoptTag?: boolean;
   },
   /**
    * The tags and projects as the caller knows them. Only for a caller that
@@ -68,7 +75,11 @@ export async function createProjectWithTag(
   // A tag by that name already meaning this work is the whole point: adopt it
   // rather than making a near-identical twin, and bring what it holds along.
   // A tag another project owns cannot be taken, so that one gets a number.
-  const adoptable = match && !match.projectId && !isLifeTag(match.name);
+  const adoptable =
+    input.adoptTag !== false &&
+    match &&
+    !match.projectId &&
+    !isLifeTag(match.name);
 
   if (adoptable) {
     await setTagProject(userId, match.id, project.id, { primary: true });

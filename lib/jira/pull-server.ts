@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import {
   bringIn,
   whatIsHere,
@@ -40,17 +42,24 @@ const READ_AGAIN_MS = 30_000;
 const READ_KEPT_MS = 5 * 60_000;
 const READS_KEPT = 200;
 
-const readKey = (userId: string, baseUrl: string, source: PullSource) =>
+// The token is part of the key, as a short digest: what one token may see is
+// not what another may, and a changed connection must not be shown the old one's read.
+const readKey = (
+  userId: string,
+  conn: { baseUrl: string; token: string },
+  source: PullSource,
+) =>
   [
     userId,
-    baseUrl,
+    conn.baseUrl,
+    createHash("sha256").update(conn.token).digest("hex").slice(0, 12),
     source.kind === "mine"
       ? "mine"
       : `${source.key.trim().toUpperCase()}|${source.children}`,
   ].join("|");
 
 type Reading =
-  | { state: "ok"; baseUrl: string; read: PullRead }
+  | { state: "ok"; baseUrl: string; key: string; read: PullRead }
   | { state: "no-connection" }
   | { state: "failed"; error: string };
 
@@ -64,16 +73,16 @@ async function reading(
   if (conn.state === "unreadable") {
     return { state: "failed", error: JIRA_UNREADABLE };
   }
-  const key = readKey(userId, conn.baseUrl, source);
+  const key = readKey(userId, conn, source);
   const kept = READS.get(key);
   if (kept && Date.now() - kept.at < youngerThan) {
-    return { state: "ok", baseUrl: conn.baseUrl, read: kept.read };
+    return { state: "ok", baseUrl: conn.baseUrl, key, read: kept.read };
   }
   const res = await readPull(conn, source);
   if (!res.ok) return { state: "failed", error: res.error };
   if (READS.size >= READS_KEPT) READS.clear();
   READS.set(key, { at: Date.now(), read: res.data });
-  return { state: "ok", baseUrl: conn.baseUrl, read: res.data };
+  return { state: "ok", baseUrl: conn.baseUrl, key, read: res.data };
 }
 
 /** Forget every kept read. For tests. */
@@ -102,17 +111,36 @@ export async function previewPull(
  * and from what is in the database at this moment: the screen only says which
  * level is the project and which tickets were unticked.
  */
-export async function runPull(
-  userId: string,
-  input: PullRunInput,
-): Promise<PullRun> {
-  const got = await reading(userId, input.source, READ_KEPT_MS);
-  if (got.state !== "ok") return got;
-  const { have, projectOf } = await whatIsHere(userId, got.baseUrl);
-  const off = new Set(input.off.map((k) => k.trim().toUpperCase()));
-  const plan = planPull(got.read.forest, input.level, off, have);
-  const brought = await bringIn(userId, plan, projectOf);
-  // What was kept describes the moment before this: the next preview reads again.
-  READS.delete(readKey(userId, got.baseUrl, input.source));
-  return { state: "ok", brought };
+export function runPull(userId: string, input: PullRunInput): Promise<PullRun> {
+  return oneAtATime(userId, async () => {
+    const got = await reading(userId, input.source, READ_KEPT_MS);
+    if (got.state !== "ok") return got;
+    // Read inside the turn: a bring-in that ran just before this one has
+    // already made its project and tasks, and this one must see them.
+    const { have, projectOf } = await whatIsHere(userId, got.baseUrl);
+    const off = new Set(input.off.map((k) => k.trim().toUpperCase()));
+    const plan = planPull(got.read.forest, input.level, off, have);
+    const brought = await bringIn(userId, plan, projectOf);
+    // What was kept describes the moment before this: the next preview reads again.
+    READS.delete(got.key);
+    return { state: "ok", brought };
+  });
+}
+
+// Bring-ins for one account run one after another. "Is this ticket here yet?"
+// is asked before anything is written, so two at once (two tabs, an impatient
+// second press) would both hear "no" and both make the project. The app runs
+// as one process, so a queue in memory is the whole of the lock.
+const TURNS = new Map<string, Promise<unknown>>();
+
+function oneAtATime<T>(userId: string, work: () => Promise<T>): Promise<T> {
+  const before = TURNS.get(userId) ?? Promise.resolve();
+  // Whatever the turn before came to, this one still runs.
+  const mine = before.then(work, work);
+  const settled = mine.catch(() => {});
+  TURNS.set(userId, settled);
+  void settled.then(() => {
+    if (TURNS.get(userId) === settled) TURNS.delete(userId);
+  });
+  return mine;
 }
