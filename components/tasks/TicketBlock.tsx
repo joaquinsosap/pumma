@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ArrowUpRight, ChevronRight } from "@/components/icons";
+import { TicketFacts } from "@/components/tasks/TicketFacts";
 import { updateTaskDetail } from "@/lib/actions/tasks";
 import { cleanTicketUrl, ticketFromUrl, ticketKeyFrom } from "@/lib/ticket-link";
 import { trySave } from "@/lib/try-save";
@@ -17,8 +18,9 @@ const NOT_A_LINK =
  * once there is one, a card with the ticket's number, a way to open it, and
  * the rest folded away.
  *
- * Only the link is kept. What the card shows is read back out of it, so
- * nothing here can disagree with what is stored.
+ * Only the link is kept. The number is read back out of it, and where the
+ * ticket stands is asked of Jira when the card is unfolded, so nothing here
+ * can disagree with what is stored.
  */
 export function TicketBlock({
   taskId,
@@ -154,6 +156,10 @@ export function TicketBlock({
           </button>
           {open && (
             <div className="animate-pumma-fade border-t border-border2 px-3 py-2.5">
+              {/* Asked of Jira only once the card is unfolded: opening a task is not asking about its ticket. */}
+              {ticket.kind === "jira" && (
+                <TicketFacts key={ticket.url} url={ticket.url} />
+              )}
               <div className="mb-1 font-mono text-[9px] uppercase tracking-widest text-faint2">
                 Address
               </div>

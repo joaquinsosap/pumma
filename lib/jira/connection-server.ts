@@ -2,7 +2,9 @@ import "server-only";
 
 import { decryptSecret } from "@/lib/crypto";
 import { getJiraSecretsEnc } from "@/lib/db/settings";
-import { jiraBaseFromUrl, jiraIssueUrl } from "@/lib/jira/address";
+import { jiraBaseFromUrl, jiraIssueUrl, jiraKeyOn } from "@/lib/jira/address";
+import { jiraIssue } from "@/lib/jira/client";
+import type { TicketRead } from "@/lib/jira/issue";
 import { cleanTicketUrl, ticketKeyFrom } from "@/lib/ticket-link";
 
 // The one place the stored Jira connection is opened. Everything that needs
@@ -32,6 +34,33 @@ export async function jiraConnection(userId: string): Promise<JiraConnection> {
   return baseUrl && token
     ? { state: "ready", baseUrl, token }
     : { state: "unreadable" };
+}
+
+export const JIRA_UNREADABLE =
+  "The saved Jira connection can no longer be read. Enter the address and the token again.";
+
+/**
+ * Where a linked ticket stands, read from the user's own Jira with their own token.
+ *
+ * Only a ticket on the connected Jira is asked about. The link may come from
+ * the screen: the worst a made-up one can do is name another ticket the same
+ * token could already read.
+ */
+export async function readTicket(
+  userId: string,
+  link: string,
+): Promise<TicketRead> {
+  const saved = await jiraConnection(userId);
+  if (saved.state === "none") return { state: "no-connection" };
+  if (saved.state === "unreadable") {
+    return { state: "failed", error: JIRA_UNREADABLE };
+  }
+  const key = jiraKeyOn(saved.baseUrl, link);
+  if (!key) return { state: "elsewhere" };
+  const res = await jiraIssue(saved.baseUrl, saved.token, key);
+  return res.ok
+    ? { state: "ok", facts: res.data }
+    : { state: "failed", error: res.error };
 }
 
 export type TicketInput =

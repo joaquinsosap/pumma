@@ -5,6 +5,7 @@
 // before the first path word only Jira pages use.
 
 import { isBlockedHost } from "@/lib/calendar-feed-url";
+import { ticketFromUrl } from "@/lib/ticket-link";
 
 /** Path words that start a Jira page. Whatever precedes one is the Jira's own root. */
 const PAGE_WORDS = new Set([
@@ -55,4 +56,15 @@ export function jiraBaseFromUrl(raw: unknown): string | null {
 /** A ticket's page on that Jira. */
 export function jiraIssueUrl(base: string, key: string): string {
   return `${base.replace(/\/+$/, "")}/browse/${encodeURIComponent(key)}`;
+}
+
+/**
+ * The ticket's number, when `link` is a ticket on the Jira at `base`. Null for
+ * a link anywhere else: the saved token is for that one Jira, so a ticket on
+ * another host, or on another Jira under the same host, is never asked about.
+ */
+export function jiraKeyOn(base: string, link: unknown): string | null {
+  const ticket = ticketFromUrl(typeof link === "string" ? link : null);
+  if (!ticket?.key) return null;
+  return jiraBaseFromUrl(ticket.url) === base ? ticket.key : null;
 }

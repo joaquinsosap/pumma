@@ -13,15 +13,24 @@ const jira = vi.hoisted(() => ({
     | { ok: true; data: { name: string } }
     | { ok: false; why: string; error: string },
 }));
+const issue = vi.hoisted(() => ({
+  calls: [] as { baseUrl: string; token: string; key: string }[],
+  answer: null as unknown,
+}));
 vi.mock("@/lib/jira/client", () => ({
   jiraMyself: async (baseUrl: string, token: string) => {
     jira.calls.push({ baseUrl, token });
     return jira.answer;
   },
+  jiraIssue: async (baseUrl: string, token: string, key: string) => {
+    issue.calls.push({ baseUrl, token, key });
+    return issue.answer;
+  },
 }));
 
 import {
   clearJiraConnectionAction,
+  readTicketAction,
   saveJiraConnectionAction,
   testJiraConnectionAction,
 } from "@/lib/actions/jira";
@@ -229,5 +238,73 @@ describe("linking a ticket by its number", () => {
     expect((await ticketUrlFromInput(userId, "see the ticket")).ok).toBe(false);
     expect(await ticketUrlFromInput(userId, "  ")).toEqual({ ok: true, url: null });
     expect(await ticketUrlFromInput(userId, null)).toEqual({ ok: true, url: null });
+  });
+});
+
+describe("reading where a linked ticket stands", () => {
+  const FACTS = {
+    key: "VST-1234",
+    title: "Alert rules",
+    status: "In Review",
+    stage: "doing",
+    assignee: "Jane Doe",
+    type: "Story",
+    priority: "High",
+  };
+  beforeEach(() => {
+    resetStore();
+    issue.calls = [];
+    issue.answer = { ok: true, data: FACTS };
+  });
+  const connect = () =>
+    saveJiraConnectionAction({ address: "https://desk.example.com", token: TOKEN });
+
+  it("asks the connected Jira with the saved token, and passes on what it said", async () => {
+    await connect();
+    const res = await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" });
+    expect(res).toEqual({ ok: true, data: { state: "ok", facts: FACTS } });
+    expect(issue.calls).toEqual([
+      { baseUrl: "https://desk.example.com", token: TOKEN, key: "VST-1234" },
+    ]);
+  });
+
+  it("asks nothing, and says where to connect, with no Jira connected", async () => {
+    const res = await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" });
+    expect(res).toEqual({ ok: true, data: { state: "no-connection" } });
+    expect(issue.calls).toHaveLength(0);
+  });
+
+  it.each([
+    ["on another host", "https://elsewhere.example.org/browse/VST-1234"],
+    ["on a look-alike host", "https://desk.example.com.evil.example.org/browse/VST-1234"],
+    ["that is no ticket", "https://desk.example.com/secure/Dashboard.jspa"],
+  ])("never sends the token for a link %s", async (_what, url) => {
+    await connect();
+    const res = await readTicketAction({ url });
+    expect(res).toEqual({ ok: true, data: { state: "elsewhere" } });
+    expect(issue.calls).toHaveLength(0);
+  });
+
+  it("passes on why Jira did not answer", async () => {
+    await connect();
+    issue.answer = { ok: false, why: "no-ticket", error: "Jira has no ticket with that number." };
+    expect(await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" })).toEqual({
+      ok: true,
+      data: { state: "failed", error: "Jira has no ticket with that number." },
+    });
+  });
+
+  it("says the connection needs entering again when it no longer opens, and asks nothing", async () => {
+    await connect();
+    Object.assign(row(), { jiraTokenEnc: "bm90LWEtc2VhbGVkLXZhbHVl" });
+    const res = await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" });
+    expect(res.ok && res.data?.state).toBe("failed");
+    expect(issue.calls).toHaveLength(0);
+  });
+
+  it("never hands the token or the address secrets back with the answer", async () => {
+    await connect();
+    const res = await readTicketAction({ url: "https://desk.example.com/browse/VST-1234" });
+    expect(JSON.stringify(res)).not.toContain(TOKEN);
   });
 });

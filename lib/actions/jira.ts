@@ -8,7 +8,13 @@ import { encryptSecret } from "@/lib/crypto";
 import { updateSettings } from "@/lib/db/settings";
 import { jiraBaseFromUrl } from "@/lib/jira/address";
 import { jiraMyself } from "@/lib/jira/client";
-import { jiraConnection } from "@/lib/jira/connection-server";
+import {
+  JIRA_UNREADABLE,
+  jiraConnection,
+  readTicket,
+} from "@/lib/jira/connection-server";
+import type { TicketRead } from "@/lib/jira/issue";
+import { TICKET_URL_MAX } from "@/lib/ticket-link";
 
 const saveSchema = z.object({
   address: z.string().max(2048),
@@ -22,9 +28,6 @@ const saveSchema = z.object({
  * characters kept readable say nothing useful about the rest.
  */
 const plausibleToken = (t: string) => t.length >= 20 && !/\s/.test(t);
-
-const UNREADABLE =
-  "The saved Jira connection can no longer be read. Enter the address and the token again.";
 
 /**
  * Save where the user's Jira lives and their personal token.
@@ -65,7 +68,7 @@ export async function saveJiraConnectionAction(
     if (saved.state === "none") {
       return { ok: false, error: "Paste your Jira personal access token." };
     }
-    if (saved.state === "unreadable") return { ok: false, error: UNREADABLE };
+    if (saved.state === "unreadable") return { ok: false, error: JIRA_UNREADABLE };
     // A token is for one Jira. Kept across a change of host, the next request
     // would hand it to whoever answers there, and whoever typed the new
     // address need not be the person who pasted the token.
@@ -101,13 +104,28 @@ export async function testJiraConnectionAction(): Promise<
 > {
   const userId = await requireUserId();
   const creds = await jiraConnection(userId);
-  if (creds.state === "unreadable") return { ok: false, error: UNREADABLE };
+  if (creds.state === "unreadable") return { ok: false, error: JIRA_UNREADABLE };
   if (creds.state === "none") {
     return { ok: false, error: "Save your Jira address and token first." };
   }
   const who = await jiraMyself(creds.baseUrl, creds.token);
   if (!who.ok) return { ok: false, error: who.error };
   return { ok: true, data: who.data };
+}
+
+const readSchema = z.object({ url: z.string().min(1).max(TICKET_URL_MAX) });
+
+/**
+ * Where a task's linked ticket stands in Jira right now. Nothing is stored:
+ * the card asks when it is opened, and shows what came back.
+ */
+export async function readTicketAction(
+  input: z.infer<typeof readSchema>,
+): Promise<ActionResult<TicketRead>> {
+  const parsed = readSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const userId = await requireUserId();
+  return { ok: true, data: await readTicket(userId, parsed.data.url) };
 }
 
 /** Forget the connection. Tickets already linked keep their links: those are addresses, not credentials. */

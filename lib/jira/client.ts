@@ -1,7 +1,13 @@
 import "server-only";
 
 import { jiraBaseFromUrl } from "@/lib/jira/address";
+import {
+  JIRA_TICKET_FIELDS,
+  jiraFactsFrom,
+  type JiraTicketFacts,
+} from "@/lib/jira/issue";
 import { whereHostResolves } from "@/lib/outbound-guard";
+import { ticketKeyFrom } from "@/lib/ticket-link";
 
 // Talking to a Jira its owner connected. Every request carries their token, so
 // the rules are about where that token may go: only to the address they saved,
@@ -15,6 +21,7 @@ export type JiraFailure =
   | "refused"
   | "forbidden"
   | "not-jira"
+  | "no-ticket"
   | "error";
 
 export type JiraAnswer<T> =
@@ -35,6 +42,8 @@ const SAID: Record<JiraFailure, string> = {
   forbidden:
     "Jira refused the request. The token may lack access, or Jira wants a CAPTCHA after failed sign-ins.",
   "not-jira": "That address answered, but not like a Jira.",
+  "no-ticket":
+    "Jira has no ticket with that number, or your token cannot see it.",
   error: "Jira answered with an error.",
 };
 
@@ -55,6 +64,8 @@ export async function jiraGet(
   baseUrl: string,
   token: string,
   path: `/rest/api/2/${string}`,
+  /** What a 404 means for this call. Asking for one ticket, it is that ticket missing, not the Jira. */
+  missing: JiraFailure = "not-jira",
 ): Promise<JiraAnswer<unknown>> {
   // Vetted again here, not only when saved: this is the last stop before the token leaves.
   const base = jiraBaseFromUrl(baseUrl);
@@ -85,7 +96,7 @@ export async function jiraGet(
     if (res.status >= 300 && res.status < 400) return fail("sign-in");
     if (res.status === 401) return fail("refused");
     if (res.status === 403) return fail("forbidden");
-    if (res.status === 404) return fail("not-jira");
+    if (res.status === 404) return fail(missing);
     if (!res.ok) return fail("error", String(res.status));
 
     if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES) {
@@ -145,4 +156,28 @@ export async function jiraMyself(
   if (!name) return fail("not-jira");
   // Somebody else's text, shown on a settings screen: one line, bounded.
   return { ok: true, data: { name: name.replace(/\s+/g, " ").slice(0, 80) } };
+}
+
+/**
+ * One ticket: where it stands, who has it, what kind it is.
+ *
+ * The number is checked to be a ticket number and nothing else before it goes
+ * into the path, so it cannot reach for another part of the API.
+ */
+export async function jiraIssue(
+  baseUrl: string,
+  token: string,
+  key: string,
+): Promise<JiraAnswer<JiraTicketFacts>> {
+  const number = ticketKeyFrom(key);
+  if (!number) return fail("no-ticket");
+  const res = await jiraGet(
+    baseUrl,
+    token,
+    `/rest/api/2/issue/${encodeURIComponent(number)}?fields=${JIRA_TICKET_FIELDS}`,
+    "no-ticket",
+  );
+  if (!res.ok) return res;
+  const facts = jiraFactsFrom(res.data);
+  return facts ? { ok: true, data: facts } : fail("not-jira");
 }

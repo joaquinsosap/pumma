@@ -8,7 +8,7 @@ vi.mock("@/lib/outbound-guard", () => ({
   whereHostResolves: async () => guard.where,
 }));
 
-import { jiraGet, jiraMyself } from "@/lib/jira/client";
+import { jiraGet, jiraIssue, jiraMyself } from "@/lib/jira/client";
 
 const BASE = "https://desk.example.com";
 const TOKEN = "t0ken-value-1234";
@@ -190,5 +190,60 @@ describe("jiraMyself", () => {
   it("is not connected when Jira names nobody", async () => {
     stub(answer(200, JSON.stringify({})));
     expect((await jiraMyself(BASE, TOKEN)).ok).toBe(false);
+  });
+});
+
+describe("jiraIssue", () => {
+  beforeEach(() => {
+    calls = [];
+    guard.where = "public";
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  const ISSUE = {
+    key: "VST-1234",
+    fields: {
+      summary: "Alert rules",
+      status: { name: "In Review", statusCategory: { key: "indeterminate" } },
+      assignee: { displayName: "Jane Doe" },
+      issuetype: { name: "Story" },
+      priority: { name: "High" },
+    },
+  };
+
+  it("asks for that one ticket, and only the fields it shows", async () => {
+    stub(answer(200, JSON.stringify(ISSUE)));
+    const res = await jiraIssue(BASE, TOKEN, "vst-1234");
+    expect(res).toMatchObject({
+      ok: true,
+      data: { key: "VST-1234", status: "In Review", stage: "doing", assignee: "Jane Doe" },
+    });
+    expect(calls).toHaveLength(1);
+    expect(calls[0].url).toBe(
+      "https://desk.example.com/rest/api/2/issue/VST-1234?fields=summary,status,assignee,issuetype,priority",
+    );
+  });
+
+  it.each([
+    ["a path", "../myself"],
+    ["a query", "VST-1?expand=changelog"],
+    ["a sentence", "VST-1 and more"],
+    ["nothing", ""],
+  ])("sends nothing when the number is %s", async (_what, key) => {
+    stub(answer(200, JSON.stringify(ISSUE)));
+    expect((await jiraIssue(BASE, TOKEN, key)).ok).toBe(false);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("says the ticket is missing, not the Jira, on a 404", async () => {
+    stub(answer(404, JSON.stringify({ errorMessages: ["Issue Does Not Exist"] })));
+    const res = await jiraIssue(BASE, TOKEN, "VST-9");
+    expect(res).toMatchObject({ ok: false, why: "no-ticket" });
+    expect(!res.ok && res.error).toContain("no ticket with that number");
+  });
+
+  it("does not take an answer that is not a ticket for one", async () => {
+    stub(answer(200, JSON.stringify({ hello: "world" })));
+    expect(await jiraIssue(BASE, TOKEN, "VST-9")).toMatchObject({ ok: false, why: "not-jira" });
   });
 });

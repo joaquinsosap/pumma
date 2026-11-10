@@ -1,6 +1,6 @@
 // Finding a Jira's root from whatever link was pasted, and refusing the ones a token must never be sent to.
 import { describe, expect, it } from "vitest";
-import { jiraBaseFromUrl, jiraIssueUrl } from "@/lib/jira/address";
+import { jiraBaseFromUrl, jiraIssueUrl, jiraKeyOn } from "@/lib/jira/address";
 import { ticketKeyFrom } from "@/lib/ticket-link";
 
 describe("jiraBaseFromUrl", () => {
@@ -63,6 +63,39 @@ describe("jiraIssueUrl", () => {
     expect(jiraIssueUrl("https://tools.example.com/jira/", "VST-1")).toBe(
       "https://tools.example.com/jira/browse/VST-1",
     );
+  });
+});
+
+describe("jiraKeyOn", () => {
+  const BASE = "https://desk.example.com";
+
+  it.each([
+    ["its page", "https://desk.example.com/browse/VST-1234"],
+    ["a filter view", "https://desk.example.com/issues/VST-1234?filter=-1"],
+    ["a board with it open", "https://desk.example.com/secure/RapidBoard.jspa?rapidView=4&selectedIssue=VST-1234"],
+    ["a service desk portal", "https://desk.example.com/servicedesk/customer/portal/3/VST-1234"],
+  ])("finds the ticket from %s on the connected Jira", (_what, link) => {
+    expect(jiraKeyOn(BASE, link)).toBe("VST-1234");
+  });
+
+  it("follows a Jira installed under a folder", () => {
+    const under = "https://tools.example.com/jira";
+    expect(jiraKeyOn(under, "https://tools.example.com/jira/browse/VST-1")).toBe("VST-1");
+    // Another Jira on the same host is another Jira.
+    expect(jiraKeyOn(under, "https://tools.example.com/browse/VST-1")).toBeNull();
+    expect(jiraKeyOn(under, "https://tools.example.com/other/browse/VST-1")).toBeNull();
+  });
+
+  it.each([
+    ["another host", "https://elsewhere.example.org/browse/VST-1234"],
+    ["a look-alike host", "https://desk.example.com.evil.example.org/browse/VST-1234"],
+    ["another port", "https://desk.example.com:8443/browse/VST-1234"],
+    ["plain http", "http://desk.example.com/browse/VST-1234"],
+    ["a page with no ticket in it", "https://desk.example.com/secure/Dashboard.jspa"],
+    ["a bare number", "VST-1234"],
+    ["nothing", null],
+  ])("asks nothing about %s", (_what, link) => {
+    expect(jiraKeyOn(BASE, link)).toBeNull();
   });
 });
 
