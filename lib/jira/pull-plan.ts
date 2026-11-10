@@ -51,6 +51,8 @@ export type PlannedTask = {
 export type PlannedProject = {
   /** The ticket that becomes the project. Null for tickets that land outside any project. */
   from: PulledTicket | null;
+  /** True when a project here already holds that ticket: the tasks go into it, and no second project is made. */
+  existing: boolean;
   /** Null together with `from`: these tasks are made unfiled. */
   title: string | null;
   /** Epic tags this project gets, in Jira's order. Empty unless the project is a COORD. */
@@ -62,6 +64,18 @@ export type PullPlan = {
   projects: PlannedProject[];
   /** Tickets left out because a task here already holds their link. */
   alreadyHere: number;
+};
+
+/**
+ * What is here already, by ticket number. Numbers and not links: the same
+ * ticket can be linked by its page, a board with it open or a filter view,
+ * and those are three different addresses.
+ */
+export type PullHave = {
+  /** Tickets some task already links. */
+  tasks: ReadonlySet<string>;
+  /** Tickets some project was already made from. */
+  projects: ReadonlySet<string>;
 };
 
 /** A tag made from an epic's title is cut near this length, at a word. Longer than a usual tag, shorter than a project's own. */
@@ -79,7 +93,11 @@ const STATUS: Record<JiraStage, PlannedTask["status"]> = {
  * readable. A first word longer than the limit is cut where the limit falls,
  * since there is no better place.
  */
-export function epicTagName(title: string): string {
+export function epicTagName(title: string, key?: string): string {
+  // A title with no letter or digit the tag alphabet keeps (Cyrillic, emoji)
+  // would make every such epic the same placeholder. Its number is at least its own.
+  const plain = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  if (key && !/[a-z0-9]/i.test(plain)) return key.toLowerCase();
   const slug = projectTagSlug(title);
   let name = slug;
   if (slug.length > EPIC_TAG_MAX) {
@@ -118,26 +136,30 @@ export function doneByDefault(forest: PullForest): string[] {
  * What bringing `forest` in would make.
  *
  * `off` holds the keys unticked in the tree: an unticked COORD or epic takes
- * everything under it along. `linked` holds the ticket links tasks here
- * already carry, so a ticket is never made twice.
+ * everything under it along. `have` says which tickets a task or a project
+ * here already stands for, so nothing is made twice: a ticket already a task
+ * is left out, and a ticket already a project gets its new tasks added to it.
  */
 export function planPull(
   forest: PullForest,
   level: PullLevel,
   off: ReadonlySet<string>,
-  linked: ReadonlySet<string>,
+  have: PullHave,
 ): PullPlan {
   let alreadyHere = 0;
   const projects: PlannedProject[] = [];
+  // Within one pull too: a ticket read twice (two searches naming it) is one task.
+  const planned = new Set<string>();
 
   const tasksOf = (stories: PulledTicket[], tag: string | null) => {
     const made: PlannedTask[] = [];
     for (const story of stories) {
-      if (off.has(story.key)) continue;
-      if (linked.has(story.url)) {
+      if (off.has(story.key) || planned.has(story.key)) continue;
+      if (have.tasks.has(story.key)) {
         alreadyHere += 1;
         continue;
       }
+      planned.add(story.key);
       made.push({
         title: clip(story.title, TASK_TITLE_MAX) || story.key,
         ticketUrl: story.url,
@@ -150,6 +172,7 @@ export function planPull(
 
   const projectFrom = (ticket: PulledTicket): PlannedProject => ({
     from: ticket,
+    existing: have.projects.has(ticket.key),
     title: clip(ticket.title, PROJECT_TITLE_MAX) || ticket.key,
     tags: [],
     tasks: [],
@@ -172,7 +195,7 @@ export function planPull(
     const taken = new Set<string>();
     for (const epic of coord.epics) {
       if (off.has(epic.ticket.key)) continue;
-      const tag = unused(epicTagName(epic.ticket.title), taken);
+      const tag = unused(epicTagName(epic.ticket.title, epic.ticket.key), taken);
       project.tags.push(tag);
       project.tasks.push(...tasksOf(epic.stories, tag));
     }
@@ -184,20 +207,20 @@ export function planPull(
 
   const unfiled = tasksOf(forest.loose, null);
   if (unfiled.length > 0) {
-    projects.push({ from: null, title: null, tags: [], tasks: unfiled });
+    projects.push({ from: null, existing: false, title: null, tags: [], tasks: unfiled });
   }
 
   return { projects, alreadyHere };
 }
 
-/** The line under the tree: how much "Bring in" will make. */
+/** The line under the tree: how much "Bring in" will make. A project already here is not made, so it is not counted. */
 export function countPlan(plan: PullPlan): {
   projects: number;
   tags: number;
   tasks: number;
 } {
   return {
-    projects: plan.projects.filter((p) => p.from !== null).length,
+    projects: plan.projects.filter((p) => p.from !== null && !p.existing).length,
     tags: plan.projects.reduce((n, p) => n + p.tags.length, 0),
     tasks: plan.projects.reduce((n, p) => n + p.tasks.length, 0),
   };

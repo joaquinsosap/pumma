@@ -27,19 +27,25 @@ const obj = (v: unknown): Raw | null =>
 
 export type JiraConn = { baseUrl: string; token: string };
 
-/** The ids of the two link fields on one Jira. Null when that Jira has no such field. */
-export type LinkFields = { epicLink: string | null; parentLink: string | null };
+/** The ids of the fields a pull reads on one Jira. Null when that Jira has no such field. */
+export type LinkFields = {
+  epicLink: string | null;
+  parentLink: string | null;
+  /** Only an epic has a value here, in any language, which is how an epic is told apart. */
+  epicName: string | null;
+};
 
 const EPIC_LINK_KIND = "com.pyxis.greenhopper.jira:gh-epic-link";
+const EPIC_NAME_KIND = "com.pyxis.greenhopper.jira:gh-epic-label";
 const PARENT_LINK_KIND = "com.atlassian.jpo:jpo-custom-field-parent";
 const FIELD_ID = /^customfield_(\d{1,9})$/;
 
 /**
- * The two link fields out of Jira's list of fields. Found by the kind of
- * field first, which survives a rename, and by name only as a fallback.
+ * The link fields out of Jira's list of fields. Found by the kind of field
+ * first, which survives a rename, and by name only as a fallback.
  */
 export function linkFieldsFrom(raw: unknown): LinkFields {
-  const found: LinkFields = { epicLink: null, parentLink: null };
+  const found: LinkFields = { epicLink: null, parentLink: null, epicName: null };
   if (!Array.isArray(raw)) return found;
   const fields = raw
     .map(obj)
@@ -52,6 +58,7 @@ export function linkFieldsFrom(raw: unknown): LinkFields {
     )?.id as string | undefined;
   found.epicLink = byKind(EPIC_LINK_KIND) ?? byName("epic link") ?? null;
   found.parentLink = byKind(PARENT_LINK_KIND) ?? byName("parent link") ?? null;
+  found.epicName = byKind(EPIC_NAME_KIND) ?? byName("epic name") ?? null;
   return found;
 }
 
@@ -67,18 +74,21 @@ export function keyIn(value: unknown): string | null {
   );
 }
 
-/** One ticket as read, with the two tickets it names above itself. */
+/** One ticket as read, with the tickets it names above itself. */
 type Seen = {
   ticket: PulledTicket;
-  type: string | null;
+  isEpic: boolean;
   epicKey: string | null;
   parentKey: string | null;
+  /** The story a sub-task belongs to. Null for anything that is not a sub-task. */
+  subtaskOf: string | null;
 };
 
 function seenFrom(raw: unknown, base: string, ids: LinkFields): Seen | null {
   const facts = jiraFactsFrom(raw);
   if (!facts) return null;
   const fields = obj(obj(raw)?.fields) ?? {};
+  const named = ids.epicName ? fields[ids.epicName] : null;
   return {
     ticket: {
       key: facts.key,
@@ -86,9 +96,11 @@ function seenFrom(raw: unknown, base: string, ids: LinkFields): Seen | null {
       stage: facts.stage,
       url: jiraIssueUrl(base, facts.key),
     },
-    type: facts.type,
+    // The type's name covers a Jira with no epic name field; the field covers one in another language.
+    isEpic: facts.type === "Epic" || (typeof named === "string" && named.trim() !== ""),
     epicKey: ids.epicLink ? keyIn(fields[ids.epicLink]) : null,
     parentKey: ids.parentLink ? keyIn(fields[ids.parentLink]) : null,
+    subtaskOf: keyIn(fields.parent),
   };
 }
 
@@ -102,11 +114,15 @@ const NOT_JIRA: Failed = {
 const PAGE = 50;
 /** A search stops here and says so. A pull of several hundred tickets is not something to make tasks of in one go. */
 const MAX_PAGES = 6;
-/** Numbers per "key in (...)", so the address of the request stays a sane length. */
-const KEYS_PER_SEARCH = 60;
+/** Numbers per "key in (...)": one page holds them all, so a full group is one request. */
+const KEYS_PER_SEARCH = PAGE;
+/** Parents looked up for one pull. More than this hang loose, and the pull says there was more. */
+const MAX_PARENTS = PAGE;
+/** Tickets read one at a time when a search of several is refused over one of them. */
+const ONE_BY_ONE = 15;
 
 const fieldList = (ids: LinkFields) =>
-  ["summary", "status", "issuetype", ids.epicLink, ids.parentLink]
+  ["summary", "status", "issuetype", "parent", ids.epicLink, ids.parentLink, ids.epicName]
     .filter(Boolean)
     .join(",");
 
@@ -116,17 +132,24 @@ const cf = (id: string) => `cf[${FIELD_ID.exec(id)![1]}]`;
 // Fields rarely change. Asking once per Jira every ten minutes saves a request on every pull.
 const FIELDS_FOR = new Map<string, { at: number; ids: LinkFields }>();
 const FIELDS_FRESH_MS = 10 * 60 * 1000;
+const FIELDS_KEPT = 50;
 
 async function linkFields(conn: JiraConn): Promise<JiraAnswer<LinkFields>> {
   const hit = FIELDS_FOR.get(conn.baseUrl);
   if (hit && Date.now() - hit.at < FIELDS_FRESH_MS) {
     return { ok: true, data: hit.ids };
   }
+  FIELDS_FOR.delete(conn.baseUrl);
   const res = await jiraGet(conn.baseUrl, conn.token, "/rest/api/2/field");
   if (!res.ok) return res;
   if (!Array.isArray(res.data)) return NOT_JIRA;
   const ids = linkFieldsFrom(res.data);
-  FIELDS_FOR.set(conn.baseUrl, { at: Date.now(), ids });
+  // An answer with neither link in it is not worth remembering: it may be a
+  // token that sees too little, and the next one deserves a fresh look.
+  if (ids.epicLink || ids.parentLink) {
+    if (FIELDS_FOR.size >= FIELDS_KEPT) FIELDS_FOR.clear();
+    FIELDS_FOR.set(conn.baseUrl, { at: Date.now(), ids });
+  }
   return { ok: true, data: ids };
 }
 
@@ -135,17 +158,21 @@ export function forgetLinkFields(): void {
   FIELDS_FOR.clear();
 }
 
+type Found = { seen: Seen[]; capped: boolean };
+
 async function search(
   conn: JiraConn,
   ids: LinkFields,
   jql: string,
-): Promise<JiraAnswer<{ seen: Seen[]; capped: boolean }>> {
+  maxPages = MAX_PAGES,
+): Promise<JiraAnswer<Found>> {
   const seen: Seen[] = [];
-  for (let page = 0; page < MAX_PAGES; page++) {
+  for (let page = 0; page < maxPages; page++) {
     const res = await jiraGet(
       conn.baseUrl,
       conn.token,
-      `/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=${fieldList(ids)}&startAt=${page * PAGE}&maxResults=${PAGE}`,
+      // validateQuery=false: a number in the search that this token cannot see is skipped, not a reason to refuse the lot.
+      `/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=${fieldList(ids)}&startAt=${page * PAGE}&maxResults=${PAGE}&validateQuery=false`,
     );
     if (!res.ok) return res;
     const body = obj(res.data);
@@ -154,30 +181,16 @@ async function search(
       const one = seenFrom(raw, conn.baseUrl, ids);
       if (one) seen.push(one);
     }
-    const total = typeof body.total === "number" ? body.total : 0;
-    if (body.issues.length === 0 || (page + 1) * PAGE >= total) {
+    // No total given: a full page means there may be another.
+    const more =
+      typeof body.total === "number"
+        ? (page + 1) * PAGE < body.total
+        : body.issues.length === PAGE;
+    if (body.issues.length === 0 || !more) {
       return { ok: true, data: { seen, capped: false } };
     }
   }
   return { ok: true, data: { seen, capped: true } };
-}
-
-/** The tickets with these numbers, in as few searches as they fit in. */
-async function byKeys(
-  conn: JiraConn,
-  ids: LinkFields,
-  keys: string[],
-): Promise<JiraAnswer<{ seen: Seen[]; capped: boolean }>> {
-  const all: Seen[] = [];
-  let capped = false;
-  for (let i = 0; i < keys.length; i += KEYS_PER_SEARCH) {
-    const some = keys.slice(i, i + KEYS_PER_SEARCH);
-    const res = await search(conn, ids, `key in (${some.join(", ")}) ORDER BY key ASC`);
-    if (!res.ok) return res;
-    all.push(...res.data.seen);
-    capped ||= res.data.capped;
-  }
-  return { ok: true, data: { seen: all, capped } };
 }
 
 async function one(
@@ -196,38 +209,81 @@ async function one(
   return seen ? { ok: true, data: seen } : NOT_JIRA;
 }
 
+/**
+ * The tickets with these numbers. One of them may be a ticket this token
+ * cannot see (an epic naming a COORD in a project it has no access to), and
+ * some Jiras refuse the whole search over that. Then the first few are read
+ * one at a time and the hidden ones are simply not there.
+ */
+async function byKeys(
+  conn: JiraConn,
+  ids: LinkFields,
+  keys: string[],
+): Promise<JiraAnswer<Found>> {
+  const all: Seen[] = [];
+  let capped = false;
+  for (let i = 0; i < keys.length; i += KEYS_PER_SEARCH) {
+    const some = keys.slice(i, i + KEYS_PER_SEARCH);
+    const res = await search(conn, ids, `key in (${some.join(", ")}) ORDER BY key ASC`, 1);
+    if (res.ok) {
+      all.push(...res.data.seen);
+      continue;
+    }
+    if (res.why !== "error") return res;
+    capped ||= some.length > ONE_BY_ONE;
+    for (const key of some.slice(0, ONE_BY_ONE)) {
+      const single = await one(conn, ids, key);
+      if (single.ok) all.push(single.data);
+      else if (single.why !== "no-ticket" && single.why !== "forbidden") return single;
+    }
+  }
+  return { ok: true, data: { seen: all, capped } };
+}
+
 const unique = (keys: (string | null)[]) => [
   ...new Set(keys.filter((k): k is string => !!k)),
 ];
 
-/** Hang stories under their epics, and epics under the tickets above them. Anything whose parent was not read hangs loose. */
+/**
+ * Hang stories under their epics, and epics under the tickets above them.
+ * Anything whose parent was not read hangs loose. A ticket is placed once: one
+ * that is here as a COORD or an epic is not also a piece of work.
+ */
 function forestOf(coords: Seen[], epics: Seen[], stories: Seen[]): PullForest {
-  const epicNodes = new Map<string, PulledEpic>();
-  for (const e of epics) epicNodes.set(e.ticket.key, { ticket: e.ticket, stories: [] });
+  const placed = new Set<string>();
   const forest: PullForest = { coords: [], epics: [], loose: [] };
-  for (const s of stories) {
-    const under = s.epicKey ? epicNodes.get(s.epicKey) : undefined;
-    if (under) under.stories.push(s.ticket);
-    else forest.loose.push(s.ticket);
-  }
+
   const coordNodes = new Map<string, PullForest["coords"][number]>();
   for (const c of coords) {
+    if (placed.has(c.ticket.key)) continue;
+    placed.add(c.ticket.key);
     const node = { ticket: c.ticket, epics: [] };
     coordNodes.set(c.ticket.key, node);
     forest.coords.push(node);
   }
+  const epicNodes = new Map<string, PulledEpic>();
   for (const e of epics) {
-    const node = epicNodes.get(e.ticket.key)!;
+    if (placed.has(e.ticket.key)) continue;
+    placed.add(e.ticket.key);
+    const node = { ticket: e.ticket, stories: [] };
+    epicNodes.set(e.ticket.key, node);
     const above = e.parentKey ? coordNodes.get(e.parentKey) : undefined;
     if (above) above.epics.push(node);
     else forest.epics.push(node);
+  }
+  for (const s of stories) {
+    if (placed.has(s.ticket.key)) continue;
+    placed.add(s.ticket.key);
+    const under = s.epicKey ? epicNodes.get(s.epicKey) : undefined;
+    if (under) under.stories.push(s.ticket);
+    else forest.loose.push(s.ticket);
   }
   return forest;
 }
 
 /**
  * The epics these stories name, and the tickets those epics name, read in two
- * searches at most: enough to hang a handful of tickets where they belong.
+ * searches as a rule: enough to hang a handful of tickets where they belong.
  */
 async function withParents(
   conn: JiraConn,
@@ -240,7 +296,8 @@ async function withParents(
   const missing = unique(stories.map((s) => s.epicKey)).filter((k) => !have.has(k));
   let allEpics = epics;
   if (missing.length > 0) {
-    const res = await byKeys(conn, ids, missing);
+    capped ||= missing.length > MAX_PARENTS;
+    const res = await byKeys(conn, ids, missing.slice(0, MAX_PARENTS));
     if (!res.ok) return res;
     allEpics = [...epics, ...res.data.seen];
     capped ||= res.data.capped;
@@ -248,16 +305,14 @@ async function withParents(
   const above = unique(allEpics.map((e) => e.parentKey));
   let coords: Seen[] = [];
   if (above.length > 0) {
-    const res = await byKeys(conn, ids, above);
+    capped ||= above.length > MAX_PARENTS;
+    const res = await byKeys(conn, ids, above.slice(0, MAX_PARENTS));
     if (!res.ok) return res;
     coords = res.data.seen;
     capped ||= res.data.capped;
   }
   return { ok: true, data: { forest: forestOf(coords, allEpics, stories), capped } };
 }
-
-/** The kinds of ticket that are work to do, never a container of other work. */
-const LEAF_TYPES = new Set(["story", "task", "bug", "sub-task", "subtask", "improvement", "spike"]);
 
 export type PullSource =
   /** One ticket by number: a COORD, an epic or a single story. `children` brings what hangs under it. */
@@ -291,8 +346,12 @@ export async function readPull(
       "assignee = currentUser() AND resolution = Unresolved ORDER BY key ASC",
     );
     if (!mine.ok) return mine;
-    const epics = mine.data.seen.filter((s) => s.type === "Epic");
-    const stories = mine.data.seen.filter((s) => s.type !== "Epic");
+    const assigned = new Set(mine.data.seen.map((s) => s.ticket.key));
+    const epics = mine.data.seen.filter((s) => s.isEpic);
+    // A sub-task whose story is in this pull too is that story's detail, not a second task.
+    const stories = mine.data.seen.filter(
+      (s) => !s.isEpic && !(s.subtaskOf && assigned.has(s.subtaskOf)),
+    );
     const hung = await withParents(conn, ids, stories, epics);
     if (!hung.ok) return hung;
     return {
@@ -312,7 +371,7 @@ export async function readPull(
   const top = await one(conn, ids, key);
   if (!top.ok) return top;
 
-  if (top.data.type === "Epic") {
+  if (top.data.isEpic) {
     let stories: Seen[] = [];
     let capped = false;
     if (source.children && ids.epicLink) {
@@ -326,47 +385,44 @@ export async function readPull(
     return { ok: true, data: { forest: hung.data.forest, capped: capped || hung.data.capped } };
   }
 
-  // Not an epic: either a ticket that epics hang under, or a single piece of work.
-  let epics: Seen[] = [];
-  let capped = false;
-  if (ids.parentLink) {
-    const under = await search(conn, ids, `${cf(ids.parentLink)} = ${key} ORDER BY key ASC`);
+  // A ticket that names an epic is a piece of work, whatever its type is called. Nothing hangs under it.
+  if (!top.data.epicKey && ids.parentLink) {
+    // Without its children one page is enough: all that is asked is whether anything hangs here.
+    const under = await search(
+      conn,
+      ids,
+      `${cf(ids.parentLink)} = ${key} ORDER BY key ASC`,
+      source.children ? MAX_PAGES : 1,
+    );
     if (!under.ok) return under;
-    epics = under.data.seen;
-    capped = under.data.capped;
-  }
-
-  if (epics.length > 0) {
-    let stories: Seen[] = [];
-    if (source.children && ids.epicLink) {
-      const keys = epics.map((e) => e.ticket.key);
-      for (let i = 0; i < keys.length; i += KEYS_PER_SEARCH) {
-        const some = keys.slice(i, i + KEYS_PER_SEARCH);
-        const under = await search(
-          conn,
-          ids,
-          `${cf(ids.epicLink)} in (${some.join(", ")}) ORDER BY key ASC`,
-        );
-        if (!under.ok) return under;
-        stories.push(...under.data.seen);
-        capped ||= under.data.capped;
+    const epics = under.data.seen;
+    if (epics.length > 0) {
+      if (!source.children) {
+        // A COORD brought in alone: the project, and nothing in it yet.
+        return { ok: true, data: { forest: forestOf([top.data], [], []), capped: false } };
       }
+      let capped = under.data.capped;
+      const stories: Seen[] = [];
+      if (ids.epicLink) {
+        const keys = epics.map((e) => e.ticket.key);
+        for (let i = 0; i < keys.length; i += KEYS_PER_SEARCH) {
+          const some = keys.slice(i, i + KEYS_PER_SEARCH);
+          const found = await search(
+            conn,
+            ids,
+            `${cf(ids.epicLink)} in (${some.join(", ")}) ORDER BY key ASC`,
+          );
+          if (!found.ok) return found;
+          stories.push(...found.data.seen);
+          capped ||= found.data.capped;
+        }
+      }
+      return { ok: true, data: { forest: forestOf([top.data], epics, stories), capped } };
     }
-    // Without its children a COORD is brought in alone: the project, and nothing in it yet.
-    const kept = source.children ? epics : [];
-    if (!source.children) stories = [];
-    return {
-      ok: true,
-      data: { forest: forestOf([top.data], kept, stories), capped },
-    };
   }
 
-  const leaf = !!top.data.epicKey || LEAF_TYPES.has((top.data.type ?? "").toLowerCase());
-  if (!leaf) {
-    // Nothing hangs under it yet, and it is not a kind of work: a COORD with no epics.
-    return { ok: true, data: { forest: forestOf([top.data], [], []), capped } };
-  }
+  // Nothing hangs under it: one piece of work, hung where it belongs.
   const hung = await withParents(conn, ids, [top.data], []);
   if (!hung.ok) return hung;
-  return { ok: true, data: { forest: hung.data.forest, capped: capped || hung.data.capped } };
+  return { ok: true, data: hung.data };
 }
