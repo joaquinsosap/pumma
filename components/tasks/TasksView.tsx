@@ -406,7 +406,8 @@ export function TasksView({
       return result;
     }
     const result: Group[] = [];
-    for (const pr of projects) {
+    // A picked project shows alone: every other group would be an empty card to scroll past.
+    for (const pr of filteredProject ? [filteredProject] : projects) {
       const items = filtered.filter((t) => t.projectId === pr.id);
       // Empty projects still render while grouping, so there's somewhere to
       // drop the first task into.
@@ -418,6 +419,7 @@ export function TasksView({
         dropProjectId: pr.id,
       });
     }
+    if (filteredProject) return result;
     result.push({
       label: "No project",
       count: filtered.filter((t) => !t.projectId).length,
