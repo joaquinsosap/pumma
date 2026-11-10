@@ -17,6 +17,7 @@ import { addDays, iso } from "@/lib/date";
 import { parseOmni, tagBg } from "@/lib/parse";
 import { getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
+import { announceNewTask } from "@/lib/new-task-arrival";
 import { entityHref } from "@/lib/entity-href";
 import { hrefWithLife, viewShowing } from "@/lib/life-area";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
@@ -314,6 +315,8 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
         }),
       );
       if (!res?.ok) return;
+      // No bar to fly from on a phone: the card makes room for itself and glows.
+      if (type === "task" && res.data) announceNewTask(res.data.id, null);
       // After the save. Same rule as the desk bar: only a quick-picked due is
       // a preference worth learning from.
       nudge.record("captureType", type);

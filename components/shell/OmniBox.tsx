@@ -38,6 +38,7 @@ import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { PriorityQuickPick } from "@/components/shell/PriorityQuickPick";
 import type { TaskPriority } from "@/lib/types";
 import { OmniHighlightInput } from "@/components/shell/OmniHighlightInput";
+import { announceNewTask } from "@/lib/new-task-arrival";
 import { isEditableTarget } from "@/lib/is-editable-target";
 import {
   completeOmniToken,
@@ -552,6 +553,8 @@ export function OmniBox({
     const trimmed = text.trim();
     if (!trimmed) return;
     const taskDue = parsed.due ?? pickedDue ?? defaultTaskDue;
+    // Where the bar is now: a board showing the new task flies its card in from here.
+    const typedAt = inputRef.current?.getBoundingClientRect() ?? null;
 
     startTransition(async () => {
       const res = await trySave(() =>
@@ -567,6 +570,7 @@ export function OmniBox({
         }),
       );
       if (!res?.ok) return;
+      if (type === "task" && res.data) announceNewTask(res.data.id, typedAt);
       // After the save, never before. The due is only worth learning from
       // when it came from the quick-pick: a typed "#friday" is a decision
       // about one task, not a preference.

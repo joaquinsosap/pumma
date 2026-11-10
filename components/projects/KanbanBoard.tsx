@@ -42,6 +42,12 @@ import { dropIndex } from "@/lib/kanban-drop";
 import { sortTasks, type ProjectTaskSort } from "@/lib/collection-sort";
 import { trySave } from "@/lib/try-save";
 import { cn } from "@/lib/utils";
+import {
+  arrivalIsFresh,
+  onNewTask,
+  type NewTaskArrival,
+} from "@/lib/new-task-arrival";
+import { landCard } from "@/lib/land-card";
 
 export type ColumnId = "todo" | "doing" | "done";
 
@@ -283,6 +289,37 @@ export function KanbanBoard({
   useEffect(() => {
     setBoard(groupByStatus(tasks, sort, sortReversed));
   }, [tasks, sort, sortReversed]);
+
+  // A task the capture bar just made is brought in rather than appearing. The
+  // bar's word and the card can arrive in either order (the card comes with
+  // the server's answer), so both ask, and whichever is second finds the other.
+  const boardRef = useRef<HTMLDivElement>(null);
+  const arrivalRef = useRef<NewTaskArrival | null>(null);
+  const bringIn = () => {
+    const arrival = arrivalRef.current;
+    if (!arrival) return;
+    if (!arrivalIsFresh(arrival, Date.now())) {
+      arrivalRef.current = null;
+      return;
+    }
+    const card = boardRef.current?.querySelector<HTMLElement>(
+      `[data-task-id="${window.CSS.escape(arrival.id)}"]`,
+    );
+    // Not here yet, or filed in another project and never coming.
+    if (!card) return;
+    arrivalRef.current = null;
+    landCard(card, arrival.from);
+  };
+  useEffect(
+    () =>
+      onNewTask((arrival) => {
+        arrivalRef.current = arrival;
+        bringIn();
+      }),
+    // bringIn only reads refs, so one subscription for the board's life.
+    [],
+  );
+  useEffect(bringIn, [items]);
 
   // Mouse drags start after a tiny move; touch needs a long-press first so
   // plain swipes keep scrolling the board instead of grabbing cards.
@@ -542,7 +579,10 @@ export function KanbanBoard({
       onDragCancel={handleDragCancel}
     >
       {railPortal}
-      <div className="h-full min-h-0 flex-1 gap-3.5 max-lg:flex max-lg:snap-x max-lg:snap-mandatory max-lg:gap-3 max-lg:overflow-x-auto max-lg:overscroll-x-contain max-lg:scroll-px-3 lg:grid lg:grid-cols-3">
+      <div
+        ref={boardRef}
+        className="h-full min-h-0 flex-1 gap-3.5 max-lg:flex max-lg:snap-x max-lg:snap-mandatory max-lg:gap-3 max-lg:overflow-x-auto max-lg:overscroll-x-contain max-lg:scroll-px-3 lg:grid lg:grid-cols-3"
+      >
         {COLS.map((col) => (
           <KanbanColumn
             key={col.key}
@@ -710,6 +750,7 @@ function KanbanCard({
     <div
       ref={setNodeRef}
       style={style}
+      data-task-id={task.id}
       className={cn(
         "kanban-card cursor-grab touch-manipulation active:cursor-grabbing",
         isDragging && "kanban-card--dragging opacity-35",
