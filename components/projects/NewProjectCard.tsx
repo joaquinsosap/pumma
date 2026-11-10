@@ -8,6 +8,7 @@ import type { LifeArea } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
 import { askCapture } from "@/lib/ask-capture";
+import { isTutorialActive } from "@/lib/tutorial-lock";
 import { projectCreatedLine } from "@/lib/project-created";
 import { toast } from "sonner";
 
@@ -50,8 +51,11 @@ export function NewProjectCard({ lifeArea, onCreated, className }: Props) {
         type="button"
         // Where the capture bar is on screen it makes the project, set to
         // "New project"; this card's own box is for screens without the bar.
+        // The tour holds the bar still, so during it the card answers itself.
         onClick={() => {
-          if (!askCapture("task", { project: true })) setOpen(true);
+          if (isTutorialActive() || !askCapture("task", { project: true })) {
+            setOpen(true);
+          }
         }}
         className={cn(
           "flex min-h-[88px] min-w-[160px] cursor-pointer flex-col items-center justify-center gap-1.5 rounded-[11px] border border-dashed border-border bg-surface/50 p-[11px_14px] text-faint transition-colors hover:border-faint2 hover:bg-surface hover:text-muted",

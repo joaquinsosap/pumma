@@ -301,8 +301,11 @@ export function OmniBox({
     (value: string, start: number, end: number) => {
       const cycle = rotateRef.current;
       return omniHint(value, start, end, {
-        pool: [...tags.map((t) => t.name), ...RESERVED_WORDS],
-        typeWords: RESERVED_TYPE_WORDS,
+        // A project's name has no tags or type words in it to finish.
+        pool: makingProject
+          ? []
+          : [...tags.map((t) => t.name), ...RESERVED_WORDS],
+        typeWords: makingProject ? [] : RESERVED_TYPE_WORDS,
         // Matches the handler's "again" test: the text before the caret is what Tab left.
         cycle:
           cycle && value.slice(0, start) === cycle.from
@@ -310,7 +313,7 @@ export function OmniBox({
             : null,
       });
     },
-    [tags],
+    [tags, makingProject],
   );
 
   // A "New note" button somewhere on the page: become what it named, take the
@@ -411,7 +414,7 @@ export function OmniBox({
       // switching type — completing what you're writing is the more specific
       // intent, and there's nothing to complete the rest of the time.
       const el = inputRef.current;
-      if (el && active === el && !e.shiftKey) {
+      if (el && active === el && !e.shiftKey && !makingProject) {
         const selStart = el.selectionStart ?? el.value.length;
         const selEnd = el.selectionEnd ?? selStart;
         // The last press left its guess SELECTED after the caret. Complete
@@ -509,7 +512,7 @@ export function OmniBox({
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [mode, type, tags, setText]);
+  }, [mode, type, tags, setText, makingProject]);
 
   useEffect(() => {
     const OMNI_CLEAR_MS = 3000;
@@ -604,16 +607,21 @@ export function OmniBox({
 
   // "#ask" and "#plan" in the text both steer the bar to the assistant — they
   // were two doors to one room even before the modes merged.
+  //
+  // Not while a project is being named. Its name is taken whole, so "Q4 #ask
+  // review" is a name there, not a question for the assistant.
   useEffect(() => {
+    if (makingProject) return;
     if (parsed.modeToken && mode !== "assistant") setMode("assistant");
-  }, [parsed.modeToken, mode]);
+  }, [parsed.modeToken, mode, makingProject]);
 
   useEffect(() => {
+    if (makingProject) return;
     if (parsed.typeToken && parsed.typeToken !== type) {
       setMode("capture");
       setType(parsed.typeToken);
     }
-  }, [parsed.typeToken, type]);
+  }, [parsed.typeToken, type, makingProject]);
 
   // What was typed is the project's name, whole: no tags or dates are read out of it.
   const submitProject = (title: string) => {
