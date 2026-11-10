@@ -6,6 +6,8 @@ import { greeting, iso } from "@/lib/date";
 import { formatTopbarDateLine } from "@/lib/date-context";
 import { DEFAULT_USER_NAME } from "@/lib/user-display";
 import { ActiveTaskTimer } from "@/components/shell/ActiveTaskTimer";
+import { CaptureButton } from "@/components/shell/CaptureButton";
+import { captureButtonFor } from "@/lib/capture-context";
 import { TopbarProjectPill } from "@/components/shell/TopbarProjectPill";
 import { NotificationCenter } from "@/components/notifications/NotificationCenter";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
@@ -59,6 +61,7 @@ export function Topbar({
   // that goes nowhere is worse than no link, because you learn to distrust
   // the other two.
   const pathname = usePathname();
+  const newKind = captureButtonFor(pathname);
   const [life] = useLifeView();
   const linkTo = (path: string) => {
     const [base] = path.split("?");
@@ -96,6 +99,10 @@ export function Topbar({
               color={activeProject.color}
               onClear={activeProject.onClear}
             />
+          ) : null}
+          {/* Wide screens only: there the bar it points at is on screen. A phone has the dock's plus. */}
+          {newKind ? (
+            <CaptureButton type={newKind} className="max-lg:hidden" />
           ) : null}
           <ActiveTaskTimer className="min-w-0 flex-1" />
         </div>

@@ -6,6 +6,7 @@ import type { Task, Tag } from "@/lib/schemas";
 import { TaskList } from "@/components/tasks/TaskList";
 import { CarryoverSection } from "@/components/tasks/CarryoverSection";
 import { WidgetHeader, WidgetHeaderLink } from "@/components/home/WidgetLink";
+import { CaptureButton } from "@/components/shell/CaptureButton";
 import { addDays, iso } from "@/lib/date";
 import { type LifeView } from "@/lib/life-area";
 import { taskDetailHref, tasksListHref } from "@/lib/task-links";
@@ -90,6 +91,7 @@ export function TodayTasksCard({
           </WidgetHeaderLink>
         </div>
         <div className="flex shrink-0 items-center gap-1">
+          <CaptureButton type="task" compact />
           {!onToday && (
             <button
               type="button"

@@ -14,6 +14,59 @@ export type CaptureContext = {
 
 type ProjectRef = { id: string; title: string };
 
+/** What each kind of capture is called on a button. */
+export const CAPTURE_NAMES: Record<OmniType, string> = {
+  task: "task",
+  habit: "habit",
+  goal: "goal",
+  note: "note",
+};
+
+/** What the bar suggests typing for each kind, on a page with nothing more specific to say. */
+const KIND_PLACEHOLDER: Record<OmniType, string> = {
+  task: 'Capture a task… try "pay rent friday #finance !high: transfer to the landlord"',
+  habit: 'New habit… try "read 20 min" or "stretch #health"',
+  goal: 'New goal… try "run a half marathon"',
+  note: 'New note… try "Meeting ideas: discuss roadmap #work" or just jot thoughts',
+};
+
+/**
+ * The words in the empty bar. The page's own while the bar makes what the page
+ * makes ("Add to Website redesign…"); the kind's own once it has been switched
+ * to something else, so a bar set to habits on Home does not go on asking for
+ * a task.
+ */
+export function capturePlaceholder(
+  capture: CaptureContext,
+  type: OmniType,
+): string {
+  return type === capture.type ? capture.placeholder : KIND_PLACEHOLDER[type];
+}
+
+/** The pages whose title carries a "New ..." button, and what it makes there. */
+const BUTTON_PAGES: { path: string; type: OmniType }[] = [
+  { path: "/tasks", type: "task" },
+  { path: "/projects", type: "task" },
+  { path: "/calendar", type: "task" },
+  { path: "/notes", type: "note" },
+  { path: "/habits", type: "habit" },
+  { path: "/goals", type: "goal" },
+];
+
+/**
+ * The kind of thing a page's "New ..." button makes, or null where a page has
+ * none: Settings, the assistant and the life calendar are not places you add
+ * a task from. Home makes a task, whatever the default capture is set to: the
+ * button says what it does, and its widgets carry the other kinds.
+ */
+export function captureButtonFor(pathname: string): OmniType | null {
+  if (pathname === "/") return "task";
+  const page = BUTTON_PAGES.find(
+    (p) => pathname === p.path || pathname.startsWith(`${p.path}/`),
+  );
+  return page?.type ?? null;
+}
+
 function projectFromParams(
   searchParams: URLSearchParams,
   projects: ProjectRef[],
@@ -46,7 +99,7 @@ export function getCaptureContext(
   if (pathname === "/habits") {
     return {
       type: "habit",
-      placeholder: 'New habit… try "read 20 min" or "stretch #health"',
+      placeholder: KIND_PLACEHOLDER.habit,
     };
   }
 
@@ -75,8 +128,7 @@ export function getCaptureContext(
   if (pathname === "/notes" || pathname.startsWith("/notes/")) {
     return {
       type: "note",
-      placeholder:
-        'New note… try "Meeting ideas: discuss roadmap #work" or just jot thoughts',
+      placeholder: KIND_PLACEHOLDER.note,
     };
   }
 
@@ -114,7 +166,7 @@ export function getCaptureContext(
       hint: day ? formatDay(day) : undefined,
       placeholder: day
         ? `Add for ${formatDay(day)}… try "call dentist #health"`
-        : 'Capture a task… try "pay rent friday #finance !high: transfer to the landlord"',
+        : KIND_PLACEHOLDER.task,
     };
     return withActiveProject(base, projectFromParams(searchParams, projects));
   }

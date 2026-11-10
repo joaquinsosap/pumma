@@ -15,7 +15,7 @@ import type { EntityLifeArea, OmniType } from "@/lib/types";
 import type { Note, Project, Tag, Task } from "@/lib/schemas";
 import { addDays, iso } from "@/lib/date";
 import { parseOmni, tagBg } from "@/lib/parse";
-import { getCaptureContext } from "@/lib/capture-context";
+import { capturePlaceholder, getCaptureContext } from "@/lib/capture-context";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { announceNewTask } from "@/lib/new-task-arrival";
 import { entityHref } from "@/lib/entity-href";
@@ -465,7 +465,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
               rows={2}
               placeholder={
                 mode === "capture"
-                  ? capture.placeholder
+                  ? capturePlaceholder(capture, type)
                   : "Ask about your data, or describe what to build…"
               }
               className="w-full resize-none rounded-2xl border-2 border-ink bg-surface px-4 py-3.5 text-[17px] font-medium leading-snug text-ink outline-none placeholder:text-faint"

@@ -15,7 +15,8 @@ import type { EntityLifeArea, OmniType } from "@/lib/types";
 import type { Project, Tag, Task, Note } from "@/lib/schemas";
 import { iso } from "@/lib/date";
 import { parseOmni, taskTitleEnd } from "@/lib/parse";
-import { getCaptureContext } from "@/lib/capture-context";
+import { capturePlaceholder, getCaptureContext } from "@/lib/capture-context";
+import { CAPTURE_BAR_EVENT } from "@/lib/ask-capture";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { entityHref } from "@/lib/entity-href";
 import { cn } from "@/lib/utils";
@@ -290,6 +291,33 @@ export function OmniBox({
     },
     [tags],
   );
+
+  // A "New note" button somewhere on the page: become what it named, take the
+  // caret, and move once so the eye finds where the typing will go.
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      if (isTutorialActive()) return;
+      const asked = (e as CustomEvent).detail?.type as OmniType | undefined;
+      wantFocusRef.current = true;
+      setMode("capture");
+      if (asked && OMNI_TYPES.includes(asked)) setType(asked);
+      inputRef.current?.focus();
+      omniEscBlurredAtRef.current = null;
+      const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      if (!still) {
+        omniRef.current?.animate(
+          [
+            { transform: "scale(1)" },
+            { transform: "scale(1.012)" },
+            { transform: "scale(1)" },
+          ],
+          { duration: 420, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+        );
+      }
+    };
+    window.addEventListener(CAPTURE_BAR_EVENT, onAsk);
+    return () => window.removeEventListener(CAPTURE_BAR_EVENT, onAsk);
+  }, []);
 
   useEffect(() => {
     if (!wantFocusRef.current) return;
@@ -711,7 +739,7 @@ export function OmniBox({
                   submit();
                 }
               }}
-              placeholder={capture.placeholder}
+              placeholder={capturePlaceholder(capture, type)}
               disabled={pending || busy}
             />
           ) : (
@@ -736,7 +764,7 @@ export function OmniBox({
               placeholder={
                 mode === "assistant"
                   ? "Ask about your data, or describe something to change…"
-                  : capture.placeholder
+                  : capturePlaceholder(capture, type)
               }
               disabled={pending || busy}
             />

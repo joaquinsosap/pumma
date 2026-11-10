@@ -22,6 +22,7 @@ import {
   WidgetRowLink,
 } from "@/components/home/WidgetLink";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
+import { CaptureButton } from "@/components/shell/CaptureButton";
 import {
   habitWeekRowClass,
   habitWeekCellClass,
@@ -101,6 +102,7 @@ export function HomeHabitsGoals({
               {habitsDone} / {habits.length} today
             </span>
           </WidgetHeaderLink>
+          <CaptureButton type="habit" compact />
         </WidgetHeader>
         <div
           className={cn("mb-2 border-b border-border2 pb-2", habitWeekRowClass)}
@@ -233,6 +235,7 @@ export function HomeHabitsGoals({
               View all →
             </span>
           </WidgetHeaderLink>
+          <CaptureButton type="goal" compact />
         </WidgetHeader>
         <div className="flex flex-col gap-3">
           {goals.slice(0, 3).map((g) => {
