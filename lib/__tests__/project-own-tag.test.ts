@@ -101,3 +101,45 @@ describe("a task in a project wears the project's own tag", () => {
     expect(task.tagIds).toContain(own.id);
   });
 });
+
+describe("a capture tagged for two projects", () => {
+  beforeEach(() => {
+    resetStore();
+  });
+
+  it("names every task it made, so the board on screen can show its own arriving", async () => {
+    const { project: first } = await entertainment();
+    const second = await insertProject({
+      userId,
+      title: "Reading",
+      description: "",
+      color: COLOR,
+      progress: 0,
+      label: "0/0",
+      goalId: null,
+      tagIds: [],
+      lifeArea: "personal",
+      createdAt: "2026-07-18",
+    });
+    await insertTag(userId, "reading", {
+      projectId: second.id,
+      isProjectPrimary: true,
+      color: COLOR,
+    });
+
+    const res = await createFromOmni({
+      text: "one for each #entertainment #reading",
+      type: "task",
+    });
+
+    expect(res.ok).toBe(true);
+    const ids = (res.ok && res.data?.ids) || [];
+    expect(ids).toHaveLength(2);
+    const made = getStore().tasks.filter((t) => ids.includes(t._id));
+    expect(made.map((t) => t.projectId).sort()).toEqual(
+      [first.id, second.id].sort(),
+    );
+    // The first id is still the one the toast's link opens.
+    expect(res.ok && res.data?.id).toBe(ids[0]);
+  });
+});

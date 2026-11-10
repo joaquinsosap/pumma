@@ -294,26 +294,26 @@ export function KanbanBoard({
   // bar's word and the card can arrive in either order (the card comes with
   // the server's answer), so both ask, and whichever is second finds the other.
   const boardRef = useRef<HTMLDivElement>(null);
-  const arrivalRef = useRef<NewTaskArrival | null>(null);
+  // A list, since one capture tagged for two projects announces a task for each.
+  const arrivalsRef = useRef<NewTaskArrival[]>([]);
   const bringIn = () => {
-    const arrival = arrivalRef.current;
-    if (!arrival) return;
-    if (!arrivalIsFresh(arrival, Date.now())) {
-      arrivalRef.current = null;
-      return;
-    }
-    const card = boardRef.current?.querySelector<HTMLElement>(
-      `[data-task-id="${window.CSS.escape(arrival.id)}"]`,
-    );
-    // Not here yet, or filed in another project and never coming.
-    if (!card) return;
-    arrivalRef.current = null;
-    landCard(card, arrival.from);
+    if (!arrivalsRef.current.length) return;
+    const now = Date.now();
+    arrivalsRef.current = arrivalsRef.current.filter((arrival) => {
+      if (!arrivalIsFresh(arrival, now)) return false;
+      const card = boardRef.current?.querySelector<HTMLElement>(
+        `[data-task-id="${window.CSS.escape(arrival.id)}"]`,
+      );
+      // Not here yet, or filed in another project and never coming: keep waiting while it is fresh.
+      if (!card) return true;
+      landCard(card, arrival.from);
+      return false;
+    });
   };
   useEffect(
     () =>
       onNewTask((arrival) => {
-        arrivalRef.current = arrival;
+        arrivalsRef.current.push(arrival);
         bringIn();
       }),
     // bringIn only reads refs, so one subscription for the board's life.

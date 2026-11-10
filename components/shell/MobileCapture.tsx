@@ -316,7 +316,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
       );
       if (!res?.ok) return;
       // No bar to fly from on a phone: the card makes room for itself and glows.
-      if (type === "task" && res.data) announceNewTask(res.data.id, null);
+      if (type === "task" && res.data) {
+        for (const id of res.data.ids ?? [res.data.id]) announceNewTask(id, null);
+      }
       // After the save. Same rule as the desk bar: only a quick-picked due is
       // a preference worth learning from.
       nudge.record("captureType", type);

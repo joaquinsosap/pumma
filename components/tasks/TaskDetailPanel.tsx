@@ -584,7 +584,16 @@ export function TaskDetailPanel({
               setWideOpen(open);
             }}
           >
-            <DialogContent className="flex h-[min(80dvh,720px)] max-w-3xl flex-col gap-3 p-5">
+            {/* Portaled out of the page, but React still hands its touches up
+                to whatever rendered it. On a phone that is the bottom sheet,
+                which reads a downward swipe as "close me": scrolling the text
+                would shut the panel under the editor. */}
+            <DialogContent
+              className="flex h-[min(80dvh,720px)] max-w-3xl flex-col gap-3 p-5"
+              onTouchStart={(e) => e.stopPropagation()}
+              onTouchMove={(e) => e.stopPropagation()}
+              onTouchEnd={(e) => e.stopPropagation()}
+            >
               <DialogTitle className="pr-8 text-[15px] font-bold leading-snug">
                 {task.title}
               </DialogTitle>

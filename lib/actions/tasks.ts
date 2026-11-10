@@ -68,7 +68,13 @@ const omniSchema = z.object({
 export async function createFromOmni(
   input: z.infer<typeof omniSchema>,
 ): Promise<
-  ActionResult<{ id: string; label: string; lifeArea: EntityLifeArea }>
+  ActionResult<{
+    id: string;
+    /** Every task the capture made: one per project its tags named. */
+    ids?: string[];
+    label: string;
+    lifeArea: EntityLifeArea;
+  }>
 > {
   const parsed = omniSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
@@ -175,7 +181,12 @@ export async function createFromOmni(
         : "Task added";
     return {
       ok: true,
-      data: { id: created[0].id, label, lifeArea: created[0].lifeArea },
+      data: {
+        id: created[0].id,
+        ids: created.map((t) => t.id),
+        label,
+        lifeArea: created[0].lifeArea,
+      },
       // Undo removes every copy the capture made, not just the first.
       undo: {
         type: "create",

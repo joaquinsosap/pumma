@@ -570,7 +570,13 @@ export function OmniBox({
         }),
       );
       if (!res?.ok) return;
-      if (type === "task" && res.data) announceNewTask(res.data.id, typedAt);
+      // Every copy, not the first: a capture tagged for two projects makes a
+      // task in each, and the board on screen may be showing either.
+      if (type === "task" && res.data) {
+        for (const id of res.data.ids ?? [res.data.id]) {
+          announceNewTask(id, typedAt);
+        }
+      }
       // After the save, never before. The due is only worth learning from
       // when it came from the quick-pick: a typed "#friday" is a decision
       // about one task, not a preference.
