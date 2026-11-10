@@ -140,12 +140,14 @@ function shellFromCore(
   const tasks = filterByLifeView(core.allTasks, lifeView);
   const habits = filterByLifeView(core.allHabits, lifeView);
   // One order everywhere a project is listed: the rail, the home widget, the
-  // pickers and Tasks grouped by project all read this.
+  // pickers and Tasks grouped by project all read this. Sorted on the tasks
+  // in view, the same ones the rail counts its progress from, so a project
+  // shared by both sides of life sits where its visible work puts it.
   const projects = sortProjects(
     filterByLifeView(core.allProjects, lifeView),
     core.settings?.projectSort ?? "created",
     (core.settings?.sortReversed ?? []).includes("project"),
-    core.allTasks,
+    tasks,
   );
   const notes = filterByLifeView(core.allNotes, lifeView);
   // Goals were the one collection left out of this, so switching to Work still

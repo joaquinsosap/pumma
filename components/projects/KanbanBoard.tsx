@@ -16,6 +16,7 @@ import {
   useSensors,
   type DragEndEvent,
   type DragMoveEvent,
+  type DragCancelEvent,
   type DragStartEvent,
   type UniqueIdentifier,
   pointerWithin,
@@ -473,7 +474,12 @@ export function KanbanBoard({
     });
   };
 
-  const handleDragCancel = () => {
+  const handleDragCancel = (event: DragCancelEvent) => {
+    if (isProjectDrag(event)) {
+      // No task moved, so the board is left exactly as it is.
+      setDragActive(false);
+      return;
+    }
     setActiveId(null);
     setDragActive(false);
     releaseClickSuppression();

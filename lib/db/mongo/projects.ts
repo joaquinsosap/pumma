@@ -34,16 +34,21 @@ export async function getProject(
 
 export async function insertProject(doc: NewProjectDoc): Promise<Project> {
   const c = await col();
-  // A new project goes first in the hand-made order. Rows from before the
-  // field existed sort lowest and read 0, which is the floor used here.
+  // A new project goes first in the hand-made order: one below the lowest
+  // order ever written. Rows from before the field existed are left out of
+  // the read, because a missing field sorts lowest and would always win,
+  // handing every new project the same -1.
   let order = doc.order;
   if (order === undefined) {
-    const first = await c
-      .find({ userId: doc.userId }, { projection: { order: 1 } })
+    const lowest = await c
+      .find(
+        { userId: doc.userId, order: { $exists: true } },
+        { projection: { order: 1 } },
+      )
       .sort({ order: 1 })
       .limit(1)
       .next();
-    order = Math.min(0, first?.order ?? 0) - 1;
+    order = Math.min(0, lowest?.order ?? 0) - 1;
   }
   const full = {
     updatedAt: new Date().toISOString(),

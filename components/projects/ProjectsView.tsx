@@ -108,8 +108,21 @@ export function ProjectsView({
     () => setReversed(sortReversedSetting.includes("project")),
     [sortReversedSetting],
   );
-  // The order a drag just made, shown until its save settles.
+  // The order a drag just made, shown until the server's copy says the same.
   const [handOrder, setHandOrder] = useState<string[] | null>(null);
+  useEffect(() => {
+    if (!handOrder) return;
+    const saved = sortProjects(rawProjects, "custom").map((p) => p.id);
+    const sameList =
+      saved.length === handOrder.length &&
+      saved.every((id) => handOrder.includes(id));
+    // Let go once the save has landed, or the list itself changed under it.
+    // Until then a refresh carrying the old order must not undo the drop, and
+    // a second drag made meanwhile keeps its own order.
+    if (!sameList || saved.every((id, i) => id === handOrder[i])) {
+      setHandOrder(null);
+    }
+  }, [rawProjects, handOrder]);
   const changeSort = (next: ProjectSort) => {
     setSort(next);
     setReversed(false);
@@ -144,13 +157,18 @@ export function ProjectsView({
   const selected = projects.find((p) => p.id === projectId) ?? projects[0];
   // The first card is only where the page starts. The rail can reorder itself
   // now (Last edited does, with every task touched), and "the first" would
-  // then swap the board, and the capture bar's target, under the user. So the
-  // project on screen is written into the address once, before anything moves.
-  const pinned = useRef(false);
+  // then swap the board, and the capture bar's target, under the user. So
+  // whenever the address names no project, the one on screen is written in.
+  const lastPinned = useRef<string | null>(null);
   useEffect(() => {
-    if (pinned.current || !selected) return;
-    pinned.current = true;
-    if (!searchParams.get("project")) void setProjectId(selected.id);
+    if (!selected) return;
+    if (searchParams.get("project")) {
+      lastPinned.current = null;
+      return;
+    }
+    if (lastPinned.current === selected.id) return;
+    lastPinned.current = selected.id;
+    void setProjectId(selected.id);
   }, [selected, searchParams, setProjectId]);
   const spTasks = tasks.filter((t) => t.projectId === selected?.id);
   const [railHost, setRailHost] = useState<HTMLDivElement | null>(null);
@@ -175,9 +193,9 @@ export function ProjectsView({
         () => {
           setSort(before.sort);
           setReversed(before.reversed);
+          setHandOrder(null);
         },
       );
-      setHandOrder(null);
     });
   };
 
