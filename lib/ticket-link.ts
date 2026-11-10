@@ -42,11 +42,23 @@ export function cleanTicketUrl(raw: unknown): string | null {
   // "https://me:secret@jira..." would store a password in a task.
   if (url.username || url.password) return null;
   if (!url.hostname) return null;
-  return url.toString();
+  // Measured again once tidied: escaping spaces and accents can make a link
+  // several times longer than what was pasted, and the cap is on what is kept.
+  const clean = url.toString();
+  return clean.length > TICKET_URL_MAX ? null : clean;
 }
 
 /** Jira issue keys: a project code, a dash, a number. */
 const JIRA_KEY = /^[A-Za-z][A-Za-z0-9_]{1,29}-\d{1,9}$/;
+
+/** A path segment as text. A broken escape ("%zz") is no key, and must not throw: this runs while a page draws. */
+function decoded(segment: string): string | null {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return null;
+  }
+}
 
 function jiraKeyIn(url: URL): string | null {
   // ".../browse/VST-1234" on Cloud and Data Center alike, with or without a
@@ -54,8 +66,8 @@ function jiraKeyIn(url: URL): string | null {
   const parts = url.pathname.split("/").filter(Boolean);
   for (let i = 0; i < parts.length - 1; i++) {
     if (parts[i] !== "browse" && parts[i] !== "issues") continue;
-    const candidate = decodeURIComponent(parts[i + 1]);
-    if (JIRA_KEY.test(candidate)) return candidate.toUpperCase();
+    const candidate = decoded(parts[i + 1]);
+    if (candidate && JIRA_KEY.test(candidate)) return candidate.toUpperCase();
   }
   // A board with one issue open: "...?selectedIssue=VST-1234".
   const picked = url.searchParams.get("selectedIssue");

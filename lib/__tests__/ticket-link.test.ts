@@ -28,6 +28,15 @@ describe("cleanTicketUrl", () => {
     expect(cleanTicketUrl({ href: "https://x.test" })).toBeNull();
   });
 
+  it("measures the link it will keep, not the one that was pasted", () => {
+    // Under the cap as typed, several times over it once the accents are escaped.
+    const pasted = `https://jira.example.com/browse/${"\u00e9".repeat(1000)}`;
+    expect(pasted.length).toBeLessThan(TICKET_URL_MAX);
+    expect(cleanTicketUrl(pasted)).toBeNull();
+    const kept = cleanTicketUrl("https://jira.example.com/browse/VST 1")!;
+    expect(kept.length).toBeLessThanOrEqual(TICKET_URL_MAX);
+  });
+
   it("refuses a link longer than any ticket's", () => {
     const long = `https://jira.example.com/browse/VST-1?q=${"a".repeat(TICKET_URL_MAX)}`;
     expect(cleanTicketUrl(long)).toBeNull();
@@ -65,6 +74,16 @@ describe("ticketFromUrl", () => {
   it("does not mistake a path word for a key", () => {
     expect(ticketFromUrl("https://example.org/browse/shoes")?.key).toBeNull();
     expect(ticketFromUrl("https://example.org/browse")?.key).toBeNull();
+  });
+
+  it("reads a link with a broken escape as a plain link instead of failing", () => {
+    for (const url of [
+      "https://jira.example.com/browse/%zz",
+      "https://jira.example.com/browse/%E0%A4",
+    ]) {
+      expect(() => ticketFromUrl(url)).not.toThrow();
+      expect(ticketFromUrl(url)).toMatchObject({ key: null, kind: "link" });
+    }
   });
 
   it("shows nothing for no link, and nothing for a stored value that is not one", () => {

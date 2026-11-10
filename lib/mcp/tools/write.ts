@@ -160,8 +160,10 @@ export const createTask = defineTool({
       ),
   }),
   handler: async (input, caller) => {
-    const ticketUrl = input.ticketUrl ? cleanTicketUrl(input.ticketUrl) : null;
-    if (input.ticketUrl && !ticketUrl) {
+    // Sent at all, it has to be a link: a blank one is a mistake to report, not "no ticket".
+    const ticketUrl =
+      input.ticketUrl === undefined ? null : cleanTicketUrl(input.ticketUrl);
+    if (input.ticketUrl !== undefined && !ticketUrl) {
       return { text: NOT_A_LINK, data: { ok: false } };
     }
     const ctx = await contextFor(caller);
@@ -582,8 +584,11 @@ export const setTaskTicket = defineTool({
     url: ticketUrlField.nullable(),
   }),
   handler: async (input, caller) => {
-    const url = input.url ? cleanTicketUrl(input.url) : null;
-    if (input.url && !url) return { text: NOT_A_LINK, data: { ok: false } };
+    // Only null takes the link off. A blank string is refused like any other non-link.
+    const url = input.url === null ? null : cleanTicketUrl(input.url);
+    if (input.url !== null && !url) {
+      return { text: NOT_A_LINK, data: { ok: false } };
+    }
     const updated = await updateTaskRow(caller.userId, input.id, {
       ticketUrl: url,
     });

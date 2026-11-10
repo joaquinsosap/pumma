@@ -157,6 +157,22 @@ describe("the MCP", () => {
     expect(stored(task.id).ticketUrl).toBe(JIRA);
   });
 
+  it("refuses a blank link instead of quietly unlinking", async () => {
+    const task = await makeTask();
+    await link({ id: task.id, url: JIRA });
+    const out = await link({ id: task.id, url: "" });
+    expect(out.data.ok).toBe(false);
+    expect(stored(task.id).ticketUrl).toBe(JIRA);
+  });
+
+  it("stays readable when the stored link has a broken escape in it", async () => {
+    const task = await makeTask();
+    const out = await link({ id: task.id, url: "https://jira.example.com/browse/%zz" });
+    expect(out.data.ok).toBe(true);
+    const got = await read(task.id);
+    expect(got.data.ticket).toMatchObject({ key: null });
+  });
+
   it("answers plainly for a task that is not this user's", async () => {
     const out = await link({ id: "0".repeat(24), url: JIRA });
     expect(out.data.ok).toBe(false);
@@ -169,6 +185,16 @@ describe("the MCP", () => {
     )) as { data: { ok: boolean; id: string } };
     expect(out.data.ok).toBe(true);
     expect(stored(out.data.id).ticketUrl).toBe(JIRA);
+  });
+
+  it("creates nothing when the link is sent blank", async () => {
+    const before = getStore().tasks.length;
+    const out = (await createTask.handler(
+      createTask.inputSchema.parse({ title: "Blank link", ticketUrl: "" }),
+      await caller(),
+    )) as { data: { ok: boolean } };
+    expect(out.data.ok).toBe(false);
+    expect(getStore().tasks.length).toBe(before);
   });
 
   it("creates nothing when the link is not one", async () => {

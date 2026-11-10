@@ -65,7 +65,15 @@ export type StarterKind =
  * (`status`, `completedAt`, habit entries) — see the note above.
  */
 const AUTHORED: Record<StarterKind, string[]> = {
-  task: ["title", "description", "priority", "due", "tagIds", "subtasks"],
+  task: [
+    "title",
+    "description",
+    "priority",
+    "due",
+    "tagIds",
+    "subtasks",
+    "ticketUrl",
+  ],
   note: ["title", "body", "tagIds"],
   habit: ["name", "frequency", "tagIds", "goalIds"],
   // `progress` is left out on purpose: on a goal it is computed from the
