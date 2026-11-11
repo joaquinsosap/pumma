@@ -14,6 +14,7 @@ import { saveJiraConnectionAction, saveJiraStatusMapAction } from "@/lib/actions
 import { insertTask } from "@/lib/db/memory/tasks";
 import { jiraStatusMap } from "@/lib/jira/connection-server";
 import { forgetJiraSends, sendTaskToJira } from "@/lib/jira/move-server";
+import { forgetLinkFields } from "@/lib/jira/pull-read";
 import { forgetStatusReads, readJiraStatuses } from "@/lib/jira/statuses-server";
 import { getCurrentUserId, getStore, resetStore } from "@/lib/store/memory";
 
@@ -23,6 +24,8 @@ const TOKEN = "NjE2MTYxNjE2MTYxOlRoaXNJc0FUZXN0VG9rZW4";
 const T0 = Date.UTC(2026, 10, 11, 12, 0);
 
 type Bucket = "new" | "indeterminate" | "done";
+const ME = { name: "pat", key: "JIRAUSER1", displayName: "Pat Example" };
+const ANA = { name: "ana", key: "JIRAUSER2", displayName: "Ana Example" };
 const BUCKET: Record<string, Bucket> = {
   Open: "new",
   "In Progress": "indeterminate",
@@ -50,6 +53,12 @@ const jira = {
   everything: null as number | null,
   /** Runs while Jira is being asked where a ticket stands. */
   onRead: null as null | (() => Promise<unknown>),
+  /** Who has each ticket. A ticket not named here is the token owner's. */
+  assignee: new Map<string, { name: string; key: string; displayName: string } | null>(),
+  /** Jira will not say who the token belongs to. */
+  noMyself: false,
+  /** Jira leaves the assignee field out of its answer. */
+  noAssigneeField: false,
   calls: [] as { method: string; path: string; body: unknown; headers: Record<string, string> }[],
 };
 
@@ -66,6 +75,9 @@ async function answer(url: URL, init: RequestInit): Promise<Response> {
     headers: init.headers as Record<string, string>,
   });
   if (jira.everything) return json({}, jira.everything);
+  if (url.pathname === "/rest/api/2/myself") {
+    return jira.noMyself ? json({}, 500) : json(ME);
+  }
   const issue = url.pathname.match(/^\/rest\/api\/2\/issue\/([A-Z0-9_]+-\d+)(\/transitions)?$/);
   if (issue) {
     const key = issue[1];
@@ -88,7 +100,13 @@ async function answer(url: URL, init: RequestInit): Promise<Response> {
     if (jira.onRead) await jira.onRead();
     return json({
       key,
-      fields: { status: { name: now, statusCategory: { key: BUCKET[now] } } },
+      fields: {
+        status: { name: now, statusCategory: { key: BUCKET[now] } },
+        ...(jira.noAssigneeField
+          ? {}
+          : { assignee: jira.assignee.has(key) ? jira.assignee.get(key) : ME }),
+        resolutiondate: now === "Closed" ? "2026-11-02T10:00:00.000+0000" : null,
+      },
       transitions: (jira.offers[now] ?? []).map((t) => ({
         id: t.id,
         name: `Go to ${t.to}`,
@@ -138,6 +156,8 @@ const sends = (to: { todo?: string; doing?: string; done?: string }) =>
     to: { todo: to.todo ?? null, doing: to.doing ?? null, done: to.done ?? null },
   });
 const posts = () => jira.calls.filter((c) => c.method === "POST");
+/** The requests about tickets, leaving out the one that asks who the token belongs to. */
+const ticketCalls = () => jira.calls.filter((c) => c.path !== "/rest/api/2/myself");
 
 beforeEach(async () => {
   resetStore();
@@ -148,7 +168,11 @@ beforeEach(async () => {
   jira.moveWants = true;
   jira.everything = null;
   jira.onRead = null;
+  jira.assignee = new Map();
+  jira.noMyself = false;
+  jira.noAssigneeField = false;
   jira.calls = [];
+  forgetLinkFields();
   vi.stubGlobal(
     "fetch",
     vi.fn(async (url: URL | string, init: RequestInit) => answer(new URL(String(url)), init)),
@@ -176,14 +200,18 @@ describe("a move sent to Jira", () => {
     expect(stored(task.id).ticketSeen).toBe("PROJ-1 In Progress");
   });
 
-  it("costs two requests: what the ticket allows, then the move", async () => {
+  it("costs two requests: what the ticket allows, then the move; who he is is asked once", async () => {
     await sends({ done: "Closed" });
     jira.status.set("PROJ-1", "In Progress");
-    const task = await linked("PROJ-1", { status: "done" });
+    jira.status.set("PROJ-2", "In Progress");
+    const one = await linked("PROJ-1", { status: "done" });
+    const two = await linked("PROJ-2", { status: "done" });
 
-    await sendTaskToJira(userId, task.id, { now: T0 });
+    await sendTaskToJira(userId, one.id, { now: T0 });
+    await sendTaskToJira(userId, two.id, { now: T0 + 1 });
 
-    expect(jira.calls.map((c) => c.method)).toEqual(["GET", "POST"]);
+    expect(ticketCalls().map((c) => c.method)).toEqual(["GET", "POST", "GET", "POST"]);
+    expect(jira.calls.filter((c) => c.path === "/rest/api/2/myself")).toHaveLength(1);
   });
 
   it("keeps the task's edit stamp as it is at the end: remembering Jira's word is not an edit", async () => {
@@ -202,6 +230,91 @@ describe("a move sent to Jira", () => {
       ticketSeen: "PROJ-1 In Progress",
       updatedAt: "2026-11-11T11:59:00.000Z",
     });
+  });
+});
+
+describe("somebody else's ticket", () => {
+  it("is never moved: nothing is sent, and the task goes back to where Jira has it, locked", async () => {
+    await sends({ doing: "In Progress", done: "Closed" });
+    jira.status.set("PROJ-1", "In Review");
+    jira.assignee.set("PROJ-1", ANA);
+    const task = await linked("PROJ-1", { status: "done" });
+
+    const res = await sendTaskToJira(userId, task.id, { now: T0 });
+
+    expect(res).toEqual({
+      state: "not-yours",
+      key: "PROJ-1",
+      status: "In Review",
+      error: "PROJ-1 is assigned to Ana Example in Jira, where it is In Review. Nothing was sent.",
+    });
+    expect(posts()).toHaveLength(0);
+    expect(stored(task.id)).toMatchObject({
+      status: "doing",
+      completedAt: null,
+      ticketSeen: "PROJ-1 In Review",
+      ticketMine: false,
+    });
+  });
+
+  it("counts a ticket nobody has as not his", async () => {
+    await sends({ done: "Closed" });
+    jira.status.set("PROJ-1", "Open");
+    jira.assignee.set("PROJ-1", null);
+    const task = await linked("PROJ-1", { status: "done" });
+
+    const res = await sendTaskToJira(userId, task.id, { now: T0 });
+
+    expect(res.state === "not-yours" && res.error).toBe(
+      "PROJ-1 is not assigned to anyone in Jira, where it is Open. Nothing was sent.",
+    );
+    expect(posts()).toHaveLength(0);
+    expect(stored(task.id).status).toBe("todo");
+  });
+
+  it("sends nothing when Jira will not say who the token belongs to", async () => {
+    await sends({ done: "Closed" });
+    jira.status.set("PROJ-1", "In Review");
+    jira.noMyself = true;
+    const task = await linked("PROJ-1", { status: "done" });
+
+    const res = await sendTaskToJira(userId, task.id, { now: T0 });
+
+    expect(res.state).toBe("failed");
+    expect(posts()).toHaveLength(0);
+  });
+
+  it("goes back to Done on the day Jira closed it", async () => {
+    await sends({ doing: "In Progress" });
+    jira.status.set("PROJ-1", "Closed");
+    jira.assignee.set("PROJ-1", ANA);
+    const task = await linked("PROJ-1", { status: "doing" });
+
+    await sendTaskToJira(userId, task.id, { now: T0 });
+
+    expect(stored(task.id)).toMatchObject({ status: "done", completedAt: "2026-11-02" });
+  });
+
+  it("sends nothing when Jira leaves out who has it: that is not knowing, not nobody", async () => {
+    await sends({ done: "Closed" });
+    jira.status.set("PROJ-1", "In Review");
+    jira.noAssigneeField = true;
+    const task = await linked("PROJ-1", { status: "done" });
+
+    const res = await sendTaskToJira(userId, task.id, { now: T0 });
+
+    expect(res.state).toBe("failed");
+    expect(posts()).toHaveLength(0);
+    expect(stored(task.id).ticketMine).toBeUndefined();
+  });
+
+  it("is marked his when Jira says so, and then sent", async () => {
+    await sends({ doing: "In Progress" });
+    jira.status.set("PROJ-1", "Open");
+    const task = await linked("PROJ-1", { status: "doing" });
+
+    expect((await sendTaskToJira(userId, task.id, { now: T0 })).state).toBe("sent");
+    expect(stored(task.id).ticketMine).toBe(true);
   });
 });
 

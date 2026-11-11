@@ -24,7 +24,8 @@ import {
 import { listGoals, updateGoal, deleteGoal } from "@/lib/db/goals";
 import { listProjects, updateProject, deleteProject } from "@/lib/db/projects";
 import { listHabits, updateHabit, deleteHabit } from "@/lib/db/habits";
-import { listTasks, updateTask, deleteTask } from "@/lib/db/tasks";
+import { getTask, listTasks, updateTask, deleteTask } from "@/lib/db/tasks";
+import { statusLockOf } from "@/lib/jira/status-lock-server";
 import { listNotes, updateNote, deleteNote } from "@/lib/db/notes";
 import { listTags } from "@/lib/db/tags";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
@@ -218,7 +219,7 @@ export async function applyChangesetAction(
 
   let applied = 0;
   try {
-    for (const op of ops) {
+    for (let op of ops) {
       if (op.op === "create") {
         const id = await applyCreate(userId, op, {
           td,
@@ -242,6 +243,19 @@ export async function applyChangesetAction(
       }
 
       if (op.op === "update") {
+        // A task whose ticket is somebody else's keeps the status Jira gives it; the rest of the change still applies.
+        if (op.entity === "task" && op.fields.status) {
+          const task = await getTask(userId, op.id);
+          const lock =
+            task && task.status !== op.fields.status ? await statusLockOf(userId, task) : null;
+          if (lock) {
+            const rest = { ...op.fields };
+            delete rest.status;
+            op = { ...op, fields: rest };
+            skipped.push({ label: op.label, reason: lock });
+            if (!Object.keys(rest).length) continue;
+          }
+        }
         if (!Object.keys(op.fields).length) {
           skipped.push({ label: op.label, reason: "had no changes" });
           continue;
@@ -303,7 +317,24 @@ export async function undoChangesetAction(
       id: string,
       patch: Record<string, unknown>,
     ) => Promise<unknown>;
-    if (await fn(userId, u.id, u.before)) reverted++;
+    let before = u.before as Record<string, unknown>;
+    // What Jira said about a ticket is never the assistant's to undo.
+    if (u.entity === "task" && ("ticketMine" in before || "ticketSeen" in before)) {
+      before = { ...before };
+      delete before.ticketMine;
+      delete before.ticketSeen;
+    }
+    // Somebody else's Jira ticket keeps the status Jira gives it, undo or not.
+    if (u.entity === "task" && "status" in before) {
+      const task = await getTask(userId, u.id);
+      if (task && (await statusLockOf(userId, task))) {
+        before = { ...before };
+        delete before.status;
+        delete before.completedAt;
+        if (!Object.keys(before).length) continue;
+      }
+    }
+    if (await fn(userId, u.id, before)) reverted++;
   }
   for (const c of [...undo.created].reverse()) {
     const ok = await {

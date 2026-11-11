@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
 import { getNotification, markNotification } from "@/lib/db/notifications";
 import { getTask, updateTask } from "@/lib/db/tasks";
+import { statusLockOf } from "@/lib/jira/status-lock-server";
 
 export const dynamic = "force-dynamic";
 
@@ -61,6 +62,9 @@ export async function POST(
     if (!task) {
       return NextResponse.json({ error: "Task is gone" }, { status: 404 });
     }
+    // Somebody else's Jira ticket: its status follows Jira, so Done changes nothing.
+    const lock = await statusLockOf(user.id, task);
+    if (lock) return NextResponse.json({ error: lock }, { status: 409 });
     await updateTask(user.id, notification.entityId, {
       status: "done",
       completedAt: new Date().toISOString(),

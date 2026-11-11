@@ -16,6 +16,11 @@ const jira = vi.hoisted(() => ({
   /** Runs while Jira is being read. */
   during: null as null | (() => void),
 }));
+const me = vi.hoisted(() => ({ ids: new Set(["jsosa"]) as ReadonlySet<string> | null }));
+vi.mock("@/lib/jira/pull-read", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/jira/pull-read")>()),
+  myJiraIds: async () => me.ids,
+}));
 vi.mock("@/lib/jira/status-read", () => ({
   readTicketStatuses: async (_conn: unknown, keys: string[]) => {
     jira.reads.push([...keys].sort());
@@ -94,6 +99,42 @@ beforeEach(async () => {
   jira.fail = null;
   jira.during = null;
   await saveJiraConnectionAction({ address: BASE, token: TOKEN });
+});
+
+describe("somebody else's ticket", () => {
+  it("is learned on a read, and its drifted task goes back to where Jira has it", async () => {
+    const p = await project();
+    const task = await linked(p.id, "PROJ-1", { status: "done", ticketStatus: "Open" });
+    says("PROJ-1", { name: "Open", stage: "todo", mine: false });
+
+    await syncProjectStatuses(userId, p.id, { now: T0 });
+
+    expect(stored(task.id)).toMatchObject({ status: "todo", completedAt: null, ticketMine: false });
+  });
+
+  it("is not written onto a task linked to another ticket while Jira was read", async () => {
+    const p = await project();
+    const task = await linked(p.id, "PROJ-1", { status: "doing", ticketStatus: "Open" });
+    says("PROJ-1", { name: "Open", stage: "todo", mine: false });
+    jira.during = () => {
+      stored(task.id).ticketUrl = `${BASE}/browse/PROJ-2`;
+    };
+
+    await syncProjectStatuses(userId, p.id, { now: T0 });
+
+    expect(stored(task.id)).toMatchObject({ status: "doing", ticketSeen: "PROJ-1 Open" });
+    expect(stored(task.id).ticketMine).toBeUndefined();
+  });
+
+  it("is his when Jira says so, and his column stands", async () => {
+    const p = await project();
+    const task = await linked(p.id, "PROJ-1", { status: "doing", ticketStatus: "Open" });
+    says("PROJ-1", { name: "Open", stage: "todo", mine: true });
+
+    await syncProjectStatuses(userId, p.id, { now: T0 });
+
+    expect(stored(task.id)).toMatchObject({ status: "doing", ticketMine: true });
+  });
 });
 
 describe("his status map", () => {

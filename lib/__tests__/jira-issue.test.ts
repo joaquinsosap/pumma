@@ -120,11 +120,18 @@ describe("jiraFactsFrom", () => {
 });
 
 describe("jiraUserIds", () => {
-  it("gives both names Jira knows a user by, lowercased", () => {
+  it("gives both names Jira knows a user by, lowercased, each saying which it is", () => {
     expect(jiraUserIds({ name: "J.Doe", key: "JIRAUSER10", displayName: "Jane Doe" })).toEqual([
-      "j.doe",
-      "jirauser10",
+      "name:j.doe",
+      "key:jirauser10",
     ]);
+  });
+
+  it("never matches one person's name against another's key", () => {
+    // Renamed: her old name stays her key. He was given the freed name later.
+    const her = jiraUserIds({ name: "ana.lopez", key: "ana" });
+    const him = new Set(jiraUserIds({ name: "ana", key: "JIRAUSER10500" }));
+    expect(her.some((id) => him.has(id))).toBe(false);
   });
 
   it("never takes the display name for one: two people can share it", () => {

@@ -173,3 +173,75 @@ describe("the wait before a project is read again", () => {
     expect(waits.size).toBeGreaterThan(1);
   });
 });
+
+describe("somebody else's ticket", () => {
+  it("puts its task back where Jira has it even when Jira did not change", () => {
+    const changes = planStatusSync(
+      [task({ status: "done", ticketStatus: "Open", mine: false })],
+      jira(["PROJ-1", step({ mine: false })]),
+    );
+    expect(changes).toEqual([
+      { id: "t1", key: "PROJ-1", seen: "Open", moveTo: "todo", finished: null },
+    ]);
+  });
+
+  it("says so the first time a read learns it, and puts the task back", () => {
+    const changes = planStatusSync(
+      [task({ status: "doing", ticketStatus: "Open" })],
+      jira(["PROJ-1", step({ mine: false })]),
+    );
+    expect(changes).toEqual([
+      { id: "t1", key: "PROJ-1", seen: "Open", moveTo: "todo", finished: null, mine: false },
+    ]);
+  });
+
+  it("changes nothing once the task already sits where Jira has it", () => {
+    expect(
+      planStatusSync(
+        [task({ status: "todo", ticketStatus: "Open", mine: false })],
+        jira(["PROJ-1", step({ mine: false })]),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("his own ticket", () => {
+  it("keeps the column he put it in while Jira has not changed", () => {
+    const changes = planStatusSync(
+      [task({ status: "doing", ticketStatus: "Open", mine: true })],
+      jira(["PROJ-1", step({ mine: true })]),
+    );
+    expect(changes).toEqual([]);
+  });
+
+  it("is marked his when a read learns it, without moving", () => {
+    const changes = planStatusSync(
+      [task({ status: "doing", ticketStatus: "Open" })],
+      jira(["PROJ-1", step({ mine: true })]),
+    );
+    expect(changes).toEqual([
+      { id: "t1", key: "PROJ-1", seen: "Open", moveTo: null, finished: null, mine: true },
+    ]);
+  });
+
+  it("is not called anybody's when Jira would not say who he is", () => {
+    expect(
+      planStatusSync(
+        [task({ status: "doing", ticketStatus: "Open" })],
+        jira(["PROJ-1", step({ mine: null })]),
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("a read that cannot tell whose a ticket is", () => {
+  it("still puts back a task already known to be somebody else's", () => {
+    const changes = planStatusSync(
+      [task({ status: "done", ticketStatus: "Open", mine: false })],
+      jira(["PROJ-1", step({ mine: null })]),
+    );
+    expect(changes).toEqual([
+      { id: "t1", key: "PROJ-1", seen: "Open", moveTo: "todo", finished: null },
+    ]);
+  });
+});

@@ -13,6 +13,8 @@ export type TicketStatus = {
   stage: JiraStage | null;
   /** When Jira closed the ticket. Null while it is open, or when Jira kept no date. */
   finished: string | null;
+  /** Assigned to the owner of the token. Null or absent when Jira did not say who that is. */
+  mine?: boolean | null;
 };
 
 /** A task that holds a ticket of the connected Jira. */
@@ -23,6 +25,8 @@ export type LinkedTask = {
   status: TaskColumn;
   /** The step's name when the ticket was last read. Absent before the first read. */
   ticketStatus?: string | null;
+  /** Whether the ticket was his when last read. Absent before a read said. */
+  mine?: boolean | null;
 };
 
 /** What is kept on a task after a read: the ticket and its step, "PROJ-12 In Review". */
@@ -54,6 +58,8 @@ export type StatusChange = {
   moveTo: TaskColumn | null;
   /** When Jira closed the ticket, for a task that moves to done. */
   finished: string | null;
+  /** Whether the ticket is his, when this read learned something new about it. */
+  mine?: boolean;
 };
 
 /**
@@ -66,6 +72,9 @@ export type StatusChange = {
  * at its word once: a ticket closed since it was brought in would otherwise
  * stay open here for good.
  *
+ * A ticket that is not his is another matter: Jira is the only word on it,
+ * so its task goes wherever Jira has it on every read, moved here or not.
+ *
  * A ticket Jira did not hand back (hidden from the token, or gone) changes nothing.
  */
 export function planStatusSync(
@@ -76,15 +85,22 @@ export function planStatusSync(
   const changes: StatusChange[] = [];
   for (const task of tasks) {
     const ticket = tickets.get(task.key);
-    if (!ticket || ticket.name === task.ticketStatus) continue;
-    const column = columnOf(ticket);
+    if (!ticket) continue;
+    const movedInJira = ticket.name !== task.ticketStatus;
+    const mine = ticket.mine ?? task.mine ?? null;
+    const learned =
+      ticket.mine !== undefined && ticket.mine !== null && ticket.mine !== (task.mine ?? null);
+    // Not his: Jira's column, always. His: Jira's column only when it moved there.
+    const column = movedInJira || mine === false ? columnOf(ticket) : null;
     const moveTo = column && column !== task.status ? column : null;
+    if (!movedInJira && !moveTo && !learned) continue;
     changes.push({
       id: task.id,
       key: task.key,
       seen: ticket.name,
       moveTo,
       finished: moveTo === "done" ? ticket.finished : null,
+      ...(learned ? { mine: ticket.mine as boolean } : {}),
     });
   }
   return changes;

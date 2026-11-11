@@ -85,7 +85,21 @@ self.addEventListener("notificationclick", (event) => {
         : `/api/notifications/${encodeURIComponent(d.id)}/done`;
     // Same-origin, so the session cookie rides along and the route can check
     // the notification actually belongs to whoever is signed in here.
-    event.waitUntil(fetch(path, { method: "POST", credentials: "include" }));
+    event.waitUntil(
+      fetch(path, { method: "POST", credentials: "include" })
+        .then((res) =>
+          // A Done turned down (somebody else's Jira ticket) says why, instead of vanishing.
+          res.status === 409
+            ? res.json().then((body) =>
+                self.registration.showNotification("Not marked done", {
+                  body: body && body.error ? String(body.error) : "",
+                  tag: `refused-${d.id}`,
+                }),
+              )
+            : undefined,
+        )
+        .catch(() => {}),
+    );
     return;
   }
 

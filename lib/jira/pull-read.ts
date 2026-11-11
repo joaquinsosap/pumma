@@ -181,7 +181,7 @@ const OWNER_RETRY_MS = 60 * 1000;
  * What the token's owner is known by on this Jira, or null when Jira would
  * not say. A pull goes on without it: it only loses the "assigned to me" mark.
  */
-async function owner(conn: JiraConn): Promise<ReadonlySet<string> | null> {
+export async function myJiraIds(conn: JiraConn): Promise<ReadonlySet<string> | null> {
   const key = `${conn.baseUrl}|${createHash("sha256").update(conn.token).digest("hex").slice(0, 12)}`;
   const hit = OWNER_FOR.get(key);
   if (hit && Date.now() - hit.at < (hit.me ? FIELDS_FRESH_MS : OWNER_RETRY_MS)) {
@@ -419,7 +419,7 @@ export async function readPull(
       error: "That is not a ticket number.",
     };
   }
-  const me = await owner(conn);
+  const me = await myJiraIds(conn);
   const whoKnown = me !== null;
   const ids: Ids = { ...fields.data, me: me ?? NOBODY };
   const top = await one(conn, ids, key);

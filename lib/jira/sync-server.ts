@@ -9,6 +9,7 @@ import {
   noteJiraStatuses,
 } from "@/lib/jira/connection-server";
 import { finishedDay } from "@/lib/jira/pull-plan";
+import { myJiraIds } from "@/lib/jira/pull-read";
 import { readTicketStatuses } from "@/lib/jira/status-read";
 import { columnOfWith } from "@/lib/jira/status-map";
 import {
@@ -122,6 +123,7 @@ export async function syncProjectStatuses(
       key,
       status: task.status,
       ticketStatus: stepSeenFor(key, task.ticketSeen),
+      mine: task.ticketMine,
     });
   }
   if (linked.length === 0) {
@@ -132,6 +134,8 @@ export async function syncProjectStatuses(
   const res = await readTicketStatuses(
     conn,
     linked.map((t) => t.key),
+    // Asked of Jira once and remembered for ten minutes, not on every read.
+    await myJiraIds(conn),
   );
   if (!res.ok) {
     const nextAt = now + FAILED_MS;
@@ -143,20 +147,20 @@ export async function syncProjectStatuses(
   // without asking Jira anything more. Where each lands is his answer, else Jira's own sorting.
   const map = await noteJiraStatuses(userId, res.data.statuses.values());
   const changes = planStatusSync(linked, res.data.statuses, columnOfWith(map));
-  // Stamps as they are now, not as they were before Jira was asked: an edit made meanwhile keeps its own.
-  const stampNow = new Map(
-    (
-      await getTasksByIds(
-        userId,
-        changes.filter((c) => !c.moveTo).map((c) => c.id),
-      )
-    ).map((t) => [t.id, t.updatedAt ?? null]),
+  // The tasks as they are now, not as they were before Jira was asked: an
+  // edit made meanwhile keeps its stamp, and a task linked to another ticket
+  // meanwhile is not given this one's status or owner.
+  const nowById = new Map(
+    (await getTasksByIds(userId, changes.map((c) => c.id))).map((t) => [t.id, t]),
   );
   const { today, timeZone } = await userToday();
   let moved = 0;
   for (const change of changes) {
+    const current = nowById.get(change.id);
+    if (!current || jiraKeyOn(conn.baseUrl, current.ticketUrl) !== change.key) continue;
     const updated = await updateTask(userId, change.id, {
       ticketSeen: seenLine(change.key, change.seen),
+      ...(change.mine !== undefined ? { ticketMine: change.mine } : {}),
       ...(change.moveTo
         ? {
             status: change.moveTo,
@@ -167,7 +171,7 @@ export async function syncProjectStatuses(
                 : null,
           }
         : // Remembering what Jira said is not an edit: the task keeps its stamp, so a read does not reshuffle "last edited".
-          { updatedAt: stampNow.get(change.id) ?? null }),
+          { updatedAt: current.updatedAt ?? null }),
     });
     if (updated && change.moveTo) moved += 1;
   }

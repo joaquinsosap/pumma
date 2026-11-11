@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { moveKept, moveSaid } from "@/lib/jira/move-said";
 import type { JiraMove } from "@/lib/jira/move-server";
 import type { JiraStatusMap } from "@/lib/jira/status-map";
+import { statusLockLine } from "@/lib/jira/status-lock";
 import type { TaskColumn } from "@/lib/jira/status-sync";
 import { ticketFromUrl } from "@/lib/ticket-link";
 
@@ -25,6 +26,14 @@ export function JiraLinkProvider({
 
 export function useJiraStatusMap(): JiraStatusMap | null {
   return useContext(JiraLinkContext);
+}
+
+/** Why this task's status cannot be changed here (its ticket is somebody else's in Jira), or null. */
+export function useStatusLock(task: {
+  ticketUrl?: string | null;
+  ticketMine?: boolean | null;
+}): string | null {
+  return statusLockLine(task, useJiraStatusMap() !== null);
 }
 
 /**

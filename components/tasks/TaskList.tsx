@@ -33,7 +33,8 @@ import { PriorityChip } from "@/components/tasks/PriorityChip";
 import { budgetForWidth, fitTagLine, ticketLead } from "@/lib/tag-line";
 import { ticketFromUrl } from "@/lib/ticket-link";
 import { TicketChip } from "@/components/tasks/TicketChip";
-import { useSendToJira } from "@/components/tasks/JiraLinkProvider";
+import { useJiraStatusMap, useSendToJira } from "@/components/tasks/JiraLinkProvider";
+import { statusLockLine } from "@/lib/jira/status-lock";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { TaskPriority } from "@/lib/types";
@@ -172,6 +173,7 @@ function TagLine({
   nested = false,
   column,
   seen,
+  mine,
 }: {
   tags: Tag[];
   /** The task's ticket link. Its chip leads the line and the tags fit after it. */
@@ -181,6 +183,7 @@ function TagLine({
   /** The task's column and its ticket's status as last read: the chip marks them disagreeing. */
   column?: Task["status"];
   seen?: string | null;
+  mine?: boolean | null;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [budget, setBudget] = useState<number | null>(null);
@@ -216,7 +219,7 @@ function TagLine({
       className="mt-0.5 flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden font-mono text-[11px] leading-[1.4]"
     >
       {ticket && (
-        <TicketChip url={ticket.url} nested={nested} column={column} seen={seen} />
+        <TicketChip url={ticket.url} nested={nested} column={column} seen={seen} mine={mine} />
       )}
       {shown.map((tg) => (
         <span key={tg.id} className="shrink-0 whitespace-nowrap">
@@ -272,9 +275,17 @@ export function TaskList({
 
   const listed = isCalendar ? sortCalendarDayTasks(optimistic) : optimistic;
   const sendToJira = useSendToJira();
+  const jiraMap = useJiraStatusMap();
+  const lockOf = (t: Task) => statusLockLine(t, jiraMap !== null);
 
   const handleToggle = (id: string) => {
     const shown = optimistic.find((t) => t.id === id);
+    // Somebody else's ticket: its status follows Jira.
+    const lock = shown ? lockOf(shown) : null;
+    if (lock) {
+      toast(lock);
+      return;
+    }
     const done = shown?.status !== "done";
     startTransition(async () => {
       setOptimistic((list) =>
@@ -573,11 +584,15 @@ export function TaskList({
                   e.stopPropagation();
                   handleToggle(t.id);
                 }}
+                // Somebody else's ticket: greyed, and a click says why instead of ticking.
+                aria-disabled={lockOf(t) ? true : undefined}
+                title={lockOf(t) ?? undefined}
                 className={cn(
                   "flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] border-[1.8px]",
                   done
                     ? "border-none bg-habits"
                     : "border-border bg-transparent",
+                  lockOf(t) && "cursor-not-allowed opacity-40",
                 )}
               >
                 {done && (
@@ -780,6 +795,9 @@ export function TaskList({
                   e.stopPropagation();
                   handleToggle(t.id);
                 }}
+                // Somebody else's ticket: greyed, and a click says why instead of ticking.
+                aria-disabled={lockOf(t) ? true : undefined}
+                title={lockOf(t) ?? undefined}
                 className={cn(
                   "flex shrink-0 items-center justify-center rounded-[5px] border-[1.8px]",
                   isPage
@@ -788,6 +806,7 @@ export function TaskList({
                   done
                     ? "border-none bg-habits"
                     : "border-border bg-transparent",
+                  lockOf(t) && "cursor-not-allowed opacity-40",
                 )}
               >
                 {done && (
@@ -871,6 +890,7 @@ export function TaskList({
                     nested
                     column={t.status}
                     seen={t.ticketSeen}
+                    mine={t.ticketMine}
                   />
                 </Link>
               ) : (
@@ -886,6 +906,7 @@ export function TaskList({
                     ticketUrl={t.ticketUrl}
                     column={t.status}
                     seen={t.ticketSeen}
+                    mine={t.ticketMine}
                   />
                 </>
               )}

@@ -21,6 +21,7 @@
  * created earlier in the same batch by a temporary refId. Callers working with
  * ids that already exist pass `resolveExisting`.
  */
+import { statusLockOf } from "@/lib/jira/status-lock-server";
 import {
   deleteAgendaItem,
   insertAgendaItem,
@@ -372,7 +373,8 @@ export async function applyUpdate(
         patch.priority = f.priority;
         before.priority = current.priority;
       }
-      if (val(f.status)) {
+      // Somebody else's ticket: its status follows Jira. Callers say so first; this is the last guard.
+      if (val(f.status) && !(await statusLockOf(userId, current))) {
         // `completedAt` moves with the status, the same way toggling a task by
         // hand does. Left alone, a task could read as done with no completion
         // date, or carry a stale one after being reopened, and every surface

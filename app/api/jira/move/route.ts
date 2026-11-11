@@ -2,6 +2,7 @@ import { revalidatePath } from "next/cache";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { apiUserId } from "@/lib/auth/api-user";
+import { moveKept } from "@/lib/jira/move-said";
 import { sendTaskToJira } from "@/lib/jira/move-server";
 import { entityId } from "@/lib/validation";
 
@@ -25,9 +26,7 @@ export async function POST(req: Request) {
   }
   const result = await sendTaskToJira(who.userId, parsed.data.taskId);
   // What Jira said is kept on the task, and the mark on its ticket reads it.
-  if (result.state === "sent" || result.state === "already" || result.state === "refused") {
-    revalidatePath("/", "layout");
-  }
+  if (moveKept(result)) revalidatePath("/", "layout");
   return NextResponse.json(result, {
     headers: { "Cache-Control": "no-store, private" },
   });

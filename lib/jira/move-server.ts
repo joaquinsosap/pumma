@@ -9,7 +9,11 @@ import {
   jiraStatusMap,
   noteJiraStatuses,
 } from "@/lib/jira/connection-server";
-import { planMove } from "@/lib/jira/status-map";
+import { finishedDay } from "@/lib/jira/pull-plan";
+import { myJiraIds } from "@/lib/jira/pull-read";
+import { columnOfStatus, planMove } from "@/lib/jira/status-map";
+import { syncGoalsForProject } from "@/lib/goal-sync-server";
+import { userToday } from "@/lib/timezone-server";
 import { seenLine, stepSeenFor } from "@/lib/jira/status-sync";
 
 // Moving a task moves its ticket: the column the task is in now is sent to
@@ -35,6 +39,8 @@ export type JiraMove =
   | { state: "held"; error: string }
   /** Jira would not make this move. Nothing changed there. */
   | { state: "refused"; key: string; error: string }
+  /** The ticket is somebody else's, or nobody's: nothing was sent, and the task went back to where Jira has it. */
+  | { state: "not-yours"; key: string; status: string; error: string }
   | { state: "failed"; error: string };
 
 /** Moves sent per person per minute at most. Dragging cards around is not a reason to hammer an employer's Jira. */
@@ -112,6 +118,15 @@ async function send(userId: string, taskId: string, now: number): Promise<JiraMo
   const moves = await jiraTicketMoves(conn.baseUrl, conn.token, key);
   if (!moves.ok) return { state: "failed", error: moves.error };
   const { current, transitions } = moves.data;
+  // Only his own tickets are ever moved. Not knowing who he is on this Jira is reason enough to send nothing.
+  const me = await myJiraIds(conn);
+  if (!me || !moves.data.assigneeKnown) {
+    return {
+      state: "failed",
+      error: `PUMMA could not tell who ${key} is assigned to in Jira, so nothing was sent.`,
+    };
+  }
+  const mine = moves.data.assigneeIds.some((id) => me.has(id));
 
   // Asking Jira takes a moment, and meanwhile he may have changed what a
   // column sends or moved the task again: both are read again now.
@@ -132,6 +147,38 @@ async function send(userId: string, taskId: string, now: number): Promise<JiraMo
       updatedAt: fresh.updatedAt ?? null,
     });
   };
+
+  if (!mine) {
+    // Somebody else's work: Jira is the only word on it. The task goes back
+    // to the column Jira's status lands in, and is locked there from now on.
+    const column = columnOfStatus(map, current.name, current.stage);
+    const back = column && column !== latest.status ? column : null;
+    const { today, timeZone } = await userToday();
+    await updateTask(userId, taskId, {
+      ticketSeen: seenLine(key, current.name),
+      ticketMine: false,
+      ...(back
+        ? {
+            status: back,
+            completedAt:
+              back === "done" ? finishedDay(moves.data.finished, today, timeZone) : null,
+          }
+        : { updatedAt: latest.updatedAt ?? null }),
+    });
+    if (back && latest.projectId) await syncGoalsForProject(userId, latest.projectId);
+    const who = moves.data.assignee
+      ? `assigned to ${moves.data.assignee}`
+      : "not assigned to anyone";
+    return {
+      state: "not-yours",
+      key,
+      status: current.name,
+      error: `${key} is ${who} in Jira, where it is ${current.name}. Nothing was sent.`,
+    };
+  }
+  if (latest.ticketMine !== true) {
+    await updateTask(userId, taskId, { ticketMine: true, updatedAt: latest.updatedAt ?? null });
+  }
 
   const plan = planMove(map, latest.status, current, transitions);
   if (plan.kind === "off") return { state: "off" };

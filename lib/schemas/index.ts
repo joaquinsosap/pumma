@@ -289,6 +289,12 @@ export const taskSchema = z.object({
    * encrypted at rest. Absent until the ticket is first read.
    */
   ticketSeen: z.string().nullable().optional(),
+  /**
+   * Whether the ticket was assigned to the owner of the Jira token when last
+   * read. False locks the task's status: it follows Jira, and nothing here
+   * moves somebody else's ticket. Absent or null until a read says.
+   */
+  ticketMine: z.boolean().nullable().optional(),
 });
 
 export const habitSchema = z.preprocess(

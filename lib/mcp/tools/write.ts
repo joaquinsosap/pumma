@@ -39,6 +39,7 @@ import {
 } from "@/lib/db/tasks";
 import { TICKET_URL_MAX, ticketFromUrl } from "@/lib/ticket-link";
 import { ticketUrlFromInput } from "@/lib/jira/connection-server";
+import { statusLockOf } from "@/lib/jira/status-lock-server";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 import { isoDateInTz } from "@/lib/timezone";
 import {
@@ -473,8 +474,34 @@ function assertMayDropSubtasks(caller: McpCaller, removed: number): void {
   }
 }
 
-/** runUpdate plus the subtask list the call asks for: the one given, or every box ticked when it says so. */
+/**
+ * runTaskUpdate, minding a task whose ticket is somebody else's in Jira: its
+ * status follows Jira. A call that only changes the status (or completes the
+ * task) is turned down; one that changes more applies the rest and says the
+ * status was kept.
+ */
 async function runTaskUpdate(
+  caller: McpCaller,
+  id: string,
+  patch: Record<string, unknown>,
+  opts: { given?: SubtaskInput[]; tick?: boolean } = {},
+) {
+  if (!patch.status) return runTaskUpdateAsked(caller, id, patch, opts);
+  const task = await getTask(caller.userId, id);
+  const lock =
+    task && task.status !== patch.status ? await statusLockOf(caller.userId, task) : null;
+  if (!lock) return runTaskUpdateAsked(caller, id, patch, opts);
+  const rest = { ...patch };
+  delete rest.status;
+  if (!Object.keys(rest).length && opts.given === undefined) {
+    return { text: `${lock} Nothing changed.`, data: { ok: false } };
+  }
+  const res = await runTaskUpdateAsked(caller, id, rest, { given: opts.given });
+  return { ...res, text: `${res.text} The status was kept: ${lock}` };
+}
+
+/** runUpdate plus the subtask list the call asks for: the one given, or every box ticked when it says so. */
+async function runTaskUpdateAsked(
   caller: McpCaller,
   id: string,
   patch: Record<string, unknown>,
@@ -599,8 +626,11 @@ export const setTaskTicket = defineTool({
       }
       url = ticket.url;
     }
+    const before = await getTask(caller.userId, input.id);
     const updated = await updateTaskRow(caller.userId, input.id, {
       ticketUrl: url,
+      // Another ticket: whose it is is not known until it is read.
+      ...(before && before.ticketUrl !== url ? { ticketMine: null } : {}),
     });
     if (!updated) {
       return { text: `No task with id ${input.id}.`, data: { ok: false } };

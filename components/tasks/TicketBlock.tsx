@@ -33,11 +33,14 @@ export function TicketBlock({
   url: storedUrl,
   column,
   seen,
+  mine,
 }: {
   taskId: string;
   url: string | null;
   column: TaskColumn;
   seen: string | null | undefined;
+  /** Whether the ticket was his when last read. Somebody else's follows Jira: no mark, no Send to Jira. */
+  mine?: boolean | null;
 }) {
   const [url, setUrl] = useSyncedDraft(storedUrl, taskId);
   const [, startTransition] = useTransition();
@@ -51,10 +54,15 @@ export function TicketBlock({
   const sendToJira = useSendToJira();
   const [sending, setSending] = useState(false);
   const jiraSays = ticket?.key ? stepSeenFor(ticket.key, seen) : undefined;
-  const differs = !!map && ticketDiffers(map, column, jiraSays);
+  const othersTicket = !!map && ticket?.kind === "jira" && mine === false;
+  const differs = !othersTicket && !!map && ticketDiffers(map, column, jiraSays);
   // Never read: nothing to mark, but a move made now could still go.
   const unread =
-    !!map && ticket?.kind === "jira" && !!map.to[column] && jiraSays === undefined;
+    !othersTicket &&
+    !!map &&
+    ticket?.kind === "jira" &&
+    !!map.to[column] &&
+    jiraSays === undefined;
   const sendNow = async () => {
     setSending(true);
     try {
@@ -165,6 +173,11 @@ export function TicketBlock({
               <ArrowUpRight aria-hidden className="h-3 w-3" strokeWidth={2.4} />
             </a>
           </div>
+          {othersTicket && (
+            <div className="border-t border-border2 px-3 py-2 text-[11.5px] text-muted">
+              Assigned to someone else in Jira. Its status follows Jira.
+            </div>
+          )}
           {(differs || unread) && (
             <div className="flex items-center gap-2 border-t border-border2 px-3 py-2">
               {differs && (

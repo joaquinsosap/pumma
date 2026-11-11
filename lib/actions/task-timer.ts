@@ -10,6 +10,7 @@ import {
   accumulateRunningTime,
 } from "@/lib/db/tasks";
 import { requireUserId } from "@/lib/auth/session";
+import { statusLockOf } from "@/lib/jira/status-lock-server";
 
 export async function startTaskTimer(taskId: string): Promise<ActionResult> {
   const userId = await requireUserId();
@@ -22,9 +23,11 @@ export async function startTaskTimer(taskId: string): Promise<ActionResult> {
 
   await stopRunningTimers(userId, taskId);
   const now = new Date().toISOString();
+  // Starting the clock moves a To do task to Doing, unless its ticket is somebody else's: that status follows Jira.
+  const moves = task.status === "todo" && !(await statusLockOf(userId, task));
   await updateTask(userId, taskId, {
     timerStartedAt: now,
-    status: task.status === "todo" ? "doing" : task.status,
+    status: moves ? "doing" : task.status,
   });
   revalidatePath("/", "layout");
   return { ok: true };

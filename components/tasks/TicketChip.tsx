@@ -26,19 +26,22 @@ export function TicketChip({
   className,
   column,
   seen,
+  mine,
 }: {
   url: string | null | undefined;
   nested?: boolean;
   className?: string;
   column?: TaskColumn;
   seen?: string | null;
+  /** Whether the ticket was his when last read. Somebody else's follows Jira, so it is never marked. */
+  mine?: boolean | null;
 }) {
   const map = useJiraStatusMap();
   const ticket = ticketFromUrl(url);
   if (!ticket) return null;
   const jiraSays =
     map && column && ticket.key ? stepSeenFor(ticket.key, seen) : undefined;
-  const differs = !!map && !!column && ticketDiffers(map, column, jiraSays);
+  const differs = !!map && !!column && mine !== false && ticketDiffers(map, column, jiraSays);
 
   // 13px of text plus the border is 15px: inside the tag line's own height, so a row with a ticket is no taller than its neighbours.
   const look = cn(

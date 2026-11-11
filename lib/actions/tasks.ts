@@ -46,6 +46,7 @@ import { entityId, isoDate, noteBody, refusal, shortText, title as titleField } 
 import { mergeTaskDueDate, mergeTaskDueTime } from "@/lib/date";
 import { TICKET_URL_MAX, cleanTicketUrl } from "@/lib/ticket-link";
 import { ticketUrlFromInput } from "@/lib/jira/connection-server";
+import { statusLockOf } from "@/lib/jira/status-lock-server";
 import { MAX_SUBTASKS, type SubtaskChange } from "@/lib/subtask-changes";
 
 const omniSchema = z.object({
@@ -364,6 +365,9 @@ export async function toggleTask(
   if (!task) return { ok: false, error: "Not found" };
   const isDone = task.status === "done";
   const done = want.data ?? !isDone;
+  // Somebody else's ticket: its status follows Jira and is not changed here.
+  const lock = done !== isDone ? await statusLockOf(userId, task) : null;
+  if (lock) return { ok: false, error: lock };
   // A click on an old screen says which way it wanted the task. Already there: keep the date, and send the real state.
   if (done !== isDone) {
     const { today: td } = await userToday();
@@ -415,6 +419,8 @@ export async function moveTaskStatus(
   const { getTask } = await import("@/lib/db/tasks");
   const task = await getTask(userId, id);
   if (!task) return { ok: false, error: "Not found" };
+  const lock = task.status !== status ? await statusLockOf(userId, task) : null;
+  if (lock) return { ok: false, error: lock };
   // A click on an old screen: already there keeps the date, and still repairs the goal above it.
   if (task.status !== status) {
     const { today: td } = await userToday();
@@ -466,6 +472,9 @@ export async function moveTaskOnBoard(input: {
   const { getTask } = await import("@/lib/db/tasks");
   const task = await getTask(userId, id);
   if (!task) return { ok: false, error: "Not found" };
+  // Reordering within its column is fine; another column is not, for somebody else's ticket.
+  const lock = task.status !== status ? await statusLockOf(userId, task) : null;
+  if (lock) return { ok: false, error: lock };
 
   if (task.status !== status) {
     const { today: td } = await userToday();
@@ -583,7 +592,7 @@ export type BulkTaskPatch = z.infer<typeof bulkUpdateSchema>;
 
 export async function bulkUpdateTasks(
   input: BulkTaskPatch,
-): Promise<ActionResult<{ updated: number }>> {
+): Promise<ActionResult<{ updated: number; leftToJira: number }>> {
   const parsed = bulkUpdateSchema.safeParse(input);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
@@ -627,6 +636,8 @@ export async function bulkUpdateTasks(
     (await getTasksByIds(userId, ids)).map((t) => [t.id, t]),
   );
   const patches: { id: string; patch: Parameters<typeof updateTask>[2] }[] = [];
+  // Tasks whose ticket is somebody else's keep the status Jira gives them; the rest of the batch still applies.
+  let leftToJira = 0;
 
   for (const id of ids) {
     const task = tasksById.get(id);
@@ -635,7 +646,10 @@ export async function bulkUpdateTasks(
     const patch: Parameters<typeof updateTask>[2] = {};
     if (priority !== undefined) patch.priority = priority;
     if (due !== undefined) patch.due = due === "" ? null : due;
-    if (status !== undefined && status !== task.status) {
+    const locked =
+      status !== undefined && status !== task.status && (await statusLockOf(userId, task));
+    if (locked) leftToJira += 1;
+    else if (status !== undefined && status !== task.status) {
       patch.status = status;
       patch.completedAt = status === "done" ? td : null;
     }
@@ -688,7 +702,7 @@ export async function bulkUpdateTasks(
   // touched project, instead of that fetch repeated per project.
   await syncGoalsForProjects(userId, [...projectsToSync]);
   revalidatePath("/", "layout");
-  return { ok: true, data: { updated } };
+  return { ok: true, data: { updated, leftToJira } };
 }
 
 const bulkDeleteSchema = z.object({
@@ -947,6 +961,10 @@ export async function updateTaskDetail(
       : {}),
     ...(duePatch ?? {}),
     ...(tagPatch ?? {}),
+    // Another ticket, or none: whose it is is not known until it is read.
+    ...(patch.ticketUrl !== undefined && patch.ticketUrl !== existing.ticketUrl
+      ? { ticketMine: null }
+      : {}),
   };
 
   const updated = await updateTask(userId, id, normalized);

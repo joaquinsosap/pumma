@@ -1,7 +1,7 @@
 import "server-only";
 
 import { jiraGet, type JiraAnswer } from "@/lib/jira/client";
-import { jiraFactsFrom } from "@/lib/jira/issue";
+import { jiraFactsFrom, jiraUserIds } from "@/lib/jira/issue";
 import { momentFrom, type JiraConn } from "@/lib/jira/pull-read";
 import type { TicketStatus } from "@/lib/jira/status-sync";
 import { ticketKeyFrom } from "@/lib/ticket-link";
@@ -22,6 +22,8 @@ export type StatusRead = {
 export async function readTicketStatuses(
   conn: JiraConn,
   keys: readonly string[],
+  /** What the token's owner is known by, to tell which tickets are theirs. Null when Jira would not say. */
+  me: ReadonlySet<string> | null = null,
 ): Promise<JiraAnswer<StatusRead>> {
   // Each number is checked to be a ticket number before it goes into the search.
   const numbers = [
@@ -40,7 +42,7 @@ export async function readTicketStatuses(
       conn.baseUrl,
       conn.token,
       // validateQuery=false: a number this token cannot see is skipped, not a reason to refuse the lot.
-      `/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=status,resolutiondate&maxResults=${PAGE}&validateQuery=false`,
+      `/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=status,resolutiondate,assignee&maxResults=${PAGE}&validateQuery=false`,
     );
     if (!res.ok) {
       // A Jira that says no is not asked again in the same read: it may be saying "slow down". What was answered so far still counts.
@@ -56,11 +58,17 @@ export async function readTicketStatuses(
     for (const raw of issues) {
       const facts = jiraFactsFrom(raw);
       if (!facts?.status) continue;
-      const fields = (raw as { fields?: { resolutiondate?: unknown } }).fields;
+      const fields = (raw as { fields?: { resolutiondate?: unknown; assignee?: unknown } }).fields;
       statuses.set(facts.key, {
         name: facts.status,
         stage: facts.stage,
         finished: momentFrom(fields?.resolutiondate),
+        // Nobody on it counts as not his: "assigned to me" is the only way in.
+        // A Jira that left the field out entirely has said nothing, which locks nothing.
+        mine:
+          me && fields && "assignee" in fields
+            ? jiraUserIds(fields.assignee).some((id) => me.has(id))
+            : null,
       });
     }
   }

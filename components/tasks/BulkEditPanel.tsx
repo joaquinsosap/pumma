@@ -115,8 +115,14 @@ export function BulkEditPanel({
       const res = await trySave(() => bulkUpdateTasks({ ids, ...patch }));
       if (!res?.ok) return;
       const n = res.data?.updated ?? ids.length;
-      if (n === 0) toast.info("Nothing to change");
-      else toast.success(`${n} ${n === 1 ? "task" : "tasks"} ${describe}`);
+      const left = res.data?.leftToJira ?? 0;
+      if (n === 0 && !left) toast.info("Nothing to change");
+      else if (n > 0) toast.success(`${n} ${n === 1 ? "task" : "tasks"} ${describe}`);
+      if (left > 0) {
+        toast(
+          `${left} ${left === 1 ? "task keeps its" : "tasks keep their"} status: ${left === 1 ? "its ticket is" : "their tickets are"} not assigned to you in Jira.`,
+        );
+      }
       router.refresh();
     });
   };

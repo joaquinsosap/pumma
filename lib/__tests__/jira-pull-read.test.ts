@@ -139,7 +139,7 @@ vi.mock("@/lib/jira/client", () => ({
     jira.calls.push("/rest/api/2/myself");
     return jira.anonymous
       ? { ok: false, why: "forbidden", error: "Jira refused the request." }
-      : { ok: true, data: { name: ME.displayName, ids: [ME.name, ME.key.toLowerCase()] } };
+      : { ok: true, data: { name: ME.displayName, ids: [`name:${ME.name.toLowerCase()}`, `key:${ME.key.toLowerCase()}`] } };
   },
 }));
 

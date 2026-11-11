@@ -44,3 +44,20 @@ describe("what is kept on the task", () => {
     expect(moveKept({ state: "failed", error: "down" })).toBe(false);
   });
 });
+
+describe("a move on somebody else's ticket", () => {
+  const notYours = {
+    state: "not-yours" as const,
+    key: "PROJ-1",
+    status: "In Review",
+    error: "PROJ-1 is assigned to Ana Example in Jira, where it is In Review. Nothing was sent.",
+  };
+
+  it("is always said, even after a move he made", () => {
+    expect(moveSaid(notYours, false)).toEqual({ tone: "bad", text: notYours.error });
+  });
+
+  it("refreshes the page: the task went back to where Jira has it", () => {
+    expect(moveKept(notYours)).toBe(true);
+  });
+});

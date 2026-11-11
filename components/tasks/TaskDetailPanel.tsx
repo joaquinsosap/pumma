@@ -23,7 +23,7 @@ import { toggleEntityTag } from "@/lib/actions/tags";
 import { TagGridPicker } from "@/components/tags/TagGridPicker";
 import { TaskTimer } from "@/components/tasks/TaskTimer";
 import { TicketBlock } from "@/components/tasks/TicketBlock";
-import { useSendToJira } from "@/components/tasks/JiraLinkProvider";
+import { useSendToJira, useStatusLock } from "@/components/tasks/JiraLinkProvider";
 import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { ScrollHint } from "@/components/ui/scroll-hint";
 import { EditableTitle } from "@/components/ui/editable-title";
@@ -179,6 +179,8 @@ export function TaskDetailPanel({
   const [dueTime, setDueTime] = useSyncedDraft(dueTimeOf(task.due), task.id);
   const [pending, startTransition] = useTransition();
   const sendToJira = useSendToJira();
+  // Somebody else's ticket in Jira: the status follows Jira and is not set here.
+  const statusLock = useStatusLock(task);
 
   const project = projects.find((p) => p.id === task.projectId);
 
@@ -410,9 +412,11 @@ export function TaskDetailPanel({
               <button
                 key={value}
                 type="button"
+                disabled={!!statusLock && !active}
+                title={statusLock ?? undefined}
                 onClick={() => setTaskStatus(value)}
                 className={cn(
-                  "rounded-md border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide transition-colors",
+                  "rounded-md border px-2.5 py-1 font-mono text-[10px] font-bold uppercase tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-40",
                   active
                     ? "border-ink bg-ink text-background"
                     : "border-border bg-surface2 text-faint hover:border-faint hover:text-ink",
@@ -425,6 +429,9 @@ export function TaskDetailPanel({
           <div className="ml-auto">
             <TaskTimer task={task} />
           </div>
+          {statusLock && (
+            <p className="m-0 w-full text-[11.5px] text-faint">{statusLock}</p>
+          )}
         </div>
 
         <section className="mb-4">
@@ -562,6 +569,7 @@ export function TaskDetailPanel({
           url={task.ticketUrl}
           column={status}
           seen={task.ticketSeen}
+          mine={task.ticketMine}
         />
 
         <section className="mb-5">

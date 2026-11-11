@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { Check, Pencil } from "@/components/icons";
 import {
@@ -49,7 +50,8 @@ import {
 } from "@/lib/new-task-arrival";
 import { landCard } from "@/lib/land-card";
 import { TicketChip } from "@/components/tasks/TicketChip";
-import { useSendToJira } from "@/components/tasks/JiraLinkProvider";
+import { useJiraStatusMap, useSendToJira } from "@/components/tasks/JiraLinkProvider";
+import { statusLockLine } from "@/lib/jira/status-lock";
 import { paint } from "@/lib/themes";
 
 export type ColumnId = "todo" | "doing" | "done";
@@ -242,6 +244,7 @@ export function KanbanBoard({
 }: Props) {
   const [, startTransition] = useTransition();
   const sendToJira = useSendToJira();
+  const jiraMap = useJiraStatusMap();
   const [items, setItems] = useState<ItemsByColumn>(() =>
     groupByStatus(tasks, sort, sortReversed),
   );
@@ -491,6 +494,14 @@ export function KanbanBoard({
     const from = original.status;
     if (from === nextStatus && !reorderedRef.current) return;
     reorderedRef.current = false;
+
+    // Somebody else's ticket: the card goes back to the column Jira has it in.
+    const lock = from !== nextStatus ? statusLockLine(original, jiraMap !== null) : null;
+    if (lock) {
+      setBoard(groupByStatus(tasks, sort, sortReversed));
+      toast(lock);
+      return;
+    }
 
     // A completed drag is an arrangement, whatever ordering was on screen —
     // what gets persisted below is exactly what the user is looking at, so
@@ -871,7 +882,12 @@ function KanbanCardShell({
       <div className="flex flex-wrap items-center gap-1.5">
         <TaskTimer task={task} compact stopPropagation />
         {!overlay && (
-          <TicketChip url={task.ticketUrl} column={task.status} seen={task.ticketSeen} />
+          <TicketChip
+            url={task.ticketUrl}
+            column={task.status}
+            seen={task.ticketSeen}
+            mine={task.ticketMine}
+          />
         )}
         {task.tagIds.map((id) => {
           const tg = tagMap.get(id);

@@ -262,11 +262,19 @@ export async function jiraIssue(
   return facts ? { ok: true, data: facts } : fail("not-jira");
 }
 
-/** Where a ticket stands, and the moves Jira offers from there. */
+/** Where a ticket stands, who has it, and the moves Jira offers from there. */
 export type TicketMoves = {
   key: string;
   current: KnownStatus;
   transitions: Transition[];
+  /** What the assignee is known by, to match against the token's owner. Empty when nobody has it. */
+  assigneeIds: string[];
+  /** False when Jira left the assignee out of its answer altogether: then nobody can say whose it is. */
+  assigneeKnown: boolean;
+  /** The assignee's name as Jira shows it. Null when nobody has it. */
+  assignee: string | null;
+  /** When Jira closed it. Null while open. */
+  finished: string | null;
 };
 
 const TRANSITIONS_MAX = 50;
@@ -283,7 +291,7 @@ export async function jiraTicketMoves(
   const res = await jiraGet(
     baseUrl,
     token,
-    `/rest/api/2/issue/${encodeURIComponent(number)}?fields=status&expand=transitions`,
+    `/rest/api/2/issue/${encodeURIComponent(number)}?fields=status,assignee,resolutiondate&expand=transitions`,
     "no-ticket",
   );
   if (!res.ok) return res;
@@ -298,12 +306,22 @@ export async function jiraTicketMoves(
     if (typeof to !== "string" || !to.trim()) continue;
     transitions.push({ id, to: to.replace(/\s+/g, " ").trim().slice(0, 60) });
   }
+  const fields = (res.data as { fields?: { assignee?: unknown; resolutiondate?: unknown } }).fields;
+  // Jira writes "+0000"; a date reader wants "+00:00".
+  const closed =
+    typeof fields?.resolutiondate === "string"
+      ? new Date(fields.resolutiondate.replace(/([+-]\d{2})(\d{2})$/, "$1:$2"))
+      : null;
   return {
     ok: true,
     data: {
       key: facts.key,
       current: { name: facts.status, stage: facts.stage },
       transitions,
+      assigneeIds: jiraUserIds(fields?.assignee),
+      assigneeKnown: !!fields && "assignee" in fields,
+      assignee: facts.assignee,
+      finished: closed && !Number.isNaN(closed.getTime()) ? closed.toISOString() : null,
     },
   };
 }

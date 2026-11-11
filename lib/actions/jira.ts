@@ -6,6 +6,7 @@ import type { ActionResult } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
 import { encryptSecret } from "@/lib/crypto";
 import { updateSettings } from "@/lib/db/settings";
+import { listTasks, updateTasks } from "@/lib/db/tasks";
 import { jiraBaseFromUrl } from "@/lib/jira/address";
 import { jiraMyself } from "@/lib/jira/client";
 import {
@@ -89,14 +90,15 @@ export async function saveJiraConnectionAction(
   } = { jiraBaseUrlEnc: encryptSecret(address) };
   // The status tables are one Jira's workflow. Kept for another Jira, a move
   // would send there a status he only ever picked for the first one.
-  if (before.state !== "ready" || before.baseUrl !== address) {
-    patch.jiraStatusMapEnc = null;
-  }
+  const anotherJira = before.state !== "ready" || before.baseUrl !== address;
+  if (anotherJira) patch.jiraStatusMapEnc = null;
   if (token) {
     patch.jiraTokenEnc = encryptSecret(token);
     patch.jiraTokenLast4 = token.slice(-4);
   }
   const saved = await updateSettings(userId, patch);
+  // Whose each ticket is was learned on the old Jira; the new one says again on its first read.
+  if (anotherJira) await forgetTicketOwners(userId);
   revalidatePath("/", "layout");
   return {
     ok: true,
@@ -158,4 +160,16 @@ export async function saveJiraStatusMapAction(
   await saveJiraStatusMap(userId, map);
   revalidatePath("/", "layout");
   return { ok: true, data: map };
+}
+
+/** Clear "his or not" on every task, keeping each task's edit stamp. */
+async function forgetTicketOwners(userId: string): Promise<void> {
+  const known = (await listTasks(userId)).filter(
+    (t) => t.ticketMine !== undefined && t.ticketMine !== null,
+  );
+  if (!known.length) return;
+  await updateTasks(
+    userId,
+    known.map((t) => ({ id: t.id, patch: { ticketMine: null, updatedAt: t.updatedAt ?? null } })),
+  );
 }

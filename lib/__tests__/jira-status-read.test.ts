@@ -22,11 +22,13 @@ const issue = (
   name: string,
   bucket: "new" | "indeterminate" | "done",
   resolved: string | null = null,
+  assignee: { name: string; key: string } | null = null,
 ) => ({
   key,
   fields: {
     status: { name, statusCategory: { key: bucket } },
     resolutiondate: resolved,
+    assignee,
   },
 });
 const found = (...issues: unknown[]) => ({ ok: true, data: { issues } });
@@ -54,21 +56,49 @@ describe("reading where tickets stand", () => {
       name: "In Review",
       stage: "doing",
       finished: null,
+      mine: null,
     });
     expect(res.data.statuses.get("PROJ-2")).toEqual({
       name: "Closed",
       stage: "done",
       finished: "2026-03-01T10:22:33.000Z",
+      mine: null,
     });
   });
 
-  it("asks once for up to fifty tickets, for the status and the closing date and nothing else", async () => {
+  it("tells his tickets from everybody else's, and from nobody's", async () => {
+    jira.answers = [
+      found(
+        issue("PROJ-1", "Open", "new", null, { name: "jsosa", key: "JIRAUSER1" }),
+        issue("PROJ-2", "Open", "new", null, { name: "ana", key: "JIRAUSER2" }),
+        issue("PROJ-3", "Open", "new"),
+      ),
+    ];
+
+    const res = await readTicketStatuses(CONN, ["PROJ-1", "PROJ-2", "PROJ-3"], new Set(["name:jsosa", "key:jirauser1"]));
+
+    if (!res.ok) throw new Error("expected an answer");
+    expect(res.data.statuses.get("PROJ-1")?.mine).toBe(true);
+    expect(res.data.statuses.get("PROJ-2")?.mine).toBe(false);
+    expect(res.data.statuses.get("PROJ-3")?.mine).toBe(false);
+  });
+
+  it("says nothing of whose a ticket is when Jira left the field out", async () => {
+    const bare = { key: "PROJ-1", fields: { status: { name: "Open", statusCategory: { key: "new" } } } };
+    jira.answers = [found(bare)];
+
+    const res = await readTicketStatuses(CONN, ["PROJ-1"], new Set(["name:jsosa"]));
+
+    expect(res.ok && res.data.statuses.get("PROJ-1")?.mine).toBeNull();
+  });
+
+  it("asks once for up to fifty tickets, for the status, the closing date and who has it, and nothing else", async () => {
     const keys = Array.from({ length: 50 }, (_, i) => `PROJ-${i + 1}`);
 
     await readTicketStatuses(CONN, keys);
 
     expect(jira.paths).toHaveLength(1);
-    expect(jira.paths[0]).toContain("fields=status,resolutiondate&");
+    expect(jira.paths[0]).toContain("fields=status,resolutiondate,assignee&");
     expect(jira.paths[0]).toContain("maxResults=50");
     expect(jira.paths[0]).toContain("validateQuery=false");
     expect(jqlOf(jira.paths[0])).toBe(`key in (${keys.join(", ")})`);

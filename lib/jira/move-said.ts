@@ -16,6 +16,7 @@ export function moveSaid(
         : null;
     case "held":
     case "refused":
+    case "not-yours":
     case "failed":
       return { tone: "bad", text: result.error };
     case "off":
@@ -38,4 +39,7 @@ export function moveSaid(
 
 /** Whether what Jira said was kept on the task, so the page has something new to show. */
 export const moveKept = (result: JiraMove) =>
-  result.state === "sent" || result.state === "already" || result.state === "refused";
+  result.state === "sent" ||
+  result.state === "already" ||
+  result.state === "refused" ||
+  result.state === "not-yours";

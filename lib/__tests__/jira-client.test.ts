@@ -195,7 +195,7 @@ describe("jiraMyself", () => {
     stub(answer(200, JSON.stringify({ name: "jdoe", displayName: "Jane Doe" })));
     expect(await jiraMyself(BASE, TOKEN)).toEqual({
       ok: true,
-      data: { name: "Jane Doe", ids: ["jdoe"] },
+      data: { name: "Jane Doe", ids: ["name:jdoe"] },
     });
   });
 
@@ -327,13 +327,17 @@ describe("a ticket's moves", () => {
   });
   afterEach(() => vi.unstubAllGlobals());
 
-  it("reads where the ticket stands and the moves it allows in one request", async () => {
+  it("reads where the ticket stands, who has it and the moves it allows in one request", async () => {
     stub(
       answer(
         200,
         JSON.stringify({
           key: "PROJ-1",
-          fields: { status: { name: "Open", statusCategory: { key: "new" } } },
+          fields: {
+            status: { name: "Open", statusCategory: { key: "new" } },
+            assignee: { name: "pat", key: "JIRAUSER1", displayName: "Pat Example" },
+            resolutiondate: "2026-03-01T10:22:33.000+0000",
+          },
           transitions: [
             { id: "11", to: { name: "In Progress" } },
             { id: "x", to: { name: "Odd" } },
@@ -349,10 +353,14 @@ describe("a ticket's moves", () => {
         key: "PROJ-1",
         current: { name: "Open", stage: "todo" },
         transitions: [{ id: "11", to: "In Progress" }],
+        assigneeIds: ["name:pat", "key:jirauser1"],
+        assigneeKnown: true,
+        assignee: "Pat Example",
+        finished: "2026-03-01T10:22:33.000Z",
       },
     });
     expect(calls[0].url).toBe(
-      "https://desk.example.com/rest/api/2/issue/PROJ-1?fields=status&expand=transitions",
+      "https://desk.example.com/rest/api/2/issue/PROJ-1?fields=status,assignee,resolutiondate&expand=transitions",
     );
   });
 
