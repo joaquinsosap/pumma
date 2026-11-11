@@ -11,6 +11,7 @@ import { JiraMark } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { LifeArea } from "@/lib/types";
 import { paint } from "@/lib/themes";
+import { useWheelSideways } from "@/lib/use-wheel-sideways";
 
 /**
  * The strip of project cards above the board. Each card is both the switcher
@@ -43,6 +44,7 @@ export function ProjectRail({
   onFromJira?: () => void;
 }) {
   const railRef = useRef<HTMLDivElement>(null);
+  useWheelSideways(railRef);
 
   // Keep the selected card on screen. A project created from the end of the
   // rail lands first under "Newest", scrolled out of view, so it read as a card
@@ -58,8 +60,8 @@ export function ProjectRail({
     const c = card.getBoundingClientRect();
     const r = rail.getBoundingClientRect();
     if (c.left >= r.left && c.right <= r.right) return;
-    // Always to the card's start edge: the cards snap by their start, so
-    // lining up the right edge would get snapped somewhere else.
+    // Always to the card's start edge: on a touch screen the cards snap by
+    // their start, so lining up the right edge would get snapped somewhere else.
     rail.scrollBy({ left: c.left - r.left, behavior: "smooth" });
   }, [selectedId, projects.length]);
 
@@ -67,7 +69,8 @@ export function ProjectRail({
     <div className="relative mb-4">
       <div
         ref={railRef}
-        className="flex snap-x gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]"
+        // Snapping is for fingers: a wheel's small moves get pulled back to a card's edge.
+        className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin] pointer-coarse:snap-x"
       >
         {projects.map((p) => (
           <ProjectRailCard
