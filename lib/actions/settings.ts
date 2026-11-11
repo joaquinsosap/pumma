@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
-import type { ActionResult, Theme, OmniType } from "@/lib/types";
+import type { ActionResult, OmniType } from "@/lib/types";
+import { LOOK_IDS, lookById, type LookId } from "@/lib/themes";
 import type { Tag } from "@/lib/schemas";
 import { getSettings, updateSettings } from "@/lib/db/settings";
 import { insertTag } from "@/lib/db/tags";
@@ -26,13 +27,17 @@ import {
 } from "@/lib/nudge";
 import { LIFE_SPAN_MAX } from "@/lib/life-constants";
 
-const themeSchema = z.enum(["light", "dark"]);
+const lookSchema = z.enum(LOOK_IDS);
 
-export async function setTheme(theme: Theme): Promise<ActionResult> {
-  const parsed = themeSchema.safeParse(theme);
+export async function setLook(look: LookId): Promise<ActionResult> {
+  const parsed = lookSchema.safeParse(look);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
   const userId = await requireUserId();
-  await updateSettings(userId, { theme: parsed.data });
+  // `theme` goes with it: light or dark is the look's to say.
+  await updateSettings(userId, {
+    look: parsed.data,
+    theme: lookById(parsed.data).mode,
+  });
   revalidatePath("/", "layout");
   return { ok: true };
 }

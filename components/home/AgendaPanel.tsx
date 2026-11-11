@@ -33,6 +33,7 @@ import { taskDetailHref } from "@/lib/task-links";
 import { trySave } from "@/lib/try-save";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
+import { paint } from "@/lib/themes";
 
 const PRIO_COLOR = {
   high: "var(--prio-high)",
@@ -334,7 +335,7 @@ function DayMeetings({
             </span>
             <div
               className="min-w-0 flex-1 border-l-2 pl-[11px]"
-              style={{ borderColor: m.color }}
+              style={{ borderColor: paint(m.color) }}
             >
               <div className="flex items-center gap-1.5">
                 <span className="min-w-0 truncate text-[13px] font-semibold">

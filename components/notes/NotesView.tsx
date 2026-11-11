@@ -39,6 +39,7 @@ import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 import { noteHref } from "@/lib/note-href";
 import { Taggable } from "@/components/tags/TagMenuProvider";
+import { paint } from "@/lib/themes";
 
 type Props = {
   notes: Note[];
@@ -254,7 +255,7 @@ export function NotesView({
                           key={id}
                           className="rounded px-1.5 py-px font-mono text-[9px]"
                           style={{
-                            color: tg.color,
+                            color: paint(tg.color),
                             background: tagBg(tg.color),
                           }}
                         >

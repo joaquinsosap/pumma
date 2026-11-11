@@ -72,6 +72,7 @@ import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { useIsDesktop } from "@/lib/use-media-query";
 import { useTaskSelection } from "@/lib/use-task-selection";
 import { trySave } from "@/lib/try-save";
+import { paint } from "@/lib/themes";
 
 const tabs = ["today", "upcoming", "all"] as const;
 const groups = ["none", "tag", "project"] as const;
@@ -376,7 +377,7 @@ export function TasksView({
         {
           label,
           count: filtered.length,
-          color: filteredProject?.color ?? TASK_ACCENT,
+          color: filteredProject ? paint(filteredProject.color) : TASK_ACCENT,
           items: filtered,
         },
       ];
@@ -389,7 +390,7 @@ export function TasksView({
           result.push({
             label: tg.name,
             count: items.length,
-            color: tg.color,
+            color: paint(tg.color),
             items,
           });
         }
@@ -414,7 +415,7 @@ export function TasksView({
       result.push({
         label: pr.title,
         count: items.length,
-        color: pr.color,
+        color: paint(pr.color),
         items,
         dropProjectId: pr.id,
       });
@@ -965,13 +966,13 @@ function ProjectFilterControl({
       <div
         className="flex max-w-[200px] items-center gap-1.5 rounded-lg border-2 px-2 py-1"
         style={{
-          borderColor: selected.color,
-          background: selected.color.replace(")", " / 0.12)"),
+          borderColor: paint(selected.color),
+          background: paint(selected.color, 0.12),
         }}
       >
         <span
           className="h-2.5 w-2.5 shrink-0 rounded-[2px]"
-          style={{ background: selected.color }}
+          style={{ background: paint(selected.color) }}
         />
         <span className="min-w-0 truncate text-[11px] font-bold text-ink">
           {selected.title}

@@ -16,6 +16,7 @@ import {
 } from "@/lib/agenda-timeline";
 import { WidgetRowLink } from "@/components/home/WidgetLink";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 function AgendaNowLine({ time }: { time: string }) {
   return (
@@ -141,7 +142,7 @@ function AgendaEventRow({
                 ? "rounded-r-lg bg-tasks/[0.07] py-1 pl-3"
                 : "py-0 pl-[11px]",
             )}
-            style={{ borderColor: ev.color }}
+            style={{ borderColor: paint(ev.color) }}
           >
             <div className="text-[13px] font-semibold">{ev.title}</div>
             <div

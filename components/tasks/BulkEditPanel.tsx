@@ -15,6 +15,7 @@ import { isLifeTag } from "@/lib/life-area-sync";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
+import { paint } from "@/lib/themes";
 
 const STATUS_OPTIONS = [
   ["todo", "To do"],
@@ -409,17 +410,17 @@ function TagToggle({
         state === "none"
           ? undefined
           : {
-              borderColor: tag.color,
+              borderColor: paint(tag.color),
               background: tagBg(tag.color),
-              color: tag.color,
+              color: paint(tag.color),
             }
       }
     >
       <span
         className="flex h-3 w-3 shrink-0 items-center justify-center rounded-[3px] border"
         style={{
-          borderColor: tag.color,
-          background: state === "all" ? tag.color : "transparent",
+          borderColor: paint(tag.color),
+          background: state === "all" ? paint(tag.color) : "transparent",
         }}
       >
         {state === "all" && (
@@ -429,7 +430,7 @@ function TagToggle({
           <Minus
             className="h-2 w-2"
             strokeWidth={4}
-            style={{ color: tag.color }}
+            style={{ color: paint(tag.color) }}
           />
         )}
       </span>

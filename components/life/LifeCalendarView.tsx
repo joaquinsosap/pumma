@@ -24,6 +24,7 @@ import { Topbar } from "@/components/shell/Topbar";
 import { Switch } from "@/components/ui/switch";
 import { updateSettingsAction } from "@/lib/actions/settings";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 type Props = {
   birthDate: string | null;
@@ -261,7 +262,7 @@ export function LifeCalendarView({
                       <LegendSwatch
                         key={m.value}
                         className="border-0"
-                        style={{ background: m.color }}
+                        style={{ background: paint(m.color) }}
                         label={m.label}
                       />
                     ))}
@@ -294,7 +295,7 @@ export function LifeCalendarView({
                       <LegendSwatch
                         key={m.value}
                         className="border-0"
-                        style={{ background: m.color }}
+                        style={{ background: paint(m.color) }}
                         label={m.label}
                       />
                     ))}

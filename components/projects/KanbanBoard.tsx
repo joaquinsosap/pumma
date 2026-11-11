@@ -49,6 +49,7 @@ import {
 } from "@/lib/new-task-arrival";
 import { landCard } from "@/lib/land-card";
 import { TicketChip } from "@/components/tasks/TicketChip";
+import { paint } from "@/lib/themes";
 
 export type ColumnId = "todo" | "doing" | "done";
 
@@ -873,7 +874,7 @@ function KanbanCardShell({
             <span
               key={id}
               className="rounded px-1.5 py-px font-mono text-[9px]"
-              style={{ color: tg.color, background: tagBg(tg.color) }}
+              style={{ color: paint(tg.color), background: tagBg(tg.color) }}
             >
               {tg.name}
             </span>

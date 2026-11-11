@@ -17,6 +17,7 @@ import { ScrambleText } from "@/components/shell/ScrambleText";
 import { NEW_TAG_PREVIEW_COLOR, tagBg, tokenizeOmniInput } from "@/lib/parse";
 import { CALENDAR_PRIO } from "@/lib/calendar-tasks";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 type Props = Omit<ComponentPropsWithoutRef<"input">, "value"> & {
   value: string;
@@ -44,7 +45,7 @@ function InlineTagToken({
   return (
     <span
       style={{
-        color: accent,
+        color: paint(accent),
         backgroundColor: tagBg(accent),
         textDecoration: isNew ? "underline dotted" : undefined,
         textUnderlineOffset: "2px",

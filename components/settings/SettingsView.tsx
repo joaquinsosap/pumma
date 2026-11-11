@@ -1,9 +1,9 @@
 "use client";
+import { LookPicker } from "@/components/shell/LookPicker";
 import { DeleteButton } from "@/components/ui/delete-button";
 
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { useTheme } from "next-themes";
 import type { CalendarFeed, Settings, Tag } from "@/lib/schemas";
 import {
   PRIORITY_LABELS,
@@ -14,7 +14,6 @@ import {
 } from "@/lib/task-filters";
 import {
   updateSettingsAction,
-  setTheme,
   addTagAction,
   updateUserNameAction,
 } from "@/lib/actions/settings";
@@ -88,6 +87,7 @@ import {
   SettingsNav,
   type SettingsGroup,
 } from "@/components/settings/SettingsNav";
+import { paint } from "@/lib/themes";
 
 type Props = {
   settings: Settings | null;
@@ -205,7 +205,6 @@ export function SettingsView({
     allowDelete: settings?.mcp?.allowDelete ?? false,
     serveExternal: settings?.mcp?.serveExternal ?? true,
   };
-  const { setTheme: setLocal } = useTheme();
   const scrollerRef = useRef<HTMLDivElement>(null);
 
   // Arriving at one panel by link, e.g. /settings#calendars from the offer
@@ -359,15 +358,6 @@ export function SettingsView({
     });
   };
 
-  const toggleTheme = () => {
-    const next = settings?.theme === "dark" ? "light" : "dark";
-    setLocal(next);
-    startTransition(async () => {
-      const res = await trySave(() => setTheme(next));
-      if (res) router.refresh();
-    });
-  };
-
   return (
     <>
       <Topbar
@@ -488,13 +478,10 @@ export function SettingsView({
               description="App-wide preferences for appearance, calendar, and quick capture."
             >
               <SettingRow
-                label="Dark mode"
-                description="Use the dark color theme across the app."
+                label="Look"
+                description="The colors of the whole app. The bulb in the sidebar opens the same choices."
               >
-                <Switch
-                  checked={settings?.theme === "dark"}
-                  onCheckedChange={toggleTheme}
-                />
+                <LookPicker className="w-[292px] shrink-0" />
               </SettingRow>
               <SettingRow
                 label="Week starts on Sunday"
@@ -1263,7 +1250,7 @@ function TagRow({ tag, handle }: { tag: Tag; handle?: ReactNode }) {
         type="button"
         onClick={cycleColor}
         className="h-3.5 w-3.5 shrink-0 rounded-full ring-offset-1 transition-transform hover:scale-125 focus-visible:ring-2 focus-visible:ring-faint"
-        style={{ background: tag.color }}
+        style={{ background: paint(tag.color) }}
         aria-label={`Change color of ${tag.name}`}
         title="Click to change color"
       />

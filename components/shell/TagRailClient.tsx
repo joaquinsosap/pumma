@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Plus, Sparkles } from "@/components/icons";
+import { paint } from "@/lib/themes";
 
 type TagItem = {
   id: string;
@@ -144,7 +145,7 @@ export function TagRailClient({ tags }: { tags: TagItem[] }) {
               >
                 <span
                   className="h-2 w-2 shrink-0 rounded-full"
-                  style={{ background: tag.color }}
+                  style={{ background: paint(tag.color) }}
                 />
                 <span className="truncate">{tag.name}</span>
                 <span className="ml-auto shrink-0 font-mono text-[10px] text-faint2">

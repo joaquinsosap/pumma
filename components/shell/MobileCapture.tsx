@@ -44,6 +44,7 @@ import {
 } from "@/components/tasks/PriorityChip";
 import type { TaskPriority } from "@/lib/types";
 import { trySave } from "@/lib/try-save";
+import { paint } from "@/lib/themes";
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string }[] = [
   { value: "high", label: "High" },
@@ -581,7 +582,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                       )}
                       style={
                         s.color
-                          ? { color: s.color, background: tagBg(s.color) }
+                          ? { color: paint(s.color), background: tagBg(s.color) }
                           : undefined
                       }
                     >
@@ -644,9 +645,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                         style={
                           active
                             ? {
-                                borderColor: t.color,
+                                borderColor: paint(t.color),
                                 background: t.color.includes("oklch")
-                                  ? t.color.replace(")", " / 0.14)")
+                                  ? paint(t.color, 0.14)
                                   : "var(--hover)",
                               }
                             : undefined
@@ -659,7 +660,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                             t.shape === "dot" && "rounded-full",
                             t.shape === "diamond" && "rotate-45",
                           )}
-                          style={{ background: t.color }}
+                          style={{ background: paint(t.color) }}
                         />
                         {t.label}
                       </button>
@@ -786,9 +787,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                             style={
                               active
                                 ? {
-                                    borderColor: tg.color,
+                                    borderColor: paint(tg.color),
                                     background: tagBg(tg.color),
-                                    color: tg.color,
+                                    color: paint(tg.color),
                                   }
                                 : undefined
                             }

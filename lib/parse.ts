@@ -14,6 +14,7 @@ import {
   type DateOrder,
 } from "@/lib/date-tokens";
 import { getDefaultTimezone } from "@/lib/timezone";
+import { paint } from "@/lib/themes";
 
 /** Preview color for #tags that do not exist yet (created on save). */
 export const NEW_TAG_PREVIEW_COLOR = "oklch(0.58 0.06 265)";
@@ -404,7 +405,7 @@ export function defaultDue(
 
 export function tagBg(color: string): string {
   if (color.startsWith("#")) return "var(--chip)";
-  return color.replace(")", " / 0.12)");
+  return paint(color, 0.12);
 }
 
 export function toggleTagInText(text: string, tagName: string): string {

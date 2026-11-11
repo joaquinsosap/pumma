@@ -45,6 +45,7 @@ export async function bootstrapNewUser(user: {
   await insertSettings({
     userId: user.id,
     theme: "light",
+    look: null,
     defaultCaptureType: "task",
     defaultDueToday: true,
     defaultTasksTab: "all" as const,

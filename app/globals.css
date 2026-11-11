@@ -1467,7 +1467,7 @@ select:hover:not(:disabled) {
 }
 /* Knocked-out text on the accent stays knocked out in both themes. */
 .text-background {
-  color: #fff !important;
+  color: var(--on-primary) !important;
 }
 
 /* Text fields sink; they are the one surfaced control that must not raise. */
@@ -1880,4 +1880,293 @@ select:hover:not(:disabled) {
   select {
     font-size: 16px;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   LOOKS: what the bulb in the sidebar switches between.
+   ══════════════════════════════════════════════════════════════════════════
+   <html> carries three attributes, drawn by the server from the account's
+   settings: data-palette (which look), data-finish (glass or matte) and
+   data-theme (light or dark, which the look decides). Mist is everything
+   above this line. Each other look is one block of tokens further down, and
+   they all share the matte rules: no blur, no gradient, no glow, no tinted
+   heads, so a look is a different surface and not a tint over the same one.
+
+   The list, the names and the swatches are lib/themes.ts. The numbers in the
+   blocks come from design/pick-themes/gen, and lib/__tests__/themes.test.ts
+   fails the build if a look stops being readable. */
+
+:root {
+  /* Text on a filled accent: white on Mist, and whatever reads on a look whose buttons are light. */
+  --on-primary: #fff;
+  /* How far a stored colour (a tag's, a project's, a calendar's) leans toward the text colour. Mist: not at all. See paint() in lib/themes.ts. */
+  --pick-keep: 100%;
+  --pick-to: var(--ink);
+}
+
+/* The glyph on an accent tile is the text on a filled accent. */
+svg.text-primary > path[fill="#fff"] {
+  fill: var(--on-primary);
+}
+
+/* ── Matte ───────────────────────────────────────────────────────────────
+   Every rule here undoes one piece of the depth above for a matte look. They
+   are !important because the rules they answer are. */
+:root[data-finish="matte"] body { background: var(--bg) !important; }
+:root[data-finish="matte"] .bg-surface, :root[data-finish="matte"] .bg-surface2 { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+:root[data-finish="matte"] .bg-surface { box-shadow: none !important; }
+:root[data-finish="matte"] .rounded-\[13px\].border.bg-surface:hover { border-color: var(--rim-hover) !important; box-shadow: none !important; }
+:root[data-finish="matte"] .widget-head { background-color: transparent !important; border-bottom-color: var(--border) !important; }
+:root[data-finish="matte"] .widget-head > * > a:hover, :root[data-finish="matte"] .widget-head > a:hover { background-color: var(--hover) !important; }
+:root[data-finish="matte"] .bg-surface2\/60 { background-color: var(--band) !important; border-bottom-color: var(--border) !important; }
+:root[data-finish="matte"] .bg-surface2\/60 h3 { color: var(--ink) !important; }
+:root[data-finish="matte"] :is(button,[role="button"],select,summary):is(.border-border,.border-border2,.bg-surface,.bg-surface2,.bg-chip):not(.border-\[1\.8px\]):not([role="switch"]), :root[data-finish="matte"] .widget-head button:not(.bg-ink), :root[data-finish="matte"] select { background-color: var(--face) !important; border-color: var(--face-line) !important; box-shadow: none !important; }
+:root[data-finish="matte"] :is(button,[role="button"],select,summary):is(.border-border,.border-border2,.bg-surface,.bg-surface2,.bg-chip):not(.border-\[1\.8px\]):not([role="switch"]):hover:not(:disabled), :root[data-finish="matte"] .widget-head button:not(.bg-ink):hover, :root[data-finish="matte"] select:hover:not(:disabled) { border-color: var(--face-line-hover) !important; box-shadow: none !important; }
+:root[data-finish="matte"] .bg-ink, :root[data-finish="matte"] .bg-primary { background-color: var(--btn) !important; box-shadow: none !important; }
+:root[data-finish="matte"] .bg-ink:hover:not(:disabled) { box-shadow: none !important; filter: brightness(0.94); }
+:root[data-finish="matte"] .text-background { color: var(--on-primary) !important; }
+:root[data-finish="matte"] svg.text-primary path[fill="#fff"] { fill: var(--on-primary); }
+:root[data-finish="matte"] :is(input, textarea):is(.border-border,.border-border2,.bg-surface,.bg-surface2) { box-shadow: none !important; border-color: var(--face-line) !important; }
+:root[data-finish="matte"] .border-\[1\.8px\] { border-color: var(--tick) !important; box-shadow: none !important; }
+:root[data-finish="matte"] .omni-box { box-shadow: none !important; border-color: var(--rim) !important; }
+:root[data-finish="matte"] .omni-box::before { display: none !important; }
+:root[data-finish="matte"] .omni-box:focus-within { border-color: var(--omni-accent) !important; box-shadow: 0 0 0 2px color-mix(in oklch, var(--omni-accent) 30%, transparent) !important; }
+:root[data-finish="matte"] [style*="width"].h-full { box-shadow: none !important; }
+:root[data-finish="matte"] .hover\:border-faint2:hover, :root[data-finish="matte"] .hover\:border-faint:hover { border-color: var(--face-line-hover) !important; box-shadow: none !important; }
+:root[data-finish="matte"] .pumma-floating { box-shadow: 0 14px 34px -10px var(--shadow) !important; }
+:root[data-finish="matte"] [role="switch"]:not([data-state="checked"]) { background-color: var(--chip) !important; border-color: var(--tick) !important; box-shadow: none !important; }
+:root[data-finish="matte"] [role="switch"][data-state="checked"] { background-color: var(--btn) !important; border-color: var(--btn) !important; box-shadow: none !important; }
+:root[data-finish="matte"] [role="switch"][data-state="checked"] > span { background-color: var(--on-primary) !important; }
+
+/* ── The looks ───────────────────────────────────────────────────────────
+   A light look starts from :root and a dark one from [data-theme="dark"],
+   so what is not named here (priorities, Jira's blue) is Mist's. */
+/* Fog: light grey, black buttons. The only colour on screen is the data's. */
+:root[data-palette="fog"] {
+  --bg: #e4e4e2;
+  --surface: #f6f6f4;
+  --surface2: #ececea;
+  --floating: #fafaf8;
+  --chip: #ebebe9;
+  --well: #fdfdfb;
+  --face: #fdfdfb;
+  --band: #ececea;
+  --face-line: rgba(26, 26, 26, 0.16);
+  --face-line-hover: rgba(26, 26, 26, 0.34);
+  --tick: rgba(26, 26, 26, 0.3);
+  --border: rgba(26, 26, 26, 0.13);
+  --border2: rgba(26, 26, 26, 0.08);
+  --row-divider: rgba(26, 26, 26, 0.12);
+  --rim: rgba(26, 26, 26, 0.15);
+  --rim-hover: rgba(26, 26, 26, 0.3);
+  --lip: transparent;
+  --edge: transparent;
+  --shadow: rgba(26, 26, 26, 0.12);
+  --ahead: rgba(26, 26, 26, 0.08);
+  --aura: transparent;
+  --ink: #1a1a1a;
+  --muted: #505050;
+  --faint: #5d5d5c;
+  --faint2: #646463;
+  --primary: #2b2b2b;
+  --btn: #1f1f1f;
+  --on-primary: #ffffff;
+  --hover: rgba(26, 26, 26, 0.055);
+  --skeleton: rgba(26, 26, 26, 0.14);
+  --tasks: #cb5540;
+  --habits: #38875a;
+  --goals: #6357bd;
+  --projects: #2b78a8;
+  --notes: #bc8115;
+  --calendar: #1f8f9c;
+  --life: #4a5da8;
+  --assistant: #a8459c;
+  --lived: #3f6ea8;
+  --life-now: #e16e01;
+  --pick-keep: 81%;
+  --pick-to: #1a1a1a;
+}
+
+/* Graphite: dark grey, light buttons. Where an account on the old dark lands. */
+:root[data-palette="graphite"] {
+  --bg: #26272a;
+  --surface: #313236;
+  --surface2: #2b2c2f;
+  --floating: #36373b;
+  --chip: #3d3f44;
+  --well: #292a2d;
+  --face: #3d3f44;
+  --band: #2b2c2f;
+  --face-line: rgba(237, 237, 238, 0.13);
+  --face-line-hover: rgba(237, 237, 238, 0.3);
+  --tick: rgba(237, 237, 238, 0.34);
+  --border: rgba(237, 237, 238, 0.11);
+  --border2: rgba(237, 237, 238, 0.07);
+  --row-divider: rgba(237, 237, 238, 0.1);
+  --rim: rgba(237, 237, 238, 0.12);
+  --rim-hover: rgba(237, 237, 238, 0.26);
+  --lip: transparent;
+  --edge: transparent;
+  --shadow: rgba(15, 16, 19, 0.55);
+  --ahead: rgba(237, 237, 238, 0.09);
+  --aura: transparent;
+  --ink: #ededee;
+  --muted: #b5b5b7;
+  --faint: #a5a6a8;
+  --faint2: #9c9c9f;
+  --primary: #d6d7da;
+  --btn: #e4e5e7;
+  --on-primary: #17181a;
+  --hover: rgba(237, 237, 238, 0.07);
+  --skeleton: rgba(237, 237, 238, 0.14);
+  --tasks: #e3775f;
+  --habits: #57b37c;
+  --goals: #9184e0;
+  --projects: #4fa3cf;
+  --notes: #dda63f;
+  --calendar: #3fb4c2;
+  --life: #7b8cd4;
+  --assistant: #d071c6;
+  --lived: #4b83c4;
+  --life-now: #ffb545;
+  --pick-keep: 78%;
+  --pick-to: #ededee;
+}
+
+/* Onyx: matte black. */
+:root[data-palette="onyx"] {
+  --bg: #0c0c0d;
+  --surface: #161617;
+  --surface2: #101011;
+  --floating: #1b1b1c;
+  --chip: #222224;
+  --well: #0f0f10;
+  --face: #222224;
+  --band: #101011;
+  --face-line: rgba(241, 241, 241, 0.13);
+  --face-line-hover: rgba(241, 241, 241, 0.3);
+  --tick: rgba(241, 241, 241, 0.34);
+  --border: rgba(241, 241, 241, 0.11);
+  --border2: rgba(241, 241, 241, 0.07);
+  --row-divider: rgba(241, 241, 241, 0.1);
+  --rim: rgba(241, 241, 241, 0.12);
+  --rim-hover: rgba(241, 241, 241, 0.26);
+  --lip: transparent;
+  --edge: transparent;
+  --shadow: rgba(1, 1, 1, 0.55);
+  --ahead: rgba(241, 241, 241, 0.09);
+  --aura: transparent;
+  --ink: #f1f1f1;
+  --muted: #afafb0;
+  --faint: #959595;
+  --faint2: #818181;
+  --primary: #e2e2e2;
+  --btn: #f0f0f0;
+  --on-primary: #0c0c0d;
+  --hover: rgba(241, 241, 241, 0.07);
+  --skeleton: rgba(241, 241, 241, 0.14);
+  --tasks: #e3775f;
+  --habits: #57b37c;
+  --goals: #9184e0;
+  --projects: #4fa3cf;
+  --notes: #dda63f;
+  --calendar: #3fb4c2;
+  --life: #7b8cd4;
+  --assistant: #d071c6;
+  --lived: #4b83c4;
+  --life-now: #ffb545;
+  --pick-keep: 100%;
+  --pick-to: #f1f1f1;
+}
+
+/* Linen: beige paper, dark brown buttons. */
+:root[data-palette="linen"] {
+  --bg: #e3d8c5;
+  --surface: #f3ecdf;
+  --surface2: #eae1d1;
+  --floating: #f7f0e3;
+  --chip: #e9dfcd;
+  --well: #faf3e6;
+  --face: #faf3e6;
+  --band: #eae1d1;
+  --face-line: rgba(42, 36, 28, 0.16);
+  --face-line-hover: rgba(42, 36, 28, 0.34);
+  --tick: rgba(42, 36, 28, 0.3);
+  --border: rgba(42, 36, 28, 0.13);
+  --border2: rgba(42, 36, 28, 0.08);
+  --row-divider: rgba(42, 36, 28, 0.12);
+  --rim: rgba(42, 36, 28, 0.15);
+  --rim-hover: rgba(42, 36, 28, 0.3);
+  --lip: transparent;
+  --edge: transparent;
+  --shadow: rgba(42, 36, 28, 0.12);
+  --ahead: rgba(42, 36, 28, 0.08);
+  --aura: transparent;
+  --ink: #2a241c;
+  --muted: #4f4940;
+  --faint: #5a544b;
+  --faint2: #635d53;
+  --primary: #5b4428;
+  --btn: #4a3722;
+  --on-primary: #fbf5ea;
+  --hover: rgba(42, 36, 28, 0.055);
+  --skeleton: rgba(42, 36, 28, 0.14);
+  --tasks: #cb5540;
+  --habits: #38875a;
+  --goals: #6357bd;
+  --projects: #2b78a8;
+  --notes: #b67c07;
+  --calendar: #1f8f9c;
+  --life: #4a5da8;
+  --assistant: #a8459c;
+  --lived: #3f6ea8;
+  --life-now: #d66801;
+  --pick-keep: 74%;
+  --pick-to: #2a241c;
+}
+
+/* Navy: deep navy, bright blue buttons. */
+:root[data-palette="navy"] {
+  --bg: #0b1423;
+  --surface: #121e33;
+  --surface2: #0e182a;
+  --floating: #172338;
+  --chip: #1b2b47;
+  --well: #0e1726;
+  --face: #1b2b47;
+  --band: #0e182a;
+  --face-line: rgba(231, 238, 248, 0.13);
+  --face-line-hover: rgba(231, 238, 248, 0.3);
+  --tick: rgba(231, 238, 248, 0.34);
+  --border: rgba(231, 238, 248, 0.11);
+  --border2: rgba(231, 238, 248, 0.07);
+  --row-divider: rgba(231, 238, 248, 0.1);
+  --rim: rgba(231, 238, 248, 0.12);
+  --rim-hover: rgba(231, 238, 248, 0.26);
+  --lip: transparent;
+  --edge: transparent;
+  --shadow: rgba(0, 2, 12, 0.55);
+  --ahead: rgba(231, 238, 248, 0.09);
+  --aura: transparent;
+  --ink: #e7eef8;
+  --muted: #a7b0bd;
+  --faint: #8e97a5;
+  --faint2: #7e8797;
+  --primary: #7fb2f5;
+  --btn: #8fbdf7;
+  --on-primary: #0b1423;
+  --hover: rgba(231, 238, 248, 0.07);
+  --skeleton: rgba(231, 238, 248, 0.14);
+  --tasks: #e3775f;
+  --habits: #57b37c;
+  --goals: #9184e0;
+  --projects: #4fa3cf;
+  --notes: #dda63f;
+  --calendar: #3fb4c2;
+  --life: #7b8cd4;
+  --assistant: #d071c6;
+  --lived: #4b83c4;
+  --life-now: #ffb545;
+  --pick-keep: 96%;
+  --pick-to: #e7eef8;
 }

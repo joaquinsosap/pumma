@@ -5,6 +5,7 @@ import type { Project, Tag } from "@/lib/schemas";
 import { tagBg } from "@/lib/parse";
 import { isLifeTag, SPECIAL_LIFE_TAGS } from "@/lib/life-area-sync";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 type Props = {
   tags: Tag[];
@@ -61,16 +62,16 @@ export function TagGridPicker({
             style={
               active
                 ? {
-                    color: tag.color,
+                    color: paint(tag.color),
                     background: tagBg(tag.color),
-                    borderColor: tag.color,
+                    borderColor: paint(tag.color),
                   }
                 : undefined
             }
           >
             <span
               className="h-2 w-2 shrink-0 rounded-full ring-1 ring-black/5"
-              style={{ background: tag.color }}
+              style={{ background: paint(tag.color) }}
             />
             <span className="truncate">{tag.name}</span>
             {active && <X className="ml-auto h-3 w-3 shrink-0" />}

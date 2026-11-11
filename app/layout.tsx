@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { Toaster } from "sonner";
-import { ThemeProvider } from "@/components/providers/theme-provider";
+import { LookProvider } from "@/components/providers/look-provider";
 import { Providers } from "@/components/providers/nuqs-provider";
 import { getSettings } from "@/lib/db/settings";
 import { getSessionUserId } from "@/lib/auth/session";
+import { lookFor } from "@/lib/themes";
 import "./globals.css";
 
 /**
@@ -65,10 +66,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  // Theme comes from the signed-in user's settings; auth pages default to light.
+  // The look comes from the signed-in user's settings; signed out, it is Mist.
   const userId = await getSessionUserId();
   const settings = userId ? await getSettings(userId) : null;
-  const defaultTheme = settings?.theme ?? "light";
+  const look = lookFor(settings);
 
   return (
     // The font variables live on <html>, not <body>. `--font-sans` is composed
@@ -77,16 +78,16 @@ export default async function RootLayout({
     // and the whole stack silently collapsed to the generic fallback.
     <html
       lang="en"
+      // Drawn here so the page arrives in its look. The bulb changes them in place.
+      data-theme={look.mode}
+      data-palette={look.id}
+      data-finish={look.finish}
       suppressHydrationWarning
       className={`${plex.variable} ${plexMono.variable} ${pixelify.variable}`}
     >
       <body className="antialiased">
         <Providers>
-          <ThemeProvider
-            attribute="data-theme"
-            defaultTheme={defaultTheme}
-            enableSystem={false}
-          >
+          <LookProvider initial={look.id}>
             {children}
             <Toaster
               position="bottom-center"
@@ -104,7 +105,7 @@ export default async function RootLayout({
                 },
               }}
             />
-          </ThemeProvider>
+          </LookProvider>
         </Providers>
       </body>
     </html>

@@ -48,6 +48,7 @@ import {
   meetingTimeLabel,
   sortCalendarDayTasks,
 } from "@/lib/calendar-tasks";
+import { paint } from "@/lib/themes";
 
 /**
  * The rail colour, as a value rather than a class.
@@ -212,7 +213,7 @@ function TagLine({
       {shown.map((tg) => (
         <span key={tg.id} className="shrink-0 whitespace-nowrap">
           <span className="text-faint2">#</span>
-          <span style={{ color: tg.color }}>{tg.name}</span>
+          <span style={{ color: paint(tg.color) }}>{tg.name}</span>
         </span>
       ))}
       {hidden > 0 && (

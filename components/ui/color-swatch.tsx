@@ -1,5 +1,6 @@
 import { Check } from "@/components/icons";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 /** One color to pick. The picked one wears a check and a ring, since `border-ink` is the same pale rim as every other surface. */
 export function ColorSwatch({
@@ -26,7 +27,7 @@ export function ColorSwatch({
         picked && "ring-2 ring-ink ring-offset-2 ring-offset-surface",
         className,
       )}
-      style={{ background: color }}
+      style={{ background: paint(color) }}
     >
       {picked && (
         // The dark chip keeps the white check readable on the light colors too.

@@ -15,7 +15,7 @@ import {
   Settings,
 } from "@/components/icons";
 import { cn } from "@/lib/utils";
-import { ThemeToggle } from "./ThemeToggle";
+import { LookMenu } from "./LookMenu";
 import { TagRail } from "./TagRail";
 import {
   LifeAreaToggle,
@@ -141,7 +141,7 @@ export function Sidebar({
         <PummaWordmark className="text-[15px] font-bold tracking-tight" />
         <AboutPummaButton />
         <div className="ml-auto">
-          <ThemeToggle />
+          <LookMenu />
         </div>
       </div>
       {demo && (

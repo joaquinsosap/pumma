@@ -43,6 +43,7 @@ import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { trySave } from "@/lib/try-save";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { EntityTagRow } from "@/components/tags/EntityTagRow";
+import { paint } from "@/lib/themes";
 
 type Props = {
   goal: Goal;
@@ -434,7 +435,7 @@ export function GoalDetailPanel({
                   <div className="mb-2 flex items-center gap-2">
                     <span
                       className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
-                      style={{ background: project.color }}
+                      style={{ background: paint(project.color) }}
                     />
                     <span className="min-w-0 flex-1 truncate text-sm font-semibold">
                       {project.title}
@@ -463,7 +464,7 @@ export function GoalDetailPanel({
                       className="h-full"
                       style={{
                         width: `${progress}%`,
-                        background: project.color,
+                        background: paint(project.color),
                       }}
                     />
                   </div>

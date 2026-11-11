@@ -10,6 +10,7 @@ import { ScrollHint } from "@/components/ui/scroll-hint";
 import { JiraMark } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { LifeArea } from "@/lib/types";
+import { paint } from "@/lib/themes";
 
 /**
  * The strip of project cards above the board. Each card is both the switcher
@@ -205,11 +206,8 @@ function ProjectRailCard({
       style={{
         ...(active || isOver
           ? {
-              borderColor: p.color,
-              background: p.color.replace(
-                ")",
-                isOver ? " / 0.16)" : " / 0.06)",
-              ),
+              borderColor: paint(p.color),
+              background: paint(p.color, isOver ? 0.16 : 0.06),
             }
           : {}),
         ...(transform ? { transform: DragCSS.Translate.toString(transform) } : {}),
@@ -218,14 +216,14 @@ function ProjectRailCard({
       <div className="mb-2 flex items-center gap-1.5 text-[13.5px] font-bold">
         <span
           className="h-[9px] w-[9px] shrink-0 rounded-[2px]"
-          style={{ background: p.color }}
+          style={{ background: paint(p.color) }}
         />
         <span className="min-w-0 truncate">{p.title}</span>
       </div>
       <div className="mb-1.5 h-1.5 overflow-hidden rounded-full bg-border2">
         <div
           className="h-full transition-[width] duration-300"
-          style={{ width: `${prog.progress}%`, background: p.color }}
+          style={{ width: `${prog.progress}%`, background: paint(p.color) }}
         />
       </div>
       <div className="flex justify-between font-mono text-[10px] text-faint">

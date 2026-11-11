@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { LIFE_SPAN_DEFAULT } from "@/lib/life-constants";
+import { LOOK_IDS } from "@/lib/themes";
 
 export const userSchema = z.object({
   _id: z.string(),
@@ -36,7 +37,11 @@ export const subscriptionSchema = z.object({
 export const settingsSchema = z.object({
   _id: z.string(),
   userId: z.string(),
+  // Light or dark: what the look's own mode is. Kept beside `look` because it
+  // is what a row from before looks carries, and what picks a look for it.
   theme: z.enum(["light", "dark"]),
+  /** The look picked from the bulb. Null until one is: `lookFor` then goes by `theme`. */
+  look: z.enum(LOOK_IDS).nullable().default(null),
   defaultCaptureType: z.enum(["task", "habit", "goal", "note"]),
   defaultDueToday: z.boolean(),
   weekStart: z.enum(["mon", "sun"]),

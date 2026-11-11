@@ -9,6 +9,7 @@ import {
 import { CaptureButton } from "@/components/shell/CaptureButton";
 import { TodayTasksCard } from "@/components/home/TodayTasksCard";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
+import { paint } from "@/lib/themes";
 
 type Props = {
   projects: Project[];
@@ -61,7 +62,7 @@ export function HomeTasksProjects({
                   <div className="mb-1.5 flex min-w-0 items-center gap-2 text-[13.5px] font-semibold">
                     <span
                       className="h-[9px] w-[9px] shrink-0 rounded-[2px]"
-                      style={{ background: p.color }}
+                      style={{ background: paint(p.color) }}
                     />
                     <span className="min-w-0 truncate">{p.title}</span>
                     <span className="ml-auto shrink-0 font-mono text-[10px] text-faint">
@@ -73,7 +74,7 @@ export function HomeTasksProjects({
                       className="h-full"
                       style={{
                         width: `${prog.progress}%`,
-                        background: p.color,
+                        background: paint(p.color),
                       }}
                     />
                   </div>

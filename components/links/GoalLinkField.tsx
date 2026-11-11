@@ -3,6 +3,7 @@
 import { X } from "@/components/icons";
 import type { Goal } from "@/lib/schemas";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 const chipClass =
   "inline-flex items-center gap-2 rounded-lg border border-border bg-surface2 px-2.5 py-1.5 text-xs text-muted";
@@ -119,7 +120,7 @@ export function GoalMultiLinkField({
       </span>
       {items.map((item) => (
         <span key={item.id} className={chipClass}>
-          <LinkDot color={item.color} shape={dotShape} />
+          <LinkDot color={item.color ? paint(item.color) : undefined} shape={dotShape} />
           <span className="max-w-[140px] truncate font-medium">
             {item.title}
           </span>

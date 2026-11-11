@@ -10,6 +10,7 @@ import { isLifeTag, SPECIAL_LIFE_TAGS } from "@/lib/life-area-sync";
 import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
 import { useSyncedDraft } from "@/lib/use-synced-draft";
+import { paint } from "@/lib/themes";
 
 type Props = {
   entity: TaggableEntity;
@@ -76,16 +77,16 @@ export function EntityTagRow({
       style={
         active
           ? {
-              color: tag.color,
+              color: paint(tag.color),
               background: tagBg(tag.color),
-              borderColor: tag.color,
+              borderColor: paint(tag.color),
             }
           : undefined
       }
     >
       <span
         className="h-2 w-2 shrink-0 rounded-full ring-1 ring-black/5"
-        style={{ background: tag.color }}
+        style={{ background: paint(tag.color) }}
       />
       <span className="truncate">{tag.name}</span>
     </button>

@@ -694,6 +694,7 @@ export function createSeedData(userId: string): SeedData {
     _id: oid(),
     userId,
     theme: "light",
+    look: null,
     defaultCaptureType: "task",
     defaultDueToday: true,
     defaultTasksTab: "all" as const,

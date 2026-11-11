@@ -21,6 +21,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { paint } from "@/lib/themes";
 
 const STATUS_DOTS: Record<TaskStatus, string> = {
   todo: "var(--faint2)",
@@ -155,7 +156,7 @@ export function TaskFilterMenu({
               <Row
                 key={tag.id}
                 label={tag.name}
-                dot={tag.color}
+                dot={paint(tag.color)}
                 capitalize
                 checked={filters.tagIds.includes(tag.id)}
                 onToggle={() =>
@@ -229,7 +230,7 @@ export function TaskFilterChips({
     ...filters.tagIds.map((id) => ({
       key: `tag:${id}`,
       label: tagById.get(id)?.name ?? "tag",
-      dot: tagById.get(id)?.color ?? "var(--faint2)",
+      dot: paint(tagById.get(id)?.color ?? "var(--faint2)"),
       capitalize: true,
       remove: () =>
         onChange({

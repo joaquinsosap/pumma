@@ -47,6 +47,7 @@ import {
   projectIdFromTags,
   tagsUsedInProject,
 } from "@/lib/project-tags";
+import { paint } from "@/lib/themes";
 
 /**
  * Multi-select, offered by whoever opened the menu. On a phone this menu IS
@@ -412,7 +413,7 @@ export function TagMenuProvider({
       >
         <span
           className="h-2 w-2 shrink-0 rounded-full"
-          style={{ background: tag.color }}
+          style={{ background: paint(tag.color) }}
         />
         <span className="min-w-0 flex-1 truncate">{tag.name}</span>
         <TagMark state={state} />
@@ -607,7 +608,7 @@ export function TagMenuProvider({
                     >
                       <span
                         className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ background: tag.color }}
+                        style={{ background: paint(tag.color) }}
                       />
                       <span className="min-w-0 flex-1 truncate">
                         {tag.name}

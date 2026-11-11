@@ -41,6 +41,7 @@ import { useIsDesktop } from "@/lib/use-media-query";
 import { useTaskSelection } from "@/lib/use-task-selection";
 import { lifeAreaForCreate } from "@/lib/life-area";
 import { trySave } from "@/lib/try-save";
+import { paint } from "@/lib/themes";
 
 type Props = {
   projects: Project[];
@@ -348,7 +349,7 @@ export function ProjectsView({
               <div className="flex shrink-0 items-center gap-2 border-b border-border2 px-4 py-3">
                 <span
                   className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
-                  style={{ background: selected.color }}
+                  style={{ background: paint(selected.color) }}
                 />
                 <h3 className="m-0 min-w-0 truncate text-sm font-bold">
                   {selected.title}
@@ -365,7 +366,7 @@ export function ProjectsView({
                 />
                 <span
                   className="font-mono text-[10px] font-bold lg:hidden"
-                  style={{ color: selected.color }}
+                  style={{ color: paint(selected.color) }}
                 >
                   {projectProgress(selected.id, tasks).progress}%
                 </span>

@@ -31,6 +31,7 @@ import { useSyncedDraft } from "@/lib/use-synced-draft";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
 import { trySave } from "@/lib/try-save";
 import { applySubtaskChange, type SubtaskChange } from "@/lib/subtask-changes";
+import { paint } from "@/lib/themes";
 
 const STATUS_OPTIONS = [
   ["todo", "To do"],
@@ -378,7 +379,7 @@ export function TaskDetailPanel({
                 <span className="flex items-center gap-1">
                   <span
                     className="h-1.5 w-1.5 rounded-full"
-                    style={{ background: project.color }}
+                    style={{ background: paint(project.color) }}
                   />
                   {project.title}
                 </span>
@@ -533,7 +534,7 @@ export function TaskDetailPanel({
                  dot disappeared entirely and "No project" started flush left
                  while every real project sat one dot-width in. `--faint2` is
                  what the task list already uses for the same bucket. */
-              style={{ background: project?.color ?? "var(--faint2)" }}
+              style={{ background: paint(project?.color ?? "var(--faint2)") }}
               aria-hidden
             />
             <select

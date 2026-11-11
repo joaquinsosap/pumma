@@ -1,6 +1,7 @@
 "use client";
 
 import { X } from "@/components/icons";
+import { paint } from "@/lib/themes";
 
 type Props = {
   title: string;
@@ -13,7 +14,7 @@ export function TopbarProjectPill({ title, color, onClear }: Props) {
     <span className="inline-flex max-w-[min(220px,40vw)] items-center gap-1.5 rounded-lg border border-border bg-surface px-2.5 py-1 text-[12px] font-semibold text-ink shadow-sm">
       <span
         className="h-[9px] w-[9px] shrink-0 rounded-[2px]"
-        style={{ background: color }}
+        style={{ background: paint(color) }}
       />
       <span className="min-w-0 truncate">{title}</span>
       {onClear ? (

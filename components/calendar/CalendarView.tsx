@@ -34,6 +34,7 @@ import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
+import { paint } from "@/lib/themes";
 
 const PRIO = CALENDAR_PRIO;
 
@@ -308,8 +309,8 @@ export function CalendarView({
                       key={m.id}
                       className="flex min-w-0 items-center gap-1 truncate rounded border-l-2 px-1 py-px text-[9px]"
                       style={{
-                        borderColor: m.color,
-                        background: m.color.replace(")", " / 0.1)"),
+                        borderColor: paint(m.color),
+                        background: paint(m.color, 0.1),
                       }}
                     >
                       <span className="shrink-0 font-mono text-[8px] text-faint2">
@@ -386,7 +387,7 @@ export function CalendarView({
                     meeting/task, tap the day to read them in the panel. */}
                 <div className="mt-auto flex flex-wrap content-end items-center gap-[3px] pt-0.5 lg:hidden">
                   {[
-                    ...c.meetings.map((m) => m.color),
+                    ...c.meetings.map((m) => paint(m.color)),
                     ...c.dts.map((t) =>
                       t.status === "done"
                         ? "oklch(0.6 0.13 155 / 0.55)"
@@ -450,7 +451,7 @@ export function CalendarView({
                       </span>
                       <div
                         className="min-w-0 flex-1 border-l-2 pl-[11px]"
-                        style={{ borderColor: m.color }}
+                        style={{ borderColor: paint(m.color) }}
                       >
                         <div className="flex items-center gap-1.5">
                           <span className="min-w-0 truncate text-[13px] font-semibold">

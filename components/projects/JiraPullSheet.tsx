@@ -29,6 +29,7 @@ import { countPlan, planPull, type PullLevel } from "@/lib/jira/pull-plan";
 import type { PullPreview, PullRun } from "@/lib/jira/pull-server";
 import { ticketKeyFrom } from "@/lib/ticket-link";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 type Source =
   | { kind: "ticket"; key: string; children: boolean }
@@ -395,7 +396,7 @@ export function JiraPullSheet({
                       <span
                         aria-hidden
                         className="h-2 w-2 shrink-0 rounded-[2px]"
-                        style={{ background: p.color }}
+                        style={{ background: paint(p.color) }}
                       />
                       <span className="min-w-0 truncate">{p.title}</span>
                     </button>

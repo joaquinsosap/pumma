@@ -6,6 +6,7 @@ import type { Note, Tag, Task } from "@/lib/schemas";
 import { tagsByUsage } from "@/lib/metrics";
 import { tagBg } from "@/lib/parse";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 type PickProps = {
   tags: Tag[];
@@ -143,10 +144,10 @@ export function TagQuickPick({
                   style={
                     active
                       ? {
-                          color: tag.color,
+                          color: paint(tag.color),
                           background: tagBg(tag.color),
-                          borderColor: tag.color,
-                          boxShadow: `2px 2px 0 ${tag.color.replace(")", " / 0.4)")}`,
+                          borderColor: paint(tag.color),
+                          boxShadow: `2px 2px 0 ${paint(tag.color, 0.4)}`,
                         }
                       : undefined
                   }
@@ -160,7 +161,7 @@ export function TagQuickPick({
                 >
                   <span
                     className="h-2 w-2 rounded-full ring-1 ring-black/5"
-                    style={{ background: tag.color }}
+                    style={{ background: paint(tag.color) }}
                   />
                   {tag.name}
                   {/* A border alone doesn't say a second click takes it off. */}
@@ -208,14 +209,14 @@ export function SelectedTagsTray({
             key={tag.id}
             className="group flex items-center gap-1 rounded-md py-0.5 pl-1.5 pr-1 font-mono text-[10px] font-medium"
             style={{
-              color: tag.color,
+              color: paint(tag.color),
               background: tagBg(tag.color),
-              boxShadow: `inset 0 0 0 1px ${tag.color.replace(")", " / 0.35)")}`,
+              boxShadow: `inset 0 0 0 1px ${paint(tag.color, 0.35)}`,
             }}
           >
             <span
               className="h-1.5 w-1.5 shrink-0 rounded-full"
-              style={{ background: tag.color }}
+              style={{ background: paint(tag.color) }}
             />
             {tag.name}
             <button

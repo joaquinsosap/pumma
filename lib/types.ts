@@ -19,7 +19,6 @@ export type LifeArea = "personal" | "work";
 // tags); every other lifeArea-bearing entity stays 2-valued.
 export type EntityLifeArea = LifeArea | "both";
 export type LifeView = "personal" | "work" | "both";
-export type Theme = "light" | "dark";
 
 export type ActionResult<T = undefined> =
   | { ok: true; data?: T; undo?: UndoPayload }

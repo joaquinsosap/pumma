@@ -16,6 +16,7 @@ import { FEED_PALETTE, OWN_MEETING_COLOR } from "@/lib/calendar-colors";
 import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
 import { ColorSwatch } from "@/components/ui/color-swatch";
+import { paint } from "@/lib/themes";
 
 /**
  * Where a subscription is added, and the only place one can be removed.
@@ -267,7 +268,7 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                   <span
                     aria-hidden
                     className="h-3 w-3 rounded-[3px]"
-                    style={{ background: f.color }}
+                    style={{ background: paint(f.color) }}
                   />
                 </summary>
                 <div className="pumma-floating absolute left-0 top-6 z-20 grid w-[132px] grid-cols-4 gap-1 rounded-lg border border-border bg-surface p-1.5 shadow-lg">

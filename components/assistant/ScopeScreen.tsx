@@ -20,6 +20,7 @@ import {
 } from "@/lib/ai/scope-schema";
 import { resolveScopeAction } from "@/lib/actions/scope";
 import { cn } from "@/lib/utils";
+import { paint } from "@/lib/themes";
 
 const ENTITY_WORD: Record<ScopeEntity, string> = {
   task: "tasks",
@@ -312,10 +313,10 @@ export function ScopeScreen({
                     style={
                       on
                         ? {
-                            borderColor: t.color,
-                            color: t.color,
-                            background: `color-mix(in oklab, ${t.color} 12%, transparent)`,
-                            boxShadow: `inset 0 0 0 1px ${t.color}`,
+                            borderColor: paint(t.color),
+                            color: paint(t.color),
+                            background: paint(t.color, 0.12),
+                            boxShadow: `inset 0 0 0 1px ${paint(t.color)}`,
                           }
                         : undefined
                     }

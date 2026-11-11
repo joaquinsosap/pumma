@@ -15,6 +15,7 @@ import { isLifeTag } from "@/lib/life-area-sync";
 import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
 import { useConfirm } from "@/components/ui/confirm-dialog";
+import { paint } from "@/lib/themes";
 
 /**
  * The tags that file things into this project.
@@ -123,9 +124,9 @@ export function ProjectTagsField({
               key={tag.id}
               className="group flex items-center gap-1 rounded-lg border px-2 py-1 font-mono text-[11px]"
               style={{
-                borderColor: tag.color,
-                background: tag.color.replace(")", " / 0.10)"),
-                color: tag.color,
+                borderColor: paint(tag.color),
+                background: paint(tag.color, 0.10),
+                color: paint(tag.color),
               }}
             >
               {tag.isProjectPrimary && (
