@@ -1899,9 +1899,10 @@ select:hover:not(:disabled) {
 :root {
   /* Text on a filled accent: white on Mist, and whatever reads on a look whose buttons are light. */
   --on-primary: #fff;
-  /* How far a stored colour (a tag's, a project's, a calendar's) leans toward the text colour. Mist: not at all. See paint() in lib/themes.ts. */
+  /* How much of a stored colour (a tag's, a project's, a calendar's) a look keeps, and the lightness and strength the rest is mixed toward (two plain numbers: paint() makes the hue-less colour from them, so only the lightness moves). Mist keeps all of it. See paint() in lib/themes.ts. */
   --pick-keep: 100%;
-  --pick-to: var(--ink);
+  --pick-l: 0;
+  --pick-c: 0;
 }
 
 /* The glyph on an accent tile is the text on a filled accent. */
@@ -1983,8 +1984,103 @@ svg.text-primary > path[fill="#fff"] {
   --assistant: #a8459c;
   --lived: #3f6ea8;
   --life-now: #e16e01;
-  --pick-keep: 81%;
-  --pick-to: #1a1a1a;
+  --pick-keep: 78%;
+  --pick-l: 0.3;
+  --pick-c: 0.14;
+}
+
+/* Linen: beige paper, dark brown buttons. */
+:root[data-palette="linen"] {
+  --bg: #e3d8c5;
+  --surface: #f3ecdf;
+  --surface2: #eae1d1;
+  --floating: #f7f0e3;
+  --chip: #e9dfcd;
+  --well: #faf3e6;
+  --face: #faf3e6;
+  --band: #eae1d1;
+  --face-line: rgba(42, 36, 28, 0.16);
+  --face-line-hover: rgba(42, 36, 28, 0.34);
+  --tick: rgba(42, 36, 28, 0.3);
+  --border: rgba(42, 36, 28, 0.13);
+  --border2: rgba(42, 36, 28, 0.08);
+  --row-divider: rgba(42, 36, 28, 0.12);
+  --rim: rgba(42, 36, 28, 0.15);
+  --rim-hover: rgba(42, 36, 28, 0.3);
+  --lip: transparent;
+  --edge: transparent;
+  --shadow: rgba(42, 36, 28, 0.12);
+  --ahead: rgba(42, 36, 28, 0.08);
+  --aura: transparent;
+  --ink: #2a241c;
+  --muted: #4f4940;
+  --faint: #5a544b;
+  --faint2: #635d53;
+  --primary: #5b4428;
+  --btn: #4a3722;
+  --on-primary: #fbf5ea;
+  --hover: rgba(42, 36, 28, 0.055);
+  --skeleton: rgba(42, 36, 28, 0.14);
+  --tasks: #cb5540;
+  --habits: #38875a;
+  --goals: #6357bd;
+  --projects: #2b78a8;
+  --notes: #b67c07;
+  --calendar: #1f8f9c;
+  --life: #4a5da8;
+  --assistant: #a8459c;
+  --lived: #3f6ea8;
+  --life-now: #d66801;
+  --pick-keep: 72%;
+  --pick-l: 0.3;
+  --pick-c: 0.14;
+}
+
+/* Latte: browner than Linen, cream cards on tan, with section colours of its own. */
+:root[data-palette="latte"] {
+  --bg: #dfcbaa;
+  --surface: #f7eddc;
+  --surface2: #eadac1;
+  --floating: #fbf1e0;
+  --chip: #eadcc5;
+  --well: #fef4e3;
+  --face: #fef4e3;
+  --band: #eadac1;
+  --face-line: rgba(42, 31, 21, 0.16);
+  --face-line-hover: rgba(42, 31, 21, 0.34);
+  --tick: rgba(42, 31, 21, 0.3);
+  --border: rgba(42, 31, 21, 0.13);
+  --border2: rgba(42, 31, 21, 0.08);
+  --row-divider: rgba(42, 31, 21, 0.12);
+  --rim: rgba(42, 31, 21, 0.15);
+  --rim-hover: rgba(42, 31, 21, 0.3);
+  --lip: transparent;
+  --edge: transparent;
+  --shadow: rgba(42, 31, 21, 0.12);
+  --ahead: rgba(42, 31, 21, 0.08);
+  --aura: transparent;
+  --ink: #2a1f15;
+  --muted: #4b4136;
+  --faint: #574d41;
+  --faint2: #5e5448;
+  --primary: #7a4a1e;
+  --btn: #5b3a1f;
+  --on-primary: #fbf3e6;
+  --hover: rgba(42, 31, 21, 0.055);
+  --skeleton: rgba(42, 31, 21, 0.14);
+  --tasks: #d02d27;
+  --habits: #05893e;
+  --goals: #7447c8;
+  --projects: #016cc3;
+  --notes: #af8008;
+  --calendar: #088187;
+  --life: #4455c2;
+  --assistant: #b2339f;
+  --lived: #1e65aa;
+  --life-now: #da6706;
+  --pick-keep: 65%;
+  --pick-l: 0.3;
+  --pick-c: 0.14;
 }
 
 /* Graphite: dark grey, light buttons. Where an account on the old dark lands. */
@@ -2029,8 +2125,9 @@ svg.text-primary > path[fill="#fff"] {
   --assistant: #d071c6;
   --lived: #4b83c4;
   --life-now: #ffb545;
-  --pick-keep: 78%;
-  --pick-to: #ededee;
+  --pick-keep: 76%;
+  --pick-l: 0.92;
+  --pick-c: 0.09;
 }
 
 /* Onyx: matte black. */
@@ -2076,53 +2173,8 @@ svg.text-primary > path[fill="#fff"] {
   --lived: #4b83c4;
   --life-now: #ffb545;
   --pick-keep: 100%;
-  --pick-to: #f1f1f1;
-}
-
-/* Linen: beige paper, dark brown buttons. */
-:root[data-palette="linen"] {
-  --bg: #e3d8c5;
-  --surface: #f3ecdf;
-  --surface2: #eae1d1;
-  --floating: #f7f0e3;
-  --chip: #e9dfcd;
-  --well: #faf3e6;
-  --face: #faf3e6;
-  --band: #eae1d1;
-  --face-line: rgba(42, 36, 28, 0.16);
-  --face-line-hover: rgba(42, 36, 28, 0.34);
-  --tick: rgba(42, 36, 28, 0.3);
-  --border: rgba(42, 36, 28, 0.13);
-  --border2: rgba(42, 36, 28, 0.08);
-  --row-divider: rgba(42, 36, 28, 0.12);
-  --rim: rgba(42, 36, 28, 0.15);
-  --rim-hover: rgba(42, 36, 28, 0.3);
-  --lip: transparent;
-  --edge: transparent;
-  --shadow: rgba(42, 36, 28, 0.12);
-  --ahead: rgba(42, 36, 28, 0.08);
-  --aura: transparent;
-  --ink: #2a241c;
-  --muted: #4f4940;
-  --faint: #5a544b;
-  --faint2: #635d53;
-  --primary: #5b4428;
-  --btn: #4a3722;
-  --on-primary: #fbf5ea;
-  --hover: rgba(42, 36, 28, 0.055);
-  --skeleton: rgba(42, 36, 28, 0.14);
-  --tasks: #cb5540;
-  --habits: #38875a;
-  --goals: #6357bd;
-  --projects: #2b78a8;
-  --notes: #b67c07;
-  --calendar: #1f8f9c;
-  --life: #4a5da8;
-  --assistant: #a8459c;
-  --lived: #3f6ea8;
-  --life-now: #d66801;
-  --pick-keep: 74%;
-  --pick-to: #2a241c;
+  --pick-l: 0.92;
+  --pick-c: 0.09;
 }
 
 /* Navy: deep navy, bright blue buttons. */
@@ -2167,6 +2219,7 @@ svg.text-primary > path[fill="#fff"] {
   --assistant: #d071c6;
   --lived: #4b83c4;
   --life-now: #ffb545;
-  --pick-keep: 96%;
-  --pick-to: #e7eef8;
+  --pick-keep: 95%;
+  --pick-l: 0.92;
+  --pick-c: 0.09;
 }

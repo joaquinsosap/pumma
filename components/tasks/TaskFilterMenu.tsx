@@ -227,17 +227,21 @@ export function TaskFilterChips({
           priority: filters.priority.filter((v) => v !== p),
         }),
     })),
-    ...filters.tagIds.map((id) => ({
-      key: `tag:${id}`,
-      label: tagById.get(id)?.name ?? "tag",
-      dot: paint(tagById.get(id)?.color ?? "var(--faint2)"),
-      capitalize: true,
-      remove: () =>
-        onChange({
-          ...filters,
-          tagIds: filters.tagIds.filter((v) => v !== id),
-        }),
-    })),
+    ...filters.tagIds.map((id) => {
+      const tag = tagById.get(id);
+      return {
+        key: `tag:${id}`,
+        label: tag?.name ?? "tag",
+        // A tag that is gone gets the look's own grey, which is not a colour to move.
+        dot: tag ? paint(tag.color) : "var(--faint2)",
+        capitalize: true,
+        remove: () =>
+          onChange({
+            ...filters,
+            tagIds: filters.tagIds.filter((v) => v !== id),
+          }),
+      };
+    }),
   ];
 
   return (

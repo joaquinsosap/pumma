@@ -534,7 +534,7 @@ export function TaskDetailPanel({
                  dot disappeared entirely and "No project" started flush left
                  while every real project sat one dot-width in. `--faint2` is
                  what the task list already uses for the same bucket. */
-              style={{ background: paint(project?.color ?? "var(--faint2)") }}
+              style={{ background: project ? paint(project.color) : "var(--faint2)" }}
               aria-hidden
             />
             <select

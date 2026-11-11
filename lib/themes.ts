@@ -2,7 +2,7 @@
 //
 // A look is a whole-app colouring: the ground, the cards, the text, the
 // buttons. Mist is the glassy one PUMMA shipped with; the rest are matte,
-// flat and solid, in plain families (greys, beige, a blue). The colours
+// flat and solid, in plain families (greys, beige and brown, a blue). The colours
 // themselves live in globals.css, one block per look; this file is the list
 // and the two rules the rest of the app needs from it.
 
@@ -10,6 +10,7 @@ export const LOOKS = [
   { id: "mist", name: "Mist", mode: "light", finish: "glass", ground: "#eef2f6", card: "#fbfcfd", button: "#3170c8" },
   { id: "fog", name: "Fog", mode: "light", finish: "matte", ground: "#e4e4e2", card: "#f6f6f4", button: "#1f1f1f" },
   { id: "linen", name: "Linen", mode: "light", finish: "matte", ground: "#e3d8c5", card: "#f3ecdf", button: "#4a3722" },
+  { id: "latte", name: "Latte", mode: "light", finish: "matte", ground: "#dfcbaa", card: "#f7eddc", button: "#5b3a1f" },
   { id: "graphite", name: "Graphite", mode: "dark", finish: "matte", ground: "#26272a", card: "#313236", button: "#e4e5e7" },
   { id: "onyx", name: "Onyx", mode: "dark", finish: "matte", ground: "#0c0c0d", card: "#161617", button: "#f0f0f0" },
   { id: "navy", name: "Navy", mode: "dark", finish: "matte", ground: "#0b1423", card: "#121e33", button: "#8fbdf7" },
@@ -42,20 +43,33 @@ export function lookFor(
  * paints it.
  *
  * Those colours are picked once and have to read on every look, so a look
- * leans them toward its text colour by however much its grounds need: darker
- * on a light look, lighter on a dark one, the hue kept. Mist leans them by
- * nothing, so there this is the colour itself. `alpha` is for the tints and
- * soft edges drawn from the same colour.
+ * moves their lightness by however much its grounds need: deeper on a light
+ * look, lighter on a dark one. Mist moves them by nothing, so there this is
+ * the colour itself. `alpha` is for the tints and soft edges drawn from the
+ * same colour.
  *
- * Only for colours a person picks. Section colours, the capture types and the
- * life calendar's moods are PUMMA's own: each look carries or keeps those.
+ * The mix is in OKLCH toward a target with no hue of its own, which is what
+ * keeps a colour its colour: the hue is the stored one and the strength stays
+ * up. Mixing toward the look's text colour, as this first did, greyed every
+ * colour and on Linen browned it.
+ *
+ * The target is written here, from two plain numbers the look gives
+ * (`--pick-l`, `--pick-c`), and not as a colour in the stylesheet: the build's
+ * CSS optimiser rewrites `oklch(L C none)` into a colour with hue 0, and
+ * every stored colour then drifts toward red.
  *
  * A plain colour mix on purpose: it is what the stylesheet already relies on
  * everywhere, where the newer relative-colour syntax drops the whole
  * declaration in browsers a couple of years old.
+ *
+ * Only for colours a person picks. Section colours, the capture types and the
+ * life calendar's moods are PUMMA's own: each look carries or keeps those.
+ * Not for a fallback grey either (`var(--faint2)` for a tag that is gone):
+ * a colour with no hue of its own would take the target's strength and come
+ * out tinted.
  */
 export function paint(color: string, alpha?: number): string {
-  const held = `color-mix(in oklab, ${color} var(--pick-keep), var(--pick-to))`;
+  const held = `color-mix(in oklch, ${color} var(--pick-keep), oklch(var(--pick-l) var(--pick-c) none))`;
   if (alpha === undefined) return held;
   return `color-mix(in oklab, ${held} ${Math.round(alpha * 100)}%, transparent)`;
 }

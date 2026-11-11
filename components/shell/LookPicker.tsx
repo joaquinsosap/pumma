@@ -16,7 +16,7 @@ export function LookPicker({ className }: { className?: string }) {
     <div
       role="radiogroup"
       aria-label="Look"
-      className={cn("grid grid-cols-3 gap-2.5", className)}
+      className={cn("grid grid-cols-4 gap-2", className)}
     >
       {LOOKS.map((l) => {
         const on = l.id === look;

@@ -46,10 +46,31 @@ function contrast(a: Rgb, b: Rgb): number {
   const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
-/** What `paint` draws: the colour leaned toward the look's text colour, in OKLab like the stylesheet. */
-function leaned(color: Rgb, keep: number, to: Rgb): Rgb {
-  const [x, y] = [toLab(color), toLab(to)];
-  return fromLab(x.map((v, i) => v * keep + y[i] * (1 - keep)) as Rgb);
+function toLch(c: Rgb): Rgb {
+  const [L, a, b] = toLab(c);
+  return [L, Math.hypot(a, b), Math.atan2(b, a)];
+}
+const inGamut = ([L, C, h]: Rgb) => {
+  const l = (L + 0.3963377774 * C * Math.cos(h) + 0.2158037573 * C * Math.sin(h)) ** 3;
+  const m = (L - 0.1055613458 * C * Math.cos(h) - 0.0638541728 * C * Math.sin(h)) ** 3;
+  const s = (L - 0.0894841775 * C * Math.cos(h) - 1.291485548 * C * Math.sin(h)) ** 3;
+  const rgb = [
+    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
+  ];
+  return rgb.every((v) => v >= -0.0005 && v <= 1.0005);
+};
+/**
+ * What `paint` draws: the colour mixed in OKLCH with the look's hue-less
+ * target, so the hue is the colour's own. A result the screen cannot show
+ * loses strength until it can, the way a browser brings it back.
+ */
+function painted(color: Rgb, keep: number, [toL, toC]: [number, number]): Rgb {
+  const [L, C, h] = toLch(color);
+  const lch: Rgb = [keep * L + (1 - keep) * toL, keep * C + (1 - keep) * toC, h];
+  while (lch[1] > 0 && !inGamut(lch)) lch[1] -= 0.002;
+  return fromLab([lch[0], lch[1] * Math.cos(h), lch[1] * Math.sin(h)]);
 }
 
 const CSS = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
@@ -84,10 +105,11 @@ describe("the looks", () => {
     for (const look of MATTE) {
       const t = tokens(look.id);
       const keep = Number(t["--pick-keep"].replace("%", "")) / 100;
-      const to = rgb(t["--pick-to"]);
-      for (const ground of ["--bg", "--surface", "--floating", "--chip", "--band"]) {
+      const target: [number, number] = [Number(t["--pick-l"]), Number(t["--pick-c"])];
+      expect([look.id, Number.isFinite(target[0]) && Number.isFinite(target[1])]).toEqual([look.id, true]);
+      for (const ground of ["--bg", "--surface", "--surface2", "--floating", "--chip", "--band", "--well", "--face"]) {
         for (const color of PICKABLE) {
-          const reads = contrast(leaned(rgb(color), keep, to), rgb(t[ground]));
+          const reads = contrast(painted(rgb(color), keep, target), rgb(t[ground]));
           expect([look.id, ground, color, reads >= 3]).toEqual([look.id, ground, color, true]);
         }
       }
@@ -143,19 +165,49 @@ describe("lookFor", () => {
 });
 
 describe("paint", () => {
-  it("hands the colour to the look in front, which leans it by its own measure", () => {
+  it("hands the colour to the look in front, which moves it by its own measure", () => {
     expect(paint("oklch(0.7 0.12 70)")).toBe(
-      "color-mix(in oklab, oklch(0.7 0.12 70) var(--pick-keep), var(--pick-to))",
+      "color-mix(in oklch, oklch(0.7 0.12 70) var(--pick-keep), oklch(var(--pick-l) var(--pick-c) none))",
     );
   });
 
-  it("draws a tint or a soft edge from the same leaned colour", () => {
+  it("draws a tint or a soft edge from the same colour", () => {
     expect(paint("oklch(0.7 0.12 70)", 0.12)).toBe(
-      "color-mix(in oklab, color-mix(in oklab, oklch(0.7 0.12 70) var(--pick-keep), var(--pick-to)) 12%, transparent)",
+      "color-mix(in oklab, color-mix(in oklch, oklch(0.7 0.12 70) var(--pick-keep), oklch(var(--pick-l) var(--pick-c) none)) 12%, transparent)",
     );
   });
 
-  it("leans nothing on Mist, so there a painted colour is the colour itself", () => {
+  it("keeps a colour strong when a look moves it", () => {
+    // What is modelled here is the mix and the screen's range. The hue is not:
+    // it stays by construction, as long as the target has none (the test below).
+    for (const look of MATTE) {
+      const t = tokens(look.id);
+      const keep = Number(t["--pick-keep"].replace("%", "")) / 100;
+      const target: [number, number] = [Number(t["--pick-l"]), Number(t["--pick-c"])];
+      const strength = (color: string) =>
+        toLch(painted(rgb(color), keep, target))[1] / toLch(rgb(color))[1];
+      for (const color of [...TAG_PALETTE, ...PROJECT_COLORS]) {
+        expect([look.id, color, strength(color) >= 0.8]).toEqual([look.id, color, true]);
+      }
+      // A screen cannot show a deep teal at full strength, so a calendar's colour may give up more.
+      for (const { value } of FEED_PALETTE) {
+        expect([look.id, value, strength(value) >= 0.6]).toEqual([look.id, value, true]);
+      }
+    }
+  });
+
+  it("never names a hue-less colour in the stylesheet, where the build would give it a hue", () => {
+    // Any form: oklch or lch, with numbers or with var(), in any case. `none` just before a
+    // closing bracket is a missing colour component; nothing else in the stylesheet ends that way.
+    expect(CSS.includes("--pick-to")).toBe(false);
+    expect(/none\s*\)/i.test(CSS)).toBe(false);
+  });
+
+  it("writes the hue-less target in the inline style, from the look's two numbers", () => {
+    expect(paint("#888888")).toContain("oklch(var(--pick-l) var(--pick-c) none)");
+  });
+
+  it("moves nothing on Mist, so there a painted colour is the colour itself", () => {
     const root = CSS.match(/--pick-keep: (\d+)%;/);
     expect(root?.[1]).toBe("100");
   });
