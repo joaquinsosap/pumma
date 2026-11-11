@@ -67,6 +67,13 @@ handed back to the user to check.
   page straight back, but what was typed in it is gone.
 - **`border-ink` can't mark a selection.** The tour section of `globals.css`
   forces `.border-ink` to a pale `var(--rim)`. Use a ring.
+- **The theme redraws any button that names a border or surface colour.** The
+  Controls section of `globals.css` gives every `button` carrying
+  `border-border`, `border-border2`, `bg-surface`, `bg-surface2` or `bg-chip` a
+  white face, a solid 1px border, a 7px radius and `--ink` text. A colour class
+  on such a button is ignored (put it on the icon inside), and an "off" state
+  that keeps `border-border` looks the same as "on" (drop the class to draw it
+  flat).
 
 ## Tests
 

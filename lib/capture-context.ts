@@ -46,10 +46,14 @@ export function capturePlaceholder(
   return type === capture.type ? capture.placeholder : KIND_PLACEHOLDER[type];
 }
 
+/** What a page's "New ..." button makes: one of the bar's kinds, or a project, which the bar makes while set to tasks. */
+export type CaptureButtonKind = OmniType | "project";
+
 /** The pages whose title carries a "New ..." button, and what it makes there. */
-const BUTTON_PAGES: { path: string; type: OmniType }[] = [
+const BUTTON_PAGES: { path: string; type: CaptureButtonKind }[] = [
   { path: "/tasks", type: "task" },
-  { path: "/projects", type: "task" },
+  // The board has its own New task, beside the open project's name. The title's button makes the project.
+  { path: "/projects", type: "project" },
   { path: "/calendar", type: "task" },
   { path: "/notes", type: "note" },
   { path: "/habits", type: "habit" },
@@ -62,7 +66,7 @@ const BUTTON_PAGES: { path: string; type: OmniType }[] = [
  * a task from. Home makes a task, whatever the default capture is set to: the
  * button says what it does, and its widgets carry the other kinds.
  */
-export function captureButtonFor(pathname: string): OmniType | null {
+export function captureButtonFor(pathname: string): CaptureButtonKind | null {
   if (pathname === "/") return "task";
   const page = BUTTON_PAGES.find(
     (p) => pathname === p.path || pathname.startsWith(`${p.path}/`),

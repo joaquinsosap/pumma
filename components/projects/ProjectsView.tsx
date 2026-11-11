@@ -28,7 +28,13 @@ import { SelectionBar } from "@/components/tasks/SelectionBar";
 import { BottomSheet } from "@/components/ui/bottom-sheet";
 import { NewProjectCard } from "@/components/projects/NewProjectCard";
 import { FromJiraCard, ProjectRail } from "@/components/projects/ProjectRail";
-import { JiraPullSheet } from "@/components/projects/JiraPullSheet";
+import {
+  JiraPullSheet,
+  type JiraLookAgain,
+} from "@/components/projects/JiraPullSheet";
+import { JiraImportButton } from "@/components/projects/JiraImportButton";
+import { CaptureButton } from "@/components/shell/CaptureButton";
+import { ticketFromUrl } from "@/lib/ticket-link";
 import { setTaskProject } from "@/lib/actions/tasks";
 import { toast } from "sonner";
 import { useIsDesktop } from "@/lib/use-media-query";
@@ -241,6 +247,16 @@ export function ProjectsView({
   const [pullOpen, setPullOpen] = useState(false);
   // No connection, no door: the rail draws the card only when this is set.
   const fromJira = jiraConnected ? () => setPullOpen(true) : undefined;
+  // Projects that came from a ticket, in the rail's order: the sheet offers each as a shortcut to look it up again.
+  const lookAgain = useMemo<JiraLookAgain[]>(() => {
+    const seen = new Set<string>();
+    return projects.flatMap((p) => {
+      const key = ticketFromUrl(p.ticketUrl)?.key;
+      if (!key || seen.has(key)) return [];
+      seen.add(key);
+      return [{ key, title: p.title, color: p.color }];
+    });
+  }, [projects]);
   useEffect(() => {
     if (!selection.active) setBulkSheet(false);
   }, [selection.active]);
@@ -271,6 +287,11 @@ export function ProjectsView({
           selected
             ? { title: selected.title, color: selected.color }
             : undefined
+        }
+        afterNew={
+          fromJira ? (
+            <JiraImportButton onClick={fromJira} className="max-lg:hidden" />
+          ) : undefined
         }
       />
       <div className="flex min-h-0 flex-1 flex-col pb-6 animate-pumma-view">
@@ -329,9 +350,12 @@ export function ProjectsView({
                   className="h-2.5 w-2.5 shrink-0 rounded-[3px]"
                   style={{ background: selected.color }}
                 />
-                <h3 className="m-0 min-w-0 flex-1 truncate text-sm font-bold">
+                <h3 className="m-0 min-w-0 truncate text-sm font-bold">
                   {selected.title}
                 </h3>
+                {/* Wide screens only, like the title's New button: a phone has the dock's plus. */}
+                <CaptureButton type="task" className="max-lg:hidden" />
+                <span className="min-w-0 flex-1" />
                 <SortMenu
                   options={PROJECT_TASK_SORTS}
                   value={taskSort}
@@ -501,7 +525,11 @@ export function ProjectsView({
         )}
       </div>
       {jiraConnected && (
-        <JiraPullSheet open={pullOpen} onOpenChange={setPullOpen} />
+        <JiraPullSheet
+          open={pullOpen}
+          onOpenChange={setPullOpen}
+          again={lookAgain}
+        />
       )}
       {selection.active && !isDesktop && (
         <SelectionBar

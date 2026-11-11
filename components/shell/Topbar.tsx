@@ -31,6 +31,8 @@ type Props = {
   activeProject?: ActiveProject;
   birthDate?: string | null;
   lifeSpanYears?: number;
+  /** A page's own door, drawn right after its New button: Projects puts its Jira import here. */
+  afterNew?: React.ReactNode;
 };
 
 export function Topbar({
@@ -43,6 +45,7 @@ export function Topbar({
   activeProject,
   birthDate = null,
   lifeSpanYears,
+  afterNew,
 }: Props) {
   const timeZone = useTimezone();
   const now = new Date();
@@ -104,6 +107,7 @@ export function Topbar({
           {newKind ? (
             <CaptureButton type={newKind} tight className="max-lg:hidden" />
           ) : null}
+          {afterNew}
           <ActiveTaskTimer className="min-w-0 flex-1" />
         </div>
       </div>

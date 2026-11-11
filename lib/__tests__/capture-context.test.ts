@@ -10,7 +10,7 @@ describe("captureButtonFor", () => {
   it.each([
     ["/", "task"],
     ["/tasks", "task"],
-    ["/projects", "task"],
+    ["/projects", "project"],
     ["/calendar", "task"],
     ["/notes", "note"],
     ["/notes/a1b2", "note"],
@@ -37,7 +37,9 @@ describe("captureButtonFor", () => {
     // The default capture is set to something else on purpose: on these pages the page decides, not the setting.
     for (const path of ["/", "/tasks", "/projects", "/calendar", "/notes", "/habits", "/goals"]) {
       const bar = getCaptureContext(path, new URLSearchParams(), path === "/notes" ? "task" : "note");
-      expect({ path, kind: captureButtonFor(path) }).toEqual({ path, kind: bar.type });
+      // A project is made by the bar while it is set to tasks, so that is the kind it has to agree with.
+      const button = captureButtonFor(path);
+      expect({ path, kind: button === "project" ? "task" : button }).toEqual({ path, kind: bar.type });
     }
   });
 

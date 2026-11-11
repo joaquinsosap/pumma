@@ -7,7 +7,7 @@ import type { Project, Task } from "@/lib/schemas";
 import { projectProgress } from "@/lib/metrics";
 import { NewProjectCard } from "@/components/projects/NewProjectCard";
 import { ScrollHint } from "@/components/ui/scroll-hint";
-import { Download } from "@/components/icons";
+import { JiraMark } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { LifeArea } from "@/lib/types";
 
@@ -79,12 +79,15 @@ export function ProjectRail({
             onSelect={() => onSelect(p.id)}
           />
         ))}
+        {/* Narrow screens only: a wide one has both doors beside the page's title. */}
         <NewProjectCard
           lifeArea={lifeArea}
           onCreated={(id) => onSelect(id)}
-          className="shrink-0"
+          className="shrink-0 lg:hidden"
         />
-        {onFromJira && <FromJiraCard onClick={onFromJira} className="shrink-0" />}
+        {onFromJira && (
+          <FromJiraCard onClick={onFromJira} className="shrink-0 lg:hidden" />
+        )}
       </div>
       <ScrollHint targetRef={railRef} direction="right" />
     </div>
@@ -108,7 +111,7 @@ export function FromJiraCard({
         className,
       )}
     >
-      <Download className="h-4 w-4" strokeWidth={2.2} />
+      <JiraMark className="h-4 w-4 text-jira" />
       <span className="text-[12px] font-semibold">From Jira</span>
     </button>
   );
