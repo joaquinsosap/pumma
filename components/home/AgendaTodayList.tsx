@@ -19,12 +19,25 @@ import { cn } from "@/lib/utils";
 import { paint } from "@/lib/themes";
 
 function AgendaNowLine({ time }: { time: string }) {
+  // The server and the browser each read the clock, and a minute can tick
+  // between the two. Hydration keeps the server's text, so without this the
+  // line would show a minute behind until the next tick: once mounted it is
+  // drawn again, and what is on screen is the browser's reading.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   return (
     <div
+      key={mounted ? "browser" : "server"}
       className="pointer-events-none relative z-10 flex items-center gap-2 py-0.5"
       aria-label={`Current time ${time}`}
+      suppressHydrationWarning
     >
-      <span className="w-10 shrink-0 font-mono text-[10px] font-bold text-primary">
+      <span
+        className="w-10 shrink-0 font-mono text-[10px] font-bold text-primary"
+        suppressHydrationWarning
+      >
         {time}
       </span>
       <div className="flex min-w-0 flex-1 items-center">
