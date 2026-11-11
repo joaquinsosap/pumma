@@ -12,6 +12,7 @@
 // exactly what the screen showed.
 
 import type { JiraStage } from "@/lib/jira/issue";
+import { isoDateInTz } from "@/lib/timezone";
 import { isReservedTagName } from "@/lib/omni-reserved";
 import { PROJECT_TITLE_MAX } from "@/lib/project-created";
 import { projectTagSlug } from "@/lib/project-tags";
@@ -27,6 +28,8 @@ export type PulledTicket = {
   url: string;
   /** Assigned to whoever owns the connected token. False too when Jira would not say who that is. */
   mine: boolean;
+  /** The moment Jira closed it. Null while it is open, and when Jira kept no date. */
+  finished: string | null;
 };
 
 export type PulledEpic = { ticket: PulledTicket; stories: PulledTicket[] };
@@ -46,6 +49,8 @@ export type PlannedTask = {
   title: string;
   ticketUrl: string;
   status: "todo" | "doing" | "done";
+  /** The moment Jira closed it, for a task that arrives done. Null otherwise. */
+  finished: string | null;
   /** The epic's tag, when the project is a COORD. Null otherwise. */
   tag: string | null;
 };
@@ -152,6 +157,7 @@ export function planPull(
         title: clip(story.title, TASK_TITLE_MAX) || story.key,
         ticketUrl: story.url,
         status: story.stage ? STATUS[story.stage] : "todo",
+        finished: story.stage === "done" ? story.finished : null,
         tag,
       });
     }
@@ -217,4 +223,24 @@ export function countPlan(plan: PullPlan): {
     tags: plan.projects.reduce((n, p) => n + (p.existing ? 0 : p.tags.length), 0),
     tasks: plan.projects.reduce((n, p) => n + p.tasks.length, 0),
   };
+}
+
+/**
+ * The day a ticket that arrives done counts as done here: the day Jira closed
+ * it, on the owner's calendar. Today when Jira kept no date, or kept one that
+ * is still ahead (two clocks that disagree): nothing was finished tomorrow.
+ *
+ * Without this a year-old project came in finished today, all of it, and the
+ * week's numbers counted work from last spring.
+ */
+export function finishedDay(
+  finished: string | null,
+  today: string,
+  timeZone: string,
+): string {
+  if (!finished) return today;
+  const at = new Date(finished);
+  if (Number.isNaN(at.getTime())) return today;
+  const day = isoDateInTz(at, timeZone);
+  return day > today ? today : day;
 }

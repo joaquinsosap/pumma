@@ -8,6 +8,8 @@ type Fake = {
   type: string;
   title?: string;
   bucket?: "new" | "indeterminate" | "done";
+  /** When it was closed, the way Jira writes a moment. */
+  resolved?: string;
   epic?: string;
   parent?: string;
   /** The story a sub-task belongs to. */
@@ -62,6 +64,7 @@ function issueJson(t: Fake) {
       status: { name: "Some step", statusCategory: { key: t.bucket ?? "new" } },
       issuetype: { name: t.type },
       assignee: t.mine ? ME : null,
+      resolutiondate: t.resolved ?? null,
       parent: t.subtaskOf ? { key: t.subtaskOf, fields: { summary: "x" } } : undefined,
       [EPIC]: t.epic ?? null,
       [EPIC_NAME]: EPIC_TYPES.includes(t.type) ? (t.title ?? t.key) : null,
@@ -152,7 +155,7 @@ const COORD_TREE: Fake[] = [
   { key: "VST-214", type: "Epic", title: "Dashboards", parent: "COOR-12" },
   { key: "VST-221", type: "Story", title: "Alert rules", epic: "VST-210", bucket: "indeterminate", mine: true },
   { key: "VST-222", type: "Task", title: "Runbook", epic: "VST-210" },
-  { key: "VST-230", type: "Bug", title: "Latency board", epic: "VST-214", bucket: "done" },
+  { key: "VST-230", type: "Bug", title: "Latency board", epic: "VST-214", bucket: "done", resolved: "2026-03-01T10:22:33.000+0000" },
   // Somebody else's corner of the same Jira.
   { key: "COOR-99", type: "Coordination Feature", title: "Unrelated" },
   { key: "VST-900", type: "Epic", title: "Unrelated epic", parent: "COOR-99" },
@@ -185,6 +188,7 @@ describe("readPull, a COORD by its number", () => {
       stage: "doing",
       url: "https://desk.example.com/browse/COOR-12",
       mine: false,
+      finished: null,
     });
     expect(forest.coords[0].epics.map((e) => [e.ticket.key, keys(e.stories)])).toEqual([
       ["VST-210", ["VST-221", "VST-222"]],
@@ -206,10 +210,19 @@ describe("readPull, a COORD by its number", () => {
   it("asks only for the fields it reads", async () => {
     await readPull(CONN, { kind: "ticket", key: "COOR-12", children: true });
     for (const call of jira.calls.slice(2)) {
-      expect(call).toContain(`fields=summary,status,issuetype,assignee,parent,${EPIC},${PARENT},${EPIC_NAME}`);
+      expect(call).toContain(
+        `fields=summary,status,issuetype,assignee,parent,resolutiondate,${EPIC},${PARENT},${EPIC_NAME}`,
+      );
     }
     // A number the token cannot see must not sink the whole search.
     for (const call of searches()) expect(call).toContain("validateQuery=false");
+  });
+
+  it("reads the moment a ticket was closed, and none for one still open", async () => {
+    const res = await readPull(CONN, { kind: "ticket", key: "COOR-12", children: true });
+    const stories = res.ok ? res.data.forest.coords[0].epics.flatMap((e) => e.stories) : [];
+    expect(stories.find((s) => s.key === "VST-230")?.finished).toBe("2026-03-01T10:22:33.000Z");
+    expect(stories.find((s) => s.key === "VST-221")?.finished).toBeNull();
   });
 
   it("brings the COORD alone when its children are not wanted", async () => {

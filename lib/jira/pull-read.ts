@@ -92,6 +92,13 @@ type Seen = {
   subtaskOf: string | null;
 };
 
+/** Jira writes a moment as "2026-03-01T10:22:33.000+0000". Null for anything that is not one. */
+function momentFrom(v: unknown): string | null {
+  if (typeof v !== "string") return null;
+  const at = new Date(v.replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+  return Number.isNaN(at.getTime()) ? null : at.toISOString();
+}
+
 function seenFrom(raw: unknown, base: string, ids: Ids): Seen | null {
   const facts = jiraFactsFrom(raw);
   if (!facts) return null;
@@ -104,6 +111,7 @@ function seenFrom(raw: unknown, base: string, ids: Ids): Seen | null {
       stage: facts.stage,
       url: jiraIssueUrl(base, facts.key),
       mine: jiraUserIds(fields.assignee).some((id) => ids.me.has(id)),
+      finished: momentFrom(fields.resolutiondate),
     },
     // The type's name covers a Jira with no epic name field; the field covers one in another language.
     isEpic: facts.type === "Epic" || (typeof named === "string" && named.trim() !== ""),
@@ -131,7 +139,7 @@ const MAX_PARENTS = PAGE;
 const ONE_BY_ONE = 15;
 
 const fieldList = (ids: LinkFields) =>
-  ["summary", "status", "issuetype", "assignee", "parent", ids.epicLink, ids.parentLink, ids.epicName]
+  ["summary", "status", "issuetype", "assignee", "parent", "resolutiondate", ids.epicLink, ids.parentLink, ids.epicName]
     .filter(Boolean)
     .join(",");
 

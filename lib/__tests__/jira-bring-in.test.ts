@@ -50,6 +50,7 @@ const ticket = (key: string, title: string, stage: PulledTicket["stage"] = "todo
   stage,
   url: `${BASE}/browse/${key}`,
   mine: false,
+  finished: null,
 });
 const COORD = ticket("COOR-12", "Platform alerts");
 const QUEUE = ticket("VST-210", "Queue alerts");

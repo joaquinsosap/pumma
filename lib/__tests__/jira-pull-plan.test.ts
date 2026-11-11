@@ -1,12 +1,13 @@
 // What a pull from Jira would make here: which level is the project, what the epics become, and what is left out.
 import { describe, expect, it } from "vitest";
 import {
-  EPIC_TAG_MAX,
   countPlan,
+  EPIC_TAG_MAX,
   epicTagName,
+  finishedDay,
   planPull,
-  type PullForest,
   type PulledTicket,
+  type PullForest,
 } from "@/lib/jira/pull-plan";
 
 const ticket = (
@@ -19,6 +20,7 @@ const ticket = (
   stage,
   url: `https://desk.example.com/browse/${key}`,
   mine: false,
+  finished: null,
 });
 
 const COORD = ticket("COOR-12", "Platform alerts");
@@ -55,9 +57,9 @@ describe("planPull, with the COORD as the project", () => {
     expect(project.title).toBe("Platform alerts");
     expect(project.tags).toEqual(["queue-alerts", "dashboards"]);
     expect(project.tasks).toEqual([
-      { title: "Alert rules for the queue", ticketUrl: RULES.url, status: "doing", tag: "queue-alerts" },
-      { title: "Write the runbook", ticketUrl: RUNBOOK.url, status: "todo", tag: "queue-alerts" },
-      { title: "Latency board", ticketUrl: LATENCY.url, status: "done", tag: "dashboards" },
+      { title: "Alert rules for the queue", ticketUrl: RULES.url, status: "doing", finished: null, tag: "queue-alerts" },
+      { title: "Write the runbook", ticketUrl: RUNBOOK.url, status: "todo", finished: null, tag: "queue-alerts" },
+      { title: "Latency board", ticketUrl: LATENCY.url, status: "done", finished: null, tag: "dashboards" },
     ]);
     expect(countPlan(plan)).toEqual({ projects: 1, tags: 2, tasks: 3 });
   });
@@ -86,7 +88,7 @@ describe("planPull, with the COORD as the project", () => {
         existing: false,
         title: "Queue alerts",
         tags: [],
-        tasks: [{ title: RULES.title, ticketUrl: RULES.url, status: "doing", tag: null }],
+        tasks: [{ title: RULES.title, ticketUrl: RULES.url, status: "doing", finished: null, tag: null }],
       },
     ]);
   });
@@ -194,8 +196,8 @@ describe("planPull, tickets with nothing above them", () => {
         title: null,
         tags: [],
         tasks: [
-          { title: RULES.title, ticketUrl: RULES.url, status: "doing", tag: null },
-          { title: RUNBOOK.title, ticketUrl: RUNBOOK.url, status: "todo", tag: null },
+          { title: RULES.title, ticketUrl: RULES.url, status: "doing", finished: null, tag: null },
+          { title: RUNBOOK.title, ticketUrl: RUNBOOK.url, status: "todo", finished: null, tag: null },
         ],
       },
     ]);
@@ -279,5 +281,41 @@ describe("epicTagName", () => {
     expect(epicTagName("🚀🚀", "VST-214")).toBe("vst-214");
     // An accent is not a reason: the letter under it is kept.
     expect(epicTagName("Épica de métricas", "VST-9")).toBe("epica-de-metricas");
+  });
+});
+
+describe("the day a ticket that arrives done counts as done", () => {
+  const forest = (story: PulledTicket): PullForest => ({
+    coords: [],
+    epics: [{ ticket: ticket("VST-900", "Old epic"), stories: [story] }],
+    loose: [],
+  });
+  const NOTHING = { tasks: new Set<string>(), projects: new Set<string>() };
+  const tasksOf = (story: PulledTicket) =>
+    planPull(forest(story), "epic", new Set(), NOTHING).projects.flatMap((p) => p.tasks);
+
+  it("carries the moment Jira closed a finished ticket into the plan", () => {
+    const closed = { ...ticket("VST-901", "Shipped in spring", "done"), finished: "2026-03-01T10:22:33.000Z" };
+    expect(tasksOf(closed)).toMatchObject([{ status: "done", finished: "2026-03-01T10:22:33.000Z" }]);
+  });
+
+  it("carries none for a ticket that is open again, whatever date Jira still holds", () => {
+    const reopened = { ...ticket("VST-902", "Reopened", "doing"), finished: "2026-03-01T10:22:33.000Z" };
+    expect(tasksOf(reopened)).toMatchObject([{ status: "doing", finished: null }]);
+  });
+
+  it("is the day Jira closed it, on the owner's calendar", () => {
+    // 01:30 UTC on the 2nd is still the evening of the 1st in Montevideo.
+    expect(finishedDay("2026-03-02T01:30:00.000Z", "2026-11-11", "America/Montevideo")).toBe("2026-03-01");
+    expect(finishedDay("2026-03-02T01:30:00.000Z", "2026-11-11", "UTC")).toBe("2026-03-02");
+  });
+
+  it("is today when Jira kept no date, or one nobody can read", () => {
+    expect(finishedDay(null, "2026-11-11", "UTC")).toBe("2026-11-11");
+    expect(finishedDay("soon", "2026-11-11", "UTC")).toBe("2026-11-11");
+  });
+
+  it("is never a day still ahead", () => {
+    expect(finishedDay("2026-11-12T09:00:00.000Z", "2026-11-11", "UTC")).toBe("2026-11-11");
   });
 });

@@ -4,7 +4,7 @@ import { listProjects } from "@/lib/db/projects";
 import { insertTag, listTags } from "@/lib/db/tags";
 import { insertTasks, listTasks } from "@/lib/db/tasks";
 import { jiraKeyOn } from "@/lib/jira/address";
-import type { PullHave, PullPlan } from "@/lib/jira/pull-plan";
+import { finishedDay, type PullHave, type PullPlan } from "@/lib/jira/pull-plan";
 import { deriveLifeAreaFromTags, setLifeTags } from "@/lib/life-area-sync";
 import { createProjectWithTag } from "@/lib/project-create-server";
 import { projectTagSlug, uniqueTagName } from "@/lib/project-tags";
@@ -65,7 +65,7 @@ export async function bringIn(
   plan: PullPlan,
   projectOf: ReadonlyMap<string, Project>,
 ): Promise<Brought> {
-  const { today } = await userToday();
+  const { today, timeZone } = await userToday();
   // Kept by hand from here on: tags are made as the loop goes, and a second
   // read inside one request may hand back the list from before they existed.
   const known: Tag[] = [...(await listTags(userId))];
@@ -190,7 +190,9 @@ export async function bringIn(
         lifeArea: deriveLifeAreaFromTags(tagIds, known),
         order: place++,
         createdAt: today,
-        completedAt: task.status === "done" ? today : null,
+        // Done on the day Jira closed it, not on the day it came in.
+        completedAt:
+          task.status === "done" ? finishedDay(task.finished, today, timeZone) : null,
         ticketUrl: task.ticketUrl,
       };
     });

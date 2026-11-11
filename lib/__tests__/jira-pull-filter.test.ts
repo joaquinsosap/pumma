@@ -27,6 +27,7 @@ const ticket = (
   stage: "todo",
   url: `https://desk.example.com/browse/${key}`,
   mine: false,
+  finished: null,
   ...over,
 });
 
