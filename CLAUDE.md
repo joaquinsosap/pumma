@@ -75,11 +75,13 @@ handed back to the user to check.
   that keeps `border-border` looks the same as "on" (drop the class to draw it
   flat).
 
-- **A stored colour is never painted raw.** A tag's, a project's, a calendar's
-  or a mood's colour goes through `paint(color)` from `lib/themes.ts`, and a
+- **A stored colour is never painted raw.** A tag's, a project's or a
+  calendar's colour goes through `paint(color)` from `lib/themes.ts`, and a
   tint or soft edge through `paint(color, alpha)`, never
   `color.replace(")", " / 0.12)")`. Each look leans those colours toward its
   text colour so they read on its grounds; a raw one is dim on Graphite.
+  Section colours (`var(--tasks)` and the like), the capture types and the
+  life calendar's moods are PUMMA's own and stay raw.
 - **A new look is three things.** A row in `LOOKS` (`lib/themes.ts`), a
   `:root[data-palette="..."]` block in the LOOKS section of `globals.css`, and
   a green `lib/__tests__/themes.test.ts`, which reads that block and fails if

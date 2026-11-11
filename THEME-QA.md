@@ -193,7 +193,7 @@ token's meaning changes, every inline `var()` use of it changes silently.
 
 When there is no time for the full list:
 
-1. Toggle dark mode. Look at one dense page.
+1. Pick a dark look from the bulb. Look at one dense page.
 2. Find every placeholder, disabled control and checkbox — are they visible?
 3. Hover and press one of each control type.
 4. Open the life calendar in full view.

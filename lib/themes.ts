@@ -47,6 +47,9 @@ export function lookFor(
  * nothing, so there this is the colour itself. `alpha` is for the tints and
  * soft edges drawn from the same colour.
  *
+ * Only for colours a person picks. Section colours, the capture types and the
+ * life calendar's moods are PUMMA's own: each look carries or keeps those.
+ *
  * A plain colour mix on purpose: it is what the stylesheet already relies on
  * everywhere, where the newer relative-colour syntax drops the whole
  * declaration in browsers a couple of years old.

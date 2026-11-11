@@ -18,7 +18,6 @@ import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { trySave } from "@/lib/try-save";
 import { toast } from "sonner";
-import { paint } from "@/lib/themes";
 
 type Props = {
   week: LifeWeekSlot | null;
@@ -152,15 +151,15 @@ export function LifeWeekDialog({
                 style={
                   on
                     ? {
-                        background: paint(m.color, 0.14),
-                        borderColor: paint(m.color),
+                        background: m.color.replace(")", " / 0.14)"),
+                        borderColor: m.color,
                       }
                     : undefined
                 }
               >
                 <div
                   className="mx-auto mb-1.5 h-4 w-4 rounded-[5px]"
-                  style={{ background: paint(m.color) }}
+                  style={{ background: m.color }}
                 />
                 <div className="font-mono text-[10px] capitalize">
                   {m.label}

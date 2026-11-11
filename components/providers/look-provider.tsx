@@ -1,12 +1,14 @@
 "use client";
 
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { setLook as saveLook } from "@/lib/actions/settings";
 import { lookById, type LookId } from "@/lib/themes";
+import { trySave } from "@/lib/try-save";
 
 type LookState = {
   look: LookId;
-  /** Put a look on the page now. Saving it is the caller's to do. */
-  show: (id: LookId) => void;
+  /** Put a look on the page now and save it to the account. A save that fails puts the old one back. */
+  pick: (id: LookId) => void;
 };
 
 const LookContext = createContext<LookState | null>(null);
@@ -24,9 +26,9 @@ function apply(id: LookId) {
  * Which look is on the page.
  *
  * The server draws <html> with the saved look's attributes, so a page never
- * arrives in one look and flips to another. This only carries the choice to
- * the bulb's menu and repaints at once when a look is picked there, without
- * waiting for the save.
+ * arrives in one look and flips to another. This carries the choice to the
+ * pickers (the bulb's menu and the row in Settings) and repaints at once when
+ * a look is picked, without waiting for the save.
  */
 export function LookProvider({
   initial,
@@ -42,12 +44,29 @@ export function LookProvider({
     setSeen(initial);
     setLook(initial);
   }
-  const show = useCallback((id: LookId) => {
-    setLook(id);
-    apply(id);
-  }, []);
+  // One save at a time, for both pickers: two in flight could end with the
+  // page in one look and the account in another.
+  const saving = useRef(false);
+
+  const pick = useCallback(
+    (id: LookId) => {
+      if (id === look || saving.current) return;
+      saving.current = true;
+      const was = look;
+      setLook(id);
+      apply(id);
+      void trySave(() => saveLook(id)).then((res) => {
+        saving.current = false;
+        if (res) return;
+        setLook(was);
+        apply(was);
+      });
+    },
+    [look],
+  );
+
   return (
-    <LookContext.Provider value={{ look, show }}>{children}</LookContext.Provider>
+    <LookContext.Provider value={{ look, pick }}>{children}</LookContext.Provider>
   );
 }
 

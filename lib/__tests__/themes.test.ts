@@ -110,6 +110,13 @@ describe("the looks", () => {
     }
   });
 
+  it("names the same tokens in every matte look, so none falls back to Mist's for one of them", () => {
+    const names = (id: string) => Object.keys(tokens(id)).sort();
+    for (const look of MATTE) {
+      expect([look.id, names(look.id)]).toEqual([look.id, names(MATTE[0].id)]);
+    }
+  });
+
   it("says light or dark the way its ground is", () => {
     for (const look of MATTE) {
       const dark = lum(rgb(tokens(look.id)["--bg"])) < 0.2;

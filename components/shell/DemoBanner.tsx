@@ -36,7 +36,7 @@ export function DemoBanner({
           ~{hoursLeft}h
         </span>
       )}
-      <LeaveDemoButton className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-white no-underline hover:text-white">
+      <LeaveDemoButton className="rounded-full bg-primary px-2 py-0.5 text-[10px] font-bold text-background no-underline">
         Keep →
       </LeaveDemoButton>
     </div>

@@ -177,7 +177,7 @@ function EmptyState({ onSubmit }: { onSubmit: (text: string) => void }) {
   return (
     <div className="flex flex-1 flex-col px-4 pt-8">
       <div className="mx-auto w-full max-w-[560px] text-center">
-        <span className="inline-grid h-9 w-9 place-items-center rounded-[9px] bg-primary font-mono text-[15px] font-extrabold text-white">
+        <span className="inline-grid h-9 w-9 place-items-center rounded-[9px] bg-primary font-mono text-[15px] font-extrabold text-background">
           A
         </span>
         <p className="m-0 mt-4 text-[20px] font-bold tracking-tight text-ink">

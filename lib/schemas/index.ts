@@ -40,8 +40,12 @@ export const settingsSchema = z.object({
   // Light or dark: what the look's own mode is. Kept beside `look` because it
   // is what a row from before looks carries, and what picks a look for it.
   theme: z.enum(["light", "dark"]),
-  /** The look picked from the bulb. Null until one is: `lookFor` then goes by `theme`. */
-  look: z.enum(LOOK_IDS).nullable().default(null),
+  /**
+   * The look picked from the bulb. Null until one is: `lookFor` then goes by
+   * `theme`. A look taken off the list reads as null too, where a plain enum
+   * would refuse the whole row and take every page of that account with it.
+   */
+  look: z.enum(LOOK_IDS).nullable().default(null).catch(null),
   defaultCaptureType: z.enum(["task", "habit", "goal", "note"]),
   defaultDueToday: z.boolean(),
   weekStart: z.enum(["mon", "sun"]),

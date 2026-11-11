@@ -645,9 +645,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                         style={
                           active
                             ? {
-                                borderColor: paint(t.color),
+                                borderColor: t.color,
                                 background: t.color.includes("oklch")
-                                  ? paint(t.color, 0.14)
+                                  ? t.color.replace(")", " / 0.14)")
                                   : "var(--hover)",
                               }
                             : undefined
@@ -660,7 +660,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                             t.shape === "dot" && "rounded-full",
                             t.shape === "diamond" && "rotate-45",
                           )}
-                          style={{ background: paint(t.color) }}
+                          style={{ background: t.color }}
                         />
                         {t.label}
                       </button>

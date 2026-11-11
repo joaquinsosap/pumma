@@ -1,9 +1,7 @@
 "use client";
 
 import { useLook } from "@/components/providers/look-provider";
-import { setLook } from "@/lib/actions/settings";
-import { LOOKS, type LookId } from "@/lib/themes";
-import { trySave } from "@/lib/try-save";
+import { LOOKS } from "@/lib/themes";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,15 +10,7 @@ import { cn } from "@/lib/utils";
  * save that fails puts the old look back.
  */
 export function LookPicker({ className }: { className?: string }) {
-  const { look, show } = useLook();
-
-  const pick = async (id: LookId) => {
-    if (id === look) return;
-    const was = look;
-    show(id);
-    const res = await trySave(() => setLook(id));
-    if (!res) show(was);
-  };
+  const { look, pick } = useLook();
 
   return (
     <div
@@ -36,7 +26,7 @@ export function LookPicker({ className }: { className?: string }) {
             type="button"
             role="radio"
             aria-checked={on}
-            onClick={() => void pick(l.id)}
+            onClick={() => pick(l.id)}
             className="group flex min-w-0 flex-col gap-1 rounded-[9px] outline-none"
           >
             {/* The swatch is the look's own colours whatever look is in front, so they are written here and not read from the theme. */}
