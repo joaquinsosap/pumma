@@ -111,7 +111,11 @@ export function Topbar({
           <ActiveTaskTimer className="min-w-0 flex-1" />
         </div>
       </div>
-      <div className="flex min-w-0 shrink items-center gap-1 self-stretch sm:self-auto">
+      {/* Side by side, the stats keep their width and the left gives way: its
+          date line is the widest thing in the bar and the one that can be cut
+          short. Left to shrink together, the date line's full length claimed
+          room it never drew in, and the streak slid off the edge for it. */}
+      <div className="flex min-w-0 shrink items-center gap-1 self-stretch sm:shrink-0 sm:self-auto">
         {/* Before the stats, not after: the stats are a reading you glance
             at, this is a thing that wants you. */}
         <NotificationCenter />
