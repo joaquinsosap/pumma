@@ -38,6 +38,7 @@ import { EditableTitle } from "@/components/ui/editable-title";
 import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
 import { noteHref } from "@/lib/note-href";
+import { notePreview } from "@/lib/note-preview";
 import { Taggable } from "@/components/tags/TagMenuProvider";
 import { paint } from "@/lib/themes";
 
@@ -84,6 +85,17 @@ function NotePinButton({
         fill={pinned ? "currentColor" : "none"}
       />
     </button>
+  );
+}
+
+/** A card is as tall as its note: with nothing to say beyond the title, there is no text block. */
+function NoteCardText({ note }: { note: Note }) {
+  const preview = notePreview(note.title, note.body);
+  if (!preview) return null;
+  return (
+    <div className="mt-1 line-clamp-3 text-xs leading-snug text-muted">
+      {preview}
+    </div>
   );
 }
 
@@ -238,14 +250,12 @@ export function NotesView({
                   className="min-w-0 flex-1"
                   onClick={(e) => openNote(e, n.id)}
                 >
-                  <div className="mb-1 flex items-center gap-1.5">
+                  <div className="flex items-center gap-1.5">
                     <span className="flex-1 truncate text-[13.5px] font-bold">
                       {n.title}
                     </span>
                   </div>
-                  <div className="line-clamp-2 h-[34px] text-xs leading-snug text-muted">
-                    {n.body || "No content yet."}
-                  </div>
+                  <NoteCardText note={n} />
                   <div className="mt-1.5 flex items-center gap-1.5">
                     {n.tagIds.map((id) => {
                       const tg = tagMap.get(id);
