@@ -809,31 +809,21 @@ export function OmniBox({
               → {lifeTint?.label ?? "Both"}
             </span>
           )}
-          {mode === "capture" && isTask && (
+          {/* Only while a project is being named. The bar does not offer one
+              by itself: a project is asked for with the New project button on
+              Projects, and this chip is how to change your mind. */}
+          {makingProject && (
             <button
               type="button"
-              aria-pressed={makingProject}
+              aria-pressed
               onClick={() => {
-                setAsProject((was) => !was);
+                setAsProject(false);
                 inputRef.current?.focus();
               }}
-              title={
-                makingProject
-                  ? "Back to adding a task"
-                  : "Make a project instead of a task. What you type is its name"
-              }
-              className={cn(
-                "shrink-0 cursor-pointer whitespace-nowrap rounded-[7px] border px-2 py-0.5 font-mono text-[11px] font-semibold transition-colors",
-                // No drawn border while it is off: a bordered button is
-                // skinned as a control by the theme (white, ink), and this one
-                // is meant to sit back in grey until it is wanted.
-                makingProject
-                  ? "border-transparent text-background"
-                  : "border-transparent bg-hover text-faint hover:text-ink",
-              )}
-              style={
-                makingProject ? { background: "var(--projects)" } : undefined
-              }
+              title="Back to adding a task"
+              // No border colour: a bordered button is skinned as a control by the theme (white, ink).
+              className="shrink-0 cursor-pointer whitespace-nowrap rounded-[7px] border border-transparent px-2 py-0.5 font-mono text-[11px] font-semibold text-background transition-colors"
+              style={{ background: "var(--projects)" }}
             >
               New project →
             </button>
