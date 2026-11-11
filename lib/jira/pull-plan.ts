@@ -25,6 +25,8 @@ export type PulledTicket = {
   stage: JiraStage | null;
   /** Its page on the connected Jira. This is what makes a task "the same ticket" on a later pull. */
   url: string;
+  /** Assigned to whoever owns the connected token. False too when Jira would not say who that is. */
+  mine: boolean;
 };
 
 export type PulledEpic = { ticket: PulledTicket; stories: PulledTicket[] };
@@ -117,20 +119,6 @@ function unused(name: string, taken: Set<string>): string {
 }
 
 const clip = (text: string, max: number) => text.trim().slice(0, max).trim();
-
-/**
- * The tickets a pull starts with unticked: the ones already done in Jira.
- * Bringing a year-old COORD in should not fill Done with its history. They
- * stay in the tree, so any of them can be ticked back.
- */
-export function doneByDefault(forest: PullForest): string[] {
-  const all = [
-    ...forest.coords.flatMap((c) => c.epics.flatMap((e) => e.stories)),
-    ...forest.epics.flatMap((e) => e.stories),
-    ...forest.loose,
-  ];
-  return all.filter((t) => t.stage === "done").map((t) => t.key);
-}
 
 /**
  * What bringing `forest` in would make.

@@ -16,8 +16,11 @@ export const pullRunSchema = z
   .object({
     source: pullSourceSchema,
     level: z.enum(["coord", "epic"]),
-    /** Ticket numbers unticked in the tree. */
-    off: z.array(z.string().max(60)).max(2000),
+    /** Ticket numbers unticked in the tree. One pull reads 2101 tickets at most, and "None" unticks most of them. */
+    off: z.array(z.string().max(60)).max(3000),
+    /** The selectors over the tree. Sent as they are set, not as the tickets they hid: a read made again at bring-in is narrowed the same way. */
+    who: z.enum(["all", "mine"]),
+    stages: z.array(z.enum(["todo", "doing", "done"])).max(3),
   })
   .strict();
 

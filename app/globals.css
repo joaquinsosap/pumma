@@ -36,6 +36,8 @@
   --calendar: oklch(0.6 0.11 200);
   --life: oklch(0.52 0.09 265);
   --assistant: oklch(0.6 0.19 330);
+  /* Jira's own blue, for its mark on the doors that lead to it. */
+  --jira: #2684ff;
 
   /* Priority. The hue paints the box's border and tint; the ink paints the
      glyph inside it, and has to be darker than the hue on a light ground or
@@ -65,6 +67,7 @@
   --prio-high-ink: oklch(0.74 0.18 25);
   --prio-med-ink: oklch(0.84 0.14 92);
   --prio-low-ink: oklch(0.76 0.12 245);
+  --jira: #4c9aff;
 
   --bg: #161519;
   --surface: #1f1e23;
@@ -110,6 +113,7 @@
   --color-calendar: var(--calendar);
   --color-life: var(--life);
   --color-assistant: var(--assistant);
+  --color-jira: var(--jira);
   --color-lived: var(--lived);
   --color-ahead: var(--ahead);
   --color-skeleton: var(--skeleton);

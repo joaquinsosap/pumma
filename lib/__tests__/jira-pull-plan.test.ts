@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest";
 import {
   EPIC_TAG_MAX,
   countPlan,
-  doneByDefault,
   epicTagName,
   planPull,
   type PullForest,
@@ -19,6 +18,7 @@ const ticket = (
   title,
   stage,
   url: `https://desk.example.com/browse/${key}`,
+  mine: false,
 });
 
 const COORD = ticket("COOR-12", "Platform alerts");
@@ -279,25 +279,5 @@ describe("epicTagName", () => {
     expect(epicTagName("🚀🚀", "VST-214")).toBe("vst-214");
     // An accent is not a reason: the letter under it is kept.
     expect(epicTagName("Épica de métricas", "VST-9")).toBe("epica-de-metricas");
-  });
-});
-
-describe("doneByDefault", () => {
-  it("names the finished tickets, wherever they hang, so a pull starts without its history", () => {
-    const mixed: PullForest = {
-      coords: [{ ticket: COORD, epics: [{ ticket: QUEUE, stories: [RULES, LATENCY] }] }],
-      epics: [{ ticket: BOARDS, stories: [ticket("VST-300", "Old board", "done")] }],
-      loose: [ticket("VST-301", "Old chore", "done"), RUNBOOK],
-    };
-    expect(doneByDefault(mixed).sort()).toEqual(["VST-230", "VST-300", "VST-301"]);
-  });
-
-  it("never unticks a COORD or an epic for being done: what is under them may not be", () => {
-    const closed: PullForest = {
-      coords: [{ ticket: ticket("COOR-9", "Closed", "done"), epics: [{ ticket: ticket("VST-9", "Closed epic", "done"), stories: [RUNBOOK] }] }],
-      epics: [],
-      loose: [],
-    };
-    expect(doneByDefault(closed)).toEqual([]);
   });
 });

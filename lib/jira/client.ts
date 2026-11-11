@@ -4,6 +4,7 @@ import { jiraBaseFromUrl } from "@/lib/jira/address";
 import {
   JIRA_TICKET_FIELDS,
   jiraFactsFrom,
+  jiraUserIds,
   type JiraTicketFacts,
 } from "@/lib/jira/issue";
 import { whereHostResolves } from "@/lib/outbound-guard";
@@ -156,7 +157,7 @@ async function readCapped(res: Response, max: number): Promise<string | null> {
 export async function jiraMyself(
   baseUrl: string,
   token: string,
-): Promise<JiraAnswer<{ name: string }>> {
+): Promise<JiraAnswer<{ name: string; ids: string[] }>> {
   const res = await jiraGet(baseUrl, token, "/rest/api/2/myself");
   if (!res.ok) return res;
   const who = res.data as { displayName?: unknown; name?: unknown } | null;
@@ -169,7 +170,11 @@ export async function jiraMyself(
   // Signed-out Jiras answer some calls with a body for "anonymous": no name means nobody is signed in.
   if (!name) return fail("not-jira");
   // Somebody else's text, shown on a settings screen: one line, bounded.
-  return { ok: true, data: { name: name.replace(/\s+/g, " ").slice(0, 80) } };
+  return {
+    ok: true,
+    // `ids` is what a ticket's assignee is matched against, to tell which tickets are the owner's.
+    data: { name: name.replace(/\s+/g, " ").slice(0, 80), ids: jiraUserIds(who) },
+  };
 }
 
 /**

@@ -193,7 +193,10 @@ describe("jiraMyself", () => {
 
   it("gives back who the token belongs to", async () => {
     stub(answer(200, JSON.stringify({ name: "jdoe", displayName: "Jane Doe" })));
-    expect(await jiraMyself(BASE, TOKEN)).toEqual({ ok: true, data: { name: "Jane Doe" } });
+    expect(await jiraMyself(BASE, TOKEN)).toEqual({
+      ok: true,
+      data: { name: "Jane Doe", ids: ["jdoe"] },
+    });
   });
 
   it("falls back to the sign-in name, and trims what Jira sends to one short line", async () => {

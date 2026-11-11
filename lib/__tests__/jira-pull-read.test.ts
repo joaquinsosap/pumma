@@ -26,7 +26,12 @@ const jira = vi.hoisted(() => ({
   strictKeys: false,
   /** A Jira that does not say how many there are in all. */
   noTotal: false,
+  /** A Jira that will not say whose token it is. */
+  anonymous: false,
 }));
+
+/** The token's owner, as Jira names a user: in "myself", and as a ticket's assignee. */
+const ME = { name: "me.user", key: "JIRAUSER10", displayName: "Me User" };
 
 const EPIC = "customfield_10101";
 const EPIC_NAME = "customfield_10102";
@@ -56,6 +61,7 @@ function issueJson(t: Fake) {
       summary: t.title ?? `Title of ${t.key}`,
       status: { name: "Some step", statusCategory: { key: t.bucket ?? "new" } },
       issuetype: { name: t.type },
+      assignee: t.mine ? ME : null,
       parent: t.subtaskOf ? { key: t.subtaskOf, fields: { summary: "x" } } : undefined,
       [EPIC]: t.epic ?? null,
       [EPIC_NAME]: EPIC_TYPES.includes(t.type) ? (t.title ?? t.key) : null,
@@ -126,6 +132,12 @@ vi.mock("@/lib/jira/client", () => ({
     }
     throw new Error(`unexpected path ${path}`);
   },
+  jiraMyself: async () => {
+    jira.calls.push("/rest/api/2/myself");
+    return jira.anonymous
+      ? { ok: false, why: "forbidden", error: "Jira refused the request." }
+      : { ok: true, data: { name: ME.displayName, ids: [ME.name, ME.key.toLowerCase()] } };
+  },
 }));
 
 import { forgetLinkFields, keyIn, linkFieldsFrom, readPull } from "@/lib/jira/pull-read";
@@ -155,6 +167,7 @@ beforeEach(() => {
   jira.failOn = null;
   jira.strictKeys = false;
   jira.noTotal = false;
+  jira.anonymous = false;
   forgetLinkFields();
 });
 
@@ -171,6 +184,7 @@ describe("readPull, a COORD by its number", () => {
       title: "Platform alerts",
       stage: "doing",
       url: "https://desk.example.com/browse/COOR-12",
+      mine: false,
     });
     expect(forest.coords[0].epics.map((e) => [e.ticket.key, keys(e.stories)])).toEqual([
       ["VST-210", ["VST-221", "VST-222"]],
@@ -180,18 +194,19 @@ describe("readPull, a COORD by its number", () => {
     expect(forest.loose).toEqual([]);
   });
 
-  it("does it in four requests: the fields, the ticket, its epics, their stories", async () => {
+  it("does it in five requests: the fields, whose token it is, the ticket, its epics, their stories", async () => {
     await readPull(CONN, { kind: "ticket", key: "COOR-12", children: true });
-    expect(jira.calls).toHaveLength(4);
+    expect(jira.calls).toHaveLength(5);
     expect(jira.calls[0]).toBe("/rest/api/2/field");
-    expect(jira.calls[1]).toContain("/rest/api/2/issue/COOR-12?fields=");
+    expect(jira.calls[1]).toBe("/rest/api/2/myself");
+    expect(jira.calls[2]).toContain("/rest/api/2/issue/COOR-12?fields=");
     expect(searches()).toHaveLength(2);
   });
 
   it("asks only for the fields it reads", async () => {
     await readPull(CONN, { kind: "ticket", key: "COOR-12", children: true });
-    for (const call of jira.calls.slice(1)) {
-      expect(call).toContain(`fields=summary,status,issuetype,parent,${EPIC},${PARENT},${EPIC_NAME}`);
+    for (const call of jira.calls.slice(2)) {
+      expect(call).toContain(`fields=summary,status,issuetype,assignee,parent,${EPIC},${PARENT},${EPIC_NAME}`);
     }
     // A number the token cannot see must not sink the whole search.
     for (const call of searches()) expect(call).toContain("validateQuery=false");
@@ -208,7 +223,7 @@ describe("readPull, a COORD by its number", () => {
 
   it("asks one page, not six, when all it needs to know is whether anything hangs there", async () => {
     await readPull(CONN, { kind: "ticket", key: "COOR-12", children: false });
-    expect(jira.calls).toHaveLength(3);
+    expect(jira.calls).toHaveLength(4);
   });
 
   it("takes a ticket nothing hangs under for a piece of work, whatever its type is called", async () => {
@@ -286,8 +301,8 @@ describe("readPull, one piece of work by its number", () => {
   it("does not go looking for epics under a ticket that names an epic itself", async () => {
     await readPull(CONN, { kind: "ticket", key: "VST-222", children: true });
     expect(searches().some((c) => decodeURIComponent(c).includes("cf[13101]"))).toBe(false);
-    // The fields, the ticket, its epic, that epic's COORD.
-    expect(jira.calls).toHaveLength(4);
+    // The fields, whose token it is, the ticket, its epic, that epic's COORD.
+    expect(jira.calls).toHaveLength(5);
   });
 
   it("leaves a story with no epic loose", async () => {
@@ -370,6 +385,70 @@ describe("readPull, tickets assigned to the token's owner", () => {
     const res = await readPull(CONN, { kind: "mine" });
     expect(res.ok && res.data.forest).toEqual({ coords: [], epics: [], loose: [] });
     expect(jira.calls).toHaveLength(2);
+  });
+});
+
+describe("readPull, whose tickets they are", () => {
+  const TOP = { kind: "ticket" as const, key: "PROJ-1", children: true };
+  const storiesOf = (forest: { coords: { epics: { stories: { key: string; mine: boolean }[] }[] }[] }) =>
+    forest.coords.flatMap((c) => c.epics.flatMap((e) => e.stories)).map((s) => [s.key, s.mine]);
+
+  // Its own corner of the pretend Jira: a top ticket, one epic, one ticket of the owner's and two of somebody else's.
+  beforeEach(() => {
+    jira.tickets = [
+      { key: "PROJ-1", type: "Initiative", title: "Storefront" },
+      { key: "PROJ-10", type: "Epic", title: "Checkout", parent: "PROJ-1" },
+      { key: "PROJ-11", type: "Story", title: "Price box", epic: "PROJ-10", mine: true },
+      { key: "PROJ-12", type: "Story", title: "Saved cards", epic: "PROJ-10" },
+      { key: "PROJ-13", type: "Bug", title: "Receipt email", epic: "PROJ-10", bucket: "done" },
+    ];
+  });
+
+  it("marks the tickets assigned to the token's owner, and no other", async () => {
+    const res = await readPull(CONN, TOP);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data.whoKnown).toBe(true);
+    expect(storiesOf(res.data.forest)).toEqual([
+      ["PROJ-11", true],
+      ["PROJ-12", false],
+      ["PROJ-13", false],
+    ]);
+  });
+
+  it("asks whose token it is once, not on every pull", async () => {
+    await readPull(CONN, TOP);
+    await readPull(CONN, { kind: "ticket", key: "PROJ-10", children: true });
+    expect(jira.calls.filter((c) => c === "/rest/api/2/myself")).toHaveLength(1);
+  });
+
+  it("asks again for another token on the same Jira: that is another person", async () => {
+    await readPull(CONN, TOP);
+    await readPull({ ...CONN, token: "an0ther-token-that-is-long-enough" }, TOP);
+    expect(jira.calls.filter((c) => c === "/rest/api/2/myself")).toHaveLength(2);
+  });
+
+  it("does not ask at all for the owner's own tickets: the search already says whose they are", async () => {
+    const res = await readPull(CONN, { kind: "mine" });
+    expect(jira.calls).not.toContain("/rest/api/2/myself");
+    expect(res.ok && res.data.whoKnown).toBe(true);
+    expect(res.ok && storiesOf(res.data.forest)).toEqual([["PROJ-11", true]]);
+  });
+
+  it("still reads the pull when Jira will not say whose token it is, and marks nothing", async () => {
+    jira.anonymous = true;
+    const res = await readPull(CONN, TOP);
+    expect(res.ok).toBe(true);
+    if (!res.ok) return;
+    expect(res.data.whoKnown).toBe(false);
+    expect(storiesOf(res.data.forest).every(([, mine]) => mine === false)).toBe(true);
+  });
+
+  it("does not go on asking a Jira that will not say, pull after pull", async () => {
+    jira.anonymous = true;
+    await readPull(CONN, TOP);
+    await readPull(CONN, TOP);
+    expect(jira.calls.filter((c) => c === "/rest/api/2/myself")).toHaveLength(1);
   });
 });
 

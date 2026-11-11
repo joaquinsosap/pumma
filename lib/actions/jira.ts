@@ -107,7 +107,7 @@ export async function testJiraConnectionAction(): Promise<
   }
   const who = await jiraMyself(creds.baseUrl, creds.token);
   if (!who.ok) return { ok: false, error: who.error };
-  return { ok: true, data: who.data };
+  return { ok: true, data: { name: who.data.name } };
 }
 
 /** Forget the connection. Tickets already linked keep their links: those are addresses, not credentials. */

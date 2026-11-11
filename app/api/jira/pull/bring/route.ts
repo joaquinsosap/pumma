@@ -9,8 +9,9 @@ export const dynamic = "force-dynamic";
 /**
  * Bring a pull in: make its project, its epic tags and its tasks.
  *
- * The body says only what to read, which level is the project and which
- * tickets were unticked. What gets made is worked out on the server.
+ * The body says only what to read, which level is the project, how the
+ * selectors are set and which tickets were unticked. What gets made is worked
+ * out on the server.
  */
 export async function POST(req: Request) {
   const who = await apiUserId(req);

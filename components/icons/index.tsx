@@ -38,6 +38,7 @@ export {
   EnterGlyph as EnterKey,
   PencilGlyph as Pencil,
   PlayGlyph as Play,
+  JiraMark,
   PlusGlyph as Plus,
   SearchGlyph as Search,
   TrashGlyph as Trash2,

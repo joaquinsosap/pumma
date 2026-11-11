@@ -1,8 +1,10 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 import { jiraIssueUrl } from "@/lib/jira/address";
-import { jiraGet, type JiraAnswer } from "@/lib/jira/client";
-import { jiraFactsFrom } from "@/lib/jira/issue";
+import { jiraGet, jiraMyself, type JiraAnswer } from "@/lib/jira/client";
+import { jiraFactsFrom, jiraUserIds } from "@/lib/jira/issue";
 import type {
   PullForest,
   PulledEpic,
@@ -33,6 +35,12 @@ export type LinkFields = {
   parentLink: string | null;
   /** Only an epic has a value here, in any language, which is how an epic is told apart. */
   epicName: string | null;
+};
+
+/** What one pull reads with: that Jira's link fields, and what its token's owner is known by there. */
+type Ids = LinkFields & {
+  /** Empty when the owner is not known, and then no ticket is marked as theirs. */
+  me: ReadonlySet<string>;
 };
 
 const EPIC_LINK_KIND = "com.pyxis.greenhopper.jira:gh-epic-link";
@@ -84,7 +92,7 @@ type Seen = {
   subtaskOf: string | null;
 };
 
-function seenFrom(raw: unknown, base: string, ids: LinkFields): Seen | null {
+function seenFrom(raw: unknown, base: string, ids: Ids): Seen | null {
   const facts = jiraFactsFrom(raw);
   if (!facts) return null;
   const fields = obj(obj(raw)?.fields) ?? {};
@@ -95,6 +103,7 @@ function seenFrom(raw: unknown, base: string, ids: LinkFields): Seen | null {
       title: facts.title ?? facts.key,
       stage: facts.stage,
       url: jiraIssueUrl(base, facts.key),
+      mine: jiraUserIds(fields.assignee).some((id) => ids.me.has(id)),
     },
     // The type's name covers a Jira with no epic name field; the field covers one in another language.
     isEpic: facts.type === "Epic" || (typeof named === "string" && named.trim() !== ""),
@@ -122,7 +131,7 @@ const MAX_PARENTS = PAGE;
 const ONE_BY_ONE = 15;
 
 const fieldList = (ids: LinkFields) =>
-  ["summary", "status", "issuetype", "parent", ids.epicLink, ids.parentLink, ids.epicName]
+  ["summary", "status", "issuetype", "assignee", "parent", ids.epicLink, ids.parentLink, ids.epicName]
     .filter(Boolean)
     .join(",");
 
@@ -153,16 +162,42 @@ async function linkFields(conn: JiraConn): Promise<JiraAnswer<LinkFields>> {
   return { ok: true, data: ids };
 }
 
-/** Forget what was learned about every Jira's fields. For tests, and for a connection that changed. */
+// Whose token it is, kept as long as the fields are. The token is part of the
+// key, as a short digest: another token on the same Jira is another person.
+const OWNER_FOR = new Map<string, { at: number; me: ReadonlySet<string> | null }>();
+const NOBODY: ReadonlySet<string> = new Set();
+/** A Jira that would not say is asked again after this long, not on every pull. */
+const OWNER_RETRY_MS = 60 * 1000;
+
+/**
+ * What the token's owner is known by on this Jira, or null when Jira would
+ * not say. A pull goes on without it: it only loses the "assigned to me" mark.
+ */
+async function owner(conn: JiraConn): Promise<ReadonlySet<string> | null> {
+  const key = `${conn.baseUrl}|${createHash("sha256").update(conn.token).digest("hex").slice(0, 12)}`;
+  const hit = OWNER_FOR.get(key);
+  if (hit && Date.now() - hit.at < (hit.me ? FIELDS_FRESH_MS : OWNER_RETRY_MS)) {
+    return hit.me;
+  }
+  OWNER_FOR.delete(key);
+  const res = await jiraMyself(conn.baseUrl, conn.token);
+  const me = res.ok && res.data.ids.length > 0 ? new Set(res.data.ids) : null;
+  if (OWNER_FOR.size >= FIELDS_KEPT) OWNER_FOR.clear();
+  OWNER_FOR.set(key, { at: Date.now(), me });
+  return me;
+}
+
+/** Forget what was learned about every Jira: its fields, and whose token it is. For tests, and for a connection that changed. */
 export function forgetLinkFields(): void {
   FIELDS_FOR.clear();
+  OWNER_FOR.clear();
 }
 
 type Found = { seen: Seen[]; capped: boolean };
 
 async function search(
   conn: JiraConn,
-  ids: LinkFields,
+  ids: Ids,
   jql: string,
   maxPages = MAX_PAGES,
 ): Promise<JiraAnswer<Found>> {
@@ -195,7 +230,7 @@ async function search(
 
 async function one(
   conn: JiraConn,
-  ids: LinkFields,
+  ids: Ids,
   key: string,
 ): Promise<JiraAnswer<Seen>> {
   const res = await jiraGet(
@@ -217,7 +252,7 @@ async function one(
  */
 async function byKeys(
   conn: JiraConn,
-  ids: LinkFields,
+  ids: Ids,
   keys: string[],
 ): Promise<JiraAnswer<Found>> {
   const all: Seen[] = [];
@@ -287,7 +322,7 @@ function forestOf(coords: Seen[], epics: Seen[], stories: Seen[]): PullForest {
  */
 async function withParents(
   conn: JiraConn,
-  ids: LinkFields,
+  ids: Ids,
   stories: Seen[],
   epics: Seen[],
 ): Promise<JiraAnswer<{ forest: PullForest; capped: boolean }>> {
@@ -324,6 +359,8 @@ export type PullRead = {
   forest: PullForest;
   /** True when a search hit its ceiling: there is more in Jira than was read. */
   capped: boolean;
+  /** False when Jira would not say whose token this is, so no ticket could be marked as theirs. */
+  whoKnown: boolean;
 };
 
 /**
@@ -337,15 +374,17 @@ export async function readPull(
 ): Promise<JiraAnswer<PullRead>> {
   const fields = await linkFields(conn);
   if (!fields.ok) return fields;
-  const ids = fields.data;
 
   if (source.kind === "mine") {
+    // The search itself says whose these are, so nobody is asked who the owner is.
+    const ids: Ids = { ...fields.data, me: NOBODY };
     const mine = await search(
       conn,
       ids,
       "assignee = currentUser() AND resolution = Unresolved ORDER BY key ASC",
     );
     if (!mine.ok) return mine;
+    for (const s of mine.data.seen) s.ticket.mine = true;
     const assigned = new Set(mine.data.seen.map((s) => s.ticket.key));
     const epics = mine.data.seen.filter((s) => s.isEpic);
     // A sub-task whose story is in this pull too is that story's detail, not a second task.
@@ -356,7 +395,11 @@ export async function readPull(
     if (!hung.ok) return hung;
     return {
       ok: true,
-      data: { forest: hung.data.forest, capped: mine.data.capped || hung.data.capped },
+      data: {
+        forest: hung.data.forest,
+        capped: mine.data.capped || hung.data.capped,
+        whoKnown: true,
+      },
     };
   }
 
@@ -368,6 +411,9 @@ export async function readPull(
       error: "That is not a ticket number.",
     };
   }
+  const me = await owner(conn);
+  const whoKnown = me !== null;
+  const ids: Ids = { ...fields.data, me: me ?? NOBODY };
   const top = await one(conn, ids, key);
   if (!top.ok) return top;
 
@@ -382,7 +428,10 @@ export async function readPull(
     }
     const hung = await withParents(conn, ids, stories, [top.data]);
     if (!hung.ok) return hung;
-    return { ok: true, data: { forest: hung.data.forest, capped: capped || hung.data.capped } };
+    return {
+      ok: true,
+      data: { forest: hung.data.forest, capped: capped || hung.data.capped, whoKnown },
+    };
   }
 
   // A ticket that names an epic is a piece of work, whatever its type is called. Nothing hangs under it.
@@ -399,7 +448,10 @@ export async function readPull(
     if (epics.length > 0) {
       if (!source.children) {
         // A COORD brought in alone: the project, and nothing in it yet.
-        return { ok: true, data: { forest: forestOf([top.data], [], []), capped: false } };
+        return {
+          ok: true,
+          data: { forest: forestOf([top.data], [], []), capped: false, whoKnown },
+        };
       }
       let capped = under.data.capped;
       const stories: Seen[] = [];
@@ -417,12 +469,15 @@ export async function readPull(
           capped ||= found.data.capped;
         }
       }
-      return { ok: true, data: { forest: forestOf([top.data], epics, stories), capped } };
+      return {
+        ok: true,
+        data: { forest: forestOf([top.data], epics, stories), capped, whoKnown },
+      };
     }
   }
 
   // Nothing hangs under it: one piece of work, hung where it belongs.
   const hung = await withParents(conn, ids, [top.data], []);
   if (!hung.ok) return hung;
-  return { ok: true, data: hung.data };
+  return { ok: true, data: { ...hung.data, whoKnown } };
 }

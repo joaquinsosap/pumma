@@ -8,6 +8,7 @@ import {
   type Brought,
 } from "@/lib/jira/bring-in-server";
 import { JIRA_UNREADABLE, jiraConnection } from "@/lib/jira/connection-server";
+import { narrowPull } from "@/lib/jira/pull-filter";
 import type { PullRunInput } from "@/lib/jira/pull-input";
 import { planPull, type PullForest } from "@/lib/jira/pull-plan";
 import { readPull, type PullRead, type PullSource } from "@/lib/jira/pull-read";
@@ -21,6 +22,8 @@ export type PullPreview =
       forest: PullForest;
       /** There is more in Jira than was read. */
       capped: boolean;
+      /** False when Jira would not say whose token this is: nothing is marked as assigned to them. */
+      whoKnown: boolean;
       /** Ticket numbers already here, so the screen can plan exactly as the server will. */
       have: { tasks: string[]; projects: string[] };
     }
@@ -102,6 +105,7 @@ export async function previewPull(
     state: "ok",
     forest: got.read.forest,
     capped: got.read.capped,
+    whoKnown: got.read.whoKnown,
     have: { tasks: [...have.tasks], projects: [...have.projects] },
   };
 }
@@ -109,7 +113,8 @@ export async function previewPull(
 /**
  * Bring `source` in. The plan is worked out here, from the server's own read
  * and from what is in the database at this moment: the screen only says which
- * level is the project and which tickets were unticked.
+ * level is the project, how its selectors are set and which tickets were
+ * unticked.
  */
 export function runPull(userId: string, input: PullRunInput): Promise<PullRun> {
   return oneAtATime(userId, async () => {
@@ -118,7 +123,19 @@ export function runPull(userId: string, input: PullRunInput): Promise<PullRun> {
     // Read inside the turn: a bring-in that ran just before this one has
     // already made its project and tasks, and this one must see them.
     const { have, projectOf } = await whatIsHere(userId, got.baseUrl);
-    const off = new Set(input.off.map((k) => k.trim().toUpperCase()));
+    const unticked = new Set(input.off.map((k) => k.trim().toUpperCase()));
+    // Narrowed here, by the rule the screen used. When this read is newer than
+    // the one on screen, a ticket that has since been finished or handed to
+    // somebody else is still left out, because the selectors say so.
+    const { off } = narrowPull(
+      got.read.forest,
+      {
+        // Whose tickets only means something where they differ and can be told apart.
+        who: input.source.kind === "ticket" && got.read.whoKnown ? input.who : "all",
+        stages: new Set(input.stages),
+      },
+      unticked,
+    );
     const plan = planPull(got.read.forest, input.level, off, have);
     const brought = await bringIn(userId, plan, projectOf);
     // What was kept describes the moment before this: the next preview reads again.

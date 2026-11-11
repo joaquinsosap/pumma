@@ -82,6 +82,13 @@ const ASSISTANT =
   "M18.7 15.1l.85 2.35 2.35.85-2.35.85-.85 2.35-.85-2.35-2.35-.85 2.35-.85Z" +
   "M4.7 16.3l.7 1.9 1.9.7-1.9.7-.7 1.9-.7-1.9-1.9-.7 1.9-.7Z";
 
+// Jira's own mark, for the doors that lead to it. A brand's shape, not one of ours: it is not redrawn.
+const JIRA =
+  "M11.571 11.513H0a5.218 5.218 0 0 0 5.232 5.215h2.13v2.057A5.215 5.215 0 0 0 12.575 24V12.518a1.005 1.005 0 0 0-1.005-1.005Z" +
+  "M17.294 5.757H5.736a5.215 5.215 0 0 0 5.215 5.214h2.129v2.058a5.218 5.218 0 0 0 5.215 5.214V6.758a1.001 1.001 0 0 0-1.001-1.001Z" +
+  "M23.013 0H11.455a5.215 5.215 0 0 0 5.215 5.215h2.129v2.057A5.215 5.215 0 0 0 24 12.483V1.005A1.001 1.001 0 0 0 23.013 0Z";
+
+export const JiraMark = (p: IconProps) => <Glyph d={JIRA} {...p} />;
 export const HomeGlyph = (p: IconProps) => <Glyph d={HOME} {...p} />;
 export const TasksGlyph = (p: IconProps) => <Glyph d={TASKS} {...p} />;
 export const NotesGlyph = (p: IconProps) => <Glyph d={NOTES} {...p} />;

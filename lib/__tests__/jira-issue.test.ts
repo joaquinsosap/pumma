@@ -1,6 +1,6 @@
 // What PUMMA shows of a Jira ticket: read out of Jira's answer, and never trusted as it comes.
 import { describe, expect, it } from "vitest";
-import { jiraFactsFrom } from "@/lib/jira/issue";
+import { jiraFactsFrom, jiraUserIds } from "@/lib/jira/issue";
 
 const answer = (fields: Record<string, unknown>, key: unknown = "VST-1234") => ({
   id: "10042",
@@ -116,5 +116,25 @@ describe("jiraFactsFrom", () => {
     ["a key that is not text", answer(FULL, 42)],
   ])("is no ticket at all for %s", (_what, raw) => {
     expect(jiraFactsFrom(raw)).toBeNull();
+  });
+});
+
+describe("jiraUserIds", () => {
+  it("gives both names Jira knows a user by, lowercased", () => {
+    expect(jiraUserIds({ name: "J.Doe", key: "JIRAUSER10", displayName: "Jane Doe" })).toEqual([
+      "j.doe",
+      "jirauser10",
+    ]);
+  });
+
+  it("never takes the display name for one: two people can share it", () => {
+    expect(jiraUserIds({ displayName: "Jane Doe" })).toEqual([]);
+  });
+
+  it("gives nothing for nobody, a blank, or something that is not a user", () => {
+    expect(jiraUserIds(null)).toEqual([]);
+    expect(jiraUserIds({ name: "  ", key: 7 })).toEqual([]);
+    expect(jiraUserIds(["j.doe"])).toEqual([]);
+    expect(jiraUserIds("j.doe")).toEqual([]);
   });
 });

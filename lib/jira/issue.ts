@@ -66,6 +66,19 @@ export function jiraFactsFrom(raw: unknown): JiraTicketFacts | null {
   };
 }
 
+/**
+ * What a Jira user is known by, wherever one appears: the sign-in name and
+ * the user key, lowercased. A ticket's assignee carries the same two, which is
+ * how "assigned to me" is told without asking Jira a second question.
+ */
+export function jiraUserIds(user: unknown): string[] {
+  if (!user || typeof user !== "object" || Array.isArray(user)) return [];
+  const { name, key } = user as { name?: unknown; key?: unknown };
+  return [name, key]
+    .filter((v): v is string => typeof v === "string" && v.trim() !== "")
+    .map((v) => v.trim().toLowerCase());
+}
+
 /** The fields asked for. Naming them keeps the answer to a few hundred bytes instead of the whole ticket. */
 export const JIRA_TICKET_FIELDS = "summary,status,assignee,issuetype,priority";
 

@@ -1,0 +1,190 @@
+// Narrowing a pull: what the selectors hide, and what is left out of a bring-in.
+import { describe, expect, it } from "vitest";
+import type { JiraStage } from "@/lib/jira/issue";
+import {
+  narrowPull,
+  pieceKeys,
+  pullFilterStart,
+  type PullFilter,
+} from "@/lib/jira/pull-filter";
+import {
+  countPlan,
+  planPull,
+  type PullForest,
+  type PulledTicket,
+} from "@/lib/jira/pull-plan";
+
+const ticket = (
+  key: string,
+  over: Partial<PulledTicket> = {},
+): PulledTicket => ({
+  key,
+  title: `Title of ${key}`,
+  stage: "todo",
+  url: `https://desk.example.com/browse/${key}`,
+  mine: false,
+  ...over,
+});
+
+const TOP = ticket("PROJ-1");
+const CHECKOUT = ticket("PROJ-10");
+const SEARCH = ticket("PROJ-20");
+const PRICE = ticket("PROJ-11", { stage: "doing", mine: true });
+const CARDS = ticket("PROJ-12");
+const RECEIPT = ticket("PROJ-13", { stage: "done", mine: true });
+const INDEX = ticket("PROJ-21");
+const CHORE = ticket("PROJ-90", { mine: true });
+
+const FOREST: PullForest = {
+  coords: [
+    {
+      ticket: TOP,
+      epics: [
+        { ticket: CHECKOUT, stories: [PRICE, CARDS, RECEIPT] },
+        { ticket: SEARCH, stories: [INDEX] },
+      ],
+    },
+  ],
+  epics: [],
+  loose: [CHORE],
+};
+
+const every = (who: PullFilter["who"] = "all"): PullFilter => ({
+  who,
+  stages: new Set<JiraStage>(["todo", "doing", "done"]),
+});
+const NO_TICKS: ReadonlySet<string> = new Set();
+const sorted = (keys: ReadonlySet<string>) => [...keys].sort();
+
+describe("narrowPull, the selectors", () => {
+  it("starts with everybody's tickets and without the finished ones", () => {
+    const { hidden, off } = narrowPull(FOREST, pullFilterStart(), NO_TICKS);
+    expect(sorted(hidden)).toEqual(["PROJ-13"]);
+    expect(sorted(off)).toEqual(["PROJ-13"]);
+  });
+
+  it("hides nothing when every stage is on and everybody's are wanted", () => {
+    const { hidden, off } = narrowPull(FOREST, every(), NO_TICKS);
+    expect(sorted(hidden)).toEqual([]);
+    expect(sorted(off)).toEqual([]);
+  });
+
+  it("keeps only the owner's tickets when only theirs are wanted", () => {
+    const { hidden } = narrowPull(FOREST, every("mine"), NO_TICKS);
+    // Somebody else's tickets, and the epic that held nothing else.
+    expect(sorted(hidden)).toEqual(["PROJ-12", "PROJ-20", "PROJ-21"]);
+  });
+
+  it("takes an epic away with its last ticket, and the top ticket with its last epic", () => {
+    const onlyDone: PullFilter = { who: "all", stages: new Set<JiraStage>(["done"]) };
+    const { hidden } = narrowPull(FOREST, onlyDone, NO_TICKS);
+    expect(hidden.has("PROJ-20")).toBe(true);
+    expect(hidden.has("PROJ-10")).toBe(false);
+    expect(hidden.has("PROJ-1")).toBe(false);
+
+    const none: PullFilter = { who: "all", stages: new Set<JiraStage>() };
+    expect(sorted(narrowPull(FOREST, none, NO_TICKS).hidden)).toEqual([
+      "PROJ-1",
+      "PROJ-10",
+      "PROJ-11",
+      "PROJ-12",
+      "PROJ-13",
+      "PROJ-20",
+      "PROJ-21",
+      "PROJ-90",
+    ]);
+  });
+
+  it("shows a ticket Jira gave no stage for, whichever stages are picked", () => {
+    const forest: PullForest = { coords: [], epics: [], loose: [ticket("PROJ-5", { stage: null })] };
+    const none: PullFilter = { who: "all", stages: new Set<JiraStage>() };
+    expect(sorted(narrowPull(forest, none, NO_TICKS).hidden)).toEqual([]);
+  });
+
+  it("keeps an epic nothing was read under, unless only the owner's are wanted and it is not theirs", () => {
+    const forest: PullForest = {
+      coords: [],
+      epics: [
+        { ticket: ticket("PROJ-30"), stories: [] },
+        { ticket: ticket("PROJ-31", { mine: true }), stories: [] },
+      ],
+      loose: [],
+    };
+    expect(sorted(narrowPull(forest, every(), NO_TICKS).hidden)).toEqual([]);
+    expect(sorted(narrowPull(forest, every("mine"), NO_TICKS).hidden)).toEqual(["PROJ-30"]);
+  });
+
+  it("always keeps a top ticket that was read on its own", () => {
+    const alone: PullForest = { coords: [{ ticket: TOP, epics: [] }], epics: [], loose: [] };
+    const { hidden, off } = narrowPull(alone, every("mine"), NO_TICKS);
+    expect(sorted(hidden)).toEqual([]);
+    expect(sorted(off)).toEqual([]);
+  });
+});
+
+describe("narrowPull, the ticks", () => {
+  it("leaves an unticked ticket out without hiding it", () => {
+    const { hidden, off } = narrowPull(FOREST, every(), new Set(["PROJ-12"]));
+    expect(sorted(hidden)).toEqual([]);
+    expect(sorted(off)).toEqual(["PROJ-12"]);
+  });
+
+  it("leaves an epic out once every ticket under it is unticked, and still draws it", () => {
+    const { hidden, off } = narrowPull(FOREST, every(), new Set(["PROJ-21"]));
+    expect(hidden.has("PROJ-20")).toBe(false);
+    expect(sorted(off)).toEqual(["PROJ-20", "PROJ-21"]);
+  });
+
+  it("counts a hidden ticket as gone when deciding whether an epic has anything left", () => {
+    // Checkout's only open ticket that is not hidden is unticked: nothing of it comes in.
+    const { off } = narrowPull(FOREST, pullFilterStart(), new Set(["PROJ-11", "PROJ-12"]));
+    expect(off.has("PROJ-10")).toBe(true);
+    expect(off.has("PROJ-1")).toBe(false);
+  });
+
+  it("leaves the top ticket out when nothing under it is left", () => {
+    const { off } = narrowPull(FOREST, every(), new Set(pieceKeys(FOREST)));
+    expect(off.has("PROJ-1")).toBe(true);
+  });
+
+  it("brings a ticket back with one tick after None: its epic and top ticket come with it", () => {
+    const unticked = new Set(pieceKeys(FOREST));
+    unticked.delete("PROJ-21");
+    const { off } = narrowPull(FOREST, every(), unticked);
+    expect(off.has("PROJ-21")).toBe(false);
+    expect(off.has("PROJ-20")).toBe(false);
+    expect(off.has("PROJ-1")).toBe(false);
+    expect(off.has("PROJ-10")).toBe(true);
+  });
+
+  it("names every piece of work for None, and no epic or top ticket", () => {
+    expect(pieceKeys(FOREST).sort()).toEqual([
+      "PROJ-11",
+      "PROJ-12",
+      "PROJ-13",
+      "PROJ-21",
+      "PROJ-90",
+    ]);
+  });
+});
+
+describe("narrowPull, handed to the plan", () => {
+  const nothingHere = { tasks: new Set<string>(), projects: new Set<string>() };
+
+  it("makes no tag for an epic the selectors emptied", () => {
+    const { off } = narrowPull(FOREST, every("mine"), NO_TICKS);
+    const plan = planPull(FOREST, "coord", off, nothingHere);
+    expect(countPlan(plan)).toEqual({ projects: 1, tags: 1, tasks: 3 });
+  });
+
+  it("makes no project when only the owner's are wanted and none under it is theirs", () => {
+    const theirs: PullForest = {
+      coords: [{ ticket: TOP, epics: [{ ticket: SEARCH, stories: [INDEX] }] }],
+      epics: [],
+      loose: [],
+    };
+    const { off } = narrowPull(theirs, every("mine"), NO_TICKS);
+    const plan = planPull(theirs, "coord", off, nothingHere);
+    expect(countPlan(plan)).toEqual({ projects: 0, tags: 0, tasks: 0 });
+  });
+});
