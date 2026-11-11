@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import {
-  HOLD_BACK_RATE,
-  HOLD_EASE,
-  WAVE_MS,
-} from "@/lib/omni-hold";
+import { HOLD_BACK_RATE, HOLD_EASE, POP_MS } from "@/lib/omni-hold";
 
 export type HoldFill = {
   /** The colour of what the bar is making now, and of what it will make. */
@@ -78,31 +74,15 @@ export function useOmniHold() {
           return;
         }
         fill.onFull();
-        // The switch has landed: the crossing colour lets go of the bar, and a wave in the new colour goes over it.
+        // Landed: the crossing colour becomes a flash of the new one over the whole bar, gone at once then slowly.
+        el.style.background = wash(fill.to, 60);
         el.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: 520,
-          easing: "ease-out",
+          duration: POP_MS,
+          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
           fill: "forwards",
         }).finished.then(
           () => el.remove(),
           () => el.remove(),
-        );
-        if (still) return;
-        const wave = document.createElement("div");
-        wave.className = "omni-hold-wave";
-        wave.style.background = `linear-gradient(90deg, transparent, ${wash(fill.to, 46)}, transparent)`;
-        layer.appendChild(wave);
-        // In its own widths: -100% is just off the left edge, 225% just off the right.
-        const [start, end] = fill.backwards ? ["225%", "-100%"] : ["-100%", "225%"];
-        wave.animate(
-          [
-            { transform: `translateX(${start})` },
-            { transform: `translateX(${end})` },
-          ],
-          { duration: WAVE_MS, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
-        ).finished.then(
-          () => wave.remove(),
-          () => wave.remove(),
         );
       })
       .catch(() => el.remove());

@@ -62,7 +62,7 @@ import { trySave } from "@/lib/try-save";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { EnterKey, Pencil, Sparkles } from "@/components/icons";
 import { useOmniHold } from "@/components/shell/OmniHold";
-import { HOLD_AGAIN_MS, HOLD_MS } from "@/lib/omni-hold";
+import { HOLD_MS, POP_EASE } from "@/lib/omni-hold";
 
 type OmniMode = "capture" | "assistant";
 
@@ -213,12 +213,29 @@ export function OmniBox({
   /** The task-only parts: a date, a priority, the title dimming. A project has none of them. */
   const taskFields = isTask && !makingProject;
 
-  // Hold Tab to switch. Where the bar stands is a ref, so a chained switch starts from it before React redraws.
+  // Hold Tab to switch. Where the bar stands, read when a hold begins.
   const hold = useOmniHold();
   const standRef = useRef({ mode, type, project: makingProject });
   useEffect(() => {
     standRef.current = { mode, type, project: makingProject };
   }, [mode, type, makingProject]);
+  // The switch landing: the bar bumps and the new kind's chip pops, once React has drawn the chip.
+  const [landed, setLanded] = useState(0);
+  useEffect(() => {
+    if (!landed) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const bar = omniRef.current;
+    bar?.animate([{ transform: "scale(0.99)" }, { transform: "scale(1)" }], {
+      duration: 300,
+      easing: POP_EASE,
+    });
+    bar
+      ?.querySelector("[data-omni-pop]")
+      ?.animate([{ transform: "scale(0.6)" }, { transform: "scale(1)" }], {
+        duration: 360,
+        easing: POP_EASE,
+      });
+  }, [landed]);
 
   const agendaDay =
     pathname === "/" ? (searchParams.get("day")?.slice(0, 10) ?? null) : null;
@@ -537,30 +554,27 @@ export function OmniBox({
 
       // Switching is a hold: the next kind's colour crosses the bar and it switches when the colour gets there.
       const direction = e.shiftKey ? -1 : 1;
-      const charge = (ms: number) => {
-        const here = standRef.current;
-        const next = cycleOmniTab(here.mode, here.type, direction);
-        hold.begin({
-          from: barAccent(here.mode, here.type, here.project),
-          to: barAccent(next.mode, next.type),
-          backwards: direction === -1,
-          ms,
-          onFull: () => {
-            standRef.current = { ...next, project: false };
-            wantFocusRef.current = true;
-            setMode(next.mode);
-            if (next.mode === "capture") setType(next.type);
-            // Covers the case where the cycle doesn't remount the input: the effect
-            // below only runs when mode/type actually change the rendered branch.
-            inputRef.current?.focus();
-            // Still down: keep going to the one after, a little quicker.
-            if (hold.down()) charge(HOLD_AGAIN_MS);
-          },
-        });
-      };
+      const here = standRef.current;
+      const next = cycleOmniTab(here.mode, here.type, direction);
       // The caret goes to the bar at once, so the colour crosses a bar that is awake.
       inputRef.current?.focus();
-      charge(HOLD_MS);
+      // One hold, one switch: the key has to come up before the next one can start.
+      hold.begin({
+        from: barAccent(here.mode, here.type, here.project),
+        to: barAccent(next.mode, next.type),
+        backwards: direction === -1,
+        ms: HOLD_MS,
+        onFull: () => {
+          standRef.current = { ...next, project: false };
+          wantFocusRef.current = true;
+          setMode(next.mode);
+          if (next.mode === "capture") setType(next.type);
+          // Covers the case where the cycle doesn't remount the input: the effect
+          // below only runs when mode/type actually change the rendered branch.
+          inputRef.current?.focus();
+          setLanded((n) => n + 1);
+        },
+      });
     };
 
     // Letting go, or leaving the window with the key down, calls the switch off.
@@ -840,6 +854,7 @@ export function OmniBox({
             Assistant, and there is only one kind of assistant input now. */}
           {mode === "capture" && (
             <span
+              data-omni-pop
               className="shrink-0 rounded-[7px] px-[9px] py-1 font-mono text-xs font-semibold lowercase text-background transition-transform duration-200 group-focus-within:scale-[1.04]"
               style={{
                 background: makingProject
@@ -1113,6 +1128,8 @@ function ModeSwitch({
         type="button"
         onClick={() => onChange("assistant")}
         aria-pressed={mode === "assistant"}
+        // The assistant has no kind chip, so this button is what pops when Tab lands on it.
+        data-omni-pop={mode === "assistant" ? "" : undefined}
         className={cn(
           "flex items-center gap-1 rounded-[7px] px-2 py-1 text-[11px] font-semibold transition-all",
           mode === "assistant"
