@@ -93,7 +93,7 @@ type Seen = {
 };
 
 /** Jira writes a moment as "2026-03-01T10:22:33.000+0000". Null for anything that is not one. */
-function momentFrom(v: unknown): string | null {
+export function momentFrom(v: unknown): string | null {
   if (typeof v !== "string") return null;
   const at = new Date(v.replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
   return Number.isNaN(at.getTime()) ? null : at.toISOString();

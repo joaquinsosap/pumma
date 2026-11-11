@@ -33,6 +33,7 @@ import {
   type JiraLookAgain,
 } from "@/components/projects/JiraPullSheet";
 import { JiraImportButton } from "@/components/projects/JiraImportButton";
+import { JiraSyncButton } from "@/components/projects/JiraSyncButton";
 import { CaptureButton } from "@/components/shell/CaptureButton";
 import { ticketFromUrl } from "@/lib/ticket-link";
 import { setTaskProject } from "@/lib/actions/tasks";
@@ -166,6 +167,10 @@ export function ProjectsView({
     clearOnDefault: false,
   });
   const selected = projects.find((p) => p.id === projectId) ?? projects[0];
+  // Any link counts here; the server reads only the ones on the connected Jira.
+  const selectedHoldsTickets =
+    Boolean(selected) &&
+    tasks.some((t) => t.projectId === selected.id && Boolean(t.ticketUrl));
   // The first card is only where the page starts. The rail can reorder itself
   // now (Last edited does, with every task touched), and "the first" would
   // then swap the board, and the capture bar's target, under the user. So
@@ -357,6 +362,10 @@ export function ProjectsView({
                 {/* Wide screens only, like the title's New button: a phone has the dock's plus. */}
                 <CaptureButton type="task" className="max-lg:hidden" />
                 <span className="min-w-0 flex-1" />
+                {/* Only on a project that holds tickets: elsewhere there is nothing for it to read. */}
+                {jiraConnected && selectedHoldsTickets && (
+                  <JiraSyncButton projectId={selected.id} />
+                )}
                 <SortMenu
                   options={PROJECT_TASK_SORTS}
                   value={taskSort}

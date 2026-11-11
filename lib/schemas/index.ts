@@ -278,6 +278,13 @@ export const taskSchema = z.object({
    * so encrypted at rest. The key on the chip is read off it: see lib/ticket-link.
    */
   ticketUrl: z.string().nullable().default(null),
+  /**
+   * The ticket's step in its tracker as last read, in the tracker's own words:
+   * "In Review". A later read is compared with it, to tell a ticket that moved
+   * there from a task that was moved here. Content, so encrypted at rest.
+   * Absent until the ticket is first read.
+   */
+  ticketStatus: z.string().nullable().optional(),
 });
 
 export const habitSchema = z.preprocess(
