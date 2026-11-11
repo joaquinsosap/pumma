@@ -3,8 +3,11 @@ import { describe, expect, it } from "vitest";
 import type { JiraStage } from "@/lib/jira/issue";
 import {
   narrowPull,
-  pieceKeys,
   pullFilterStart,
+  tickKeys,
+  tickOf,
+  ticksUnder,
+  toggleTick,
   type PullFilter,
 } from "@/lib/jira/pull-filter";
 import {
@@ -53,12 +56,20 @@ const every = (who: PullFilter["who"] = "all"): PullFilter => ({
   who,
   stages: new Set<JiraStage>(["todo", "doing", "done"]),
 });
+const open: PullFilter = { who: "all", stages: new Set<JiraStage>(["todo", "doing"]) };
 const NO_TICKS: ReadonlySet<string> = new Set();
+const NO_SKIP: ReadonlySet<string> = new Set();
 const sorted = (keys: ReadonlySet<string>) => [...keys].sort();
 
 describe("narrowPull, the selectors", () => {
-  it("starts with everybody's tickets and without the finished ones", () => {
+  it("starts with everybody's tickets at every stage, so all of it arrives ticked", () => {
     const { hidden, off } = narrowPull(FOREST, pullFilterStart(), NO_TICKS);
+    expect(sorted(hidden)).toEqual([]);
+    expect(sorted(off)).toEqual([]);
+  });
+
+  it("takes the finished ones away when Done is turned off", () => {
+    const { hidden, off } = narrowPull(FOREST, open, NO_TICKS);
     expect(sorted(hidden)).toEqual(["PROJ-13"]);
     expect(sorted(off)).toEqual(["PROJ-13"]);
   });
@@ -137,19 +148,18 @@ describe("narrowPull, the ticks", () => {
 
   it("counts a hidden ticket as gone when deciding whether an epic has anything left", () => {
     // Checkout's only open ticket that is not hidden is unticked: nothing of it comes in.
-    const { off } = narrowPull(FOREST, pullFilterStart(), new Set(["PROJ-11", "PROJ-12"]));
+    const { off } = narrowPull(FOREST, open, new Set(["PROJ-11", "PROJ-12"]));
     expect(off.has("PROJ-10")).toBe(true);
     expect(off.has("PROJ-1")).toBe(false);
   });
 
   it("leaves the top ticket out when nothing under it is left", () => {
-    const { off } = narrowPull(FOREST, every(), new Set(pieceKeys(FOREST)));
+    const { off } = narrowPull(FOREST, every(), new Set(tickKeys(FOREST)));
     expect(off.has("PROJ-1")).toBe(true);
   });
 
   it("brings a ticket back with one tick after None: its epic and top ticket come with it", () => {
-    const unticked = new Set(pieceKeys(FOREST));
-    unticked.delete("PROJ-21");
+    const unticked = toggleTick(FOREST, "PROJ-21", new Set(tickKeys(FOREST)), NO_SKIP);
     const { off } = narrowPull(FOREST, every(), unticked);
     expect(off.has("PROJ-21")).toBe(false);
     expect(off.has("PROJ-20")).toBe(false);
@@ -157,14 +167,81 @@ describe("narrowPull, the ticks", () => {
     expect(off.has("PROJ-10")).toBe(true);
   });
 
-  it("names every piece of work for None, and no epic or top ticket", () => {
-    expect(pieceKeys(FOREST).sort()).toEqual([
+  it("names every row with a tick of its own for None: the work, and an epic or top ticket nothing was read under", () => {
+    expect(tickKeys(FOREST).sort()).toEqual([
       "PROJ-11",
       "PROJ-12",
       "PROJ-13",
       "PROJ-21",
       "PROJ-90",
     ]);
+    const bare: PullForest = {
+      coords: [{ ticket: TOP, epics: [] }],
+      epics: [{ ticket: ticket("PROJ-30"), stories: [] }],
+      loose: [],
+    };
+    expect(tickKeys(bare).sort()).toEqual(["PROJ-1", "PROJ-30"]);
+  });
+});
+
+describe("the boxes", () => {
+  it("stands a row for everything under it, and a piece of work for itself", () => {
+    expect(ticksUnder(FOREST, "PROJ-1").sort()).toEqual(["PROJ-11", "PROJ-12", "PROJ-13", "PROJ-21"]);
+    expect(ticksUnder(FOREST, "PROJ-10").sort()).toEqual(["PROJ-11", "PROJ-12", "PROJ-13"]);
+    expect(ticksUnder(FOREST, "PROJ-12")).toEqual(["PROJ-12"]);
+  });
+
+  it("ticks a row when all under it are ticked, dashes it when some are, empties it when none are", () => {
+    expect(tickOf(FOREST, "PROJ-10", NO_TICKS, NO_SKIP)).toBe("on");
+    expect(tickOf(FOREST, "PROJ-10", new Set(["PROJ-12"]), NO_SKIP)).toBe("some");
+    expect(tickOf(FOREST, "PROJ-1", new Set(["PROJ-12"]), NO_SKIP)).toBe("some");
+    expect(tickOf(FOREST, "PROJ-10", new Set(["PROJ-11", "PROJ-12", "PROJ-13"]), NO_SKIP)).toBe("off");
+  });
+
+  it("empties every box after None, the epics and the top ticket too", () => {
+    const none = new Set(tickKeys(FOREST));
+    for (const key of ["PROJ-1", "PROJ-10", "PROJ-20", "PROJ-11", "PROJ-21", "PROJ-90"]) {
+      expect(tickOf(FOREST, key, none, NO_SKIP)).toBe("off");
+    }
+  });
+
+  it("unticks everything under an epic with one click, and ticks it all back with the next", () => {
+    const off = toggleTick(FOREST, "PROJ-10", NO_TICKS, NO_SKIP);
+    expect(sorted(off)).toEqual(["PROJ-11", "PROJ-12", "PROJ-13"]);
+    expect(sorted(toggleTick(FOREST, "PROJ-10", off, NO_SKIP))).toEqual([]);
+  });
+
+  it("ticks the rest when a half-ticked row is clicked", () => {
+    expect(sorted(toggleTick(FOREST, "PROJ-10", new Set(["PROJ-12"]), NO_SKIP))).toEqual([]);
+  });
+
+  it("reaches every ticket under its epics from the top ticket", () => {
+    expect(sorted(toggleTick(FOREST, "PROJ-1", NO_TICKS, NO_SKIP))).toEqual([
+      "PROJ-11",
+      "PROJ-12",
+      "PROJ-13",
+      "PROJ-21",
+    ]);
+  });
+
+  it("reads a box from the rows that can be ticked: not the hidden ones, not the ones already here", () => {
+    const skip = new Set(["PROJ-13"]);
+    expect(tickOf(FOREST, "PROJ-10", new Set(["PROJ-13"]), skip)).toBe("on");
+    expect(tickOf(FOREST, "PROJ-20", NO_TICKS, new Set(["PROJ-21"]))).toBe("none");
+    expect(tickOf(FOREST, "PROJ-13", NO_TICKS, skip)).toBe("none");
+  });
+
+  it("takes an epic's hidden tickets with it, so a stage turned back on shows it as it was left", () => {
+    const skip = new Set(["PROJ-13"]);
+    expect(sorted(toggleTick(FOREST, "PROJ-10", NO_TICKS, skip))).toEqual(["PROJ-11", "PROJ-12", "PROJ-13"]);
+  });
+
+  it("gives an epic nothing was read under a tick of its own", () => {
+    const bare: PullForest = { coords: [], epics: [{ ticket: ticket("PROJ-30"), stories: [] }], loose: [] };
+    const off = toggleTick(bare, "PROJ-30", NO_TICKS, NO_SKIP);
+    expect(sorted(off)).toEqual(["PROJ-30"]);
+    expect(tickOf(bare, "PROJ-30", off, NO_SKIP)).toBe("off");
+    expect(narrowPull(bare, every(), off).off.has("PROJ-30")).toBe(true);
   });
 });
 

@@ -18,8 +18,9 @@ import { hrefWithLife, viewShowing } from "@/lib/life-area";
 import type { JiraStage } from "@/lib/jira/issue";
 import {
   narrowPull,
-  pieceKeys,
   pullFilterStart,
+  tickKeys,
+  toggleTick,
   type PullFilter,
   type PullWho,
 } from "@/lib/jira/pull-filter";
@@ -209,11 +210,14 @@ export function JiraPullSheet({
   const counts = plan ? countPlan(plan) : null;
   const nothing = !counts || counts.projects + counts.tags + counts.tasks === 0;
 
+  // What no click can tick: hidden by the selectors, or already a task here.
+  const skip = useMemo(
+    () => new Set([...(narrowed?.hidden ?? []), ...have.tasks]),
+    [narrowed, have],
+  );
   const toggle = (key: string) => {
-    const next = new Set(pane.unticked);
-    if (next.has(key)) next.delete(key);
-    else next.add(key);
-    patch(tab, { unticked: next });
+    if (!shown) return;
+    patch(tab, { unticked: toggleTick(shown.forest, key, pane.unticked, skip) });
   };
 
   const setWho = (who: PullWho) => patch(tab, { filter: { ...pane.filter, who } });
@@ -458,11 +462,11 @@ export function JiraPullSheet({
                       aria-pressed={on}
                       onClick={() => toggleStage(s.id)}
                       className={cn(
-                        "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-[11.5px] font-semibold transition-colors",
-                        // Off is flat on purpose: the theme draws anything with a border colour as a raised control, on or off.
+                        "inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-0.5 text-[11.5px] font-semibold transition active:scale-[0.96]",
+                        // Off is a flat tinted pill: the theme draws anything with a border colour as a raised control, on or off.
                         on
                           ? "border-border bg-surface text-ink"
-                          : "border-transparent text-faint hover:text-muted",
+                          : "border-transparent bg-hover text-muted hover:text-ink",
                       )}
                     >
                       <span
@@ -482,7 +486,7 @@ export function JiraPullSheet({
                   Tick all
                 </TextButton>
                 <TextButton
-                  onClick={() => patch(tab, { unticked: new Set(pieceKeys(forest)) })}
+                  onClick={() => patch(tab, { unticked: new Set(tickKeys(forest)) })}
                 >
                   None
                 </TextButton>
@@ -524,6 +528,7 @@ export function JiraPullSheet({
                       unticked: pane.unticked,
                       hidden: narrowed.hidden,
                       off: narrowed.off,
+                      skip,
                       have,
                       showMine: canPickWho && filter.who === "all",
                     }}
@@ -581,7 +586,7 @@ function WhoChip({
       title={title}
       onClick={onClick}
       className={cn(
-        "rounded-md px-2.5 py-1 text-[12px] font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+        "rounded-md px-2.5 py-1 text-[12px] font-semibold transition active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-50",
         active ? "bg-ink text-background" : "text-muted hover:text-ink",
       )}
     >
@@ -601,7 +606,7 @@ function TextButton({
     <button
       type="button"
       onClick={onClick}
-      className="rounded-md px-1.5 py-0.5 text-[11.5px] font-semibold text-muted transition-colors hover:bg-hover hover:text-ink"
+      className="rounded-md border border-border bg-surface px-2 py-0.5 text-[11.5px] font-semibold text-ink transition active:scale-[0.96]"
     >
       {children}
     </button>
@@ -623,7 +628,7 @@ function LevelChip({
       aria-pressed={active}
       onClick={onClick}
       className={cn(
-        "rounded-lg border px-2.5 py-1 text-[12px] font-semibold transition-colors",
+        "rounded-lg border px-2.5 py-1 text-[12px] font-semibold transition active:scale-[0.96]",
         active
           ? "border-transparent bg-ink text-background"
           : "border-transparent bg-hover text-muted hover:text-ink",

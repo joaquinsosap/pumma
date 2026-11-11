@@ -8,6 +8,7 @@ import {
   type PulledEpic,
   type PulledTicket,
 } from "@/lib/jira/pull-plan";
+import { tickOf, type Tick } from "@/lib/jira/pull-filter";
 import { cn } from "@/lib/utils";
 
 export const STAGE_DOT: Record<JiraStage, string> = {
@@ -27,6 +28,8 @@ export type PullMarks = {
   hidden: ReadonlySet<string>;
   /** Not brought in, for whichever reason. */
   off: ReadonlySet<string>;
+  /** Cannot be ticked: hidden, or a task here already holds it. */
+  skip: ReadonlySet<string>;
   have: { tasks: ReadonlySet<string>; projects: ReadonlySet<string> };
   /** Say which tickets are the owner's. Off where all of them are, or none can be told. */
   showMine: boolean;
@@ -34,8 +37,9 @@ export type PullMarks = {
 
 /**
  * What a pull read, hung the way Jira hangs it (the ticket epics hang under,
- * then epic, then story), with a tick on every row. A row the selectors left
- * out is not drawn at all.
+ * then epic, then story), with a tick on every row. A row with rows under it
+ * shows their ticks: all, none or some. A row the selectors left out is not
+ * drawn at all.
  */
 export function JiraPullTree({
   forest,
@@ -48,24 +52,24 @@ export function JiraPullTree({
   marks: PullMarks;
   onToggle: (key: string) => void;
 }) {
-  const { unticked, hidden, off, have } = marks;
+  const { unticked, hidden, off, have, skip } = marks;
+  const tick = (key: string) => tickOf(forest, key, unticked, skip);
   const loose = forest.loose.filter((t) => !hidden.has(t.key));
   return (
     <div className="flex flex-col gap-0.5">
       {forest.coords.map((coord) => {
         if (hidden.has(coord.ticket.key)) return null;
-        const coordOff = unticked.has(coord.ticket.key);
         return (
           <div key={coord.ticket.key}>
             <Row
               ticket={coord.ticket}
               depth={0}
-              off={coordOff}
+              tick={tick(coord.ticket.key)}
               onToggle={onToggle}
               note={
                 level !== "coord"
                   ? "not made"
-                  : !coordOff && off.has(coord.ticket.key)
+                  : coord.epics.length > 0 && off.has(coord.ticket.key)
                     ? "nothing ticked under it"
                     : have.projects.has(coord.ticket.key)
                       ? "project, already here"
@@ -78,9 +82,9 @@ export function JiraPullTree({
                 key={epic.ticket.key}
                 epic={epic}
                 depth={1}
-                under={coordOff}
                 asTag={level === "coord"}
                 marks={marks}
+                tick={tick}
                 onToggle={onToggle}
               />
             ))}
@@ -92,9 +96,9 @@ export function JiraPullTree({
           key={epic.ticket.key}
           epic={epic}
           depth={0}
-          under={false}
           asTag={false}
           marks={marks}
+          tick={tick}
           onToggle={onToggle}
         />
       ))}
@@ -106,7 +110,7 @@ export function JiraPullTree({
               key={t.key}
               ticket={t}
               depth={0}
-              off={unticked.has(t.key)}
+              tick={tick(t.key)}
               here={have.tasks.has(t.key)}
               mine={marks.showMine && t.mine}
               onToggle={onToggle}
@@ -121,34 +125,30 @@ export function JiraPullTree({
 function EpicRows({
   epic,
   depth,
-  under,
   asTag,
   marks,
+  tick,
   onToggle,
 }: {
   epic: PulledEpic;
   depth: number;
-  /** The ticket above this epic is unticked, so nothing under it comes in. */
-  under: boolean;
   /** The project is the ticket above, so this epic becomes a tag. */
   asTag: boolean;
   marks: PullMarks;
+  tick: (key: string) => Tick;
   onToggle: (key: string) => void;
 }) {
-  const { unticked, hidden, off, have } = marks;
+  const { hidden, off, have } = marks;
   if (hidden.has(epic.ticket.key)) return null;
-  const own = unticked.has(epic.ticket.key);
-  const epicOff = under || own;
   return (
     <>
       <Row
         ticket={epic.ticket}
         depth={depth}
-        off={own}
-        dimmed={under}
+        tick={tick(epic.ticket.key)}
         onToggle={onToggle}
         note={
-          !epicOff && off.has(epic.ticket.key)
+          epic.stories.length > 0 && off.has(epic.ticket.key)
             ? "nothing ticked under it"
             : asTag
               ? `tag #${epicTagName(epic.ticket.title, epic.ticket.key)}`
@@ -163,8 +163,7 @@ function EpicRows({
             key={story.key}
             ticket={story}
             depth={depth + 1}
-            off={unticked.has(story.key)}
-            dimmed={epicOff}
+            tick={tick(story.key)}
             here={have.tasks.has(story.key)}
             mine={marks.showMine && story.mine}
             onToggle={onToggle}
@@ -178,8 +177,7 @@ function EpicRows({
 function Row({
   ticket,
   depth,
-  off,
-  dimmed = false,
+  tick,
   here = false,
   mine = false,
   note,
@@ -188,9 +186,7 @@ function Row({
 }: {
   ticket: PulledTicket;
   depth: number;
-  off: boolean;
-  /** Something above it is unticked: it will not come in whatever its own tick says. */
-  dimmed?: boolean;
+  tick: Tick;
   /** A task here already holds this ticket. */
   here?: boolean;
   /** Assigned to the owner, and worth saying so. */
@@ -199,19 +195,24 @@ function Row({
   bold?: boolean;
   onToggle: (key: string) => void;
 }) {
-  const out = off || dimmed || here;
+  const locked = tick === "none";
+  const out = locked || tick === "off";
   return (
     <label
       className={cn(
-        "flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-[12.5px] hover:bg-hover",
-        (dimmed || here) && "cursor-default",
+        "flex min-w-0 cursor-pointer items-center gap-2 rounded-md px-1 py-1 text-[12.5px] transition-colors hover:bg-hover",
+        locked && "cursor-default",
       )}
       style={{ paddingLeft: 4 + depth * 18 }}
     >
       <input
         type="checkbox"
-        checked={!off && !here}
-        disabled={dimmed || here}
+        checked={tick === "on"}
+        // Some ticked under it: the box shows a dash, which only script can set.
+        ref={(el) => {
+          if (el) el.indeterminate = tick === "some";
+        }}
+        disabled={locked}
         onChange={() => onToggle(ticket.key)}
         className="h-3.5 w-3.5 shrink-0 accent-primary"
       />
