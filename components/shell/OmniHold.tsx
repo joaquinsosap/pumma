@@ -1,7 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef } from "react";
-import { HOLD_BACK_RATE, HOLD_EASE, POP_MS } from "@/lib/omni-hold";
+import {
+  FLASH_OUT_RATE,
+  HOLD_EASE,
+  LET_GO_MS,
+  POP_MS,
+} from "@/lib/omni-hold";
 
 export type HoldFill = {
   /** The colour of what the bar is making now, and of what it will make. */
@@ -19,10 +24,11 @@ type Charge = { anim: Animation; el: HTMLElement; letGo: boolean };
 const wash = (color: string, pct: number) =>
   `color-mix(in oklch, ${color} ${pct}%, transparent)`;
 
-/** The colour that crosses the capture bar while Tab is held, drawn by hand so it can run back from anywhere and outlive the bar's re-render. */
+/** The colour that crosses the capture bar while Tab is held, drawn by hand so it can stop anywhere and outlive the bar's re-render. */
 export function useOmniHold() {
   const layerRef = useRef<HTMLDivElement>(null);
   const chargeRef = useRef<Charge | null>(null);
+  const flashRef = useRef<Animation | null>(null);
   const downRef = useRef(false);
   const aliveRef = useRef(true);
 
@@ -37,14 +43,7 @@ export function useOmniHold() {
 
   const begin = useCallback((fill: HoldFill) => {
     const layer = layerRef.current;
-    if (!layer) return;
-    const running = chargeRef.current;
-    if (running) {
-      if (!running.letGo) return;
-      // A new press while the last colour is still running back: drop that one and start over.
-      running.anim.cancel();
-      chargeRef.current = null;
-    }
+    if (!layer || chargeRef.current) return;
     downRef.current = true;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -69,32 +68,52 @@ export function useOmniHold() {
     anim.finished
       .then(() => {
         if (chargeRef.current === charge) chargeRef.current = null;
-        if (charge.letGo || !aliveRef.current) {
+        if (!aliveRef.current) {
           el.remove();
           return;
         }
+        // Let go on the very frame it arrived: the fade that release started takes it away.
+        if (charge.letGo) return;
         fill.onFull();
         // Landed: the crossing colour becomes a flash of the new one over the whole bar, which fades out evenly.
         el.style.background = wash(fill.to, 52);
-        el.animate([{ opacity: 1 }, { opacity: 0 }], {
+        const flash = el.animate([{ opacity: 1 }, { opacity: 0 }], {
           duration: POP_MS,
           easing: "cubic-bezier(0.33, 1, 0.68, 1)",
           fill: "forwards",
-        }).finished.then(
-          () => el.remove(),
-          () => el.remove(),
-        );
+        });
+        flashRef.current = flash;
+        const gone = () => {
+          if (flashRef.current === flash) flashRef.current = null;
+          el.remove();
+        };
+        flash.finished.then(gone, gone);
       })
       .catch(() => el.remove());
   }, []);
 
-  /** The key came up. A colour still on its way runs back and nothing switches. */
+  /** The key came up: whatever colour is on the bar goes away at once, and a switch still on its way is called off. */
   const release = useCallback(() => {
     downRef.current = false;
     const charge = chargeRef.current;
-    if (!charge || charge.letGo) return;
-    charge.letGo = true;
-    charge.anim.playbackRate = -HOLD_BACK_RATE;
+    if (charge && !charge.letGo) {
+      charge.letGo = true;
+      chargeRef.current = null;
+      // It stops where it is and fades there: running back across the bar took longer the further it had got.
+      charge.anim.pause();
+      const el = charge.el;
+      el.animate({ opacity: 0 }, {
+        duration: LET_GO_MS,
+        easing: "ease-out",
+        fill: "forwards",
+      }).finished.then(
+        () => el.remove(),
+        () => el.remove(),
+      );
+    }
+    // The flash of a switch that already landed leaves with the key too.
+    const flash = flashRef.current;
+    if (flash?.playState === "running") flash.updatePlaybackRate(FLASH_OUT_RATE);
   }, []);
 
   const down = useCallback(() => downRef.current, []);

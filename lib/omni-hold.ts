@@ -6,8 +6,11 @@ export const HOLD_MS = 900;
 /** A subtle change of pace: a gentle start, then an even glide that eases into the far edge. */
 export const HOLD_EASE = "cubic-bezier(0.35, 0.05, 0.7, 0.8)";
 
-/** Letting go early: the colour runs back this many times faster than it came. */
-export const HOLD_BACK_RATE = 3;
+/** Letting go early: the colour fades where it stands, in this long. */
+export const LET_GO_MS = 160;
+
+/** Letting go after it landed: what is left of the flash plays this many times faster. */
+export const FLASH_OUT_RATE = 4;
 
 /** The flash of the new colour over the whole bar when the switch lands. */
 export const POP_MS = 700;
