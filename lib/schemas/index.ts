@@ -87,6 +87,9 @@ export const settingsSchema = z.object({
   jiraBaseUrlEnc: z.string().nullable().default(null),
   jiraTokenEnc: z.string().nullable().default(null),
   jiraTokenLast4: z.string().nullable().default(null),
+  // Which Jira status is which column and what each column sends back
+  // (lib/jira/status-map.ts), sealed the same way: the names are that company's wording.
+  jiraStatusMapEnc: z.string().nullable().default(null),
   // Which provider that key belongs to, and which model to ask for. Both
   // default, so a row written before providers existed reads as Anthropic on
   // its default model — exactly what it did before.
@@ -603,7 +606,7 @@ export type User = Omit<UserDoc, "_id"> & { id: string };
 // The encrypted key never crosses the server/client boundary — the DTO drops it.
 export type Settings = Omit<
   SettingsDoc,
-  "_id" | "aiApiKeyEnc" | "jiraBaseUrlEnc" | "jiraTokenEnc"
+  "_id" | "aiApiKeyEnc" | "jiraBaseUrlEnc" | "jiraTokenEnc" | "jiraStatusMapEnc"
 > & {
   id: string;
 };
@@ -633,6 +636,7 @@ export function settingsToDto(doc: SettingsDoc): Settings {
     aiApiKeyEnc: _enc,
     jiraBaseUrlEnc: _jiraBase,
     jiraTokenEnc: _jiraToken,
+    jiraStatusMapEnc: _jiraMap,
     ...rest
   } = doc;
   return { ...rest, id: _id };

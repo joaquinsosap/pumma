@@ -11,7 +11,7 @@ vi.mock("@/lib/outbound-guard", () => ({
     guard.hangs ? new Promise(() => {}) : Promise.resolve(guard.where),
 }));
 
-import { jiraGet, jiraIssue, jiraMyself } from "@/lib/jira/client";
+import { jiraGet, jiraIssue, jiraMoveTicket, jiraMyself, jiraPost, jiraTicketMoves } from "@/lib/jira/client";
 
 const BASE = "https://desk.example.com";
 const TOKEN = "t0ken-value-1234";
@@ -267,5 +267,99 @@ describe("jiraIssue", () => {
   it("does not take an answer that is not a ticket for one", async () => {
     stub(answer(200, JSON.stringify({ hello: "world" })));
     expect(await jiraIssue(BASE, TOKEN, "VST-9")).toMatchObject({ ok: false, why: "not-jira" });
+  });
+});
+
+describe("jiraPost", () => {
+  beforeEach(() => {
+    calls = [];
+    guard.where = "public";
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("sends a JSON body to the saved Jira, with the token and no redirects followed", async () => {
+    stub(answer(204));
+    const res = await jiraPost(BASE, TOKEN, "/rest/api/2/issue/PROJ-1/transitions", { a: 1 });
+    expect(res).toEqual({ ok: true, data: null });
+    expect(calls[0].init.method).toBe("POST");
+    expect(calls[0].init.body).toBe('{"a":1}');
+    expect(calls[0].init.redirect).toBe("manual");
+    const headers = calls[0].init.headers as Record<string, string>;
+    expect(headers.Authorization).toBe(`Bearer ${TOKEN}`);
+    expect(headers["Content-Type"]).toBe("application/json");
+  });
+
+  it("never sends the token to a name that resolves inside the server's network", async () => {
+    guard.where = "private";
+    stub(answer(204));
+    const res = await jiraPost(BASE, TOKEN, "/rest/api/2/issue/PROJ-1/transitions", {});
+    expect(res.ok).toBe(false);
+    expect(calls).toHaveLength(0);
+  });
+
+  it("tells a change Jira turned down from a Jira that broke", async () => {
+    stub(answer(400, "{}"));
+    expect(await jiraPost(BASE, TOKEN, "/rest/api/2/issue/PROJ-1/transitions", {})).toMatchObject({
+      ok: false,
+      why: "invalid",
+    });
+    stub(answer(500, "{}"));
+    expect(await jiraPost(BASE, TOKEN, "/rest/api/2/issue/PROJ-1/transitions", {})).toMatchObject({
+      ok: false,
+      why: "error",
+    });
+  });
+
+  it("reads a redirect as a refused sign-in, and does not follow it", async () => {
+    stub(answer(302, "", { location: "https://desk.example.com/login.jsp" }));
+    expect(await jiraPost(BASE, TOKEN, "/rest/api/2/issue/PROJ-1/transitions", {})).toMatchObject({
+      ok: false,
+      why: "sign-in",
+    });
+    expect(calls).toHaveLength(1);
+  });
+});
+
+describe("a ticket's moves", () => {
+  beforeEach(() => {
+    calls = [];
+    guard.where = "public";
+  });
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads where the ticket stands and the moves it allows in one request", async () => {
+    stub(
+      answer(
+        200,
+        JSON.stringify({
+          key: "PROJ-1",
+          fields: { status: { name: "Open", statusCategory: { key: "new" } } },
+          transitions: [
+            { id: "11", to: { name: "In Progress" } },
+            { id: "x", to: { name: "Odd" } },
+            { id: "12", to: {} },
+          ],
+        }),
+      ),
+    );
+    const res = await jiraTicketMoves(BASE, TOKEN, "PROJ-1");
+    expect(res).toEqual({
+      ok: true,
+      data: {
+        key: "PROJ-1",
+        current: { name: "Open", stage: "todo" },
+        transitions: [{ id: "11", to: "In Progress" }],
+      },
+    });
+    expect(calls[0].url).toBe(
+      "https://desk.example.com/rest/api/2/issue/PROJ-1?fields=status&expand=transitions",
+    );
+  });
+
+  it("never puts anything but a ticket number or a move id into the path", async () => {
+    stub(answer(204));
+    expect((await jiraTicketMoves(BASE, TOKEN, "../myself")).ok).toBe(false);
+    expect((await jiraMoveTicket(BASE, TOKEN, "PROJ-1", "1/../2")).ok).toBe(false);
+    expect(calls).toHaveLength(0);
   });
 });

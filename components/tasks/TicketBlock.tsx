@@ -4,6 +4,9 @@ import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ArrowUpRight, ChevronRight } from "@/components/icons";
 import { TicketFacts } from "@/components/tasks/TicketFacts";
+import { useJiraStatusMap, useSendToJira } from "@/components/tasks/JiraLinkProvider";
+import { ticketDiffers } from "@/lib/jira/status-map";
+import { stepSeenFor, type TaskColumn } from "@/lib/jira/status-sync";
 import { updateTaskDetail } from "@/lib/actions/tasks";
 import { cleanTicketUrl, ticketFromUrl, ticketKeyFrom } from "@/lib/ticket-link";
 import { trySave } from "@/lib/try-save";
@@ -21,13 +24,20 @@ const NOT_A_LINK =
  * Only the link is kept. The number is read back out of it, and where the
  * ticket stands is asked of Jira when the card is unfolded, so nothing here
  * can disagree with what is stored.
+ *
+ * When the task's column sends a status and its ticket is not known to agree
+ * (read elsewhere, or never read), the card says so and offers Send to Jira.
  */
 export function TicketBlock({
   taskId,
   url: storedUrl,
+  column,
+  seen,
 }: {
   taskId: string;
   url: string | null;
+  column: TaskColumn;
+  seen: string | null | undefined;
 }) {
   const [url, setUrl] = useSyncedDraft(storedUrl, taskId);
   const [, startTransition] = useTransition();
@@ -37,6 +47,22 @@ export function TicketBlock({
   const ticket = ticketFromUrl(url);
   // What was last turned down, so leaving the box does not say it a second time.
   const refused = useRef<string | null>(null);
+  const map = useJiraStatusMap();
+  const sendToJira = useSendToJira();
+  const [sending, setSending] = useState(false);
+  const jiraSays = ticket?.key ? stepSeenFor(ticket.key, seen) : undefined;
+  const differs = !!map && ticketDiffers(map, column, jiraSays);
+  // Never read: nothing to mark, but a move made now could still go.
+  const unread =
+    !!map && ticket?.kind === "jira" && !!map.to[column] && jiraSays === undefined;
+  const sendNow = async () => {
+    setSending(true);
+    try {
+      await sendToJira({ id: taskId, ticketUrl: url }, column, { byHand: true });
+    } finally {
+      setSending(false);
+    }
+  };
 
   const save = (raw: string | null) => {
     const next = raw && raw.trim() ? cleanTicketUrl(raw) : null;
@@ -139,6 +165,31 @@ export function TicketBlock({
               <ArrowUpRight aria-hidden className="h-3 w-3" strokeWidth={2.4} />
             </a>
           </div>
+          {(differs || unread) && (
+            <div className="flex items-center gap-2 border-t border-border2 px-3 py-2">
+              {differs && (
+                <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-notes" />
+              )}
+              <span className="min-w-0 flex-1 text-[11.5px] text-muted">
+                {differs ? (
+                  <>
+                    Jira still has it as{" "}
+                    <span className="font-semibold text-ink">{jiraSays}</span>
+                  </>
+                ) : (
+                  "Not read from Jira yet"
+                )}
+              </span>
+              <button
+                type="button"
+                disabled={sending}
+                onClick={() => void sendNow()}
+                className="shrink-0 rounded-md border border-border bg-surface px-2 py-1 text-[11px] font-semibold text-ink transition-colors hover:border-faint disabled:opacity-60"
+              >
+                {sending ? "Sending" : "Send to Jira"}
+              </button>
+            </div>
+          )}
           <button
             type="button"
             aria-expanded={open}

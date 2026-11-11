@@ -33,6 +33,7 @@ import { PriorityChip } from "@/components/tasks/PriorityChip";
 import { budgetForWidth, fitTagLine, ticketLead } from "@/lib/tag-line";
 import { ticketFromUrl } from "@/lib/ticket-link";
 import { TicketChip } from "@/components/tasks/TicketChip";
+import { useSendToJira } from "@/components/tasks/JiraLinkProvider";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { TaskPriority } from "@/lib/types";
@@ -169,12 +170,17 @@ function TagLine({
   tags,
   ticketUrl,
   nested = false,
+  column,
+  seen,
 }: {
   tags: Tag[];
   /** The task's ticket link. Its chip leads the line and the tags fit after it. */
   ticketUrl?: string | null;
   /** The row is itself a link, so the chip cannot be one. */
   nested?: boolean;
+  /** The task's column and its ticket's status as last read: the chip marks them disagreeing. */
+  column?: Task["status"];
+  seen?: string | null;
 }) {
   const ref = useRef<HTMLSpanElement>(null);
   const [budget, setBudget] = useState<number | null>(null);
@@ -209,7 +215,9 @@ function TagLine({
       ref={ref}
       className="mt-0.5 flex min-w-0 flex-nowrap items-center gap-2 overflow-hidden font-mono text-[11px] leading-[1.4]"
     >
-      {ticket && <TicketChip url={ticket.url} nested={nested} />}
+      {ticket && (
+        <TicketChip url={ticket.url} nested={nested} column={column} seen={seen} />
+      )}
       {shown.map((tg) => (
         <span key={tg.id} className="shrink-0 whitespace-nowrap">
           <span className="text-faint2">#</span>
@@ -263,9 +271,11 @@ export function TaskList({
   const day = calendarDay ?? today;
 
   const listed = isCalendar ? sortCalendarDayTasks(optimistic) : optimistic;
+  const sendToJira = useSendToJira();
 
   const handleToggle = (id: string) => {
-    const done = optimistic.find((t) => t.id === id)?.status !== "done";
+    const shown = optimistic.find((t) => t.id === id);
+    const done = shown?.status !== "done";
     startTransition(async () => {
       setOptimistic((list) =>
         list.map((t) =>
@@ -275,7 +285,9 @@ export function TaskList({
       // The action's revalidatePath already re-renders the current route in the
       // same response, so no explicit router.refresh() round-trip is needed,
       // unless a row was opened meanwhile, which throws that response away.
-      await trySave(() => toggleTask(id, done));
+      const res = await trySave(() => toggleTask(id, done));
+      // A tick moves the task to done, or back to to do: its ticket follows.
+      if (res?.ok && shown) void sendToJira(shown, done ? "done" : "todo");
     });
   };
 
@@ -853,7 +865,13 @@ export function TaskList({
                       </span>
                     )}
                   </span>
-                  <TagLine tags={taskTags} ticketUrl={t.ticketUrl} nested />
+                  <TagLine
+                    tags={taskTags}
+                    ticketUrl={t.ticketUrl}
+                    nested
+                    column={t.status}
+                    seen={t.ticketSeen}
+                  />
                 </Link>
               ) : (
                 <>
@@ -863,7 +881,12 @@ export function TaskList({
                   {compact && subtaskTotal > 0 && (
                     <SubtaskProgress done={subtaskDone} total={subtaskTotal} />
                   )}
-                  <TagLine tags={taskTags} ticketUrl={t.ticketUrl} />
+                  <TagLine
+                    tags={taskTags}
+                    ticketUrl={t.ticketUrl}
+                    column={t.status}
+                    seen={t.ticketSeen}
+                  />
                 </>
               )}
             </div>

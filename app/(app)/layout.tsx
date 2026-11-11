@@ -7,6 +7,7 @@ import { TimezoneSync } from "@/components/shell/TimezoneSync";
 import { SaveCatchUp } from "@/components/shell/SaveCatchUp";
 import { AssistantProvider } from "@/components/assistant/AssistantProvider";
 import { TaskTimerProvider } from "@/components/tasks/TaskTimerProvider";
+import { JiraLinkProvider } from "@/components/tasks/JiraLinkProvider";
 import { MobileShell } from "@/components/shell/MobileShell";
 import { MobileDock } from "@/components/shell/MobileDock";
 import { TutorialOverlay } from "@/components/tutorial/TutorialOverlay";
@@ -19,7 +20,8 @@ import { loadShellData } from "@/lib/data";
 import { tutorialDisabled } from "@/lib/tutorial";
 import { displayName } from "@/lib/user-display";
 import { resolveLifeView } from "@/lib/life-view-server";
-import { isAuthEnabled } from "@/lib/auth/session";
+import { getSessionUserId, isAuthEnabled } from "@/lib/auth/session";
+import { jiraStatusMap } from "@/lib/jira/connection-server";
 import { requireAccess } from "@/lib/auth/session";
 import { Suspense } from "react";
 import type { Note, Task } from "@/lib/schemas";
@@ -52,8 +54,14 @@ async function AppShell({ children }: { children: React.ReactNode }) {
   // Paywall gate (no-op unless BILLING_ENABLED=1): unpaid accounts → /billing.
   await requireAccess();
   const lifeView = await resolveLifeView();
-  const data = await loadShellData({ lifeView });
+  // The status map is a small read of its own, asked beside the shell's batch so the page waits no longer for it.
+  const [data, statusMap] = await Promise.all([
+    loadShellData({ lifeView }),
+    getSessionUserId().then((id) => (id ? jiraStatusMap(id) : null)),
+  ]);
   const s = data.settings;
+  // Only a connected Jira sends moves or marks tickets.
+  const jiraMap = s?.jiraTokenLast4 ? statusMap : null;
   const lifeAuto = {
     enabled: s?.lifeAutoSwitch ?? false,
     workStart: s?.workStart ?? "09:00",
@@ -88,6 +96,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
       <SaveCatchUp />
       <TagMenuProvider tags={data.tags} tasks={shellTasks} notes={shellNotes}>
         <TaskTimerProvider tasks={shellTasks}>
+          <JiraLinkProvider map={jiraMap}>
           <div className="flex h-dvh overflow-hidden bg-background text-ink">
             <div className="hidden lg:contents">{sidebar}</div>
             <AssistantProvider>
@@ -146,6 +155,7 @@ async function AppShell({ children }: { children: React.ReactNode }) {
               </main>
             </AssistantProvider>
           </div>
+          </JiraLinkProvider>
         </TaskTimerProvider>
       </TagMenuProvider>
     </TimeZoneProvider>

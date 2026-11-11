@@ -1,11 +1,16 @@
 import "server-only";
 
-import { listTasks, updateTask } from "@/lib/db/tasks";
+import { getTasksByIds, listTasks, updateTask } from "@/lib/db/tasks";
 import { syncGoalsForProject } from "@/lib/goal-sync-server";
 import { jiraKeyOn } from "@/lib/jira/address";
-import { JIRA_UNREADABLE, jiraConnection } from "@/lib/jira/connection-server";
+import {
+  JIRA_UNREADABLE,
+  jiraConnection,
+  noteJiraStatuses,
+} from "@/lib/jira/connection-server";
 import { finishedDay } from "@/lib/jira/pull-plan";
 import { readTicketStatuses } from "@/lib/jira/status-read";
+import { columnOfWith } from "@/lib/jira/status-map";
 import {
   nextWait,
   planStatusSync,
@@ -108,7 +113,6 @@ export async function syncProjectStatuses(
   }
 
   const linked: LinkedTask[] = [];
-  const stampOf = new Map<string, string | null>();
   for (const task of await listTasks(userId)) {
     if (task.projectId !== projectId) continue;
     const key = jiraKeyOn(conn.baseUrl, task.ticketUrl);
@@ -119,7 +123,6 @@ export async function syncProjectStatuses(
       status: task.status,
       ticketStatus: stepSeenFor(key, task.ticketSeen),
     });
-    stampOf.set(task.id, task.updatedAt);
   }
   if (linked.length === 0) {
     letGo();
@@ -136,7 +139,19 @@ export async function syncProjectStatuses(
     return { state: "failed", error: res.error, nextAt };
   }
 
-  const changes = planStatusSync(linked, res.data.statuses);
+  // A status met for the first time is listed in Settings, so the tables fill
+  // without asking Jira anything more. Where each lands is his answer, else Jira's own sorting.
+  const map = await noteJiraStatuses(userId, res.data.statuses.values());
+  const changes = planStatusSync(linked, res.data.statuses, columnOfWith(map));
+  // Stamps as they are now, not as they were before Jira was asked: an edit made meanwhile keeps its own.
+  const stampNow = new Map(
+    (
+      await getTasksByIds(
+        userId,
+        changes.filter((c) => !c.moveTo).map((c) => c.id),
+      )
+    ).map((t) => [t.id, t.updatedAt ?? null]),
+  );
   const { today, timeZone } = await userToday();
   let moved = 0;
   for (const change of changes) {
@@ -152,7 +167,7 @@ export async function syncProjectStatuses(
                 : null,
           }
         : // Remembering what Jira said is not an edit: the task keeps its stamp, so a read does not reshuffle "last edited".
-          { updatedAt: stampOf.get(change.id) ?? null }),
+          { updatedAt: stampNow.get(change.id) ?? null }),
     });
     if (updated && change.moveTo) moved += 1;
   }

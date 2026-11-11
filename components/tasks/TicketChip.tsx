@@ -1,6 +1,9 @@
 "use client";
 
 import { Link2 } from "@/components/icons";
+import { useJiraStatusMap } from "@/components/tasks/JiraLinkProvider";
+import { ticketDiffers } from "@/lib/jira/status-map";
+import { stepSeenFor, type TaskColumn } from "@/lib/jira/status-sync";
 import { ticketFromUrl } from "@/lib/ticket-link";
 import { cn } from "@/lib/utils";
 
@@ -13,18 +16,29 @@ import { cn } from "@/lib/utils";
  *
  * `nested` is for rows that are already one big link. A link inside a link is
  * not valid, so there the chip is a span that opens the ticket itself.
+ *
+ * Given the task's column and its ticket's status as last read, the chip wears
+ * a small mark while the two disagree and Send to Jira on the task would move it.
  */
 export function TicketChip({
   url,
   nested = false,
   className,
+  column,
+  seen,
 }: {
   url: string | null | undefined;
   nested?: boolean;
   className?: string;
+  column?: TaskColumn;
+  seen?: string | null;
 }) {
+  const map = useJiraStatusMap();
   const ticket = ticketFromUrl(url);
   if (!ticket) return null;
+  const jiraSays =
+    map && column && ticket.key ? stepSeenFor(ticket.key, seen) : undefined;
+  const differs = !!map && !!column && ticketDiffers(map, column, jiraSays);
 
   // 13px of text plus the border is 15px: inside the tag line's own height, so a row with a ticket is no taller than its neighbours.
   const look = cn(
@@ -34,11 +48,17 @@ export function TicketChip({
   );
   const inside = (
     <>
-      <Link2 aria-hidden className="h-2.5 w-2.5 shrink-0 text-muted" strokeWidth={2.4} />
+      {differs ? (
+        <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-notes" />
+      ) : (
+        <Link2 aria-hidden className="h-2.5 w-2.5 shrink-0 text-muted" strokeWidth={2.4} />
+      )}
       <span className="truncate">{ticket.label}</span>
     </>
   );
-  const label = `Open ticket ${ticket.label}`;
+  const label = differs
+    ? `Open ticket ${ticket.label}. Jira still has it as ${jiraSays}.`
+    : `Open ticket ${ticket.label}`;
 
   if (nested) {
     const open = () => window.open(ticket.url, "_blank", "noopener,noreferrer");

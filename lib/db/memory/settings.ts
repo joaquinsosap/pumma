@@ -49,3 +49,10 @@ export async function getJiraSecretsEnc(
     tokenEnc: doc?.jiraTokenEnc ?? null,
   };
 }
+
+/** Server-only: the Jira status map as stored, still encrypted. */
+export async function getJiraStatusMapEnc(userId: string): Promise<string | null> {
+  const store = getStore();
+  const doc = store.settings.find((s) => s.userId === userId);
+  return doc?.jiraStatusMapEnc ?? null;
+}

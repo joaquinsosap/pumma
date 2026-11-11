@@ -12,7 +12,7 @@ import { mcpAvailable, mcpResourceUrl } from "@/lib/mcp/config";
 import { listMcpAudit } from "@/lib/db/mcp-audit";
 import { listConnectedClients } from "@/lib/mcp/connections";
 import { getSessionUserId } from "@/lib/auth/session";
-import { jiraBaseUrl } from "@/lib/jira/connection-server";
+import { jiraBaseUrl, jiraStatusMap } from "@/lib/jira/connection-server";
 import { releaseOrphans } from "@/lib/tag-protection";
 
 export default async function SettingsPage() {
@@ -45,9 +45,13 @@ export default async function SettingsPage() {
   // Opened on the server and handed over as the address only. The token never
   // leaves: the screen gets its last four characters, from the settings row.
   const viewerId = userId ?? (await getSessionUserId());
+  const address = viewerId ? await jiraBaseUrl(viewerId) : null;
+  const tokenLast4 = data.settings?.jiraTokenLast4 ?? null;
   const jira = {
-    address: viewerId ? await jiraBaseUrl(viewerId) : null,
-    tokenLast4: data.settings?.jiraTokenLast4 ?? null,
+    address,
+    tokenLast4,
+    statusMap:
+      viewerId && address && tokenLast4 ? await jiraStatusMap(viewerId) : null,
   };
 
   return (

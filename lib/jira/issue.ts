@@ -28,6 +28,12 @@ const STAGES: Record<string, JiraStage> = {
   done: "done",
 };
 
+/** The bucket of a status as Jira describes one: `{ statusCategory: { key } }`. */
+export function jiraStageOf(status: unknown): JiraStage | null {
+  const category = obj(obj(status)?.statusCategory);
+  return typeof category?.key === "string" ? (STAGES[category.key] ?? null) : null;
+}
+
 const obj = (v: unknown): Record<string, unknown> | null =>
   v && typeof v === "object" && !Array.isArray(v)
     ? (v as Record<string, unknown>)

@@ -19,6 +19,7 @@
  *
  * `jiraTokenEnc` / `jiraBaseUrlEnc` are their employer's Jira token and where
  * it works: the same reasoning, with somebody else's system on the other end.
+ * `jiraStatusMapEnc` goes with them: it is that Jira's workflow, and no use without it.
  */
 export const NEVER_EXPORT = [
   "dekWrapped",
@@ -26,6 +27,7 @@ export const NEVER_EXPORT = [
   "aiApiKeyEnc",
   "jiraTokenEnc",
   "jiraBaseUrlEnc",
+  "jiraStatusMapEnc",
 ] as const;
 
 /** Fields secret only in one collection: a calendar feed's address reads the whole calendar to anyone holding it. */

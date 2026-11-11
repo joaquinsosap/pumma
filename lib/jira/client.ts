@@ -7,6 +7,7 @@ import {
   jiraUserIds,
   type JiraTicketFacts,
 } from "@/lib/jira/issue";
+import type { KnownStatus, Transition } from "@/lib/jira/status-map";
 import { whereHostResolves } from "@/lib/outbound-guard";
 import { ticketKeyFrom } from "@/lib/ticket-link";
 
@@ -23,11 +24,19 @@ export type JiraFailure =
   | "forbidden"
   | "not-jira"
   | "no-ticket"
+  /** Jira read a write and turned it down: a field it wants, or a value it will not take. */
+  | "invalid"
   | "error";
 
 export type JiraAnswer<T> =
   | { ok: true; data: T }
-  | { ok: false; why: JiraFailure; error: string };
+  | {
+      ok: false;
+      why: JiraFailure;
+      error: string;
+      /** On a change turned down: the fields Jira asked to be filled in. Empty when it named none. */
+      wants?: string[];
+    };
 
 const TIMEOUT_MS = 10_000;
 /** Finding the address has its own deadline: a name server that never answers must not hold the request open. */
@@ -47,6 +56,7 @@ const SAID: Record<JiraFailure, string> = {
   "not-jira": "That address answered, but not like a Jira.",
   "no-ticket":
     "Jira has no ticket with that number, or your token cannot see it.",
+  invalid: "Jira turned that change down.",
   error: "Jira answered with an error.",
 };
 
@@ -68,6 +78,8 @@ function within<T>(ms: number, work: Promise<T>, otherwise: T): Promise<T> {
   });
 }
 
+type ApiPath = `/rest/api/2/${string}`;
+
 /**
  * One GET against the Jira REST API.
  *
@@ -75,12 +87,36 @@ function within<T>(ms: number, work: Promise<T>, otherwise: T): Promise<T> {
  * root, so a saved address cannot be turned into a request for anything else
  * on that host.
  */
-export async function jiraGet(
+export function jiraGet(
   baseUrl: string,
   token: string,
-  path: `/rest/api/2/${string}`,
+  path: ApiPath,
   /** What a 404 means for this call. Asking for one ticket, it is that ticket missing, not the Jira. */
   missing: JiraFailure = "not-jira",
+): Promise<JiraAnswer<unknown>> {
+  return jiraAsk(baseUrl, token, path, missing, null);
+}
+
+/**
+ * One POST against the Jira REST API: a change made in Jira with the owner's
+ * token, so under every rule a read keeps. An answer with no body is a yes.
+ */
+export function jiraPost(
+  baseUrl: string,
+  token: string,
+  path: ApiPath,
+  body: unknown,
+  missing: JiraFailure = "not-jira",
+): Promise<JiraAnswer<unknown>> {
+  return jiraAsk(baseUrl, token, path, missing, { body: JSON.stringify(body) });
+}
+
+async function jiraAsk(
+  baseUrl: string,
+  token: string,
+  path: ApiPath,
+  missing: JiraFailure,
+  write: { body: string } | null,
 ): Promise<JiraAnswer<unknown>> {
   // Vetted again here, not only when saved: this is the last stop before the token leaves.
   const base = jiraBaseFromUrl(baseUrl);
@@ -95,11 +131,20 @@ export async function jiraGet(
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(url, {
+      method: write ? "POST" : "GET",
       headers: {
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
         "User-Agent": "PUMMA-jira",
+        ...(write
+          ? {
+              "Content-Type": "application/json",
+              // Jira's guard against forged form posts; a script's own request says so.
+              "X-Atlassian-Token": "no-check",
+            }
+          : {}),
       },
+      ...(write ? { body: write.body } : {}),
       signal: controller.signal,
       // A redirect would carry the token to wherever it points. Jira's own
       // answer to a bad token is a redirect to its sign-in page, so this is
@@ -112,7 +157,22 @@ export async function jiraGet(
     if (res.status === 401) return fail("refused");
     if (res.status === 403) return fail("forbidden");
     if (res.status === 404) return fail(missing);
+    if (write && res.status === 400) {
+      // Jira names the fields it wants under `errors`; a move that is no longer offered comes back with none.
+      const text = await readCapped(res, 64 * 1024).catch(() => null);
+      let wants: string[] = [];
+      try {
+        const errors = (JSON.parse(text ?? "") as { errors?: unknown })?.errors;
+        if (errors && typeof errors === "object" && !Array.isArray(errors)) {
+          wants = Object.keys(errors).slice(0, 10);
+        }
+      } catch {
+        // Not JSON: nothing named.
+      }
+      return { ok: false, why: "invalid", error: SAID.invalid, wants };
+    }
     if (!res.ok) return fail("error", String(res.status));
+    if (write && res.status === 204) return { ok: true, data: null };
 
     if (Number(res.headers.get("content-length") ?? 0) > MAX_BYTES) {
       return fail("error", "answer too large");
@@ -122,6 +182,7 @@ export async function jiraGet(
       controller.abort();
       return fail("error", "answer too large");
     }
+    if (write && !text.trim()) return { ok: true, data: null };
     try {
       return { ok: true, data: JSON.parse(text) as unknown };
     } catch {
@@ -199,4 +260,70 @@ export async function jiraIssue(
   if (!res.ok) return res;
   const facts = jiraFactsFrom(res.data);
   return facts ? { ok: true, data: facts } : fail("not-jira");
+}
+
+/** Where a ticket stands, and the moves Jira offers from there. */
+export type TicketMoves = {
+  key: string;
+  current: KnownStatus;
+  transitions: Transition[];
+};
+
+const TRANSITIONS_MAX = 50;
+const TRANSITION_ID = /^\d{1,10}$/;
+
+/** One ticket's status and the moves it allows, in one request. */
+export async function jiraTicketMoves(
+  baseUrl: string,
+  token: string,
+  key: string,
+): Promise<JiraAnswer<TicketMoves>> {
+  const number = ticketKeyFrom(key);
+  if (!number) return fail("no-ticket");
+  const res = await jiraGet(
+    baseUrl,
+    token,
+    `/rest/api/2/issue/${encodeURIComponent(number)}?fields=status&expand=transitions`,
+    "no-ticket",
+  );
+  if (!res.ok) return res;
+  const facts = jiraFactsFrom(res.data);
+  if (!facts?.status) return fail("not-jira");
+  const raw = (res.data as { transitions?: unknown }).transitions;
+  const transitions: Transition[] = [];
+  for (const t of Array.isArray(raw) ? raw.slice(0, TRANSITIONS_MAX) : []) {
+    const id = (t as { id?: unknown } | null)?.id;
+    const to = (t as { to?: { name?: unknown } } | null)?.to?.name;
+    if (typeof id !== "string" || !TRANSITION_ID.test(id)) continue;
+    if (typeof to !== "string" || !to.trim()) continue;
+    transitions.push({ id, to: to.replace(/\s+/g, " ").trim().slice(0, 60) });
+  }
+  return {
+    ok: true,
+    data: {
+      key: facts.key,
+      current: { name: facts.status, stage: facts.stage },
+      transitions,
+    },
+  };
+}
+
+/** Make one move Jira offered. The id is checked to be one of Jira's move ids before it is sent. */
+export async function jiraMoveTicket(
+  baseUrl: string,
+  token: string,
+  key: string,
+  transitionId: string,
+): Promise<JiraAnswer<null>> {
+  const number = ticketKeyFrom(key);
+  if (!number) return fail("no-ticket");
+  if (!TRANSITION_ID.test(transitionId)) return fail("invalid");
+  const res = await jiraPost(
+    baseUrl,
+    token,
+    `/rest/api/2/issue/${encodeURIComponent(number)}/transitions`,
+    { transition: { id: transitionId } },
+    "no-ticket",
+  );
+  return res.ok ? { ok: true, data: null } : res;
 }

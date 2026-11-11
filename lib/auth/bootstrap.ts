@@ -88,6 +88,7 @@ export async function bootstrapNewUser(user: {
     jiraBaseUrlEnc: null,
     jiraTokenEnc: null,
     jiraTokenLast4: null,
+    jiraStatusMapEnc: null,
     aiProvider: "anthropic",
     aiModel: null,
     lifeAutoSwitch: false,

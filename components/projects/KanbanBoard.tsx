@@ -49,6 +49,7 @@ import {
 } from "@/lib/new-task-arrival";
 import { landCard } from "@/lib/land-card";
 import { TicketChip } from "@/components/tasks/TicketChip";
+import { useSendToJira } from "@/components/tasks/JiraLinkProvider";
 import { paint } from "@/lib/themes";
 
 export type ColumnId = "todo" | "doing" | "done";
@@ -240,6 +241,7 @@ export function KanbanBoard({
   onArrange,
 }: Props) {
   const [, startTransition] = useTransition();
+  const sendToJira = useSendToJira();
   const [items, setItems] = useState<ItemsByColumn>(() =>
     groupByStatus(tasks, sort, sortReversed),
   );
@@ -499,7 +501,7 @@ export function KanbanBoard({
     // crossed between them: the one it left has a hole where it used to be.
     const current = itemsRef.current;
     startTransition(async () => {
-      await trySave(
+      const res = await trySave(
         () =>
           moveTaskOnBoard({
             id: taskId,
@@ -510,6 +512,8 @@ export function KanbanBoard({
           }),
         () => setBoard(groupByStatus(tasks, sort, sortReversed)),
       );
+      // Saved here first; then its ticket follows, without holding the board.
+      if (res?.ok && from !== nextStatus) void sendToJira(original, nextStatus);
     });
   };
 
@@ -866,7 +870,9 @@ function KanbanCardShell({
       </div>
       <div className="flex flex-wrap items-center gap-1.5">
         <TaskTimer task={task} compact stopPropagation />
-        {!overlay && <TicketChip url={task.ticketUrl} />}
+        {!overlay && (
+          <TicketChip url={task.ticketUrl} column={task.status} seen={task.ticketSeen} />
+        )}
         {task.tagIds.map((id) => {
           const tg = tagMap.get(id);
           if (!tg) return null;

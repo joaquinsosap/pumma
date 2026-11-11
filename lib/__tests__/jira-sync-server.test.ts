@@ -13,10 +13,13 @@ const jira = vi.hoisted(() => ({
   statuses: new Map<string, unknown>(),
   reads: [] as string[][],
   fail: null as string | null,
+  /** Runs while Jira is being read. */
+  during: null as null | (() => void),
 }));
 vi.mock("@/lib/jira/status-read", () => ({
   readTicketStatuses: async (_conn: unknown, keys: string[]) => {
     jira.reads.push([...keys].sort());
+    jira.during?.();
     return jira.fail
       ? { ok: false, why: "refused", error: jira.fail }
       : { ok: true, data: { statuses: new Map(jira.statuses), capped: false } };
@@ -89,7 +92,44 @@ beforeEach(async () => {
   jira.statuses = new Map();
   jira.reads = [];
   jira.fail = null;
+  jira.during = null;
   await saveJiraConnectionAction({ address: BASE, token: TOKEN });
+});
+
+describe("his status map", () => {
+  it("decides where a task goes, and the statuses a read meets are listed", async () => {
+    const { saveJiraStatusMapAction } = await import("@/lib/actions/jira");
+    const { jiraStatusMap } = await import("@/lib/jira/connection-server");
+    await saveJiraStatusMapAction({
+      from: { Blocked: "todo" },
+      to: { todo: null, doing: null, done: null },
+    });
+    const p = await project();
+    const task = await linked(p.id, "PROJ-1", { status: "doing", ticketStatus: "In Progress" });
+    says("PROJ-1", { name: "Blocked", stage: "doing" });
+
+    await syncProjectStatuses(userId, p.id, { now: T0 });
+
+    expect(stored(task.id).status).toBe("todo");
+    expect((await jiraStatusMap(userId)).known).toContainEqual({ name: "Blocked", stage: "doing" });
+  });
+
+  it("keeps an edit made while Jira was being read", async () => {
+    const p = await project();
+    const task = await linked(p.id, "PROJ-1", { ticketStatus: "Open" });
+    says("PROJ-1", { name: "To Triage", stage: "todo" });
+    stored(task.id).updatedAt = "2026-11-01T09:00:00.000Z";
+    jira.during = () => {
+      stored(task.id).updatedAt = "2026-11-11T11:59:00.000Z";
+    };
+
+    await syncProjectStatuses(userId, p.id, { now: T0 });
+
+    expect(stored(task.id)).toMatchObject({
+      ticketSeen: "PROJ-1 To Triage",
+      updatedAt: "2026-11-11T11:59:00.000Z",
+    });
+  });
 });
 
 describe("reading a project's tickets", () => {

@@ -737,6 +737,7 @@ export function createSeedData(userId: string): SeedData {
     jiraBaseUrlEnc: null,
     jiraTokenEnc: null,
     jiraTokenLast4: null,
+    jiraStatusMapEnc: null,
     aiProvider: "anthropic",
     aiModel: null,
     lifeAutoSwitch: false,

@@ -1,10 +1,22 @@
 import "server-only";
 
-import { decryptSecret } from "@/lib/crypto";
-import { getJiraSecretsEnc } from "@/lib/db/settings";
+import { cache } from "react";
+import { decryptSecret, encryptSecret } from "@/lib/crypto";
+import {
+  getJiraSecretsEnc,
+  getJiraStatusMapEnc,
+  updateSettings,
+} from "@/lib/db/settings";
 import { jiraBaseFromUrl, jiraIssueUrl, jiraKeyOn } from "@/lib/jira/address";
 import { jiraIssue } from "@/lib/jira/client";
 import type { TicketRead } from "@/lib/jira/issue";
+import {
+  emptyStatusMap,
+  readStatusMap,
+  withKnown,
+  type JiraStatusMap,
+  type KnownStatus,
+} from "@/lib/jira/status-map";
 import { cleanTicketUrl, ticketKeyFrom } from "@/lib/ticket-link";
 
 // The one place the stored Jira connection is opened. Everything that needs
@@ -104,4 +116,48 @@ export async function ticketUrlFromInput(
   return built
     ? { ok: true, url: built }
     : { ok: false, error: "That ticket number could not be turned into a link." };
+}
+
+/** The map as stored right now, never a copy shared within the request. */
+async function readStatusMapNow(userId: string): Promise<JiraStatusMap> {
+  const enc = await getJiraStatusMapEnc(userId);
+  const text = enc ? decryptSecret(enc) : null;
+  if (!text) return emptyStatusMap();
+  try {
+    return readStatusMap(JSON.parse(text));
+  } catch {
+    return emptyStatusMap();
+  }
+}
+
+/**
+ * Which Jira status is which column, and what each column sends. The empty map
+ * (Jira's own sorting, nothing sent) when none is saved or it will not open.
+ * Shared within a request, so the layout and a page read it once.
+ */
+export const jiraStatusMap = cache(readStatusMapNow);
+
+/** Keep the map, sealed like the connection beside it. */
+export async function saveJiraStatusMap(
+  userId: string,
+  map: JiraStatusMap,
+): Promise<void> {
+  await updateSettings(userId, {
+    jiraStatusMapEnc: encryptSecret(JSON.stringify(readStatusMap(map))),
+  });
+}
+
+/**
+ * List the statuses a read of Jira met, and give back the map as it stands
+ * now. Read again just before it is written: a read of Jira can take seconds,
+ * and the map he set meanwhile in Settings must not be written over.
+ */
+export async function noteJiraStatuses(
+  userId: string,
+  found: Iterable<KnownStatus>,
+): Promise<JiraStatusMap> {
+  const now = await readStatusMapNow(userId);
+  const grown = withKnown(now, found);
+  if (grown) await saveJiraStatusMap(userId, grown);
+  return grown ?? now;
 }

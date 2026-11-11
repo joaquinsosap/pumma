@@ -9,3 +9,4 @@ export const insertSettings = impl.insertSettings;
 export const updateSettings = impl.updateSettings;
 export const getAiApiKeyEnc = impl.getAiApiKeyEnc;
 export const getJiraSecretsEnc = impl.getJiraSecretsEnc;
+export const getJiraStatusMapEnc = impl.getJiraStatusMapEnc;

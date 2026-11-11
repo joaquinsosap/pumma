@@ -11,7 +11,10 @@ import { jiraMyself } from "@/lib/jira/client";
 import {
   JIRA_UNREADABLE,
   jiraConnection,
+  jiraStatusMap,
+  saveJiraStatusMap,
 } from "@/lib/jira/connection-server";
+import { statusMapSchema, type JiraStatusMap } from "@/lib/jira/status-map";
 
 const saveSchema = z.object({
   address: z.string().max(2048),
@@ -60,16 +63,16 @@ export async function saveJiraConnectionAction(
   }
 
   const userId = await requireUserId();
+  const before = await jiraConnection(userId);
   if (!token) {
-    const saved = await jiraConnection(userId);
-    if (saved.state === "none") {
+    if (before.state === "none") {
       return { ok: false, error: "Paste your Jira personal access token." };
     }
-    if (saved.state === "unreadable") return { ok: false, error: JIRA_UNREADABLE };
+    if (before.state === "unreadable") return { ok: false, error: JIRA_UNREADABLE };
     // A token is for one Jira. Kept across a change of host, the next request
     // would hand it to whoever answers there, and whoever typed the new
     // address need not be the person who pasted the token.
-    if (new URL(saved.baseUrl).origin !== new URL(address).origin) {
+    if (new URL(before.baseUrl).origin !== new URL(address).origin) {
       return {
         ok: false,
         error:
@@ -82,7 +85,13 @@ export async function saveJiraConnectionAction(
     jiraBaseUrlEnc: string;
     jiraTokenEnc?: string;
     jiraTokenLast4?: string;
+    jiraStatusMapEnc?: null;
   } = { jiraBaseUrlEnc: encryptSecret(address) };
+  // The status tables are one Jira's workflow. Kept for another Jira, a move
+  // would send there a status he only ever picked for the first one.
+  if (before.state !== "ready" || before.baseUrl !== address) {
+    patch.jiraStatusMapEnc = null;
+  }
   if (token) {
     patch.jiraTokenEnc = encryptSecret(token);
     patch.jiraTokenLast4 = token.slice(-4);
@@ -117,7 +126,36 @@ export async function clearJiraConnectionAction(): Promise<ActionResult> {
     jiraBaseUrlEnc: null,
     jiraTokenEnc: null,
     jiraTokenLast4: null,
+    jiraStatusMapEnc: null,
   });
   revalidatePath("/", "layout");
   return { ok: true };
+}
+
+const mapAnswersSchema = statusMapSchema.pick({ from: true, to: true }).strict();
+
+/**
+ * Save his answers in the two status tables: where a Jira status lands, and
+ * what each column sends. The list of statuses is the server's own, from
+ * Jira, and is kept as it is.
+ */
+export async function saveJiraStatusMapAction(
+  input: Pick<JiraStatusMap, "from" | "to">,
+): Promise<ActionResult<JiraStatusMap>> {
+  const parsed = mapAnswersSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  const userId = await requireUserId();
+  const saved = await jiraConnection(userId);
+  if (saved.state === "none") {
+    return { ok: false, error: "Save your Jira address and token first." };
+  }
+  if (saved.state === "unreadable") return { ok: false, error: JIRA_UNREADABLE };
+  const map: JiraStatusMap = {
+    ...(await jiraStatusMap(userId)),
+    from: parsed.data.from,
+    to: parsed.data.to,
+  };
+  await saveJiraStatusMap(userId, map);
+  revalidatePath("/", "layout");
+  return { ok: true, data: map };
 }

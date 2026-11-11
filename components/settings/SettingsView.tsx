@@ -75,6 +75,8 @@ import { DueQuickPick } from "@/components/shell/DueQuickPick";
 import { CalendarFeeds } from "@/components/settings/CalendarFeeds";
 import { McpSettings, type McpPrefs } from "@/components/settings/McpSettings";
 import { JiraConnection } from "@/components/settings/JiraConnection";
+import { JiraStatusMap } from "@/components/settings/JiraStatusMap";
+import type { JiraStatusMap as StatusMap } from "@/lib/jira/status-map";
 import type { McpAuditRow } from "@/lib/mcp/audit-types";
 import type { ConnectedClient } from "@/lib/mcp/connections";
 import { NotificationSettings } from "@/components/settings/NotificationSettings";
@@ -111,7 +113,12 @@ type Props = {
   /** The MCP server URL to paste into a client. Empty when not served here. */
   mcpEndpoint?: string;
   /** The saved Jira connection, as much of it as the screen may see. */
-  jira?: { address: string | null; tokenLast4: string | null };
+  jira?: {
+    address: string | null;
+    tokenLast4: string | null;
+    /** Null until a Jira is connected: the tables need one to mean anything. */
+    statusMap: StatusMap | null;
+  };
   /** Last few MCP tool calls, newest first. */
   mcpActivity?: McpAuditRow[];
   /** Apps this account has approved, newest first. */
@@ -191,7 +198,7 @@ export function SettingsView({
   mcpEndpoint = "",
   mcpActivity = [],
   mcpClients = [],
-  jira = { address: null, tokenLast4: null },
+  jira = { address: null, tokenLast4: null, statusMap: null },
 }: Props) {
   const router = useRouter();
   const [, startTransition] = useTransition();
@@ -949,12 +956,13 @@ export function SettingsView({
             <div id="jira" className="mb-6 scroll-mt-4">
               <SettingsSection
                 title="Jira"
-                description="Connect your own Jira so a task can be linked to its ticket by number. PUMMA only reads from Jira with this connection: when you ask it to, and when you open a project that holds tickets, to see where they stand."
+                description="Connect your own Jira so a task can be linked to its ticket by number. PUMMA reads from Jira when you ask it to, and when you open a project that holds tickets, to see where they stand. It writes to Jira only to move a ticket, after you choose below what each column sends."
               >
                 <JiraConnection
                   address={jira.address}
                   tokenLast4={jira.tokenLast4}
                 />
+                {jira.statusMap && <JiraStatusMap map={jira.statusMap} />}
               </SettingsSection>
             </div>
             </SettingsGroupBlock>
