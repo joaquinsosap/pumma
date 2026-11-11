@@ -332,6 +332,7 @@ export function TasksView({
     projects,
     filters,
     sort,
+    reversed,
   ]);
 
   const filteredCarryover = useMemo(() => {
