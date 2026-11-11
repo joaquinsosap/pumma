@@ -949,7 +949,7 @@ export function SettingsView({
             <div id="jira" className="mb-6 scroll-mt-4">
               <SettingsSection
                 title="Jira"
-                description="Connect your own Jira so a task can be linked to its ticket by number. PUMMA only reads from Jira with this connection, and only when you ask it to."
+                description="Connect your own Jira so a task can be linked to its ticket by number. PUMMA only reads from Jira with this connection: when you ask it to, and when you open a project that holds tickets, to see where they stand."
               >
                 <JiraConnection
                   address={jira.address}
