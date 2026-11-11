@@ -477,12 +477,17 @@ export function SettingsView({
               title="General"
               description="App-wide preferences for appearance, calendar, and quick capture."
             >
-              <SettingRow
-                label="Look"
-                description="The colors of the whole app. The bulb in the sidebar opens the same choices."
-              >
-                <LookPicker className="w-[292px] shrink-0" />
-              </SettingRow>
+              {/* Not a SettingRow: the picker is too wide to sit beside its text on a phone, so there it goes under it. */}
+              <div className="flex max-w-2xl flex-col gap-3 border-b border-border/60 py-3 first:pt-0 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm text-ink">Look</div>
+                  <p className="mt-0.5 text-[12px] leading-snug text-faint">
+                    The colors of the whole app. On a computer, the bulb in the
+                    sidebar opens the same choices.
+                  </p>
+                </div>
+                <LookPicker className="w-full max-w-[292px] shrink-0 sm:w-[292px]" />
+              </div>
               <SettingRow
                 label="Week starts on Sunday"
                 description="Affects the tasks calendar and week-based views."
