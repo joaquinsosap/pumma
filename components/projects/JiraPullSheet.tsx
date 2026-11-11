@@ -19,6 +19,7 @@ import type { JiraStage } from "@/lib/jira/issue";
 import {
   narrowPull,
   pullFilterStart,
+  settleTicks,
   tickKeys,
   toggleTick,
   type PullFilter,
@@ -73,6 +74,7 @@ const STAGES: { id: JiraStage; name: string }[] = [
   { id: "done", name: "Done" },
 ];
 
+const NO_TICKS: ReadonlySet<string> = new Set();
 const NO_JIRA = "Connect your Jira first: Settings, Connections, Jira.";
 
 type Posted<T> = { ok: true; data: T } | { ok: false; said: string };
@@ -196,9 +198,21 @@ export function JiraPullSheet({
     }),
     [shown],
   );
+  // What the selectors hide does not depend on the ticks, so it is worked out
+  // first: it decides which rows can be ticked at all.
+  const hidden = useMemo(
+    () => (shown ? narrowPull(shown.forest, filter, NO_TICKS).hidden : NO_TICKS),
+    [shown, filter],
+  );
+  // What no click can tick: hidden by the selectors, or already a task here.
+  const skip = useMemo(() => new Set([...hidden, ...have.tasks]), [hidden, have]);
+  const unticked = useMemo(
+    () => (shown ? settleTicks(shown.forest, pane.unticked, skip) : pane.unticked),
+    [shown, pane.unticked, skip],
+  );
   const narrowed = useMemo(
-    () => (shown ? narrowPull(shown.forest, filter, pane.unticked) : null),
-    [shown, filter, pane.unticked],
+    () => (shown ? narrowPull(shown.forest, filter, unticked) : null),
+    [shown, filter, unticked],
   );
   const plan = useMemo(
     () =>
@@ -210,14 +224,9 @@ export function JiraPullSheet({
   const counts = plan ? countPlan(plan) : null;
   const nothing = !counts || counts.projects + counts.tags + counts.tasks === 0;
 
-  // What no click can tick: hidden by the selectors, or already a task here.
-  const skip = useMemo(
-    () => new Set([...(narrowed?.hidden ?? []), ...have.tasks]),
-    [narrowed, have],
-  );
   const toggle = (key: string) => {
     if (!shown) return;
-    patch(tab, { unticked: toggleTick(shown.forest, key, pane.unticked, skip) });
+    patch(tab, { unticked: toggleTick(shown.forest, key, unticked, skip) });
   };
 
   const setWho = (who: PullWho) => patch(tab, { filter: { ...pane.filter, who } });
@@ -240,7 +249,7 @@ export function JiraPullSheet({
         level: pane.level,
         // The selectors as they are set and the ticks, not the list they add
         // up to: the server narrows its own read by the same rule.
-        off: [...pane.unticked],
+        off: [...unticked],
         who: filter.who,
         stages: [...filter.stages],
       },
@@ -486,7 +495,7 @@ export function JiraPullSheet({
                   Tick all
                 </TextButton>
                 <TextButton
-                  onClick={() => patch(tab, { unticked: new Set(tickKeys(forest)) })}
+                  onClick={() => patch(tab, { unticked: new Set(tickKeys(forest, skip)) })}
                 >
                   None
                 </TextButton>
@@ -525,7 +534,7 @@ export function JiraPullSheet({
                     forest={forest}
                     level={pane.level}
                     marks={{
-                      unticked: pane.unticked,
+                      unticked,
                       hidden: narrowed.hidden,
                       off: narrowed.off,
                       skip,

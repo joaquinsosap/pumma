@@ -101,21 +101,15 @@ export function narrowPull(
 
 // The ticks. A piece of work holds a tick of its own, and so does an epic or
 // a top ticket nothing was read under. A row with rows under it holds none:
-// its box shows theirs, and a click on it ticks or unticks all of them.
+// its box shows theirs, and a click on it ticks or unticks all of them. The
+// one exception is a row with nothing under it left to tick (every ticket is
+// hidden or already a task here): the row is then all there is to decide, so
+// it holds its own tick and can still be left out.
 
 const epicTicks = (e: PulledEpic): string[] =>
   e.stories.length > 0 ? e.stories.map((s) => s.key) : [e.ticket.key];
 const coordTicks = (c: PullForest["coords"][number]): string[] =>
   c.epics.length > 0 ? c.epics.flatMap(epicTicks) : [c.ticket.key];
-
-/** Every row that holds a tick of its own, for "None". */
-export function tickKeys(forest: PullForest): string[] {
-  return [
-    ...forest.coords.flatMap(coordTicks),
-    ...forest.epics.flatMap(epicTicks),
-    ...forest.loose.map((t) => t.key),
-  ];
-}
 
 /** The ticks a row stands for: its own, or those of everything under it. */
 export function ticksUnder(forest: PullForest, key: string): string[] {
@@ -127,21 +121,59 @@ export function ticksUnder(forest: PullForest, key: string): string[] {
   return [key];
 }
 
-/** What a row's box shows. "none": nothing it stands for can be ticked. */
-export type Tick = "on" | "off" | "some" | "none";
+/** The rows with rows under them: top tickets with epics, epics with stories. */
+function parents(forest: PullForest): string[] {
+  const withStories = (e: PulledEpic) => (e.stories.length > 0 ? [e.ticket.key] : []);
+  return [
+    ...forest.coords.flatMap((c) =>
+      c.epics.length > 0 ? [c.ticket.key, ...c.epics.flatMap(withStories)] : [],
+    ),
+    ...forest.epics.flatMap(withStories),
+  ];
+}
+
+/** What can still be ticked under a row, and whether the row is a piece of its own. */
+function reach(forest: PullForest, key: string, skip: ReadonlySet<string>) {
+  const under = ticksUnder(forest, key);
+  return {
+    under,
+    live: under.filter((k) => !skip.has(k)),
+    leaf: under.length === 1 && under[0] === key,
+  };
+}
 
 /**
- * A row's box. `skip` holds the rows that cannot be ticked: the ones the
- * selectors hid, and the ones a task here already holds.
+ * Every row that holds a tick of its own, for "None". `skip` holds the rows
+ * that cannot be ticked: the ones the selectors hid, and the ones a task here
+ * already holds.
  */
+export function tickKeys(
+  forest: PullForest,
+  skip: ReadonlySet<string> = new Set(),
+): string[] {
+  return [
+    ...forest.coords.flatMap(coordTicks),
+    ...forest.epics.flatMap(epicTicks),
+    ...forest.loose.map((t) => t.key),
+    ...parents(forest).filter((k) => reach(forest, k, skip).live.length === 0),
+  ];
+}
+
+/** What a row's box shows. "none": a piece of work that cannot be ticked. */
+export type Tick = "on" | "off" | "some" | "none";
+
+/** A row's box. */
 export function tickOf(
   forest: PullForest,
   key: string,
   unticked: ReadonlySet<string>,
   skip: ReadonlySet<string>,
 ): Tick {
-  const live = ticksUnder(forest, key).filter((k) => !skip.has(k));
-  if (live.length === 0) return "none";
+  const { live, leaf } = reach(forest, key, skip);
+  if (live.length === 0) {
+    if (leaf) return "none";
+    return unticked.has(key) ? "off" : "on";
+  }
   const on = live.filter((k) => !unticked.has(k)).length;
   if (on === 0) return "off";
   return on === live.length ? "on" : "some";
@@ -158,11 +190,34 @@ export function toggleTick(
   unticked: ReadonlySet<string>,
   skip: ReadonlySet<string>,
 ): Set<string> {
+  const { under, live, leaf } = reach(forest, key, skip);
   const untick = tickOf(forest, key, unticked, skip) === "on";
   const next = new Set(unticked);
-  for (const k of ticksUnder(forest, key)) {
+  // Nothing under it to tick: the row's own tick is what the click moves.
+  for (const k of !leaf && live.length === 0 ? [key] : under) {
     if (untick) next.add(k);
     else next.delete(k);
   }
+  return next;
+}
+
+/**
+ * The ticks as they stand once the selectors moved. A row that held its own
+ * tick stops holding it when a ticket under it can be ticked again (a stage
+ * was turned back on): its own untick is dropped, or the box would show the
+ * tickets as coming while the row above them kept them out.
+ */
+export function settleTicks(
+  forest: PullForest,
+  unticked: ReadonlySet<string>,
+  skip: ReadonlySet<string>,
+): ReadonlySet<string> {
+  const stale = [...unticked].filter((key) => {
+    const { live, leaf } = reach(forest, key, skip);
+    return !leaf && live.length > 0;
+  });
+  if (stale.length === 0) return unticked;
+  const next = new Set(unticked);
+  for (const key of stale) next.delete(key);
   return next;
 }

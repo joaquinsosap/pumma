@@ -4,6 +4,7 @@ import type { JiraStage } from "@/lib/jira/issue";
 import {
   narrowPull,
   pullFilterStart,
+  settleTicks,
   tickKeys,
   tickOf,
   ticksUnder,
@@ -227,8 +228,38 @@ describe("the boxes", () => {
   it("reads a box from the rows that can be ticked: not the hidden ones, not the ones already here", () => {
     const skip = new Set(["PROJ-13"]);
     expect(tickOf(FOREST, "PROJ-10", new Set(["PROJ-13"]), skip)).toBe("on");
-    expect(tickOf(FOREST, "PROJ-20", NO_TICKS, new Set(["PROJ-21"]))).toBe("none");
     expect(tickOf(FOREST, "PROJ-13", NO_TICKS, skip)).toBe("none");
+  });
+
+  it("lets an epic whose every ticket is already here be left out, so no empty tag or project is made", () => {
+    // Search's only ticket is a task here already: the epic is all there is to decide.
+    const skip = new Set(["PROJ-21"]);
+    const have = { tasks: new Set(["PROJ-21"]), projects: new Set<string>() };
+    expect(tickOf(FOREST, "PROJ-20", NO_TICKS, skip)).toBe("on");
+    const kept = narrowPull(FOREST, every(), NO_TICKS);
+    expect(planPull(FOREST, "epic", kept.off, have).projects.map((p) => p.from?.key)).toContain("PROJ-20");
+
+    const left = toggleTick(FOREST, "PROJ-20", NO_TICKS, skip);
+    expect(sorted(left)).toEqual(["PROJ-20"]);
+    expect(tickOf(FOREST, "PROJ-20", left, skip)).toBe("off");
+    const out = narrowPull(FOREST, every(), left);
+    expect(planPull(FOREST, "epic", out.off, have).projects.map((p) => p.from?.key)).not.toContain("PROJ-20");
+    // The next click puts it back.
+    expect(sorted(toggleTick(FOREST, "PROJ-20", left, skip))).toEqual([]);
+  });
+
+  it("unticks such an epic with None too", () => {
+    expect(tickKeys(FOREST, new Set(["PROJ-21"]))).toContain("PROJ-20");
+    expect(tickKeys(FOREST)).not.toContain("PROJ-20");
+  });
+
+  it("drops an epic's own untick once a ticket under it can be ticked again", () => {
+    // Left out while its ticket was hidden; the stage comes back on.
+    const left = new Set(["PROJ-20"]);
+    expect(sorted(settleTicks(FOREST, left, new Set(["PROJ-21"])))).toEqual(["PROJ-20"]);
+    expect(sorted(settleTicks(FOREST, left, NO_SKIP))).toEqual([]);
+    // A piece of work's untick is its own and stays.
+    expect(sorted(settleTicks(FOREST, new Set(["PROJ-12"]), NO_SKIP))).toEqual(["PROJ-12"]);
   });
 
   it("takes an epic's hidden tickets with it, so a stage turned back on shows it as it was left", () => {
