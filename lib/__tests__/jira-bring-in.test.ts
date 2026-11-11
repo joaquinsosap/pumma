@@ -136,6 +136,22 @@ describe("bringing a COORD in as the project", () => {
     expect(tagNames(latency.tagIds)).toEqual(["dashboards", "platform-alerts", "work"]);
   });
 
+  it("dates a ticket that arrives done on the day Jira closed it, both when it was made and when it was done", async () => {
+    const forest = tree();
+    forest.coords[0].epics[1].stories[0] = { ...LATENCY, finished: "2026-03-01T10:22:33.000Z" };
+    jira.forest = forest;
+    await runPull(userId, { source: SOURCE, level: "coord", off: [], ...EVERY });
+    const [project] = projectsNamed("Platform alerts");
+    const tasks = tasksOf(project._id);
+    const latency = tasks.find((t) => t.ticketUrl === LATENCY.url)!;
+    expect(latency.completedAt).toBe("2026-03-01");
+    expect(latency.createdAt).toBe("2026-03-01");
+    // An open ticket beside it is made today and done never.
+    const rules = tasks.find((t) => t.ticketUrl === RULES.url)!;
+    expect(rules.completedAt).toBeNull();
+    expect(rules.createdAt).not.toBe("2026-03-01");
+  });
+
   it("keeps the order Jira gave", async () => {
     await runPull(userId, { source: SOURCE, level: "coord", off: [], ...EVERY });
     const [project] = projectsNamed("Platform alerts");

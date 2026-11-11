@@ -171,6 +171,11 @@ export async function bringIn(
     const workTags = setLifeTags([], "work", known);
     const docs = planned.tasks.map((task) => {
       const epicTagId = task.tag ? tagIdOf.get(task.tag) : undefined;
+      // A ticket that arrives done is history, dated where it happened at
+      // both ends: made today and done last spring would count it in this
+      // week's new tasks, and put the day it was made after the day it was done.
+      const doneOn =
+        task.status === "done" ? finishedDay(task.finished, today, timeZone) : null;
       const tagIds = [
         ...new Set([
           ...workTags,
@@ -189,10 +194,8 @@ export async function bringIn(
         goalId: null,
         lifeArea: deriveLifeAreaFromTags(tagIds, known),
         order: place++,
-        createdAt: today,
-        // Done on the day Jira closed it, not on the day it came in.
-        completedAt:
-          task.status === "done" ? finishedDay(task.finished, today, timeZone) : null,
+        createdAt: doneOn ?? today,
+        completedAt: doneOn,
         ticketUrl: task.ticketUrl,
       };
     });
