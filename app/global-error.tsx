@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { DbConnectionErrorView } from "@/components/errors/DbConnectionErrorView";
+import { NoConnectionView } from "@/components/errors/NoConnectionView";
 import { useLostConnectionRecovery } from "@/lib/lost-connection";
 
 export default function GlobalError({
@@ -11,15 +12,18 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const recovering = useLostConnectionRecovery(error, reset);
+  const recovery = useLostConnectionRecovery(error, reset);
   useEffect(() => {
-    if (!recovering) console.error(error);
-  }, [error, recovering]);
+    if (recovery === "none") console.error(error);
+  }, [error, recovery]);
 
   return (
     <html lang="en">
       <body className="antialiased">
-        {!recovering && <DbConnectionErrorView error={error} reset={reset} />}
+        {recovery === "waiting" && <NoConnectionView />}
+        {recovery === "none" && (
+          <DbConnectionErrorView error={error} reset={reset} />
+        )}
       </body>
     </html>
   );

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { RefreshCw } from "@/components/icons";
 import { refreshCalendarFeedsAction } from "@/lib/actions/calendar-feeds";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 /**
  * Pull the subscribed calendars again, now.
@@ -35,11 +36,8 @@ export function SyncCalendarsButton({
       title={`Sync ${feedCount} linked calendar${feedCount === 1 ? "" : "s"}`}
       onClick={() =>
         start(async () => {
-          const res = await refreshCalendarFeedsAction();
-          if (!res.ok) {
-            toast.error(res.error);
-            return;
-          }
+          const res = await trySave(() => refreshCalendarFeedsAction());
+          if (!res?.ok) return;
           const { synced, failed } = res.data ?? { synced: 0, failed: 0 };
           if (failed) toast.warning(`${synced} updated, ${failed} failed`);
           else toast.success(synced ? `${synced} updated` : "Already up to date");

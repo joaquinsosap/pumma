@@ -59,12 +59,23 @@ handed back to the user to check.
   save in the app, so a screen adds nothing for it. To reproduce by hand, use
   `history.replaceState(null, "", url)`: passing `history.state` carries `__NA`
   and skips Next's patch.
-- **A `router.refresh()` with no answer leaves the page.** Next falls back to a
-  full navigation, so the browser's error screen replaces the app and unsaved
-  text goes with it. A refresh nobody clicked for asks `serverAnswers()` first.
-- **A save that can fail goes through `trySave`.** Unguarded in a transition, a
-  lost connection reaches the error screen. `useLostConnectionRecovery` puts the
-  page straight back, but what was typed in it is gone.
+- **A page asked for with no answer waits for the server.** Next alone falls
+  back to a full navigation, so the browser's error screen replaces the app
+  and unsaved text goes with it. `lib/save-catch-up.ts` holds a
+  `router.refresh()` or a link click that got no answer, or a 502 to 504 from
+  the proxy during a deploy, until `/api/health?ready=1` answers, then asks
+  again. Saves made meanwhile queue behind it in Next's own queue and go when
+  it is back. A refresh nobody clicked for still asks `serverAnswers()` first:
+  with the database down a page is an error screen.
+- **A save that can fail goes through `trySave`**, and an ask whose refusal
+  the screen shows itself through `tryAsk`. Unguarded in a transition, a lost
+  connection reaches the error screen. `useLostConnectionRecovery` puts the
+  page straight back, but what was typed in it is gone. Anything that asks in
+  the background catches its own failure, so it never shows "Could not save".
+- **An optimistic list takes a change, not a copy.**
+  `useOptimistic(list, (list, change) => change(list))`, as in `TaskList`, so
+  a tick survives the list under it moving. That list is a new array on every
+  draw while a save is out: an effect that sets state must not depend on it.
 - **`border-ink` can't mark a selection.** The tour section of `globals.css`
   forces `.border-ink` to a pale `var(--rim)`. Use a ring.
 - **The theme redraws any button that names a border or surface colour.** The

@@ -49,3 +49,13 @@ export const cssColor = z
     /^(oklch\([^)]*\)|#[0-9a-fA-F]{3,8}|var\(--[\w-]+\))$/,
     "Invalid color",
   );
+
+/** What to tell someone whose input was refused. Text over its limit says so and gives the limit: "Invalid input" on a long title reads as a broken app. */
+export function refusal(error: z.ZodError): string {
+  for (const issue of error.issues) {
+    if (issue.code === "too_big" && issue.type === "string") {
+      return `That is too long. The limit is ${issue.maximum} characters.`;
+    }
+  }
+  return "Invalid input";
+}

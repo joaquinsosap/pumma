@@ -69,7 +69,9 @@ export function NotificationCenter() {
   const first = useRef(true);
 
   const load = useCallback(async () => {
-    const res = await loadNotificationsAction();
+    // Asked in the background: with no connection there is nothing to tell anyone.
+    const res = await loadNotificationsAction().catch(() => null);
+    if (!res) return;
     // Set even on failure: it records that the server has answered, which is
     // what decides whether an unfound id is still loading or simply gone.
     setLoaded(true);

@@ -1,6 +1,17 @@
 // Next throws away a save's page when the address is written while the save runs, and a refresh's page too. This notices and asks for the page again.
+// It also holds a page that got no answer until the server is back: Next would leave for the browser's error screen, and unsaved text goes with it.
+
+import {
+  isLostConnection,
+  isProxyAnswer,
+  noAnswer,
+  serverAnswered,
+  whenServerAnswers,
+} from "@/lib/lost-connection";
 
 const ACTION_HEADER = "next-action";
+const PAGE_HEADER = "rsc";
+const PREFETCH_HEADER = "next-router-prefetch";
 
 let saves = 0;
 let movedDuringSave = false;
@@ -21,37 +32,69 @@ export function catchUpNow() {
 }
 
 function saveEnded(answered: boolean) {
+  if (answered) serverAnswered();
   saves--;
   if (saves > 0) return;
   if (answered) catchUpNow();
-  // Asking for a page with no connection makes Next leave this one.
+  // Asking for a page with no connection would wait for it, with every later save behind it.
   else movedDuringSave = false;
+}
+
+/** A save is never sent twice: with no answer nobody knows whether it landed. */
+function watchedSave(send: () => Promise<Response>): Promise<Response> {
+  saves++;
+  return send().then(
+    (res) => {
+      if (isProxyAnswer(res.status)) {
+        saveEnded(false);
+        throw noAnswer();
+      }
+      // The page comes in the body, so the save isn't over until the body is.
+      void res
+        .clone()
+        .arrayBuffer()
+        .then(
+          () => saveEnded(res.ok),
+          () => saveEnded(false),
+        );
+      return res;
+    },
+    (err) => {
+      saveEnded(false);
+      throw err;
+    },
+  );
+}
+
+/** A page asked for with no connection, or during a deploy, comes when the server is back. Asking again is safe: a page changes nothing. */
+async function watchedPage(ask: () => Promise<Response>): Promise<Response> {
+  for (;;) {
+    try {
+      const res = await ask();
+      if (!isProxyAnswer(res.status)) {
+        if (res.ok) serverAnswered();
+        return res;
+      }
+    } catch (err) {
+      // An abort, or anything that isn't the connection, is Next's to handle.
+      if (!isLostConnection(err)) throw err;
+    }
+    await whenServerAnswers();
+  }
 }
 
 function watchFetch() {
   const realFetch = window.fetch.bind(window);
   window.fetch = (input, init) => {
-    const isSave =
-      init?.method === "POST" && new Headers(init.headers).has(ACTION_HEADER);
-    if (!isSave) return realFetch(input, init);
-    saves++;
-    return realFetch(input, init).then(
-      (res) => {
-        // The page comes in the body, so the save isn't over until the body is.
-        void res
-          .clone()
-          .arrayBuffer()
-          .then(
-            () => saveEnded(res.ok),
-            () => saveEnded(false),
-          );
-        return res;
-      },
-      (err) => {
-        saveEnded(false);
-        throw err;
-      },
-    );
+    const headers = new Headers(init?.headers);
+    if (init?.method === "POST" && headers.has(ACTION_HEADER)) {
+      return watchedSave(() => realFetch(input, init));
+    }
+    // A prefetch is a guess, and Next drops one that fails.
+    if (headers.has(PAGE_HEADER) && !headers.has(PREFETCH_HEADER)) {
+      return watchedPage(() => realFetch(input, init));
+    }
+    return realFetch(input, init);
   };
 }
 

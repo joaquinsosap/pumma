@@ -14,7 +14,7 @@ import { listNotes } from "@/lib/db/notes";
 import { getSettings, updateSettings } from "@/lib/db/settings";
 import type { TagDoc } from "@/lib/schemas";
 import { cssColor, entityId, tagName } from "@/lib/validation";
-import { tagDeleteBlock } from "@/lib/tag-protection";
+import { releaseOrphans, tagDeleteBlock } from "@/lib/tag-protection";
 import {
   deriveLifeAreaFromTags,
   isLifeTag,
@@ -538,12 +538,21 @@ export async function renameProjectTagAction(
   return { ok: true, data: { status: "renamed", filed: toFile.length } };
 }
 
+/** The tags as the delete rule reads them: one whose project is gone protects nothing. */
+async function listDeletableTags(userId: string) {
+  const [tags, projects] = await Promise.all([
+    listTags(userId),
+    listProjects(userId),
+  ]);
+  return releaseOrphans(tags, new Set(projects.map((p) => p.id)));
+}
+
 export async function deleteTagAction(id: string): Promise<ActionResult> {
   const parsed = entityId.safeParse(id);
   if (!parsed.success) return { ok: false, error: "Invalid input" };
 
   const userId = await requireUserId();
-  const tags = await listTags(userId);
+  const tags = await listDeletableTags(userId);
   const tag = tags.find((t) => t.id === parsed.data);
   if (!tag) return { ok: false, error: "Not found" };
   // The same rule the settings list shows, so the button and the server can
@@ -567,7 +576,7 @@ export async function deleteTagAction(id: string): Promise<ActionResult> {
  */
 async function findUnusedTags(userId: string) {
   const [tags, tasks, notes] = await Promise.all([
-    listTags(userId),
+    listDeletableTags(userId),
     listTasks(userId),
     listNotes(userId),
   ]);

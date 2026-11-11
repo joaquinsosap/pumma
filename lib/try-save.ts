@@ -28,3 +28,14 @@ export async function trySave<R extends SaveResult | void>(
   onFail?.(why);
   return null;
 }
+
+/** For an ask whose refusal the caller shows itself. No answer shows the toast and gives back null. */
+export async function tryAsk<R>(run: () => Promise<R>): Promise<R | null> {
+  try {
+    return await run();
+  } catch (err) {
+    unstable_rethrow(err);
+    toastLostConnection();
+    return null;
+  }
+}

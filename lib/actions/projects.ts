@@ -21,7 +21,7 @@ import {
 } from "@/lib/db/projects";
 import { getSettings, updateSettings } from "@/lib/db/settings";
 import { reorderWithin, sortProjects } from "@/lib/collection-sort";
-import { entityId } from "@/lib/validation";
+import { entityId, refusal } from "@/lib/validation";
 import { syncGoalProgress, syncGoalsForProject } from "@/lib/goal-sync-server";
 import { setProjectLifeArea } from "@/lib/project-life-server";
 import { fileTaggedTasksIntoProject } from "@/lib/project-filing-server";
@@ -137,7 +137,7 @@ export async function updateProjectDetail(
   input: z.infer<typeof updateProjectDetailSchema>,
 ): Promise<ActionResult<Project>> {
   const parsed = updateProjectDetailSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  if (!parsed.success) return { ok: false, error: refusal(parsed.error) };
 
   const { id, lifeArea, ...patch } = parsed.data;
   if (!Object.keys(parsed.data).length) {

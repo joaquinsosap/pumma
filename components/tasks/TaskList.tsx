@@ -247,7 +247,11 @@ export function TaskList({
   selection,
 }: Props) {
   const router = useRouter();
-  const [optimistic, setOptimistic] = useOptimistic(tasks);
+  // A change, not a copy of the list: when the list under it moves while a save is out (a filter, another save's page), the change is made again on the new one.
+  const [optimistic, setOptimistic] = useOptimistic(
+    tasks,
+    (list: Task[], change: (list: Task[]) => Task[]) => change(list),
+  );
   const [, startTransition] = useTransition();
 
   const tagMap = new Map(tags.map((t) => [t.id, t]));
@@ -263,8 +267,8 @@ export function TaskList({
   const handleToggle = (id: string) => {
     const done = optimistic.find((t) => t.id === id)?.status !== "done";
     startTransition(async () => {
-      setOptimistic(
-        optimistic.map((t) =>
+      setOptimistic((list) =>
+        list.map((t) =>
           t.id === id ? { ...t, status: done ? "done" : "todo" } : t,
         ),
       );
@@ -281,8 +285,8 @@ export function TaskList({
     if (!shown) return;
     const priority = PRIO_NEXT[shown.priority];
     startTransition(async () => {
-      setOptimistic(
-        optimistic.map((t) => (t.id === id ? { ...t, priority } : t)),
+      setOptimistic((list) =>
+        list.map((t) => (t.id === id ? { ...t, priority } : t)),
       );
       await trySave(() => updateTaskDetail({ id, priority }));
     });
@@ -290,7 +294,7 @@ export function TaskList({
 
   const handleDelete = (id: string) => {
     startTransition(async () => {
-      setOptimistic(optimistic.filter((t) => t.id !== id));
+      setOptimistic((list) => list.filter((t) => t.id !== id));
       const res = await trySave(() => deleteTaskAction(id));
       if (res?.ok) {
         const snapshot = res.undo && JSON.stringify(res.undo.snapshot);
@@ -356,13 +360,15 @@ export function TaskList({
   // Measured, not calculated: real rows are not a fixed height the way the
   // tour's are (tags wrap, the page and calendar variants differ), so the
   // only honest source for where the two ends sit is the rows themselves.
+  // The order as text: the list is a new array on every draw while a save is out, and an effect that sets state on each new array never stops.
+  const order = listed.map((t) => t.id).join(" ");
   useEffect(() => {
     const root = listRef.current;
     if (!root || !shiftHeld || !hoverId || !rangeAnchor || hoverId === rangeAnchor) {
       setRangeSpan(null);
       return;
     }
-    const ids = listed.map((t) => t.id);
+    const ids = order.split(" ");
     const from = ids.indexOf(rangeAnchor);
     const to = ids.indexOf(hoverId);
     if (from < 0 || to < 0) {
@@ -389,7 +395,7 @@ export function TaskList({
       span: Math.abs(bMid - aMid),
       direction: to < from ? "up" : "down",
     });
-  }, [shiftHeld, hoverId, rangeAnchor, listed]);
+  }, [shiftHeld, hoverId, rangeAnchor, order]);
 
   const showRange = Boolean(selection) && shiftHeld && rangeSpan !== null;
 

@@ -655,7 +655,7 @@ function GoalCard({
     <div
       className={cn(
         "rounded-[13px] border bg-surface p-[12px_14px]",
-        selected ? "border-ink shadow-sm" : "border-border",
+        selected ? "border-border shadow-sm ring-2 ring-ink" : "border-border",
         overlay
           ? "kanban-card--overlay rotate-[1deg] cursor-grabbing shadow-lg"
           : "hover:border-faint2",

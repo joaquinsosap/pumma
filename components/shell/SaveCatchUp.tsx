@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { serverAnswers, useLostConnectionToast } from "@/lib/lost-connection";
 import { urlMark, watchSaves } from "@/lib/save-catch-up";
 
-const QUIET_MS = 250;
+// Longer than the gap between keys typed slowly, so a search box being typed in asks once, at the end.
+const QUIET_MS = 800;
 
 /** Renders nothing. Keeps lists right when the address moves during a save, and tells you when a save with no handler of its own loses the connection. */
 export function SaveCatchUp() {

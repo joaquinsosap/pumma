@@ -7,7 +7,7 @@ import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
 import { userToday } from "@/lib/timezone-server";
-import { entityId, isoDate, shortText, title } from "@/lib/validation";
+import { entityId, isoDate, refusal, shortText, title } from "@/lib/validation";
 import {
   deleteGoal,
   insertGoal,
@@ -103,7 +103,7 @@ export async function updateGoalDetailAction(input: {
   metricLabel?: string;
 }): Promise<ActionResult> {
   const parsed = detailSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  if (!parsed.success) return { ok: false, error: refusal(parsed.error) };
   const { id, ...patch } = parsed.data;
   if (!Object.keys(patch).length)
     return { ok: false, error: "Nothing to update" };

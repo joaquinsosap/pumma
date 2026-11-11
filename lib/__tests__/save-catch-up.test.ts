@@ -298,3 +298,119 @@ describe("the save watcher", () => {
     });
   });
 });
+
+describe("a page asked for with no connection", () => {
+  let asked: Array<{
+    answer: (res: Response) => void;
+    lose: (err: Error) => void;
+  }>;
+  let fetchSpy: ReturnType<typeof vi.fn>;
+  let serverIsBack: () => void;
+  let win: { fetch: typeof fetch } & Record<string, unknown>;
+
+  beforeEach(async () => {
+    vi.resetModules();
+    asked = [];
+    fetchSpy = vi.fn(
+      () =>
+        new Promise<Response>((answer, lose) => {
+          asked.push({ answer, lose });
+        }),
+    );
+    win = {
+      fetch: fetchSpy as unknown as typeof fetch,
+      history: { pushState: vi.fn(), replaceState: vi.fn() },
+      addEventListener: () => {},
+      location: { href: "http://x/tasks" },
+    };
+    vi.stubGlobal("window", win);
+    // The wait itself is lost-connection's, tested there: here it ends when the test says.
+    vi.doMock("@/lib/lost-connection", async (original) => ({
+      ...(await original<typeof import("@/lib/lost-connection")>()),
+      whenServerAnswers: () =>
+        new Promise<void>((resolve) => {
+          serverIsBack = resolve;
+        }),
+    }));
+    const mod = await import("@/lib/save-catch-up");
+    mod.watchSaves(() => {});
+  });
+
+  afterEach(() => {
+    vi.doUnmock("@/lib/lost-connection");
+    vi.unstubAllGlobals();
+  });
+
+  const page = (headers: Record<string, string> = {}) =>
+    win.fetch("/notes?_rsc=1", { headers: { RSC: "1", ...headers } });
+  const lost = () => new TypeError("Failed to fetch");
+
+  it("waits for the server and asks again, where Next would leave for the browser's error screen", async () => {
+    const out = page();
+    asked[0].lose(lost());
+    await tick();
+    expect(fetchSpy).toHaveBeenCalledOnce();
+
+    serverIsBack();
+    await tick();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    asked[1].answer(new Response("the page"));
+    await expect((await out).text()).resolves.toBe("the page");
+  });
+
+  it("keeps waiting when the server goes again before the page comes", async () => {
+    const out = page();
+    asked[0].lose(lost());
+    await tick();
+    serverIsBack();
+    await tick();
+    asked[1].lose(lost());
+    await tick();
+    serverIsBack();
+    await tick();
+    asked[2].answer(new Response("the page"));
+    expect((await out).ok).toBe(true);
+  });
+
+  it("waits out a deploy, when a proxy answers for the app", async () => {
+    const out = page();
+    asked[0].answer(new Response("Bad Gateway", { status: 502 }));
+    await tick();
+    serverIsBack();
+    await tick();
+    asked[1].answer(new Response("the page"));
+    expect((await out).status).toBe(200);
+  });
+
+  it("hands Next the app's own answer, whatever it says", async () => {
+    const out = page();
+    asked[0].answer(new Response("not found", { status: 404 }));
+    expect((await out).status).toBe(404);
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("lets a prefetch fail: it was a guess", async () => {
+    const out = page({ "Next-Router-Prefetch": "1" });
+    asked[0].lose(lost());
+    await expect(out).rejects.toThrow("Failed to fetch");
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("hands Next anything that isn't the connection", async () => {
+    const out = page();
+    asked[0].lose(new DOMException("The user aborted a request.", "AbortError"));
+    await expect(out).rejects.toThrow("aborted");
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+
+  it("fails a save a proxy answered for like one with no answer, and never sends it twice", async () => {
+    const out = win.fetch("/tasks", {
+      method: "POST",
+      headers: { [ACTION_HEADER]: "abc" },
+    });
+    asked[0].answer(new Response("Bad Gateway", { status: 502 }));
+    await expect(out).rejects.toThrow("Failed to fetch");
+    await tick();
+    expect(fetchSpy).toHaveBeenCalledOnce();
+  });
+});

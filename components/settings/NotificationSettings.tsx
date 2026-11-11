@@ -13,6 +13,7 @@ import {
 import { updateSettingsAction } from "@/lib/actions/settings";
 import { isIos, isStandalone } from "@/lib/pwa";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 type Prefs = {
   meetingsEnabled: boolean;
@@ -106,8 +107,9 @@ export function NotificationSettings({
 
   const loadDevices = () =>
     start(async () => {
-      const res = await listPushDevicesAction();
-      if (res.ok && res.data) setDevices(res.data.devices);
+      // Asked on arrival, not by a click: with no connection the list just stays as it is.
+      const res = await listPushDevicesAction().catch(() => null);
+      if (res?.ok && res.data) setDevices(res.data.devices);
     });
   useEffect(loadDevices, []);
 
@@ -115,15 +117,14 @@ export function NotificationSettings({
     const next = { ...local, ...patch };
     setLocal(next);
     start(async () => {
-      const res = await updateSettingsAction({ notifications: next });
-      if (!res.ok) {
-        toast.error(res.error);
-        setLocal(local);
-        return;
-      }
+      const res = await trySave(
+        () => updateSettingsAction({ notifications: next }),
+        () => setLocal(local),
+      );
+      if (!res) return;
       // Rebuild immediately. Waiting for the five-minute pass would mean a
       // toggle that appears to do nothing for five minutes.
-      await refreshNotificationsAction();
+      await refreshNotificationsAction().catch(() => {});
     });
   };
 
@@ -400,8 +401,8 @@ export function NotificationSettings({
                   aria-label={`Remove ${d.label}`}
                   onClick={() =>
                     start(async () => {
-                      await removePushDeviceAction(d.id);
-                      loadDevices();
+                      const res = await trySave(() => removePushDeviceAction(d.id));
+                      if (res) loadDevices();
                     })
                   }
                   className="shrink-0 text-faint2 transition-colors hover:text-tasks"

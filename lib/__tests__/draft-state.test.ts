@@ -207,11 +207,29 @@ describe("a save that was answered", () => {
 });
 
 describe("a name the server refuses", () => {
-  it("goes back to what the server holds, and isn't sent again", () => {
+  it("stays in the box to be fixed, and isn't sent again as it is", () => {
     const out = send(typed(draftFrom("finance"), "personal"))!;
     const state = nameRefused(out.state, out.value);
-    expect(state.shown).toBe("finance");
-    expect(state.unsaved).toBe(false);
+    expect(state.shown).toBe("personal");
+    expect(send(state)).toBeNull();
+    expect(send(committedRequired(state))).toBeNull();
+  });
+
+  it("goes once it is changed", () => {
+    const out = send(typed(draftFrom("Short"), "A title far too long"))!;
+    const fixed = typed(nameRefused(out.state, out.value), "A title");
+    expect(send(fixed)?.value).toBe("A title");
+  });
+
+  it("goes back to the old name on Escape", () => {
+    const out = send(typed(draftFrom("finance"), "personal"))!;
+    expect(reverted(nameRefused(out.state, out.value)).shown).toBe("finance");
+  });
+
+  it("gives way to a name that arrives from the server", () => {
+    const out = send(typed(draftFrom("finance"), "personal"))!;
+    const state = fromServer(nameRefused(out.state, out.value), "money");
+    expect(state.shown).toBe("money");
     expect(send(state)).toBeNull();
   });
 

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { isBuiltInTag, tagDeleteBlock } from "@/lib/tag-protection";
+import {
+  isBuiltInTag,
+  releaseOrphans,
+  tagDeleteBlock,
+} from "@/lib/tag-protection";
 
 describe("tagDeleteBlock", () => {
   it("refuses the two life tags, whatever their stored flag says", () => {
@@ -50,5 +54,34 @@ describe("what the auto-cleaner may sweep", () => {
 
   it("may sweep an ordinary unused tag", () => {
     expect(sweepable({ name: "leftover" })).toBe(true);
+  });
+});
+
+describe("a tag whose project is gone", () => {
+  const own = { name: "website", projectId: "p1", isProjectPrimary: true };
+
+  it("can be deleted, since nothing is left for it to protect", () => {
+    const [tag] = releaseOrphans([own], new Set());
+    expect(tagDeleteBlock(tag)).toBeNull();
+  });
+
+  it("stays protected while its project is there", () => {
+    const [tag] = releaseOrphans([own], new Set(["p1"]));
+    expect(tagDeleteBlock(tag)).toMatch(/delete the project/);
+  });
+
+  it("is released when it names no project at all", () => {
+    const [tag] = releaseOrphans(
+      [{ name: "website", projectId: null, isProjectPrimary: true }],
+      new Set(["p1"]),
+    );
+    expect(tagDeleteBlock(tag)).toBeNull();
+  });
+
+  it("leaves a life tag refused and an ordinary tag alone", () => {
+    const tags = [{ name: "work" }, { name: "idea", projectId: "gone" }];
+    const out = releaseOrphans(tags, new Set());
+    expect(tagDeleteBlock(out[0])).toMatch(/life tag/);
+    expect(out[1]).toBe(tags[1]);
   });
 });

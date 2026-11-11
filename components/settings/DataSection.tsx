@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { clearStarterContent, type StarterStatus } from "@/lib/actions/starter";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 export function DataSection({
   userEmail,
@@ -52,11 +53,8 @@ export function DataSection({
 
   const handleDelete = () => {
     startTransition(async () => {
-      const res = await deleteAccountAction({ confirmation: typed });
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() => deleteAccountAction({ confirmation: typed }));
+      if (!res) return;
       // Everything it could render is gone; get off the page before it tries.
       window.location.href = "/";
     });

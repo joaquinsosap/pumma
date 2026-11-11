@@ -48,7 +48,7 @@ export function CalendarLinkOffer({
   // more on the next first meeting, which is not worth blocking a dialog on.
   const markOffered = () =>
     start(async () => {
-      await updateSettingsAction({ calendarLinkOffered: true });
+      await updateSettingsAction({ calendarLinkOffered: true }).catch(() => {});
     });
 
   return (

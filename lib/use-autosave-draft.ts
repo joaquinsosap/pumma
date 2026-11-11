@@ -35,7 +35,8 @@ type Save = (
  * unsaved typing is in the box. The rules are in lib/draft-state.ts.
  *
  * `required` is for titles: a blank box is never sent and goes back to what is
- * stored when you leave it, and so does a name the server refuses.
+ * stored when you leave it. A name the server refuses stays in the box and is
+ * not sent again until it is changed.
  *
  * Returns [draft, setDraft, flush, cancel].
  */

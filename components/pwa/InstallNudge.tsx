@@ -47,7 +47,8 @@ export function InstallNudge({ offered }: { offered: boolean }) {
   const dismiss = () => {
     setShow(false);
     start(async () => {
-      await updateSettingsAction({ installOffered: true });
+      // Not worth a message: unanswered, the nudge is offered once more.
+      await updateSettingsAction({ installOffered: true }).catch(() => {});
     });
   };
 

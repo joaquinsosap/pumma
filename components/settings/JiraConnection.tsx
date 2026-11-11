@@ -11,7 +11,7 @@ import {
   saveJiraConnectionAction,
   testJiraConnectionAction,
 } from "@/lib/actions/jira";
-import { trySave } from "@/lib/try-save";
+import { tryAsk, trySave } from "@/lib/try-save";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -66,7 +66,8 @@ export function JiraConnection({ address, tokenLast4 }: Props) {
   const test = () => {
     setResult(null);
     startTransition(async () => {
-      const res = await testJiraConnectionAction();
+      const res = await tryAsk(() => testJiraConnectionAction());
+      if (!res) return;
       setResult(
         res.ok && res.data
           ? { ok: true, text: `Connected as ${res.data.name}.` }

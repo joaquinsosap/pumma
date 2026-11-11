@@ -75,11 +75,11 @@ export function reverted(state: DraftState): DraftState {
   return { ...state, shown: value, stored: value, unsaved: false };
 }
 
-/** The server said no to a name and would say it again, so the box goes back to what it holds. Anything typed since stays. */
+/** The server said no to a name and would say it again, so the name isn't sent again as it is. It stays in the box to be fixed: going back to the old one would throw away a long title for being a little too long. */
 export function nameRefused(state: DraftState, value: string): DraftState {
   const failed = sendFailed(state, value);
   return failed.stored === null && state.shown === value
-    ? reverted(failed)
+    ? { ...failed, unsaved: false }
     : failed;
 }
 

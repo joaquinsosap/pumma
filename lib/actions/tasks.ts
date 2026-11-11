@@ -42,13 +42,7 @@ import {
   projectAfterRetag,
   projectIdFromTags,
 } from "@/lib/project-tags";
-import {
-  entityId,
-  title as titleField,
-  noteBody,
-  shortText,
-  isoDate,
-} from "@/lib/validation";
+import { entityId, isoDate, noteBody, refusal, shortText, title as titleField } from "@/lib/validation";
 import { mergeTaskDueDate, mergeTaskDueTime } from "@/lib/date";
 import { TICKET_URL_MAX, cleanTicketUrl } from "@/lib/ticket-link";
 import { ticketUrlFromInput } from "@/lib/jira/connection-server";
@@ -898,7 +892,7 @@ export async function updateTaskDetail(
   input: z.infer<typeof updateTaskDetailSchema>,
 ): Promise<ActionResult<Task>> {
   const parsed = updateTaskDetailSchema.safeParse(input);
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  if (!parsed.success) return { ok: false, error: refusal(parsed.error) };
 
   const { id, dueDate, dueTime, ...patch } = parsed.data;
   if (

@@ -116,6 +116,8 @@ type Props = {
 };
 
 type Group = {
+  /** Stays the same while the label changes, so the list under it isn't rebuilt and a tick still saving stays ticked. */
+  id?: string;
   label: string;
   count: number;
   color: string;
@@ -376,6 +378,7 @@ export function TasksView({
                 : "All tasks"));
       return [
         {
+          id: "all",
           label,
           count: filtered.length,
           color: filteredProject ? paint(filteredProject.color) : TASK_ACCENT,
@@ -661,7 +664,7 @@ export function TasksView({
                     .filter((grp) => grp.items.length > 0 || dragEnabled)
                     .map((grp) => (
                       <TaskGroupCard
-                        key={grp.label}
+                        key={grp.id ?? grp.label}
                         group={grp}
                         tags={tags}
                         selectedId={taskId}

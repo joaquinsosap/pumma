@@ -149,11 +149,8 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
 
   const refresh = () => {
     start(async () => {
-      const res = await refreshCalendarFeedsAction();
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() => refreshCalendarFeedsAction());
+      if (!res?.ok) return;
       const { synced, failed } = res.data ?? { synced: 0, failed: 0 };
       toast[failed ? "warning" : "success"](
         failed ? `${synced} updated, ${failed} failed` : `${synced} updated`,
@@ -281,8 +278,9 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                       onClick={(e) => {
                         e.currentTarget.closest("details")?.removeAttribute("open");
                         start(async () => {
-                          const res = await setCalendarFeedColorAction(f.id, c.value);
-                          if (!res.ok) toast.error(res.error);
+                          await trySave(() =>
+                            setCalendarFeedColorAction(f.id, c.value),
+                          );
                         });
                       }}
                       className="h-6 w-6 rounded-md hover:scale-110"
@@ -308,11 +306,13 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                         return;
                       }
                       start(async () => {
-                        const res = await renameCalendarFeedAction(f.id, next);
-                        if (!res.ok) {
-                          toast.error(res.error);
-                          e.target.value = f.label;
-                        }
+                        // With no answer the name stays in the box, and goes again on leaving it.
+                        await trySave(
+                          () => renameCalendarFeedAction(f.id, next),
+                          (why) => {
+                            if (why === "refused") e.target.value = f.label;
+                          },
+                        );
                       });
                     }}
                     onKeyDown={(e) => {
@@ -334,7 +334,9 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                 type="button"
                 onClick={() =>
                   start(async () => {
-                    await setCalendarFeedEnabledAction(f.id, !f.enabled);
+                    await trySave(() =>
+                      setCalendarFeedEnabledAction(f.id, !f.enabled),
+                    );
                   })
                 }
                 className={cn(
@@ -351,9 +353,8 @@ export function CalendarFeeds({ feeds }: { feeds: CalendarFeed[] }) {
                 aria-label={`Stop reading ${f.label}`}
                 onClick={() =>
                   start(async () => {
-                    const res = await removeCalendarFeedAction(f.id);
-                    if (!res.ok) toast.error(res.error);
-                    else toast.success(`Stopped reading ${f.label}`);
+                    const res = await trySave(() => removeCalendarFeedAction(f.id));
+                    if (res) toast.success(`Stopped reading ${f.label}`);
                   })
                 }
                 className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-faint2 transition-colors hover:bg-tasks/10 hover:text-tasks"

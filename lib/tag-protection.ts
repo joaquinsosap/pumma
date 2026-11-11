@@ -39,3 +39,18 @@ export function tagDeleteBlock(tag: {
 export function isBuiltInTag(tag: { name: string }): boolean {
   return isLifeTag(tag.name);
 }
+
+/**
+ * A tag that says it is a project's own, when that project is gone, is an
+ * ordinary tag: nothing is left for it to protect. A delete that went around
+ * the project's own cleanup left some behind, and they could never be removed.
+ */
+export function releaseOrphans<
+  T extends { projectId?: string | null; isProjectPrimary?: boolean },
+>(tags: T[], projectIds: ReadonlySet<string>): T[] {
+  return tags.map((t) =>
+    t.isProjectPrimary && !(t.projectId && projectIds.has(t.projectId))
+      ? { ...t, isProjectPrimary: false }
+      : t,
+  );
+}

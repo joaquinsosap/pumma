@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Plus, Sparkles } from "@/components/icons";
 import { paint } from "@/lib/themes";
+import { trySave } from "@/lib/try-save";
 
 type TagItem = {
   id: string;
@@ -34,11 +35,8 @@ export function TagRailClient({ tags }: { tags: TagItem[] }) {
   const handleAdd = async () => {
     const trimmed = name.trim().toLowerCase();
     if (!trimmed) return;
-    const res = await addTagAction(trimmed);
-    if (!res.ok) {
-      toast.error(res.error);
-      return;
-    }
+    const res = await trySave(() => addTagAction(trimmed));
+    if (!res) return;
     toast.success(`Tag "${trimmed}" added`);
     setName("");
     setOpen(false);
@@ -49,11 +47,8 @@ export function TagRailClient({ tags }: { tags: TagItem[] }) {
     if (cleaning) return;
     setCleaning(true);
     try {
-      const res = await cleanUnusedTagsAction();
-      if (!res.ok) {
-        toast.error(res.error);
-        return;
-      }
+      const res = await trySave(() => cleanUnusedTagsAction());
+      if (!res?.ok) return;
       const removed = res.data?.removed ?? 0;
       if (!removed) {
         toast.success("No unused tags to clean");

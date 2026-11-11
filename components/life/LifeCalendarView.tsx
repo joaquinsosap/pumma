@@ -24,6 +24,7 @@ import { Topbar } from "@/components/shell/Topbar";
 import { Switch } from "@/components/ui/switch";
 import { updateSettingsAction } from "@/lib/actions/settings";
 import { cn } from "@/lib/utils";
+import { trySave } from "@/lib/try-save";
 
 type Props = {
   birthDate: string | null;
@@ -61,8 +62,11 @@ export function LifeCalendarView({
   const setFullViewPersisted = (next: boolean) => {
     setFullView(next);
     startTransition(async () => {
-      await updateSettingsAction({ lifeCalendarFullView: next });
-      router.refresh();
+      const res = await trySave(
+        () => updateSettingsAction({ lifeCalendarFullView: next }),
+        () => setFullView(!next),
+      );
+      if (res) router.refresh();
     });
   };
 

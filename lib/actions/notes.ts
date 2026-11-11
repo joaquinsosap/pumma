@@ -5,7 +5,7 @@ import { z } from "zod";
 import type { ActionResult } from "@/lib/types";
 import { requireUserId } from "@/lib/auth/session";
 import { userToday } from "@/lib/timezone-server";
-import { entityId, noteBody, title } from "@/lib/validation";
+import { entityId, noteBody, refusal, title } from "@/lib/validation";
 import { insertNote, updateNote, deleteNote, getNote } from "@/lib/db/notes";
 import { insertTask } from "@/lib/db/tasks";
 import { listTags, ensureLifeTags } from "@/lib/db/tags";
@@ -46,7 +46,7 @@ export async function updateNoteAction(
   value: string,
 ): Promise<ActionResult> {
   const parsed = updateNoteSchema.safeParse({ id, field, value });
-  if (!parsed.success) return { ok: false, error: "Invalid input" };
+  if (!parsed.success) return { ok: false, error: refusal(parsed.error) };
   const userId = await requireUserId();
   const { today: td } = await userToday();
   await updateNote(userId, parsed.data.id, {

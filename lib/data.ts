@@ -161,6 +161,8 @@ function shellFromCore(
     habits,
     goals,
     projects,
+    // Every project, whatever side of life is showing: what decides whether a tag still has one.
+    allProjectIds: core.allProjects.map((p) => p.id),
     tags: core.tags,
     notes,
     user: core.user,

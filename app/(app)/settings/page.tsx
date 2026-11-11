@@ -13,6 +13,7 @@ import { listMcpAudit } from "@/lib/db/mcp-audit";
 import { listConnectedClients } from "@/lib/mcp/connections";
 import { getSessionUserId } from "@/lib/auth/session";
 import { jiraBaseUrl } from "@/lib/jira/connection-server";
+import { releaseOrphans } from "@/lib/tag-protection";
 
 export default async function SettingsPage() {
   const lifeView = await resolveLifeView();
@@ -58,7 +59,7 @@ export default async function SettingsPage() {
       showSubscription={showSubscription}
       deletionBlock={deletionBlock}
       starter={starter}
-      tags={data.tags}
+      tags={releaseOrphans(data.tags, new Set(data.allProjectIds))}
       tagCounts={tagCounts}
       calendarFeeds={data.calendarFeeds}
       // Public half of the VAPID pair, read at runtime and handed over as a

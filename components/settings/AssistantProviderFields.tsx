@@ -22,7 +22,7 @@ import {
   providerDef,
   type ProviderId,
 } from "@/lib/ai/providers";
-import { trySave } from "@/lib/try-save";
+import { tryAsk, trySave } from "@/lib/try-save";
 
 const GROUPS: { label: string; group: "vendor" | "gateway" | "local" }[] = [
   { label: "Model vendors", group: "vendor" },
@@ -81,11 +81,8 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
         });
         if (!ok) return;
       }
-      const res = await setAiProviderAction(next);
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not switch provider");
-        return;
-      }
+      const res = await trySave(() => setAiProviderAction(next));
+      if (!res) return;
       setCustom(false);
       setDraftModel("");
       setDraftKey("");
@@ -96,11 +93,8 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
 
   const saveModel = (value: string) => {
     startTransition(async () => {
-      const res = await setAiModelAction(value);
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not save model");
-        return;
-      }
+      const res = await trySave(() => setAiModelAction(value));
+      if (!res) return;
       setTestResult(null);
       router.refresh();
     });
@@ -130,11 +124,8 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
         destructive: true,
       });
       if (!ok) return;
-      const res = await clearAiApiKeyAction();
-      if (!res.ok) {
-        toast.error(res.error ?? "Could not remove key");
-        return;
-      }
+      const res = await trySave(() => clearAiApiKeyAction());
+      if (!res) return;
       toast.success("API key removed");
       setDraftKey("");
       setEditingKey(false);
@@ -146,7 +137,8 @@ export function AssistantProviderFields({ provider, model, last4 }: Props) {
   const test = () => {
     setTestResult(null);
     startTransition(async () => {
-      const res = await testAiConnectionAction();
+      const res = await tryAsk(() => testAiConnectionAction());
+      if (!res) return;
       if (res.ok && res.data) {
         setTestResult({
           ok: true,
