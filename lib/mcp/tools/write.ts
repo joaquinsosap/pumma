@@ -132,7 +132,7 @@ export const createTask = defineTool({
   name: "create_task",
   title: "Create a task",
   description:
-    "Add a task. Returns its id. To put it in a project, pass a projectId from list_projects. " +
+    "Add a task. Returns its id. To put it in a project, pass a projectId from list_projects, or tag it with that project's own tag. " +
     "A new task lands on top of its column; move_task places it elsewhere.",
   opClass: "create",
   inputSchema: z.object({

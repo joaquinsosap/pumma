@@ -41,6 +41,7 @@ import {
   nextGoalOrder,
 } from "@/lib/db/goals";
 import {
+  getProject,
   listProjects,
   insertProject,
   updateProject,
@@ -68,6 +69,7 @@ import {
   setLifeTags,
 } from "@/lib/life-area-sync";
 import {
+  projectIdFromTags,
   projectTagSlug,
   uniqueTagName,
   withSingleProjectTag,
@@ -172,11 +174,16 @@ export async function applyCreate(
       return { id: h.id, title: h.name };
     }
     case "task": {
-      const projectId = resolve("project", val(f.projectId));
       const named = await ensureTags(userId, f.tagNames ?? []);
-      // The task carries its life tag, and — when filed — the project's
-      // flagship, so the tag-driven model holds for AI-created rows too.
+      // The task carries its life tag and, when filed, the project's flagship, so the tag-driven model holds for AI-created rows too.
       const fresh = await listTags(userId);
+      let projectId = resolve("project", val(f.projectId));
+      if (!projectId) {
+        // With no project named, a project's tag files the task there, as typing that tag in the bar does.
+        const tagged = projectIdFromTags(named, fresh);
+        // A tag can outlive its project, so only a project that still exists takes the task.
+        if (tagged && (await getProject(userId, tagged))) projectId = tagged;
+      }
       let tagIds = setLifeTags(named, area, fresh);
       if (projectId) {
         tagIds = withSingleProjectTag(tagIds, projectId, fresh);
