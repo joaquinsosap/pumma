@@ -19,7 +19,7 @@ export const CAPTURE_BAR_EVENT = "pumma:capture-bar";
  */
 const BAR_FROM = "(min-width: 64rem)";
 
-/** Whether the bar is on this screen. A project can only be made from it: the phone's sheet has no project yet. */
+/** Whether the bar is on this screen. */
 export function barOnScreen(): boolean {
   return window.matchMedia(BAR_FROM).matches;
 }
@@ -27,19 +27,16 @@ export function barOnScreen(): boolean {
 /**
  * Hand over to wherever capturing happens on this screen, set to `type`.
  * `project` asks for a project instead of a task: what is typed becomes its
- * name. False when nothing on this screen can do what was asked, so the
- * caller can fall back to a form of its own.
+ * name, in the bar and in the phone's sheet alike. Neither offers a project
+ * by itself, so this is the only way into one.
  */
 export function askCapture(
   type: OmniType,
   { project = false }: { project?: boolean } = {},
-): boolean {
-  const bar = barOnScreen();
-  if (project && !bar) return false;
+): void {
   window.dispatchEvent(
-    new CustomEvent(bar ? CAPTURE_BAR_EVENT : CAPTURE_SHEET_EVENT, {
+    new CustomEvent(barOnScreen() ? CAPTURE_BAR_EVENT : CAPTURE_SHEET_EVENT, {
       detail: { type: project ? "task" : type, project },
     }),
   );
-  return true;
 }

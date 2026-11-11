@@ -15,11 +15,21 @@ import type { EntityLifeArea, OmniType } from "@/lib/types";
 import type { Note, Project, Tag, Task } from "@/lib/schemas";
 import { addDays, iso } from "@/lib/date";
 import { parseOmni, tagBg } from "@/lib/parse";
-import { capturePlaceholder, getCaptureContext } from "@/lib/capture-context";
+import {
+  PROJECT_PLACEHOLDER,
+  capturePlaceholder,
+  getCaptureContext,
+} from "@/lib/capture-context";
+import { createProjectAction } from "@/lib/actions/projects";
+import { PROJECT_TITLE_MAX, projectCreatedLine } from "@/lib/project-created";
 import { createFromOmni, undoCreate } from "@/lib/actions/tasks";
 import { announceNewTask } from "@/lib/new-task-arrival";
 import { entityHref } from "@/lib/entity-href";
-import { hrefWithLife, viewShowing } from "@/lib/life-area";
+import {
+  hrefWithLife,
+  lifeAreaForCreate,
+  viewShowing,
+} from "@/lib/life-area";
 import { useLifeView } from "@/components/shell/LifeAreaToggle";
 import { useKeyboardInset } from "@/lib/use-keyboard-inset";
 import {
@@ -129,6 +139,8 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("capture");
   const [type, setType] = useState<OmniType>(defaultType);
+  // Set only by a New project button: the sheet does not offer a project by itself.
+  const [asProject, setAsProject] = useState(false);
   // How much of the screen the keyboard has taken, so the type bar can ride
   // on top of it. Zero when there is no on-screen keyboard.
   const keyboardInset = useKeyboardInset();
@@ -150,10 +162,11 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
     [pathname, searchParams, defaultType, projects],
   );
 
-  const openWith = (t: OmniType) => {
+  const openWith = (t: OmniType, project = false) => {
     // Tell the shell a capture is opening (the dock closes its More menu).
     window.dispatchEvent(new CustomEvent("pumma:capture-opening"));
     setType(t);
+    setAsProject(project);
     // Opening the sheet from the Assistant page means you want the assistant,
     // same as the desktop bar switching itself over there.
     setMode(pathname === "/assistant" ? "assistant" : "capture");
@@ -166,8 +179,10 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
 
   useEffect(() => {
     const onCapture = (e: Event) => {
-      const t = (e as CustomEvent).detail?.type as OmniType | undefined;
-      openWith(t ?? capture.type);
+      const detail = (e as CustomEvent).detail as
+        | { type?: OmniType; project?: boolean }
+        | undefined;
+      openWith(detail?.type ?? capture.type, Boolean(detail?.project));
     };
     const onKey = (e: KeyboardEvent) => {
       if (isTutorialActive()) return;
@@ -191,6 +206,12 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
   }, [open]);
 
   const isTask = type === "task";
+  // What is typed is the project's name, whole: no tags, dates or priority are read out of it.
+  const makingProject = mode === "capture" && isTask && asProject;
+  // A project belongs to the task side of capture: leaving it is changing your mind.
+  useEffect(() => {
+    if (!isTask || mode !== "capture") setAsProject(false);
+  }, [isTask, mode]);
   // What the "#" under the caret could become. Empty whenever the caret is
   // not inside one, which is what puts the type chips back on screen.
   const completions = useMemo(
@@ -265,7 +286,8 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
     ),
     tags,
   );
-  const lifeTint = LIFE_META[captureArea];
+  // A project takes the side of life the view is on; no tag is read from its name.
+  const lifeTint = LIFE_META[makingProject ? lifeAreaForCreate(life) : captureArea];
 
   const td = iso(new Date(), timeZone);
   const tomorrow = iso(addDays(1, new Date(), timeZone), timeZone);
@@ -289,6 +311,39 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
    */
   const quickAdd = () => submit({ keepOpen: true });
 
+  // The same save as the bar's New project, and the same words after it.
+  const submitProject = (title: string) => {
+    if (title.length > PROJECT_TITLE_MAX) {
+      toast.error(`A project's name can be ${PROJECT_TITLE_MAX} characters at most.`);
+      return;
+    }
+    const lifeArea = lifeAreaForCreate(life);
+    startTransition(async () => {
+      const res = await trySave(() => createProjectAction({ title, lifeArea }));
+      if (!res?.ok) return;
+      if (!res.data) {
+        toast.error("Could not create project");
+        return;
+      }
+      const openIt = hrefWithLife(
+        `/projects?project=${res.data.project.id}`,
+        viewShowing(lifeArea, life),
+      );
+      // On Projects the new board is what you came for. Anywhere else you stay, with a way over to it.
+      const here = pathname === "/projects";
+      toast.success(projectCreatedLine(res.data), {
+        cancel: here
+          ? undefined
+          : { label: "SEE →", onClick: () => router.push(openIt) },
+      });
+      setText("");
+      setCaret(0);
+      close();
+      if (here) router.push(openIt);
+      router.refresh();
+    });
+  };
+
   const submit = (options?: { keepOpen?: boolean }) => {
     const keepOpen = options?.keepOpen ?? false;
     const trimmed = text.trim();
@@ -299,6 +354,10 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
       // Land on /assistant first so the thinking state is what you see.
       router.push("/assistant");
       assistant.run(trimmed);
+      return;
+    }
+    if (makingProject) {
+      submitProject(trimmed);
       return;
     }
     startTransition(async () => {
@@ -379,7 +438,9 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
       ? busy
         ? "Thinking…"
         : "Send to assistant"
-      : `Add ${activeType.label.toLowerCase()}`;
+      : makingProject
+        ? "Create project"
+        : `Add ${activeType.label.toLowerCase()}`;
 
   return (
     <div className="lg:hidden">
@@ -418,7 +479,11 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
           {/* Header */}
           <div className="flex shrink-0 items-center justify-between px-4 pb-1">
             <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-faint">
-              {mode === "capture" ? "Capture" : "Assistant"}
+              {mode !== "capture"
+                ? "Assistant"
+                : makingProject
+                  ? "New project"
+                  : "Capture"}
             </span>
             <div className="flex items-center gap-2">
               {mode === "capture" && lifeTint && (
@@ -465,13 +530,15 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
               }}
               rows={2}
               placeholder={
-                mode === "capture"
-                  ? capturePlaceholder(capture, type)
-                  : "Ask about your data, or describe what to build…"
+                mode !== "capture"
+                  ? "Ask about your data, or describe what to build…"
+                  : makingProject
+                    ? PROJECT_PLACEHOLDER
+                    : capturePlaceholder(capture, type)
               }
               className="w-full resize-none rounded-2xl border-2 border-ink bg-surface px-4 py-3.5 text-[17px] font-medium leading-snug text-ink outline-none placeholder:text-faint"
             />
-            {mode === "capture" && parsed.dateLabel && (
+            {mode === "capture" && !makingProject && parsed.dateLabel && (
               <span className="mt-1.5 inline-block rounded-md bg-primary/10 px-2 py-0.5 font-mono text-[12px] text-primary">
                 📅 {parsed.dateLabel}
               </span>
@@ -555,21 +622,28 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                 {/* Boxed and first, before the suggestions, because it is a
                     key rather than a choice — the one thing here that types
                     a character instead of picking a value. */}
-                <button
-                  type="button"
-                  onClick={insertHash}
-                  aria-label="Type a hash"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface2 font-mono text-[17px] font-bold leading-none text-ink"
-                >
-                  #
-                </button>
+                {!makingProject && (
+                  <button
+                    type="button"
+                    onClick={insertHash}
+                    aria-label="Type a hash"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-border bg-surface2 font-mono text-[17px] font-bold leading-none text-ink"
+                  >
+                    #
+                  </button>
+                )}
                 <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto [scrollbar-width:none]">
-                  {activeFragment && (
+                  {makingProject && (
+                    <span className="shrink-0 px-1 font-mono text-[10px] uppercase tracking-widest text-faint2">
+                      the name of the project
+                    </span>
+                  )}
+                  {!makingProject && activeFragment && (
                     <span className="shrink-0 font-mono text-[10px] uppercase tracking-widest text-faint2">
                       #{activeFragment}
                     </span>
                   )}
-                  {chips.map((s) => (
+                  {(makingProject ? [] : chips).map((s) => (
                     <button
                       key={`${s.kind}:${s.word}`}
                       type="button"
@@ -589,7 +663,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                       {s.kind === "new" ? `+ #${s.word}` : `#${s.word}`}
                     </button>
                   ))}
-                  {chips.length === 0 && (
+                  {!makingProject && chips.length === 0 && (
                     <span className="shrink-0 px-1 font-mono text-[10px] uppercase tracking-widest text-faint2">
                       type # for tags
                     </span>
@@ -602,7 +676,11 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                   type="button"
                   onClick={quickAdd}
                   disabled={pending || !text.trim()}
-                  aria-label={`Add ${activeType.label.toLowerCase()} and keep writing`}
+                  aria-label={
+                    makingProject
+                      ? "Create project"
+                      : `Add ${activeType.label.toLowerCase()} and keep writing`
+                  }
                   className="flex shrink-0 items-center gap-1 rounded-full bg-habits px-3.5 py-1.5 text-[13px] font-bold text-white transition-opacity disabled:opacity-35"
                 >
                   <Plus className="h-3.5 w-3.5" strokeWidth={3} />
@@ -628,14 +706,47 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                 <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
                   Save as
                 </p>
+                {/* Only while a project is being named, and only after a New
+                    project button asked for one. Tapping it, or a kind below,
+                    is how to change your mind. */}
+                {makingProject && (
+                  <button
+                    type="button"
+                    aria-pressed
+                    onClick={() => setAsProject(false)}
+                    title="Back to adding a task"
+                    // No border colour class: the theme redraws a button that names one. The edge is drawn inline.
+                    className="mb-2 flex w-full items-center justify-between rounded-2xl border-2 px-4 py-3 text-[13px] font-bold text-ink shadow-[2px_2px_0_var(--shadow)]"
+                    style={{
+                      borderColor: "var(--projects)",
+                      background:
+                        "color-mix(in oklab, var(--projects) 14%, transparent)",
+                    }}
+                  >
+                    <span className="flex items-center gap-2">
+                      <span
+                        aria-hidden
+                        className="h-2.5 w-2.5 rounded-[3px]"
+                        style={{ background: "var(--projects)" }}
+                      />
+                      New project
+                    </span>
+                    <span className="font-mono text-[11px] font-medium text-muted">
+                      what you type is its name
+                    </span>
+                  </button>
+                )}
                 <div className="mb-5 grid grid-cols-4 gap-2">
                   {TYPES.map((t) => {
-                    const active = type === t.type;
+                    const active = type === t.type && !makingProject;
                     return (
                       <button
                         key={t.type}
                         type="button"
-                        onClick={() => setType(t.type)}
+                        onClick={() => {
+                          setAsProject(false);
+                          setType(t.type);
+                        }}
                         className={cn(
                           "flex flex-col items-center gap-1.5 rounded-2xl border py-3 text-[13px] transition-all",
                           active
@@ -668,7 +779,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                   })}
                 </div>
 
-                {isTask && !parsed.dateLabel && (
+                {isTask && !makingProject && !parsed.dateLabel && (
                   <>
                     <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
                       Due
@@ -716,7 +827,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                   </>
                 )}
 
-                {isTask && !parsed.hasPriorityToken && (
+                {isTask && !makingProject && !parsed.hasPriorityToken && (
                   <>
                     <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
                       Priority
@@ -765,7 +876,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                   </>
                 )}
 
-                {tags.length > 0 && (
+                {tags.length > 0 && !makingProject && (
                   <>
                     <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-widest text-faint2">
                       Tags
@@ -828,7 +939,7 @@ export function MobileCapture({ tags, projects, defaultType = "task" }: Props) {
                 mode === "assistant" ? "bg-primary" : "bg-ink",
               )}
             >
-              {pending ? "Adding…" : submitLabel}
+              {pending ? (makingProject ? "Creating…" : "Adding…") : submitLabel}
             </button>
           </div>
         </div>

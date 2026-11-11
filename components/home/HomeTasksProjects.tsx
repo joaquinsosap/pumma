@@ -47,8 +47,8 @@ export function HomeTasksProjects({
               {projects.length} active
             </span>
           </WidgetHeaderLink>
-          {/* Wide screens only: a project is made from the bar, and a phone has no bar. */}
-          <CaptureButton type="project" compact className="max-lg:hidden" />
+          {/* The bar makes the project on a wide screen, the capture sheet on a phone. */}
+          <CaptureButton type="project" compact />
         </WidgetHeader>
         <div className="glow-room min-h-0 flex-1 overflow-x-hidden pb-3.5 max-xl:overflow-y-visible xl:overflow-y-auto">
           <div className="flex flex-col gap-3">
