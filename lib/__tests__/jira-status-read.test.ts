@@ -128,19 +128,24 @@ describe("when Jira does not answer as hoped", () => {
     expect(jira.paths).toHaveLength(1);
   });
 
-  it("still answers for the other groups when one search errors", async () => {
-    jira.answers = [error, found(issue("PROJ-51", "Open", "new"))];
-    const keys = Array.from({ length: 60 }, (_, i) => `PROJ-${i + 1}`);
+  it("stops asking at the first search Jira refuses, and keeps what was answered", async () => {
+    jira.answers = [found(issue("PROJ-1", "Open", "new")), error];
+    const keys = Array.from({ length: 130 }, (_, i) => `PROJ-${i + 1}`);
 
     const res = await readTicketStatuses(CONN, keys);
 
-    expect(res.ok && [...res.data.statuses.keys()]).toEqual(["PROJ-51"]);
+    expect(jira.paths).toHaveLength(2);
+    if (!res.ok) throw new Error("expected an answer");
+    expect([...res.data.statuses.keys()]).toEqual(["PROJ-1"]);
+    expect(res.data.capped).toBe(true);
   });
 
-  it("fails when every search errors", async () => {
+  it("fails when the first search errors, without asking again", async () => {
     jira.answers = [error];
+    const keys = Array.from({ length: 60 }, (_, i) => `PROJ-${i + 1}`);
 
-    expect(await readTicketStatuses(CONN, ["PROJ-1"])).toEqual(error);
+    expect(await readTicketStatuses(CONN, keys)).toEqual(error);
+    expect(jira.paths).toHaveLength(1);
   });
 
   it("fails on an answer that is not a search result", async () => {

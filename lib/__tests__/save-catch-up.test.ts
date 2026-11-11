@@ -306,11 +306,14 @@ describe("a page asked for with no connection", () => {
   }>;
   let fetchSpy: ReturnType<typeof vi.fn>;
   let serverIsBack: () => void;
+  /** What the health check says right now. */
+  let up: boolean;
   let win: { fetch: typeof fetch } & Record<string, unknown>;
 
   beforeEach(async () => {
     vi.resetModules();
     asked = [];
+    up = false;
     fetchSpy = vi.fn(
       () =>
         new Promise<Response>((answer, lose) => {
@@ -327,6 +330,7 @@ describe("a page asked for with no connection", () => {
     // The wait itself is lost-connection's, tested there: here it ends when the test says.
     vi.doMock("@/lib/lost-connection", async (original) => ({
       ...(await original<typeof import("@/lib/lost-connection")>()),
+      serverAnswers: async () => up,
       whenServerAnswers: () =>
         new Promise<void>((resolve) => {
           serverIsBack = resolve;
@@ -380,6 +384,50 @@ describe("a page asked for with no connection", () => {
     await tick();
     asked[1].answer(new Response("the page"));
     expect((await out).status).toBe(200);
+  });
+
+  it("asks once more after a blip, when the server answers straight away", async () => {
+    up = true;
+    const out = page();
+    asked[0].lose(lost());
+    await tick();
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    asked[1].answer(new Response("the page"));
+    await expect((await out).text()).resolves.toBe("the page");
+  });
+
+  it("hands Next a page that fails while the server answers: a redirect to another site fails the same way", async () => {
+    up = true;
+    const out = page();
+    asked[0].lose(lost());
+    await tick();
+    asked[1].lose(lost());
+    await expect(out).rejects.toThrow("Failed to fetch");
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("hands Next a proxy's answer once the server itself answers and the page still does not", async () => {
+    up = true;
+    const out = page();
+    asked[0].answer(new Response("Bad Gateway", { status: 502 }));
+    await tick();
+    asked[1].answer(new Response("Bad Gateway", { status: 502 }));
+    expect((await out).status).toBe(502);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("holds again after an outage ends and the page is lost once more", async () => {
+    const out = page();
+    asked[0].lose(lost());
+    await tick();
+    up = true;
+    serverIsBack();
+    await tick();
+    asked[1].lose(lost());
+    await tick();
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
+    asked[2].answer(new Response("the page"));
+    expect((await out).ok).toBe(true);
   });
 
   it("hands Next the app's own answer, whatever it says", async () => {

@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   nextWait,
   planStatusSync,
+  seenLine,
+  stepSeenFor,
   type LinkedTask,
   type TicketStatus,
 } from "@/lib/jira/status-sync";
@@ -135,6 +137,25 @@ describe("another way of sorting steps into columns", () => {
       (status) => (status.name === "Blocked" ? "todo" : status.stage),
     );
     expect(change).toMatchObject({ seen: "Blocked", moveTo: null });
+  });
+});
+
+describe("what is kept on a task after a read", () => {
+  it("gives the step back for the ticket it was read from", () => {
+    expect(stepSeenFor("PROJ-12", seenLine("PROJ-12", "In Review"))).toBe("In Review");
+  });
+
+  it("is nothing for a task linked to another ticket since, so that one starts as never read", () => {
+    expect(stepSeenFor("PROJ-2", seenLine("PROJ-1", "Done"))).toBeUndefined();
+  });
+
+  it("does not take PROJ-1's step for PROJ-12's", () => {
+    expect(stepSeenFor("PROJ-1", seenLine("PROJ-12", "Done"))).toBeUndefined();
+  });
+
+  it("is nothing when nothing was kept", () => {
+    expect(stepSeenFor("PROJ-1", null)).toBeUndefined();
+    expect(stepSeenFor("PROJ-1", undefined)).toBeUndefined();
   });
 });
 

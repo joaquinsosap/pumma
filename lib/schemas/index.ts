@@ -279,12 +279,13 @@ export const taskSchema = z.object({
    */
   ticketUrl: z.string().nullable().default(null),
   /**
-   * The ticket's step in its tracker as last read, in the tracker's own words:
-   * "In Review". A later read is compared with it, to tell a ticket that moved
-   * there from a task that was moved here. Content, so encrypted at rest.
-   * Absent until the ticket is first read.
+   * The ticket and its step in its tracker as last read, in the tracker's own
+   * words: "PROJ-12 In Review". A later read is compared with it, to tell a
+   * ticket that moved there from a task that was moved here. The number is
+   * part of it, so a task linked to another ticket starts over. Content, so
+   * encrypted at rest. Absent until the ticket is first read.
    */
-  ticketStatus: z.string().nullable().optional(),
+  ticketSeen: z.string().nullable().optional(),
 });
 
 export const habitSchema = z.preprocess(

@@ -6,6 +6,7 @@ import {
   isProxyAnswer,
   noAnswer,
   serverAnswered,
+  serverAnswers,
   whenServerAnswers,
 } from "@/lib/lost-connection";
 
@@ -66,19 +67,40 @@ function watchedSave(send: () => Promise<Response>): Promise<Response> {
   );
 }
 
-/** A page asked for with no connection, or during a deploy, comes when the server is back. Asking again is safe: a page changes nothing. */
+/**
+ * A page asked for with no connection, or during a deploy, comes when the
+ * server is back. Asking again is safe: a page changes nothing.
+ *
+ * Only while the server really is away. A redirect to another site fails the
+ * same way as a lost connection, so when the server answers and the page
+ * still does not, it is asked once more (a blip) and then handed to Next.
+ */
 async function watchedPage(ask: () => Promise<Response>): Promise<Response> {
+  let failedWhileUp = false;
   for (;;) {
+    let proxy: Response | null = null;
+    let lost: unknown = null;
     try {
       const res = await ask();
       if (!isProxyAnswer(res.status)) {
         if (res.ok) serverAnswered();
         return res;
       }
+      proxy = res;
     } catch (err) {
       // An abort, or anything that isn't the connection, is Next's to handle.
       if (!isLostConnection(err)) throw err;
+      lost = err;
     }
+    if (await serverAnswers()) {
+      if (failedWhileUp) {
+        if (proxy) return proxy;
+        throw lost;
+      }
+      failedWhileUp = true;
+      continue;
+    }
+    failedWhileUp = false;
     await whenServerAnswers();
   }
 }

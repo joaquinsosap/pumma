@@ -9,6 +9,8 @@ import { readTicketStatuses } from "@/lib/jira/status-read";
 import {
   nextWait,
   planStatusSync,
+  seenLine,
+  stepSeenFor,
   type LinkedTask,
 } from "@/lib/jira/status-sync";
 import { userToday } from "@/lib/timezone-server";
@@ -51,6 +53,18 @@ export type JiraSync =
 // them, which costs one early read per project.
 const WAITS = new Map<string, { readAt: number; nextAt: number }>();
 
+/** Room for one more wait: the ones that have run out go first, then the oldest. Never the lot, or one account could reset everybody's. */
+function makeRoom(now: number): void {
+  if (WAITS.size < WAITS_KEPT) return;
+  for (const [key, wait] of WAITS) {
+    if (wait.nextAt <= now) WAITS.delete(key);
+  }
+  for (const key of WAITS.keys()) {
+    if (WAITS.size < WAITS_KEPT) break;
+    WAITS.delete(key);
+  }
+}
+
 /** Forget every wait. For tests. */
 export function forgetJiraWaits(): void {
   WAITS.clear();
@@ -75,7 +89,7 @@ export async function syncProjectStatuses(
   }
   // Held before anything is awaited, so a second window asking at the same
   // moment waits instead of reading too. Let go again if no read is made.
-  if (WAITS.size >= WAITS_KEPT) WAITS.clear();
+  makeRoom(now);
   WAITS.set(waitKey, { readAt: now, nextAt: now + BY_HAND_MS });
   const letGo = () => {
     if (wait) WAITS.set(waitKey, wait);
@@ -88,12 +102,13 @@ export async function syncProjectStatuses(
     return { state: "no-connection" };
   }
   if (conn.state === "unreadable") {
-    const nextAt = now + FAILED_MS;
-    WAITS.set(waitKey, { readAt: now, nextAt });
-    return { state: "failed", error: JIRA_UNREADABLE, nextAt };
+    // Nothing was asked of Jira, so nothing is kept: only a real read holds a place among the waits.
+    letGo();
+    return { state: "failed", error: JIRA_UNREADABLE, nextAt: now + FAILED_MS };
   }
 
   const linked: LinkedTask[] = [];
+  const stampOf = new Map<string, string | null>();
   for (const task of await listTasks(userId)) {
     if (task.projectId !== projectId) continue;
     const key = jiraKeyOn(conn.baseUrl, task.ticketUrl);
@@ -102,8 +117,9 @@ export async function syncProjectStatuses(
       id: task.id,
       key,
       status: task.status,
-      ticketStatus: task.ticketStatus,
+      ticketStatus: stepSeenFor(key, task.ticketSeen),
     });
+    stampOf.set(task.id, task.updatedAt);
   }
   if (linked.length === 0) {
     letGo();
@@ -125,7 +141,7 @@ export async function syncProjectStatuses(
   let moved = 0;
   for (const change of changes) {
     const updated = await updateTask(userId, change.id, {
-      ticketStatus: change.seen,
+      ticketSeen: seenLine(change.key, change.seen),
       ...(change.moveTo
         ? {
             status: change.moveTo,
@@ -135,7 +151,8 @@ export async function syncProjectStatuses(
                 ? finishedDay(change.finished, today, timeZone)
                 : null,
           }
-        : {}),
+        : // Remembering what Jira said is not an edit: the task keeps its stamp, so a read does not reshuffle "last edited".
+          { updatedAt: stampOf.get(change.id) ?? null }),
     });
     if (updated && change.moveTo) moved += 1;
   }

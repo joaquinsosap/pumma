@@ -122,7 +122,7 @@ describe("every collection in the spec", () => {
       title: "a",
       description: "b",
       ticketUrl: "https://jira.example.com/browse/ABC-1",
-      ticketStatus: "In Review",
+      ticketSeen: "ABC-1 In Review",
       subtasks: [{ title: "c" }],
     },
     notes: { title: "a", body: "b" },

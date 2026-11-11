@@ -395,7 +395,8 @@ export function TaskList({
       span: Math.abs(bMid - aMid),
       direction: to < from ? "up" : "down",
     });
-  }, [shiftHeld, hoverId, rangeAnchor, order]);
+  // `tasks` too: a retitled row changes height without changing the order.
+  }, [shiftHeld, hoverId, rangeAnchor, order, tasks]);
 
   const showRange = Boolean(selection) && shiftHeld && rangeSpan !== null;
 

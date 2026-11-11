@@ -23,8 +23,8 @@ export const SPECS = {
   tasks: {
     // ticketUrl: a link into somebody's work tracker names their employer's
     // system and the ticket, which is content as much as the title is.
-    // ticketStatus: the tracker's own name for a step, which is that company's wording.
-    fields: ["title", "description", "ticketUrl", "ticketStatus"],
+    // ticketSeen: the ticket's number and the tracker's own name for its step, that company's wording.
+    fields: ["title", "description", "ticketUrl", "ticketSeen"],
     arrays: [{ path: "subtasks", fields: ["title"] }],
   },
   notes: { fields: ["title", "body"] },

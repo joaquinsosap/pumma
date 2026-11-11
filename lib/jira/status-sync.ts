@@ -25,6 +25,20 @@ export type LinkedTask = {
   ticketStatus?: string | null;
 };
 
+/** What is kept on a task after a read: the ticket and its step, "PROJ-12 In Review". */
+export function seenLine(key: string, status: string): string {
+  return `${key} ${status}`;
+}
+
+/** The step last read for this ticket. Nothing when no read was kept, or it was of another ticket: a task linked anew starts as never read. */
+export function stepSeenFor(
+  key: string,
+  line: string | null | undefined,
+): string | undefined {
+  const mine = `${key} `;
+  return line?.startsWith(mine) ? line.slice(mine.length) : undefined;
+}
+
 /** The column a step belongs in. Null when nothing says, and then the task stays put. */
 export type ColumnOf = (status: TicketStatus) => TaskColumn | null;
 

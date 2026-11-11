@@ -56,7 +56,12 @@ async function project(title = "Platform") {
 async function linked(
   projectId: string | null,
   key: string | null,
-  over: { status?: "todo" | "doing" | "done"; ticketStatus?: string } = {},
+  over: {
+    status?: "todo" | "doing" | "done";
+    ticketStatus?: string;
+    /** What is stored, when it was read from another ticket than the one linked now. */
+    seenOf?: string;
+  } = {},
 ) {
   return insertTask({
     userId,
@@ -72,7 +77,7 @@ async function linked(
     createdAt: "2026-11-01",
     completedAt: over.status === "done" ? "2026-11-02" : null,
     ticketUrl: key ? `${BASE}/browse/${key}` : null,
-    ...(over.ticketStatus ? { ticketStatus: over.ticketStatus } : {}),
+    ...(over.ticketStatus ? { ticketSeen: over.seenOf ?? `${key} ${over.ticketStatus}` } : {}),
   });
 }
 
@@ -98,7 +103,7 @@ describe("reading a project's tickets", () => {
     expect(res).toMatchObject({ state: "ok", read: 1, moved: 1 });
     expect(stored(task.id)).toMatchObject({
       status: "doing",
-      ticketStatus: "In Progress",
+      ticketSeen: "PROJ-1 In Progress",
       completedAt: null,
     });
   });
@@ -142,7 +147,46 @@ describe("reading a project's tickets", () => {
     const res = await syncProjectStatuses(userId, p.id, { now: T0 });
 
     expect(res).toMatchObject({ moved: 1 });
-    expect(stored(task.id)).toMatchObject({ status: "done", ticketStatus: "Closed" });
+    expect(stored(task.id)).toMatchObject({ status: "done", ticketSeen: "PROJ-1 Closed" });
+  });
+
+  it("starts over for a task linked to another ticket since the last read", async () => {
+    const p = await project();
+    const task = await linked(p.id, "PROJ-2", {
+      ticketStatus: "Closed",
+      seenOf: "PROJ-1 Closed",
+    });
+    says("PROJ-2", { name: "Closed", stage: "done" });
+
+    const res = await syncProjectStatuses(userId, p.id, { now: T0 });
+
+    expect(res).toMatchObject({ moved: 1 });
+    expect(stored(task.id)).toMatchObject({ status: "done", ticketSeen: "PROJ-2 Closed" });
+  });
+
+  it("does not count remembering what Jira said as an edit", async () => {
+    const p = await project();
+    const task = await linked(p.id, "PROJ-1");
+    getStore().tasks.find((t) => t._id === task.id)!.updatedAt = "2026-10-01T08:00:00.000Z";
+    says("PROJ-1", { name: "Open", stage: "todo" });
+
+    await syncProjectStatuses(userId, p.id, { now: T0 });
+
+    expect(stored(task.id)).toMatchObject({
+      ticketSeen: "PROJ-1 Open",
+      updatedAt: "2026-10-01T08:00:00.000Z",
+    });
+  });
+
+  it("stamps a task it moves, since that is a change", async () => {
+    const p = await project();
+    const task = await linked(p.id, "PROJ-1", { ticketStatus: "Open" });
+    getStore().tasks.find((t) => t._id === task.id)!.updatedAt = "2026-10-01T08:00:00.000Z";
+    says("PROJ-1", { name: "In Progress", stage: "doing" });
+
+    await syncProjectStatuses(userId, p.id, { now: T0 });
+
+    expect(stored(task.id).updatedAt).not.toBe("2026-10-01T08:00:00.000Z");
   });
 
   it("asks only about this project's tickets on the connected Jira", async () => {

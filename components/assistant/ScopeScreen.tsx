@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Check } from "@/components/icons";
 import type { Tag } from "@/lib/schemas";
 import {
@@ -20,7 +21,6 @@ import {
 import { resolveScopeAction } from "@/lib/actions/scope";
 import { cn } from "@/lib/utils";
 import { paint } from "@/lib/themes";
-import { trySave } from "@/lib/try-save";
 
 const ENTITY_WORD: Record<ScopeEntity, string> = {
   task: "tasks",
@@ -123,8 +123,14 @@ export function ScopeScreen({
     }
     let live = true;
     start(async () => {
-      const res = await trySave(() => resolveScopeAction(scope));
-      if (!live || !res?.ok || !res.data) return;
+      // A read, not a save: with no answer the column stays as it was and nothing is said.
+      const res = await resolveScopeAction(scope).catch(() => null);
+      if (!live || !res) return;
+      if (!res.ok) {
+        toast.error(res.error);
+        return;
+      }
+      if (!res.data) return;
       setResolved(res.data);
     });
     return () => {

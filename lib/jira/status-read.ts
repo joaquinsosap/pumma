@@ -15,7 +15,7 @@ const MAX_SEARCHES = 4;
 
 export type StatusRead = {
   statuses: Map<string, TicketStatus>;
-  /** There were more tickets than one read takes. */
+  /** Not every ticket was read: there were more than one read takes, or Jira stopped answering part way. */
   capped: boolean;
 };
 
@@ -32,8 +32,8 @@ export async function readTicketStatuses(
   for (let i = 0; i < numbers.length; i += PAGE) {
     groups.push(numbers.slice(i, i + PAGE));
   }
-  let refused: Extract<JiraAnswer<never>, { ok: false }> | null = null;
   let answered = 0;
+  let cutShort = false;
   for (const group of groups.slice(0, MAX_SEARCHES)) {
     const jql = `key in (${group.join(", ")})`;
     const res = await jiraGet(
@@ -43,10 +43,10 @@ export async function readTicketStatuses(
       `/rest/api/2/search?jql=${encodeURIComponent(jql)}&fields=status,resolutiondate&maxResults=${PAGE}&validateQuery=false`,
     );
     if (!res.ok) {
-      // A Jira that refuses one group over one ticket still answers for the others. Anything else stops here.
-      if (res.why !== "error") return res;
-      refused = res;
-      continue;
+      // A Jira that says no is not asked again in the same read: it may be saying "slow down". What was answered so far still counts.
+      if (answered === 0) return res;
+      cutShort = true;
+      break;
     }
     const issues = (res.data as { issues?: unknown } | null)?.issues;
     if (!Array.isArray(issues)) {
@@ -64,6 +64,8 @@ export async function readTicketStatuses(
       });
     }
   }
-  if (refused && answered === 0) return refused;
-  return { ok: true, data: { statuses, capped: groups.length > MAX_SEARCHES } };
+  return {
+    ok: true,
+    data: { statuses, capped: cutShort || groups.length > MAX_SEARCHES },
+  };
 }
