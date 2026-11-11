@@ -385,6 +385,32 @@ body {
     omniHaloScale 3.2s ease-in-out infinite;
 }
 
+/* Hold Tab: the colour and the wave are drawn into this layer by OmniHold.tsx, over the halo and under the text. */
+.omni-hold {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.omni-hold-fill,
+.omni-hold-wave {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+}
+
+.omni-hold-fill {
+  right: 0;
+}
+
+.omni-hold-wave {
+  width: 45%;
+}
+
 @keyframes omniScrollHintRight {
   0%,
   100% {

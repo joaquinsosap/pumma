@@ -61,6 +61,8 @@ import { isTutorialActive } from "@/lib/tutorial-lock";
 import { trySave } from "@/lib/try-save";
 import { useTimezone } from "@/components/shell/TimeZoneProvider";
 import { EnterKey, Pencil, Sparkles } from "@/components/icons";
+import { useOmniHold } from "@/components/shell/OmniHold";
+import { HOLD_AGAIN_MS, HOLD_MS } from "@/lib/omni-hold";
 
 type OmniMode = "capture" | "assistant";
 
@@ -114,6 +116,12 @@ const OMNI_TAB_CYCLE: { mode: OmniMode; type?: OmniType }[] = [
 
 function omniAccent(type: OmniType): string {
   return type === "note" ? "var(--ink)" : TYPE_META[type].color;
+}
+
+/** The bar's colour for where it stands: the assistant's, a project's, or the capture type's. */
+function barAccent(mode: OmniMode, type: OmniType, project = false): string {
+  if (mode === "assistant") return "var(--primary)";
+  return project ? "var(--projects)" : omniAccent(type);
 }
 
 // Where a capture will land — same palette as the sidebar Personal/Work toggle.
@@ -204,6 +212,14 @@ export function OmniBox({
   const taggable = mode === "capture" && !makingProject;
   /** The task-only parts: a date, a priority, the title dimming. A project has none of them. */
   const taskFields = isTask && !makingProject;
+
+  // Hold Tab to switch. Where the bar stands is a ref, so a chained switch starts from it before React redraws.
+  const hold = useOmniHold();
+  const standRef = useRef({ mode, type, project: makingProject });
+  useEffect(() => {
+    standRef.current = { mode, type, project: makingProject };
+  }, [mode, type, makingProject]);
+
   const agendaDay =
     pathname === "/" ? (searchParams.get("day")?.slice(0, 10) ?? null) : null;
 
@@ -383,7 +399,12 @@ export function OmniBox({
     const onKeyDown = (e: KeyboardEvent) => {
       // The tour owns the keyboard while it's up (see lib/tutorial-lock).
       if (isTutorialActive()) return;
-      if (e.key !== "Tab" || e.defaultPrevented || e.isComposing) return;
+      if (e.key !== "Tab") {
+        // Any other key ends a hold: with Cmd down the app switcher eats Tab's key-up.
+        if (e.key !== "Shift" && hold.down()) hold.release();
+        return;
+      }
+      if (e.defaultPrevented || e.isComposing) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
 
       const active = document.activeElement;
@@ -397,6 +418,16 @@ export function OmniBox({
         active.closest('[role="dialog"], [data-radix-popper-content-wrapper]')
       ) {
         return;
+      }
+
+      if (hold.down()) {
+        // Still down from the press that started a switch: the colour is already crossing.
+        if (e.repeat) {
+          e.preventDefault();
+          return;
+        }
+        // A fresh press while the bar thinks the key is down: its key-up was lost. Start over.
+        hold.release();
       }
 
       // Same text means React skips the render, so select at once; otherwise after the write.
@@ -501,18 +532,51 @@ export function OmniBox({
       }
 
       e.preventDefault();
-      const next = cycleOmniTab(mode, type, e.shiftKey ? -1 : 1);
-      wantFocusRef.current = true;
-      setMode(next.mode);
-      if (next.mode === "capture") setType(next.type);
-      // Covers the case where the cycle doesn't remount the input: the effect
-      // below only runs when mode/type actually change the rendered branch.
+      // A key held since it finished a word is not asking for a switch.
+      if (e.repeat) return;
+
+      // Switching is a hold: the next kind's colour crosses the bar and it switches when the colour gets there.
+      const direction = e.shiftKey ? -1 : 1;
+      const charge = (ms: number) => {
+        const here = standRef.current;
+        const next = cycleOmniTab(here.mode, here.type, direction);
+        hold.begin({
+          from: barAccent(here.mode, here.type, here.project),
+          to: barAccent(next.mode, next.type),
+          backwards: direction === -1,
+          ms,
+          onFull: () => {
+            standRef.current = { ...next, project: false };
+            wantFocusRef.current = true;
+            setMode(next.mode);
+            if (next.mode === "capture") setType(next.type);
+            // Covers the case where the cycle doesn't remount the input: the effect
+            // below only runs when mode/type actually change the rendered branch.
+            inputRef.current?.focus();
+            // Still down: keep going to the one after, a little quicker.
+            if (hold.down()) charge(HOLD_AGAIN_MS);
+          },
+        });
+      };
+      // The caret goes to the bar at once, so the colour crosses a bar that is awake.
       inputRef.current?.focus();
+      charge(HOLD_MS);
+    };
+
+    // Letting go, or leaving the window with the key down, calls the switch off.
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Tab") hold.release();
     };
 
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [mode, type, tags, setText, makingProject]);
+    window.addEventListener("keyup", onKeyUp);
+    window.addEventListener("blur", hold.release);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      window.removeEventListener("blur", hold.release);
+    };
+  }, [mode, type, tags, setText, makingProject, hold]);
 
   useEffect(() => {
     const OMNI_CLEAR_MS = 3000;
@@ -754,18 +818,15 @@ export function OmniBox({
       className="omni-box group mb-3 shrink-0 rounded-[14px] border-2 border-ink bg-surface p-[10px_12px] transition-colors lg:mb-[18px] lg:p-[13px_16px]"
       style={
         {
-          "--omni-accent":
-            mode === "assistant"
-              ? "var(--primary)"
-              : makingProject
-                ? "var(--projects)"
-                : omniAccent(type),
+          "--omni-accent": barAccent(mode, type, makingProject),
           ...(showLifeSignal && lifeTint
             ? { borderColor: lifeTint.border }
             : {}),
         } as React.CSSProperties
       }
     >
+      {/* Empty on purpose: the hold Tab colour is drawn into it by hand (see OmniHold). */}
+      <div ref={hold.layerRef} className="omni-hold" aria-hidden />
       <div className="relative z-[1]">
         {/* Both rows of the bar are pinned, not just the foot.
               Capture puts a type chip in here and the assistant does not, and
@@ -916,7 +977,7 @@ export function OmniBox({
             )}
           >
             <span className="shrink-0 font-mono text-[10px] text-faint2">
-              TAB FOR →
+              HOLD TAB →
             </span>
             <div className="flex shrink-0 items-center gap-1">
               <TypeChip

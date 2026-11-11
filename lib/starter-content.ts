@@ -190,7 +190,7 @@ export function buildStarterContent(
       body: [
         "Start typing anywhere and the bar at the top catches it.",
         "",
-        "#tag files it. !high sets priority. A date word like tomorrow sets the due date. Tab cycles between task, habit, goal and note.",
+        "#tag files it. !high sets priority. A date word like tomorrow sets the due date. Hold Tab to switch between task, habit, goal and note.",
         "",
         "Everything here is an example. Settings has a button that removes the ones you have not made your own.",
       ].join("\n"),
