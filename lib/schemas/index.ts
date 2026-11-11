@@ -332,6 +332,8 @@ export const noteSchema = z.object({
   body: z.string(),
   tagIds: z.array(z.string()),
   pinned: z.boolean(),
+  // The colour picked for the note's card, one of the project palette; absent or null is none.
+  color: z.string().nullable().optional(),
   // See taskSchema.lifeArea above — same "both" rule applies to notes.
   lifeArea: z.enum(["personal", "work", "both"]),
   createdAt: z.string(),

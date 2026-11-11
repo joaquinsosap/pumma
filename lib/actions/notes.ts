@@ -10,6 +10,7 @@ import { insertNote, updateNote, deleteNote, getNote } from "@/lib/db/notes";
 import { insertTask } from "@/lib/db/tasks";
 import { listTags, ensureLifeTags } from "@/lib/db/tags";
 import { deriveLifeAreaFromTags, withLifeTags } from "@/lib/life-area-sync";
+import { noteColorPick } from "@/lib/note-color";
 import type { LifeView } from "@/lib/types";
 
 export async function createNote(
@@ -71,6 +72,27 @@ export async function toggleNotePin(
   const pinned = want.data ?? !note.pinned;
   if (pinned !== note.pinned) {
     await updateNote(userId, parsed.data, { pinned });
+  }
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+/** Gives a note one of the palette colours, or takes its colour off with null. */
+export async function setNoteColor(
+  id: string,
+  color: string | null,
+): Promise<ActionResult> {
+  const parsed = entityId.safeParse(id);
+  const picked = noteColorPick(color);
+  if (!parsed.success || picked === undefined) {
+    return { ok: false, error: "Invalid input" };
+  }
+  const userId = await requireUserId();
+  const note = await getNote(userId, parsed.data);
+  if (!note) return { ok: false, error: "Not found" };
+  // Not an edit to what the note says, so "last edited" stays where it was.
+  if ((note.color ?? null) !== picked) {
+    await updateNote(userId, parsed.data, { color: picked });
   }
   revalidatePath("/", "layout");
   return { ok: true };

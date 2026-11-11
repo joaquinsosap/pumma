@@ -7,6 +7,7 @@ import {
   useState,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
 } from "react";
 import { useAutosaveDraft } from "@/lib/use-autosave-draft";
@@ -22,7 +23,7 @@ import {
 } from "@/lib/collection-sort";
 import { SortMenu } from "@/components/ui/sort-menu";
 import { updateSettingsAction } from "@/lib/actions/settings";
-import { Star } from "@/components/icons";
+import { ChevronLeft, ChevronRight, Star } from "@/components/icons";
 import type { Note, Tag } from "@/lib/schemas";
 import { tagBg } from "@/lib/parse";
 import {
@@ -30,13 +31,17 @@ import {
   toggleNotePin,
   deleteNoteAction,
   convertNoteToTask,
+  setNoteColor,
 } from "@/lib/actions/notes";
+import { NOTE_COLORS, noteColorName } from "@/lib/note-color";
+import { ColorSwatch } from "@/components/ui/color-swatch";
 import { Topbar } from "@/components/shell/Topbar";
 import { toast } from "sonner";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { EditableTitle } from "@/components/ui/editable-title";
 import { cn } from "@/lib/utils";
 import { hrefWithLife, type LifeView } from "@/lib/life-area";
+import { isLifeTag } from "@/lib/life-area-sync";
 import { noteHref } from "@/lib/note-href";
 import { notePreview } from "@/lib/note-preview";
 import { Taggable } from "@/components/tags/TagMenuProvider";
@@ -88,6 +93,9 @@ function NotePinButton({
   );
 }
 
+/** Where this device remembers that the list of notes is folded away. */
+const FOLDED_KEY = "pumma:notes-list-folded";
+
 /** A card is as tall as its note: with nothing to say beyond the title, there is no text block. */
 function NoteCardText({ note }: { note: Note }) {
   const preview = notePreview(note.title, note.body);
@@ -135,6 +143,29 @@ export function NotesView({
   const [, startTransition] = useTransition();
   const isDesktop = useIsDesktop();
 
+  // The list folded to a strip. Kept on this device, read once the page is in but before it is painted, so nothing jumps.
+  const [folded, setFolded] = useState(false);
+  // Folding slides only after the remembered state is on screen, or every load would open with the list sliding shut.
+  const [moves, setMoves] = useState(false);
+  useLayoutEffect(() => {
+    try {
+      setFolded(window.localStorage.getItem(FOLDED_KEY) === "1");
+    } catch {
+      // No storage (private mode): the list simply starts open.
+    }
+    const frame = requestAnimationFrame(() => setMoves(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  const changeFolded = (next: boolean) => {
+    setFolded(next);
+    try {
+      if (next) window.localStorage.setItem(FOLDED_KEY, "1");
+      else window.localStorage.removeItem(FOLDED_KEY);
+    } catch {
+      // Not remembered, still folded for this visit.
+    }
+  };
+
   // Which note the editor is showing. Held here rather than read straight off
   // the route, so that picking one on a desktop is a click instead of a page
   // load. See the list item's onClick for why.
@@ -161,6 +192,8 @@ export function NotesView({
   );
 
   const selected = sorted.find((n) => n.id === openId) ?? sorted[0] ?? null;
+  // With no notes there is nothing to fold to: the list shows, so its count and sort stay in reach.
+  const showFolded = folded && sorted.length > 0;
   // Phone master-detail: the list, or the editor with a back link, never both.
   // Wider screens show both side by side.
   const explicit = Boolean(openId && sorted.some((n) => n.id === openId));
@@ -208,23 +241,118 @@ export function NotesView({
         lifeSpanYears={lifeSpanYears}
       />
       <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-hidden pb-6 md:flex-row md:gap-[18px]">
+        {/* The list, and folded, a strip of one tile per note. On a wide screen the column's width is what folds, so the open note grows as the list goes. */}
         <div
           className={cn(
-            "flex min-h-0 shrink-0 flex-col md:w-[260px] lg:w-[300px]",
+            "relative flex min-h-0 shrink-0 flex-col md:overflow-hidden",
+            moves && "md:transition-[width] md:duration-300 md:ease-out",
+            showFolded ? "md:w-11" : "md:w-[260px] lg:w-[300px]",
             explicit ? "max-md:hidden" : "max-md:min-h-0 max-md:flex-1",
           )}
         >
-          <div className="mb-2 flex shrink-0 items-center justify-between">
+          <div
+            className={cn(
+              "absolute inset-y-0 left-0 hidden w-11 flex-col items-center md:flex",
+              moves && "transition-[opacity,visibility] duration-200",
+              showFolded ? "visible opacity-100" : "invisible opacity-0",
+            )}
+          >
+            {/* Same height as the list's own top row, so the arrow only moves sideways. */}
+            <div className="mb-2 flex h-8 shrink-0 items-center">
+              <button
+                type="button"
+                onClick={() => changeFolded(false)}
+                title="Show the list"
+                aria-label="Show the list of notes"
+                className="flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface"
+              >
+                <ChevronRight className="h-4 w-4 text-muted" />
+              </button>
+            </div>
+            <div className="flex min-h-0 w-full flex-1 flex-col items-center gap-1.5 overflow-y-auto pb-2 pt-1 [scrollbar-width:none]">
+              {sorted.map((n) => {
+                // One tag to tell notes apart by: the first that is not personal or work.
+                const tag = n.tagIds
+                  .map((id) => tagMap.get(id))
+                  .find((t) => t && !isLifeTag(t.name));
+                return (
+                <div
+                  key={n.id}
+                  className="flex w-full flex-col items-center gap-0.5"
+                >
+                <button
+                  type="button"
+                  onClick={() => pickNote(n.id)}
+                  title={n.title}
+                  aria-label={n.title}
+                  aria-current={selected?.id === n.id ? "true" : undefined}
+                  className={cn(
+                    "relative flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-[7px] border text-[11px] font-bold uppercase",
+                    // The open note's tile is solid. The theme redraws a button naming a border or surface colour, so its fill is inline.
+                    selected?.id === n.id
+                      ? "border-transparent text-background"
+                      : "border-border bg-surface",
+                  )}
+                  style={
+                    selected?.id === n.id
+                      ? { background: "var(--ink)" }
+                      : undefined
+                  }
+                >
+                  {Array.from(n.title.trim())[0] ?? "·"}
+                  {/* The note's colour as a dot: a colour on the tile itself is redrawn by the theme. */}
+                  {n.color && (
+                    <span
+                      aria-hidden
+                      className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full ring-2 ring-background"
+                      style={{ background: paint(n.color) }}
+                    />
+                  )}
+                </button>
+                {tag && (
+                  <span
+                    title={tag.name}
+                    className="max-w-full truncate px-0.5 font-mono text-[8px] leading-none"
+                    style={{ color: paint(tag.color) }}
+                  >
+                    {tag.name}
+                  </span>
+                )}
+                </div>
+                );
+              })}
+            </div>
+          </div>
+          <div
+            className={cn(
+              // Its own fixed width on a wide screen, so the cards do not reflow while the column narrows over them.
+              "flex min-h-0 flex-1 flex-col md:w-[260px] lg:w-[300px]",
+              moves && "md:transition-[opacity,visibility] md:duration-200",
+              showFolded && "md:invisible md:opacity-0",
+            )}
+          >
+          <div className="mb-2 flex h-8 shrink-0 items-center justify-between">
             <span className="font-mono text-[10px] uppercase tracking-widest text-faint2">
               {sorted.length} {sorted.length === 1 ? "note" : "notes"}
             </span>
-            <SortMenu
-              options={NOTE_SORTS}
-              value={sort}
-              onChange={changeSort}
-              reversed={reversed}
-              onReversedChange={changeReversed}
-            />
+            <div className="flex items-center gap-1.5">
+              <SortMenu
+                options={NOTE_SORTS}
+                value={sort}
+                onChange={changeSort}
+                reversed={reversed}
+                onReversedChange={changeReversed}
+              />
+              <button
+                type="button"
+                onClick={() => changeFolded(true)}
+                title="Fold the list away"
+                aria-label="Fold the list of notes away"
+                className="hidden h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-border bg-surface md:flex"
+              >
+                <ChevronLeft className="h-4 w-4 text-muted" />
+              </button>
+            </div>
           </div>
           <div className="flex flex-1 flex-col gap-2 overflow-y-auto max-lg:pb-24">
             {sorted.map((n) => (
@@ -240,10 +368,23 @@ export function NotesView({
                 onContextSelect={() => pickNote(n.id)}
                 className={cn(
                   "flex items-start gap-1 rounded-[10px] border p-3 hover:bg-hover",
+                  // The theme's hover fill beats an inline one, so a coloured card that is open leaves it out.
                   selected?.id === n.id
-                    ? "border-faint2 bg-hover"
+                    ? cn("border-faint2", !n.color && "bg-hover")
                     : "border-border",
                 )}
+                // A picked colour tints the card and its edge, a little stronger on the open note.
+                style={
+                  n.color
+                    ? {
+                        background: paint(
+                          n.color,
+                          selected?.id === n.id ? 0.18 : 0.09,
+                        ),
+                        borderColor: paint(n.color, 0.5),
+                      }
+                    : undefined
+                }
               >
                 <Link
                   href={hrefWithLife(noteHref(n.id), lifeView)}
@@ -284,6 +425,7 @@ export function NotesView({
                 />
               </Taggable>
             ))}
+          </div>
           </div>
         </div>
         {selected && (
@@ -347,8 +489,33 @@ function NoteEditor({
     ),
   );
 
+  // The colour answers the click; the server's value takes over when it changes. Picking the one it wears takes it off.
+  const [color, setColor] = useSyncedDraft<string | null>(
+    note.color ?? null,
+    note.id,
+  );
+  const pickColor = (picked: string) => {
+    const next = color === picked ? null : picked;
+    setColor(next);
+    startTransition(async () => {
+      const res = await trySave(
+        () => setNoteColor(note.id, next),
+        () => setColor(note.color ?? null),
+      );
+      if (res) onRefresh();
+    });
+  };
+
   return (
     <div className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-[13px] border border-border bg-surface">
+      {/* The note's colour as a band along the top: the theme pins a surface's edge, so the edge cannot carry it. */}
+      {color && (
+        <div
+          aria-hidden
+          className="h-[3px] shrink-0"
+          style={{ background: paint(color) }}
+        />
+      )}
       <div className="flex items-center gap-2.5 border-b border-border2 px-5 py-4">
         <EditableTitle
           value={title}
@@ -404,7 +571,27 @@ function NoteEditor({
         <span>Created {shortDate(note.createdAt)}</span>
         <span className="text-faint2">·</span>
         <span>Edited {shortDate(note.updatedAt)}</span>
-        <span className="ml-auto text-faint2">autosaves</span>
+        <span
+          role="group"
+          aria-label="Note color"
+          className="ml-auto flex items-center gap-1.5"
+        >
+          {NOTE_COLORS.map((c) => (
+            <ColorSwatch
+              key={c}
+              color={c}
+              picked={color === c}
+              title={
+                color === c
+                  ? "Take the color off this note"
+                  : `Make this note ${noteColorName(c)}`
+              }
+              onClick={() => pickColor(c)}
+              className="h-5 w-5"
+            />
+          ))}
+        </span>
+        <span className="text-faint2">autosaves</span>
       </div>
     </div>
   );
