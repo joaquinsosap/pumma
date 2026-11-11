@@ -74,11 +74,11 @@ export function useOmniHold() {
           return;
         }
         fill.onFull();
-        // Landed: the crossing colour becomes a flash of the new one over the whole bar, gone at once then slowly.
-        el.style.background = wash(fill.to, 60);
+        // Landed: the crossing colour becomes a flash of the new one over the whole bar, which fades out evenly.
+        el.style.background = wash(fill.to, 52);
         el.animate([{ opacity: 1 }, { opacity: 0 }], {
           duration: POP_MS,
-          easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+          easing: "cubic-bezier(0.33, 1, 0.68, 1)",
           fill: "forwards",
         }).finished.then(
           () => el.remove(),
